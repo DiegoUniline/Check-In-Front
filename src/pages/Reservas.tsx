@@ -1,14 +1,76 @@
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { TimelineToolbar } from '@/components/reservas/TimelineToolbar';
+import { TimelineGrid } from '@/components/reservas/TimelineGrid';
+import { TimelineLegend } from '@/components/reservas/TimelineLegend';
+import { NuevaReservaModal } from '@/components/reservas/NuevaReservaModal';
+import { mockHabitaciones, mockReservas, Reserva } from '@/data/mockData';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Reservas() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [viewMode, setViewMode] = useState<'dia' | 'semana' | 'mes'>('semana');
+  const [startDate, setStartDate] = useState(new Date());
+  const [tipoFilter, setTipoFilter] = useState('all');
+  const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
+
+  // Calculate days to show based on view mode
+  const daysToShow = useMemo(() => {
+    switch (viewMode) {
+      case 'dia': return 7;
+      case 'semana': return 14;
+      case 'mes': return 30;
+      default: return 14;
+    }
+  }, [viewMode]);
+
+  // Filter rooms by type
+  const filteredHabitaciones = useMemo(() => {
+    if (tipoFilter === 'all') return mockHabitaciones;
+    return mockHabitaciones.filter(h => h.tipoId === tipoFilter);
+  }, [tipoFilter]);
+
+  const handleReservationClick = (reserva: Reserva) => {
+    toast({
+      title: `Reserva ${reserva.numeroReserva}`,
+      description: `${reserva.cliente.nombre} ${reserva.cliente.apellidoPaterno} - ${reserva.estado}`,
+    });
+    // TODO: Navigate to reservation detail or open detail modal
+  };
+
   return (
-    <MainLayout 
-      title="Calendario de Reservas" 
-      subtitle="Gestión de ocupación y disponibilidad en tiempo real"
-    >
-      <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
-        Calendario de reservas - Próximamente
-      </div>
+    <MainLayout>
+      <TimelineToolbar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        startDate={startDate}
+        onDateChange={setStartDate}
+        tipoFilter={tipoFilter}
+        onTipoFilterChange={setTipoFilter}
+        onNewReservation={() => setIsNewReservationOpen(true)}
+      />
+
+      <TimelineGrid
+        habitaciones={filteredHabitaciones}
+        reservas={mockReservas}
+        startDate={startDate}
+        daysToShow={daysToShow}
+        onReservationClick={handleReservationClick}
+      />
+
+      <TimelineLegend
+        totalRooms={mockHabitaciones.length}
+        visibleRooms={filteredHabitaciones.length}
+        lastUpdate={new Date()}
+      />
+
+      <NuevaReservaModal
+        open={isNewReservationOpen}
+        onOpenChange={setIsNewReservationOpen}
+      />
     </MainLayout>
   );
 }
