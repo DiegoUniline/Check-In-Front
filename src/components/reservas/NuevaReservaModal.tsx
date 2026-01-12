@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarDays, Users, Search, BedDouble, CreditCard, Check, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -30,9 +30,16 @@ import { cn } from '@/lib/utils';
 import { mockTiposHabitacion, mockHabitaciones, mockClientes, TipoHabitacion, Cliente, Habitacion } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 
+export interface ReservationPreload {
+  habitacion?: Habitacion;
+  fechaCheckin?: Date;
+  fechaCheckout?: Date;
+}
+
 interface NuevaReservaModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preload?: ReservationPreload;
 }
 
 type Step = 1 | 2 | 3 | 4;
@@ -81,12 +88,37 @@ const initialFormData: FormData = {
   anticipo: 0,
 };
 
-export function NuevaReservaModal({ open, onOpenChange }: NuevaReservaModalProps) {
+export function NuevaReservaModal({ open, onOpenChange, preload }: NuevaReservaModalProps) {
   const [step, setStep] = useState<Step>(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [searchCliente, setSearchCliente] = useState('');
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
   const { toast } = useToast();
+
+  // Handle preload data when modal opens
+  useEffect(() => {
+    if (open && preload) {
+      const newFormData = { ...initialFormData };
+      
+      if (preload.fechaCheckin) {
+        newFormData.fechaCheckin = preload.fechaCheckin;
+      }
+      if (preload.fechaCheckout) {
+        newFormData.fechaCheckout = preload.fechaCheckout;
+      }
+      if (preload.habitacion) {
+        newFormData.habitacionId = preload.habitacion.id;
+        newFormData.tipoHabitacion = preload.habitacion.tipoId;
+      }
+      
+      setFormData(newFormData);
+      
+      // Skip to step 3 if room is preloaded (already selected)
+      if (preload.habitacion) {
+        setStep(3);
+      }
+    }
+  }, [open, preload]);
 
   const noches = differenceInDays(formData.fechaCheckout, formData.fechaCheckin);
   
@@ -144,22 +176,56 @@ export function NuevaReservaModal({ open, onOpenChange }: NuevaReservaModalProps
 
   const progressValue = (step / 4) * 100;
 
+  // Determine if we're in "quick create" mode (preloaded from drag)
+  const isQuickCreate = preload?.habitacion != null;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nueva Reserva</DialogTitle>
+          <DialogTitle>
+            {isQuickCreate ? '🚀 Reserva Rápida' : 'Nueva Reserva'}
+          </DialogTitle>
           <DialogDescription>
-            Paso {step} de 4 - {
-              step === 1 ? 'Búsqueda' :
-              step === 2 ? 'Selección de habitación' :
-              step === 3 ? 'Datos del huésped' :
-              'Confirmación'
-            }
+            {isQuickCreate ? (
+              <>
+                Habitación {selectedHabitacion?.numero} • {format(formData.fechaCheckin, 'd MMM', { locale: es })} - {format(formData.fechaCheckout, 'd MMM', { locale: es })} ({noches} noche{noches !== 1 ? 's' : ''})
+              </>
+            ) : (
+              <>
+                Paso {step} de 4 - {
+                  step === 1 ? 'Búsqueda' :
+                  step === 2 ? 'Selección de habitación' :
+                  step === 3 ? 'Datos del huésped' :
+                  'Confirmación'
+                }
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
-        <Progress value={progressValue} className="h-2 mb-4" />
+        {!isQuickCreate && <Progress value={progressValue} className="h-2 mb-4" />}
+        
+        {/* Quick create info banner */}
+        {isQuickCreate && step === 3 && (
+          <Card className="bg-primary/5 border-primary/20 mb-4">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <BedDouble className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Hab. {selectedHabitacion?.numero} - {selectedHabitacion?.tipo.nombre}</p>
+                <p className="text-sm text-muted-foreground">
+                  {format(formData.fechaCheckin, 'd MMM yyyy', { locale: es })} → {format(formData.fechaCheckout, 'd MMM yyyy', { locale: es })}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-primary">${(selectedHabitacion?.tipo.precioBase || 0) * noches}</p>
+                <p className="text-xs text-muted-foreground">{noches} noche{noches !== 1 ? 's' : ''}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Step 1: Search */}
         {step === 1 && (

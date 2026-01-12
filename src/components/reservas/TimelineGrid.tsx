@@ -1,12 +1,18 @@
-import { useMemo, useRef } from 'react';
-import { format, addDays, isSameDay, isWithinInterval, differenceInDays, startOfDay } from 'date-fns';
+import { useMemo, useState, useRef, useCallback } from 'react';
+import { format, addDays, isSameDay, differenceInDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Habitacion, Reserva } from '@/data/mockData';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { User, CreditCard, Clock, CheckCircle } from 'lucide-react';
+import { CreditCard, Clock, CheckCircle } from 'lucide-react';
+
+interface DragSelection {
+  habitacionId: string;
+  startIndex: number;
+  endIndex: number;
+}
 
 interface TimelineGridProps {
   habitaciones: Habitacion[];
@@ -14,6 +20,7 @@ interface TimelineGridProps {
   startDate: Date;
   daysToShow: number;
   onReservationClick?: (reserva: Reserva) => void;
+  onCreateReservation?: (habitacion: Habitacion, fechaCheckin: Date, fechaCheckout: Date) => void;
 }
 
 const CELL_WIDTH = 80;
@@ -25,8 +32,12 @@ export function TimelineGrid({
   startDate,
   daysToShow,
   onReservationClick,
+  onCreateReservation,
 }: TimelineGridProps) {
   const today = startOfDay(new Date());
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragSelection, setDragSelection] = useState<DragSelection | null>(null);
+  const dragStartRef = useRef<{ habitacionId: string; index: number } | null>(null);
   
   // Generate array of dates
   const dates = useMemo(() => {
@@ -42,6 +53,94 @@ export function TimelineGrid({
     );
   };
 
+  // Check if a cell is occupied by a reservation
+  const isCellOccupied = useCallback((habitacionId: string, dateIndex: number) => {
+    const date = dates[dateIndex];
+    const roomReservations = reservas.filter(r => 
+      r.habitacionId === habitacionId &&
+      r.estado !== 'Cancelada' &&
+      r.estado !== 'NoShow'
+    );
+    
+    return roomReservations.some(r => {
+      const checkin = startOfDay(new Date(r.fechaCheckin));
+      const checkout = startOfDay(new Date(r.fechaCheckout));
+      return date >= checkin && date < checkout;
+    });
+  }, [reservas, dates]);
+
+  // Handle drag start
+  const handleMouseDown = (habitacionId: string, index: number, e: React.MouseEvent) => {
+    // Only left click
+    if (e.button !== 0) return;
+    
+    // Don't start drag if cell is occupied
+    if (isCellOccupied(habitacionId, index)) return;
+    
+    // Don't allow selecting past dates
+    if (dates[index] < today) return;
+    
+    e.preventDefault();
+    setIsDragging(true);
+    dragStartRef.current = { habitacionId, index };
+    setDragSelection({
+      habitacionId,
+      startIndex: index,
+      endIndex: index,
+    });
+  };
+
+  // Handle drag move
+  const handleMouseMove = (habitacionId: string, index: number) => {
+    if (!isDragging || !dragStartRef.current) return;
+    if (dragStartRef.current.habitacionId !== habitacionId) return;
+    
+    const start = Math.min(dragStartRef.current.index, index);
+    const end = Math.max(dragStartRef.current.index, index);
+    
+    // Check if any cell in range is occupied
+    let isRangeValid = true;
+    for (let i = start; i <= end; i++) {
+      if (isCellOccupied(habitacionId, i) || dates[i] < today) {
+        isRangeValid = false;
+        break;
+      }
+    }
+    
+    if (isRangeValid) {
+      setDragSelection({
+        habitacionId,
+        startIndex: start,
+        endIndex: end,
+      });
+    }
+  };
+
+  // Handle drag end
+  const handleMouseUp = () => {
+    if (isDragging && dragSelection && onCreateReservation) {
+      const habitacion = habitaciones.find(h => h.id === dragSelection.habitacionId);
+      if (habitacion) {
+        const fechaCheckin = dates[dragSelection.startIndex];
+        const fechaCheckout = addDays(dates[dragSelection.endIndex], 1); // Checkout is next day
+        onCreateReservation(habitacion, fechaCheckin, fechaCheckout);
+      }
+    }
+    
+    setIsDragging(false);
+    setDragSelection(null);
+    dragStartRef.current = null;
+  };
+
+  // Handle mouse leave from grid
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      setDragSelection(null);
+      dragStartRef.current = null;
+    }
+  };
+
   // Calculate position and width for a reservation bar
   const getReservationBarStyle = (reserva: Reserva) => {
     const checkin = startOfDay(new Date(reserva.fechaCheckin));
@@ -49,16 +148,13 @@ export function TimelineGrid({
     const gridStart = startOfDay(startDate);
     const gridEnd = addDays(gridStart, daysToShow);
 
-    // Skip if reservation is completely outside the visible range
     if (checkout < gridStart || checkin >= gridEnd) {
       return null;
     }
 
-    // Calculate left position
     const startOffset = Math.max(0, differenceInDays(checkin, gridStart));
     const left = startOffset * CELL_WIDTH;
 
-    // Calculate width
     const visibleStart = checkin < gridStart ? gridStart : checkin;
     const visibleEnd = checkout > gridEnd ? gridEnd : checkout;
     const days = differenceInDays(visibleEnd, visibleStart);
@@ -67,7 +163,6 @@ export function TimelineGrid({
     return { left: left + 4, width };
   };
 
-  // Get status color for reservation bar
   const getStatusColor = (estado: Reserva['estado']) => {
     switch (estado) {
       case 'Confirmada':
@@ -83,7 +178,6 @@ export function TimelineGrid({
     }
   };
 
-  // Get status icon
   const getStatusIcon = (estado: Reserva['estado']) => {
     switch (estado) {
       case 'Confirmada':
@@ -97,7 +191,6 @@ export function TimelineGrid({
     }
   };
 
-  // Get room status dot color
   const getRoomStatusColor = (hab: Habitacion) => {
     if (hab.estadoMantenimiento !== 'OK') return 'bg-destructive';
     if (hab.estadoLimpieza !== 'Limpia') return 'bg-info';
@@ -110,16 +203,24 @@ export function TimelineGrid({
     }
   };
 
+  // Check if a cell is in the current drag selection
+  const isCellSelected = (habitacionId: string, index: number) => {
+    if (!dragSelection || dragSelection.habitacionId !== habitacionId) return false;
+    return index >= dragSelection.startIndex && index <= dragSelection.endIndex;
+  };
+
   return (
-    <div className="border rounded-lg bg-card overflow-hidden">
+    <div 
+      className="border rounded-lg bg-card overflow-hidden select-none"
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Header row with dates */}
       <div className="flex border-b">
-        {/* Fixed room column header */}
         <div className="w-[200px] min-w-[200px] p-3 bg-muted/50 border-r font-medium text-sm">
           Habitaciones
         </div>
         
-        {/* Scrollable date headers */}
         <ScrollArea className="flex-1">
           <div className="flex" style={{ width: daysToShow * CELL_WIDTH }}>
             {dates.map((date, i) => {
@@ -190,22 +291,44 @@ export function TimelineGrid({
                     height: ROW_HEIGHT,
                   }}
                 >
-                  {/* Grid cells */}
+                  {/* Grid cells - now interactive for drag selection */}
                   <div className="absolute inset-0 flex">
                     {dates.map((date, i) => {
                       const isToday = isSameDay(date, today);
+                      const isPast = date < today;
+                      const isOccupied = isCellOccupied(hab.id, i);
+                      const isSelected = isCellSelected(hab.id, i);
+                      
                       return (
                         <div
                           key={i}
                           className={cn(
-                            "border-r h-full",
-                            isToday && "bg-primary/5"
+                            "border-r h-full transition-colors",
+                            isToday && "bg-primary/5",
+                            isPast && "bg-muted/30",
+                            !isPast && !isOccupied && "cursor-crosshair hover:bg-primary/10",
+                            isSelected && "bg-primary/20"
                           )}
                           style={{ width: CELL_WIDTH, minWidth: CELL_WIDTH }}
+                          onMouseDown={(e) => handleMouseDown(hab.id, i, e)}
+                          onMouseMove={() => handleMouseMove(hab.id, i)}
                         />
                       );
                     })}
                   </div>
+
+                  {/* Drag selection overlay */}
+                  {dragSelection && dragSelection.habitacionId === hab.id && (
+                    <div
+                      className="absolute top-2 h-10 rounded-md bg-primary/30 border-2 border-primary border-dashed flex items-center justify-center text-xs font-medium text-primary pointer-events-none animate-fade-in"
+                      style={{
+                        left: dragSelection.startIndex * CELL_WIDTH + 4,
+                        width: (dragSelection.endIndex - dragSelection.startIndex + 1) * CELL_WIDTH - 8,
+                      }}
+                    >
+                      {dragSelection.endIndex - dragSelection.startIndex + 1} noche{dragSelection.endIndex !== dragSelection.startIndex ? 's' : ''}
+                    </div>
+                  )}
 
                   {/* Reservation bars */}
                   {roomReservations.map((reserva) => {
@@ -218,7 +341,7 @@ export function TimelineGrid({
                           <button
                             onClick={() => onReservationClick?.(reserva)}
                             className={cn(
-                              "absolute top-2 h-10 rounded-md px-2 flex items-center gap-1.5 text-white text-xs font-medium shadow-sm transition-all cursor-pointer",
+                              "absolute top-2 h-10 rounded-md px-2 flex items-center gap-1.5 text-white text-xs font-medium shadow-sm transition-all cursor-pointer z-10",
                               getStatusColor(reserva.estado)
                             )}
                             style={{
@@ -261,6 +384,13 @@ export function TimelineGrid({
           );
         })}
       </ScrollArea>
+
+      {/* Drag hint */}
+      {!isDragging && (
+        <div className="p-2 bg-muted/30 border-t text-center text-xs text-muted-foreground">
+          💡 Arrastra sobre las celdas vacías para crear una reserva rápida
+        </div>
+      )}
     </div>
   );
 }
