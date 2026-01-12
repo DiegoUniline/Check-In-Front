@@ -21,6 +21,10 @@ import Reportes from "./pages/Reportes";
 import Configuracion from "./pages/Configuracion";
 import CheckIn from "./pages/CheckIn";
 import CheckOut from "./pages/CheckOut";
+import Turnos from "./pages/Turnos";
+import Gastos from "./pages/Gastos";
+import Compras from "./pages/Compras";
+import Historial from "./pages/Historial";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -132,6 +136,38 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <CheckOut />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/turnos"
+                element={
+                  <ProtectedRoute>
+                    <Turnos />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gastos"
+                element={
+                  <ProtectedRoute>
+                    <Gastos />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/compras"
+                element={
+                  <ProtectedRoute>
+                    <Compras />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/historial"
+                element={
+                  <ProtectedRoute>
+                    <Historial />
                   </ProtectedRoute>
                 }
               />

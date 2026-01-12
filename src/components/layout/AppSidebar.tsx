@@ -9,7 +9,11 @@ import {
   Package, 
   BarChart3, 
   Settings,
-  Hotel
+  Hotel,
+  Clock,
+  Receipt,
+  ShoppingBag,
+  History
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -43,10 +47,14 @@ const operationsNavItems = [
 const salesNavItems = [
   { title: 'POS', url: '/pos', icon: ShoppingCart },
   { title: 'Inventario', url: '/inventario', icon: Package },
+  { title: 'Compras', url: '/compras', icon: ShoppingBag },
+  { title: 'Gastos', url: '/gastos', icon: Receipt },
+  { title: 'Historial', url: '/historial', icon: History },
   { title: 'Reportes', url: '/reportes', icon: BarChart3 },
 ];
 
 const configNavItems = [
+  { title: 'Turnos', url: '/turnos', icon: Clock },
   { title: 'Configuración', url: '/configuracion', icon: Settings },
 ];
 

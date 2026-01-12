@@ -4,6 +4,7 @@ import { TimelineToolbar } from '@/components/reservas/TimelineToolbar';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { TimelineLegend } from '@/components/reservas/TimelineLegend';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
+import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { mockHabitaciones, mockReservas, Reserva, Habitacion } from '@/data/mockData';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +18,8 @@ export default function Reservas() {
   const [tipoFilter, setTipoFilter] = useState('all');
   const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
   const [reservationPreload, setReservationPreload] = useState<ReservationPreload | undefined>();
+  const [selectedReserva, setSelectedReserva] = useState<Reserva | null>(null);
+  const [isDetalleOpen, setIsDetalleOpen] = useState(false);
 
   // Calculate days to show based on view mode
   const daysToShow = useMemo(() => {
@@ -35,10 +38,8 @@ export default function Reservas() {
   }, [tipoFilter]);
 
   const handleReservationClick = (reserva: Reserva) => {
-    toast({
-      title: `Reserva ${reserva.numeroReserva}`,
-      description: `${reserva.cliente.nombre} ${reserva.cliente.apellidoPaterno} - ${reserva.estado}`,
-    });
+    setSelectedReserva(reserva);
+    setIsDetalleOpen(true);
   };
 
   const handleNewReservation = () => {
@@ -93,6 +94,12 @@ export default function Reservas() {
         open={isNewReservationOpen}
         onOpenChange={handleCloseModal}
         preload={reservationPreload}
+      />
+
+      <ReservaDetalleModal
+        open={isDetalleOpen}
+        onOpenChange={setIsDetalleOpen}
+        reserva={selectedReserva}
       />
     </MainLayout>
   );
