@@ -3,8 +3,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineToolbar } from '@/components/reservas/TimelineToolbar';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { TimelineLegend } from '@/components/reservas/TimelineLegend';
-import { NuevaReservaModal } from '@/components/reservas/NuevaReservaModal';
-import { mockHabitaciones, mockReservas, Reserva } from '@/data/mockData';
+import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
+import { mockHabitaciones, mockReservas, Reserva, Habitacion } from '@/data/mockData';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,6 +16,7 @@ export default function Reservas() {
   const [startDate, setStartDate] = useState(new Date());
   const [tipoFilter, setTipoFilter] = useState('all');
   const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
+  const [reservationPreload, setReservationPreload] = useState<ReservationPreload | undefined>();
 
   // Calculate days to show based on view mode
   const daysToShow = useMemo(() => {
@@ -38,7 +39,27 @@ export default function Reservas() {
       title: `Reserva ${reserva.numeroReserva}`,
       description: `${reserva.cliente.nombre} ${reserva.cliente.apellidoPaterno} - ${reserva.estado}`,
     });
-    // TODO: Navigate to reservation detail or open detail modal
+  };
+
+  const handleNewReservation = () => {
+    setReservationPreload(undefined);
+    setIsNewReservationOpen(true);
+  };
+
+  const handleCreateFromDrag = (habitacion: Habitacion, fechaCheckin: Date, fechaCheckout: Date) => {
+    setReservationPreload({
+      habitacion,
+      fechaCheckin,
+      fechaCheckout,
+    });
+    setIsNewReservationOpen(true);
+  };
+
+  const handleCloseModal = (open: boolean) => {
+    setIsNewReservationOpen(open);
+    if (!open) {
+      setReservationPreload(undefined);
+    }
   };
 
   return (
@@ -50,7 +71,7 @@ export default function Reservas() {
         onDateChange={setStartDate}
         tipoFilter={tipoFilter}
         onTipoFilterChange={setTipoFilter}
-        onNewReservation={() => setIsNewReservationOpen(true)}
+        onNewReservation={handleNewReservation}
       />
 
       <TimelineGrid
@@ -59,6 +80,7 @@ export default function Reservas() {
         startDate={startDate}
         daysToShow={daysToShow}
         onReservationClick={handleReservationClick}
+        onCreateReservation={handleCreateFromDrag}
       />
 
       <TimelineLegend
@@ -69,7 +91,8 @@ export default function Reservas() {
 
       <NuevaReservaModal
         open={isNewReservationOpen}
-        onOpenChange={setIsNewReservationOpen}
+        onOpenChange={handleCloseModal}
+        preload={reservationPreload}
       />
     </MainLayout>
   );
