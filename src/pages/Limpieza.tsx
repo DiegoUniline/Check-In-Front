@@ -51,7 +51,7 @@ export default function Limpieza() {
   const totalTareas = stats.pendientes + stats.enProceso + stats.completadas;
   const progreso = Math.round((stats.completadas / totalTareas) * 100);
 
-  const getPrioridadColor = (p: TareaLimpieza['prioridad']) => {
+  const getPrioridadColor = (p?: string) => {
     switch (p) {
       case 'Urgente': return 'bg-destructive text-destructive-foreground';
       case 'Alta': return 'bg-warning text-warning-foreground';
@@ -60,19 +60,30 @@ export default function Limpieza() {
     }
   };
 
-  const getEstadoIcon = (e: TareaLimpieza['estado']) => {
+  const getEstadoIcon = (e?: string) => {
     switch (e) {
       case 'Pendiente': return <Clock className="h-4 w-4" />;
       case 'EnProceso': return <Play className="h-4 w-4" />;
       case 'Completada': return <Check className="h-4 w-4" />;
       case 'Verificada': return <CheckCircle className="h-4 w-4" />;
+      default: return <Clock className="h-4 w-4" />;
     }
   };
 
-  const handleAction = (tarea: TareaLimpieza, action: string) => {
+  const getHabitacionNumero = (tarea: any) => {
+    if (tarea.habitacion?.numero) return tarea.habitacion.numero;
+    return tarea.habitacion_numero || 'N/A';
+  };
+
+  const getHabitacionTipo = (tarea: any) => {
+    if (tarea.habitacion?.tipo?.nombre) return tarea.habitacion.tipo.nombre;
+    return tarea.tipo_habitacion_nombre || tarea.habitacion_tipo || '';
+  };
+
+  const handleAction = (tarea: any, action: string) => {
     toast({
       title: `Tarea ${action}`,
-      description: `Habitación ${tarea.habitacion.numero} - ${action}`,
+      description: `Habitación ${getHabitacionNumero(tarea)} - ${action}`,
     });
   };
 
@@ -171,7 +182,7 @@ export default function Limpieza() {
 
       {/* Task list */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTareas.map(tarea => (
+        {filteredTareas.map((tarea: any) => (
           <Card key={tarea.id} className={cn(
             "transition-all hover:shadow-md",
             tarea.prioridad === 'Urgente' && "border-destructive/50"
@@ -180,11 +191,11 @@ export default function Limpieza() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted font-bold text-lg">
-                    {tarea.habitacion.numero}
+                    {getHabitacionNumero(tarea)}
                   </div>
                   <div>
                     <p className="font-medium">{tarea.tipo}</p>
-                    <p className="text-sm text-muted-foreground">{tarea.habitacion.tipo.nombre}</p>
+                    <p className="text-sm text-muted-foreground">{getHabitacionTipo(tarea)}</p>
                   </div>
                 </div>
                 <Badge className={getPrioridadColor(tarea.prioridad)}>
