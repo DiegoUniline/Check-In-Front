@@ -73,7 +73,7 @@ export function TimelineToolbar({
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-card rounded-lg border">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <ToggleGroup
             type="single"
             value={viewMode}
