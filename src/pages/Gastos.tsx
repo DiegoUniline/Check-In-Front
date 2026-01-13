@@ -129,20 +129,25 @@ export default function Gastos() {
   };
 
   const handleNuevoGasto = async () => {
-    if (!formData.categoria || !formData.monto || !formData.descripcion) {
+    // Validar solo campos obligatorios: categoria y monto
+    if (!formData.categoria || !formData.monto) {
       toast({
         title: 'Campos requeridos',
-        description: 'Complete todos los campos obligatorios',
+        description: 'Complete categoría y monto',
         variant: 'destructive',
       });
       return;
     }
 
+    // Auto-generar descripción si está vacío
+    const descripcion = formData.descripcion.trim() || 
+      `Gasto ${categoriasConfig.find(c => c.id === formData.categoria)?.nombre || formData.categoria}`;
+
     try {
       await api.createGasto({
         categoria: formData.categoria,
         monto: parseFloat(formData.monto),
-        descripcion: formData.descripcion,
+        descripcion,
         metodo_pago: formData.metodo_pago,
         proveedor: formData.proveedor || null,
         notas: formData.notas || null,
@@ -151,7 +156,7 @@ export default function Gastos() {
       
       toast({
         title: 'Gasto registrado',
-        description: `${formData.descripcion} - $${parseFloat(formData.monto).toFixed(2)}`,
+        description: `${descripcion} - $${parseFloat(formData.monto).toFixed(2)}`,
       });
       
       setIsNewGastoOpen(false);
@@ -436,9 +441,9 @@ export default function Gastos() {
             </div>
 
             <div className="space-y-2">
-              <Label>Descripción *</Label>
+              <Label>Descripción</Label>
               <Input
-                placeholder="Descripción del gasto"
+                placeholder="Descripción del gasto (se auto-genera si está vacío)"
                 value={formData.descripcion}
                 onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
               />
@@ -474,8 +479,11 @@ export default function Gastos() {
                       toast({ title: 'Proveedor creado' });
                       return { value: newProv.id, label: newProv.nombre };
                     } catch (e: any) {
-                      // If API fails, just use the name
-                      setFormData({ ...formData, proveedor: nombre });
+                      // Si la API falla, usar el nombre directamente como texto
+                      const tempId = `temp-${Date.now()}`;
+                      setFormData(prev => ({ ...prev, proveedor: nombre, proveedor_id: tempId }));
+                      toast({ title: 'Proveedor guardado localmente', description: 'El endpoint de proveedores no está disponible' });
+                      return { value: tempId, label: nombre };
                     }
                   }}
                   placeholder="Seleccionar proveedor..."
