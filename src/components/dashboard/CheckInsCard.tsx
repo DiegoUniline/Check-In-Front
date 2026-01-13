@@ -14,11 +14,13 @@ interface CheckInsCardProps {
 }
 
 export function CheckInsCard({ title, reservas, type, onAction }: CheckInsCardProps) {
-  const getInitials = (nombre: string, apellido?: string) => {
-    return `${nombre.charAt(0)}${apellido?.charAt(0) || ''}`.toUpperCase();
+  const getInitials = (nombre?: string, apellido?: string) => {
+    const n = nombre || '';
+    const a = apellido || '';
+    return `${n.charAt(0)}${a.charAt(0)}`.toUpperCase() || '?';
   };
 
-  const getStatusColor = (estado: Reserva['estado']) => {
+  const getStatusColor = (estado?: string) => {
     switch (estado) {
       case 'Confirmada': return 'bg-success/10 text-success border-success/20';
       case 'CheckIn': return 'bg-warning/10 text-warning border-warning/20';
@@ -27,16 +29,32 @@ export function CheckInsCard({ title, reservas, type, onAction }: CheckInsCardPr
     }
   };
 
+  // Normalizar datos de reserva para soportar ambas estructuras de API
+  const getNombreCliente = (reserva: any) => {
+    if (reserva.cliente?.nombre) return reserva.cliente.nombre;
+    return reserva.cliente_nombre || reserva.nombre || 'Huésped';
+  };
+
+  const getApellidoCliente = (reserva: any) => {
+    if (reserva.cliente?.apellidoPaterno) return reserva.cliente.apellidoPaterno;
+    return reserva.apellido_paterno || '';
+  };
+
+  const getHabitacionNumero = (reserva: any) => {
+    if (reserva.habitacion?.numero) return reserva.habitacion.numero;
+    return reserva.habitacion_numero || 'Por asignar';
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
         <Badge variant="outline" className="font-normal">
-          {reservas.length} pendientes
+          {reservas?.length || 0} pendientes
         </Badge>
       </CardHeader>
       <CardContent>
-        {reservas.length === 0 ? (
+        {!reservas || reservas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div className="rounded-full bg-muted p-3 mb-3">
               <Clock className="h-6 w-6 text-muted-foreground" />
@@ -47,25 +65,25 @@ export function CheckInsCard({ title, reservas, type, onAction }: CheckInsCardPr
           </div>
         ) : (
           <div className="space-y-3">
-            {reservas.map((reserva) => (
+            {reservas.map((reserva: any) => (
               <div
                 key={reserva.id}
                 className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
               >
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                    {getInitials(reserva.cliente.nombre, reserva.cliente.apellidoPaterno)}
+                    {getInitials(getNombreCliente(reserva), getApellidoCliente(reserva))}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">
-                    {reserva.cliente.nombre} {reserva.cliente.apellidoPaterno}
+                    {getNombreCliente(reserva)} {getApellidoCliente(reserva)}
                   </p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>Hab. {reserva.habitacion?.numero || 'Por asignar'}</span>
+                    <span>Hab. {getHabitacionNumero(reserva)}</span>
                     <span>•</span>
-                    <span>{reserva.horaLlegada || '—'}</span>
+                    <span>{reserva.horaLlegada || reserva.hora_llegada || '—'}</span>
                   </div>
                 </div>
 
