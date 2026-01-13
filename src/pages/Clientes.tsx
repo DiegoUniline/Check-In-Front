@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Users, Search, Plus, Star, Mail, Phone, 
   MoreVertical, Eye, Edit, History, Award
@@ -7,7 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table,
@@ -32,24 +32,63 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { mockClientes, Cliente } from '@/data/mockData';
+import { useToast } from '@/hooks/use-toast';
+import api from '@/lib/api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+interface Cliente {
+  id: string;
+  nombre: string;
+  apellido_paterno: string;
+  apellido_materno?: string;
+  email: string;
+  telefono: string;
+  nacionalidad?: string;
+  tipo_documento?: string;
+  numero_documento?: string;
+  tipo_cliente?: string;
+  nivel_lealtad?: string;
+  es_vip?: boolean;
+  total_estancias?: number;
+  notas?: string;
+  created_at?: string;
+}
+
 export default function Clientes() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredClientes = mockClientes.filter(c => {
-    const fullName = `${c.nombre} ${c.apellidoPaterno} ${c.apellidoMaterno}`.toLowerCase();
+  useEffect(() => {
+    cargarClientes();
+  }, []);
+
+  const cargarClientes = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getClientes();
+      setClientes(data);
+    } catch (error) {
+      console.error('Error cargando clientes:', error);
+      toast({ title: 'Error', description: 'No se pudieron cargar los clientes', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredClientes = clientes.filter(c => {
+    const fullName = `${c.nombre} ${c.apellido_paterno} ${c.apellido_materno || ''}`.toLowerCase();
     const query = searchQuery.toLowerCase();
     return fullName.includes(query) || 
-           c.email.toLowerCase().includes(query) || 
-           c.telefono.includes(query);
+           c.email?.toLowerCase().includes(query) || 
+           c.telefono?.includes(query);
   });
 
-  const getLoyaltyColor = (nivel: Cliente['nivelLealtad']) => {
+  const getLoyaltyColor = (nivel?: string) => {
     switch (nivel) {
       case 'Diamante': return 'bg-purple-500';
       case 'Platino': return 'bg-slate-400';
@@ -66,11 +105,21 @@ export default function Clientes() {
 
   // Stats
   const stats = {
-    total: mockClientes.length,
-    vip: mockClientes.filter(c => c.esVip).length,
-    nuevos: mockClientes.filter(c => c.totalEstancias <= 1).length,
-    frecuentes: mockClientes.filter(c => c.totalEstancias > 5).length,
+    total: clientes.length,
+    vip: clientes.filter(c => c.es_vip).length,
+    nuevos: clientes.filter(c => (c.total_estancias || 0) <= 1).length,
+    frecuentes: clientes.filter(c => (c.total_estancias || 0) > 5).length,
   };
+
+  if (loading) {
+    return (
+      <MainLayout title="Gestión de Clientes" subtitle="Base de datos de huéspedes y empresas">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout 
@@ -143,82 +192,84 @@ export default function Clientes() {
       </div>
 
       {/* Table */}
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Contacto</TableHead>
-              <TableHead className="text-center">Estancias</TableHead>
-              <TableHead>Última Visita</TableHead>
-              <TableHead>Lealtad</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredClientes.slice(0, 20).map(cliente => (
-              <TableRow key={cliente.id} className="cursor-pointer hover:bg-muted/50">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {cliente.nombre.charAt(0)}{cliente.apellidoPaterno.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium flex items-center gap-2">
-                        {cliente.nombre} {cliente.apellidoPaterno}
-                        {cliente.esVip && <Star className="h-4 w-4 text-warning fill-warning" />}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{cliente.tipoCliente}</p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <p className="text-sm flex items-center gap-1">
-                      <Mail className="h-3 w-3" /> {cliente.email}
-                    </p>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Phone className="h-3 w-3" /> {cliente.telefono}
-                    </p>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <span className="font-medium">{cliente.totalEstancias}</span>
-                </TableCell>
-                <TableCell>
-                  {format(cliente.createdAt, 'd MMM yyyy', { locale: es })}
-                </TableCell>
-                <TableCell>
-                  <Badge className={getLoyaltyColor(cliente.nivelLealtad)}>
-                    {cliente.nivelLealtad}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewCliente(cliente)}>
-                        <Eye className="mr-2 h-4 w-4" /> Ver detalle
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="mr-2 h-4 w-4" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <History className="mr-2 h-4 w-4" /> Historial
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Contacto</TableHead>
+                <TableHead className="text-center">Estancias</TableHead>
+                <TableHead>Registro</TableHead>
+                <TableHead>Lealtad</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredClientes.slice(0, 20).map(cliente => (
+                <TableRow key={cliente.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {cliente.nombre?.charAt(0)}{cliente.apellido_paterno?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium flex items-center gap-2">
+                          {cliente.nombre} {cliente.apellido_paterno}
+                          {cliente.es_vip && <Star className="h-4 w-4 text-warning fill-warning" />}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{cliente.tipo_cliente || 'Individual'}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <p className="text-sm flex items-center gap-1">
+                        <Mail className="h-3 w-3" /> {cliente.email || '-'}
+                      </p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" /> {cliente.telefono || '-'}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="font-medium">{cliente.total_estancias || 0}</span>
+                  </TableCell>
+                  <TableCell>
+                    {cliente.created_at ? format(new Date(cliente.created_at), 'd MMM yyyy', { locale: es }) : '-'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getLoyaltyColor(cliente.nivel_lealtad)}>
+                      {cliente.nivel_lealtad || 'Bronce'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewCliente(cliente)}>
+                          <Eye className="mr-2 h-4 w-4" /> Ver detalle
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Edit className="mr-2 h-4 w-4" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <History className="mr-2 h-4 w-4" /> Historial
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
 
       <p className="text-sm text-muted-foreground mt-4 text-center">
@@ -227,18 +278,18 @@ export default function Clientes() {
 
       {/* Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {selectedCliente?.nombre.charAt(0)}{selectedCliente?.apellidoPaterno.charAt(0)}
+                  {selectedCliente?.nombre?.charAt(0)}{selectedCliente?.apellido_paterno?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="flex items-center gap-2">
-                  {selectedCliente?.nombre} {selectedCliente?.apellidoPaterno}
-                  {selectedCliente?.esVip && <Star className="h-5 w-5 text-warning fill-warning" />}
+                  {selectedCliente?.nombre} {selectedCliente?.apellido_paterno}
+                  {selectedCliente?.es_vip && <Star className="h-5 w-5 text-warning fill-warning" />}
                 </p>
                 <p className="text-sm font-normal text-muted-foreground">{selectedCliente?.email}</p>
               </div>
@@ -256,67 +307,53 @@ export default function Clientes() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Teléfono</Label>
-                  <p className="font-medium">{selectedCliente?.telefono}</p>
+                  <p className="font-medium">{selectedCliente?.telefono || '-'}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Nacionalidad</Label>
-                  <p className="font-medium">{selectedCliente?.nacionalidad}</p>
+                  <p className="font-medium">{selectedCliente?.nacionalidad || '-'}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Documento</Label>
-                  <p className="font-medium">{selectedCliente?.tipoDocumento}: {selectedCliente?.numeroDocumento}</p>
+                  <p className="font-medium">{selectedCliente?.tipo_documento}: {selectedCliente?.numero_documento || '-'}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Nivel de Lealtad</Label>
-                  <Badge className={getLoyaltyColor(selectedCliente?.nivelLealtad || 'Bronce')}>
-                    {selectedCliente?.nivelLealtad}
+                  <Badge className={getLoyaltyColor(selectedCliente?.nivel_lealtad)}>
+                    {selectedCliente?.nivel_lealtad || 'Bronce'}
                   </Badge>
                 </div>
               </div>
               <Separator />
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold text-primary">{selectedCliente?.totalEstancias}</p>
+                  <p className="text-2xl font-bold text-primary">{selectedCliente?.total_estancias || 0}</p>
                   <p className="text-sm text-muted-foreground">Estancias</p>
                 </div>
                 <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold text-primary">$24,500</p>
+                  <p className="text-2xl font-bold text-primary">-</p>
                   <p className="text-sm text-muted-foreground">Total Gastado</p>
                 </div>
                 <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold text-primary">4.8</p>
+                  <p className="text-2xl font-bold text-primary">-</p>
                   <p className="text-sm text-muted-foreground">Rating</p>
                 </div>
               </div>
             </TabsContent>
             
             <TabsContent value="historial" className="mt-4">
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <Card key={i}>
-                    <CardContent className="p-3 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Suite Deluxe - 3 noches</p>
-                        <p className="text-sm text-muted-foreground">Enero 2024</p>
-                      </div>
-                      <p className="font-medium text-primary">$7,500</p>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="text-center text-muted-foreground py-8">
+                No hay historial disponible
               </div>
             </TabsContent>
             
             <TabsContent value="preferencias" className="mt-4">
               <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">Piso alto</Badge>
-                  <Badge variant="outline">Vista al mar</Badge>
-                  <Badge variant="outline">Cama king</Badge>
-                  <Badge variant="outline">Late checkout</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Notas: Prefiere habitaciones tranquilas, alergia a mariscos.
-                </p>
+                {selectedCliente?.notas ? (
+                  <p className="text-sm text-muted-foreground">{selectedCliente.notas}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Sin preferencias registradas</p>
+                )}
               </div>
             </TabsContent>
           </Tabs>
