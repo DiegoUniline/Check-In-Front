@@ -12,11 +12,11 @@ import api from '@/lib/api';
 export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ ocupadas: 0, disponibles: 0, pendientes_limpieza: 0, pendientes_mantenimiento: 0, total_habitaciones: 0 });
+  const [stats, setStats] = useState<any>({ ocupadas: 0, disponibles: 0, pendientes_limpieza: 0, pendientes_mantenimiento: 0, total_habitaciones: 0, ocupacion_porcentaje: 0 });
   const [checkinsHoy, setCheckinsHoy] = useState([]);
   const [checkoutsHoy, setCheckoutsHoy] = useState([]);
-  const [ventas, setVentas] = useState({ total_cobrado: 0, total_cargos: 0, por_metodo: [] });
-  const [tareasCriticas, setTareasCriticas] = useState({ limpieza: [], mantenimiento: [] });
+  const [ventas, setVentas] = useState<any>({ total: 0, alojamiento: 0, alimentos: 0, servicios: 0 });
+  const [tareasCriticas, setTareasCriticas] = useState<any>({ limpieza: [], mantenimiento: [] });
 
   useEffect(() => {
     const cargarDatos = async () => {
