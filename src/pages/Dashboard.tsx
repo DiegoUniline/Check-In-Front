@@ -28,13 +28,25 @@ export default function Dashboard() {
           api.getDashboardVentasHoy(),
           api.getDashboardTareasCriticas()
         ]);
-        setStats(statsData);
-        setCheckinsHoy(checkins);
-        setCheckoutsHoy(checkouts);
-        setVentas(ventasData);
-        setTareasCriticas(tareas);
+        console.log('Dashboard data:', { statsData, checkins, checkouts, ventasData, tareas });
+        setStats(statsData || { ocupadas: 0, disponibles: 0, pendientes_limpieza: 0, pendientes_mantenimiento: 0, total_habitaciones: 0, ocupacion_porcentaje: 0 });
+        setCheckinsHoy(Array.isArray(checkins) ? checkins : []);
+        setCheckoutsHoy(Array.isArray(checkouts) ? checkouts : []);
+        setVentas(ventasData || { total: 0, alojamiento: 0, alimentos: 0, servicios: 0 });
+        // Handle tareas - could be array or object with limpieza property
+        if (Array.isArray(tareas)) {
+          setTareasCriticas({ limpieza: tareas, mantenimiento: [] });
+        } else {
+          setTareasCriticas(tareas || { limpieza: [], mantenimiento: [] });
+        }
       } catch (error) {
         console.error('Error cargando dashboard:', error);
+        // Set default values on error
+        setStats({ ocupadas: 0, disponibles: 0, pendientes_limpieza: 0, pendientes_mantenimiento: 0, total_habitaciones: 0, ocupacion_porcentaje: 0 });
+        setCheckinsHoy([]);
+        setCheckoutsHoy([]);
+        setVentas({ total: 0, alojamiento: 0, alimentos: 0, servicios: 0 });
+        setTareasCriticas({ limpieza: [], mantenimiento: [] });
       } finally {
         setLoading(false);
       }
