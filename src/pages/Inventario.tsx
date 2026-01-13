@@ -51,6 +51,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
+import { ComboboxCreatable, ComboboxOption } from '@/components/ui/combobox-creatable';
 
 export default function Inventario() {
   const { toast } = useToast();
@@ -395,16 +396,24 @@ export default function Inventario() {
               </div>
               <div className="space-y-2">
                 <Label>Categoría</Label>
-                <Select value={formData.categoria_id} onValueChange={(v) => setFormData({ ...formData, categoria_id: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categorias.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ComboboxCreatable
+                  options={categorias.map(cat => ({ value: cat.id, label: cat.nombre }))}
+                  value={formData.categoria_id}
+                  onValueChange={(v) => setFormData({ ...formData, categoria_id: v })}
+                  onCreate={async (nombre) => {
+                    try {
+                      const newCat = await api.createCategoria({ nombre });
+                      setCategorias([...categorias, newCat]);
+                      toast({ title: 'Categoría creada' });
+                      return { value: newCat.id, label: newCat.nombre };
+                    } catch (e: any) {
+                      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                    }
+                  }}
+                  placeholder="Seleccionar categoría..."
+                  searchPlaceholder="Buscar o crear categoría..."
+                  createLabel="Crear categoría"
+                />
               </div>
             </div>
             <div className="space-y-2">
