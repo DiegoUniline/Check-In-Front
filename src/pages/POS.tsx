@@ -144,21 +144,35 @@ export default function POS() {
 
       // Calculate totals with sanitized values
       const ventaSubtotal = safeNumber(subtotal, 0);
-      const ventaIva = safeNumber(iva, 0);
+      const ventaImpuestos = safeNumber(iva, 0);
       const ventaTotal = safeNumber(total, 0);
 
       // Get habitacion info if selected
       const habitacionSeleccionada = habitaciones.find(h => h.id === selectedRoom);
       const reservaId = habitacionSeleccionada?.reserva_id || habitacionSeleccionada?.reserva_activa_id || null;
 
-      // Preparar payload de venta (sin habitacion_id/reserva_id - esos van en cargos)
+      // Mapear método de pago al enum del backend
+      const metodoPagoMap: Record<string, string> = {
+        'Tarjeta': 'Tarjeta',
+        'Efectivo': 'Efectivo',
+        'Cargo a habitación': 'Transferencia', // O el que prefieras para cargos
+        'Credit Card': 'Tarjeta',
+        'Cash': 'Efectivo',
+      };
+      const metodoPagoBackend = metodoPagoMap[method] || 'Efectivo';
+
+      // Generar folio único
+      const folio = `POS-${Date.now()}`;
+
+      // Preparar payload de venta
       const ventaPayload = {
+        folio: folio,
         detalle: ventaItems,
         subtotal: ventaSubtotal,
-        iva: ventaIva,
+        impuestos: ventaImpuestos,
         total: ventaTotal,
-        metodo_pago: method,
-        fecha: new Date().toISOString(),
+        metodo_pago: metodoPagoBackend,
+        reserva_id: reservaId,
       };
 
       console.log('📤 Enviando venta:', JSON.stringify(ventaPayload, null, 2));
