@@ -124,16 +124,23 @@ export function TimelineGrid({
     return dayIndex >= minIdx && dayIndex <= maxIdx;
   };
 
-  const cellWidth = 80;
-  const roomColumnWidth = 140;
+  const cellWidth = 90;
+  const roomColumnWidth = 120;
+
+  const getReservationDays = (reserva: any) => {
+    const checkin = startOfDay(new Date(reserva.fecha_checkin));
+    const checkout = startOfDay(new Date(reserva.fecha_checkout));
+    const diffTime = checkout.getTime() - checkin.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
   return (
     <div 
-      className="border rounded-lg overflow-hidden bg-card"
+      className="border rounded-lg overflow-hidden bg-card w-full max-w-full"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <ScrollArea className="w-full">
+      <ScrollArea className="w-full max-w-full">
         <div className="min-w-max" ref={gridRef}>
           {/* Header */}
           <div className="flex border-b bg-muted/30 sticky top-0 z-10">
@@ -208,29 +215,44 @@ export function TimelineGrid({
                           {reserva && position && (
                             <div
                               className={cn(
-                                "absolute inset-y-1 flex items-center justify-center text-[10px] font-medium",
+                                "absolute inset-y-1 flex items-center text-[10px] font-medium overflow-hidden",
                                 getStatusColor(reserva.estado),
-                                position === 'start' && "left-1 right-0 rounded-l-md",
-                                position === 'end' && "left-0 right-1 rounded-r-md",
-                                position === 'middle' && "left-0 right-0"
+                                position === 'start' && "left-1 right-0 rounded-l-md pl-1.5",
+                                position === 'end' && "left-0 right-1 rounded-r-md justify-end pr-1.5",
+                                position === 'middle' && "left-0 right-0 justify-center"
                               )}
                             >
                               {position === 'start' && (
-                                <span className="truncate px-1">
-                                  {reserva.cliente_nombre || 'Huésped'}
-                                </span>
+                                <div className="flex flex-col leading-tight truncate">
+                                  <span className="font-semibold truncate text-[11px]">
+                                    {reserva.cliente_nombre || 'Huésped'}
+                                  </span>
+                                  <span className="opacity-80 text-[9px]">
+                                    {getReservationDays(reserva)} noches
+                                  </span>
+                                </div>
+                              )}
+                              {position === 'middle' && (
+                                <span className="opacity-60">─</span>
                               )}
                             </div>
                           )}
                         </div>
                       </TooltipTrigger>
                       {reserva && (
-                        <TooltipContent>
-                          <div className="text-sm">
-                            <p className="font-medium">{reserva.cliente_nombre || 'Huésped'}</p>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="text-sm space-y-1">
+                            <p className="font-semibold text-base">{reserva.cliente_nombre || 'Huésped'}</p>
+                            {reserva.cliente_email && (
+                              <p className="text-muted-foreground text-xs">{reserva.cliente_email}</p>
+                            )}
                             <p className="text-muted-foreground">
-                              {format(new Date(reserva.fecha_checkin), 'd MMM', { locale: es })} - {format(new Date(reserva.fecha_checkout), 'd MMM', { locale: es })}
+                              {format(new Date(reserva.fecha_checkin), "d MMM yyyy", { locale: es })} → {format(new Date(reserva.fecha_checkout), "d MMM yyyy", { locale: es })}
                             </p>
+                            <p className="text-xs">{getReservationDays(reserva)} noches · {reserva.adultos || 1} adultos{reserva.ninos > 0 ? ` · ${reserva.ninos} niños` : ''}</p>
+                            {reserva.total && (
+                              <p className="font-medium text-primary">${Number(reserva.total).toLocaleString()}</p>
+                            )}
                             <Badge className={cn("mt-1", getStatusColor(reserva.estado))}>
                               {reserva.estado}
                             </Badge>
