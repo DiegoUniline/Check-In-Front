@@ -18,7 +18,6 @@ export default function Reservas() {
   const [selectedReserva, setSelectedReserva] = useState<any>(null);
   const [isDetalleOpen, setIsDetalleOpen] = useState(false);
 
-  // Data from API
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [reservas, setReservas] = useState<any[]>([]);
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
@@ -80,7 +79,7 @@ export default function Reservas() {
     if (!open) setReservationPreload(undefined);
   };
 
-  const handleReservationSuccess = () => {
+  const handleSuccess = () => {
     cargarDatos();
   };
 
@@ -123,7 +122,7 @@ export default function Reservas() {
         open={isNewReservationOpen}
         onOpenChange={handleCloseModal}
         preload={reservationPreload}
-        onSuccess={handleReservationSuccess}
+        onSuccess={handleSuccess}
       />
       <ReservaDetalleModal
         open={isDetalleOpen}
