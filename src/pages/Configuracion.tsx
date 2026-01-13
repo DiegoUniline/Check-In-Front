@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Settings, Hotel, Users, CreditCard, Bell, 
-  Palette, Shield, Save, Building2
+  Palette, Shield, Save, Building2, ExternalLink
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ import { mockHotel } from '@/data/mockData';
 
 export default function Configuracion() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [hotelData, setHotelData] = useState(mockHotel);
 
@@ -196,10 +198,15 @@ export default function Configuracion() {
               <CardTitle>Gestión de Usuarios</CardTitle>
               <CardDescription>Administra los usuarios del sistema</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-center py-8">
-                La gestión de usuarios estará disponible próximamente.
+            <CardContent className="flex flex-col items-center py-8 gap-4">
+              <Users className="h-12 w-12 text-muted-foreground" />
+              <p className="text-muted-foreground text-center">
+                Gestiona usuarios, roles y permisos desde el panel dedicado.
               </p>
+              <Button onClick={() => navigate('/usuarios')}>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Ir a Gestión de Usuarios
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
