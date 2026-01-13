@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  History, Search, Filter, Calendar, DollarSign, 
+  Search, Calendar, DollarSign, 
   ArrowDownCircle, ArrowUpCircle, CreditCard, Banknote,
-  Receipt, FileText, Download, Eye, BedDouble, ShoppingCart,
-  Users, Clock
+  Receipt, Download, BedDouble, ShoppingCart,
+  Users, RefreshCw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -25,16 +25,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import api from '@/lib/api';
 
 interface Transaccion {
   id: string;
-  fecha: Date;
+  fecha: string;
   tipo: 'Ingreso' | 'Egreso';
-  categoria: 'Hospedaje' | 'POS' | 'Servicio' | 'Gasto' | 'Compra' | 'Reembolso';
+  categoria: string;
   concepto: string;
   referencia?: string;
   monto: number;
@@ -45,28 +54,101 @@ interface Transaccion {
 }
 
 export default function Historial() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTipo, setFilterTipo] = useState('all');
   const [filterCategoria, setFilterCategoria] = useState('all');
   const [filterMetodo, setFilterMetodo] = useState('all');
   const [dateRange, setDateRange] = useState('today');
+  const [loading, setLoading] = useState(true);
+  const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
+  const [detalleModal, setDetalleModal] = useState<{ open: boolean; transaccion: Transaccion | null }>({ open: false, transaccion: null });
 
-  // Mock transactions
-  const [transacciones] = useState<Transaccion[]>([
-    { id: '1', fecha: new Date(), tipo: 'Ingreso', categoria: 'Hospedaje', concepto: 'Check-in Reserva RES-2024-0125', referencia: 'RES-2024-0125', monto: 4500, metodoPago: 'Tarjeta', usuario: 'Carlos García', cliente: 'María López', habitacion: '302' },
-    { id: '2', fecha: new Date(), tipo: 'Ingreso', categoria: 'POS', concepto: 'Venta Minibar', monto: 350, metodoPago: 'Cargo Habitación', usuario: 'Carlos García', habitacion: '201' },
-    { id: '3', fecha: new Date(), tipo: 'Egreso', categoria: 'Gasto', concepto: 'Compra suministros limpieza', monto: 850, metodoPago: 'Efectivo', usuario: 'Admin' },
-    { id: '4', fecha: new Date(Date.now() - 3600000), tipo: 'Ingreso', categoria: 'Hospedaje', concepto: 'Pago anticipado reserva', referencia: 'RES-2024-0130', monto: 2500, metodoPago: 'Transferencia', usuario: 'María López', cliente: 'Juan Pérez' },
-    { id: '5', fecha: new Date(Date.now() - 3600000 * 2), tipo: 'Ingreso', categoria: 'Servicio', concepto: 'Room Service - Desayuno', monto: 280, metodoPago: 'Efectivo', usuario: 'Carlos García', habitacion: '405' },
-    { id: '6', fecha: new Date(Date.now() - 3600000 * 3), tipo: 'Egreso', categoria: 'Compra', concepto: 'Orden de compra OC-2024-004', referencia: 'OC-2024-004', monto: 2366, metodoPago: 'Transferencia', usuario: 'Admin' },
-    { id: '7', fecha: new Date(Date.now() - 86400000), tipo: 'Ingreso', categoria: 'Hospedaje', concepto: 'Check-out liquidación', referencia: 'RES-2024-0118', monto: 8750, metodoPago: 'Tarjeta', usuario: 'María López', cliente: 'Roberto Sánchez', habitacion: '501' },
-    { id: '8', fecha: new Date(Date.now() - 86400000), tipo: 'Ingreso', categoria: 'POS', concepto: 'Venta Restaurante', monto: 1450, metodoPago: 'Efectivo', usuario: 'Carlos García' },
-    { id: '9', fecha: new Date(Date.now() - 86400000), tipo: 'Egreso', categoria: 'Reembolso', concepto: 'Reembolso parcial por incidencia', referencia: 'RES-2024-0115', monto: 500, metodoPago: 'Tarjeta', usuario: 'Admin', cliente: 'Ana Martínez' },
-    { id: '10', fecha: new Date(Date.now() - 86400000 * 2), tipo: 'Ingreso', categoria: 'Servicio', concepto: 'Lavandería Express', monto: 450, metodoPago: 'Cargo Habitación', usuario: 'Carlos García', habitacion: '302' },
-  ]);
+  useEffect(() => {
+    cargarTransacciones();
+  }, [dateRange]);
+
+  const cargarTransacciones = async () => {
+    setLoading(true);
+    try {
+      const now = new Date();
+      let fechaDesde: Date, fechaHasta: Date;
+      
+      switch (dateRange) {
+        case 'today':
+          fechaDesde = startOfDay(now);
+          fechaHasta = endOfDay(now);
+          break;
+        case 'week':
+          fechaDesde = startOfWeek(now, { locale: es });
+          fechaHasta = endOfWeek(now, { locale: es });
+          break;
+        case 'month':
+          fechaDesde = startOfMonth(now);
+          fechaHasta = endOfMonth(now);
+          break;
+        default:
+          fechaDesde = startOfDay(now);
+          fechaHasta = endOfDay(now);
+      }
+
+      const params: Record<string, string> = {
+        fecha_desde: fechaDesde.toISOString().split('T')[0],
+        fecha_hasta: fechaHasta.toISOString().split('T')[0],
+      };
+
+      // Try to load from transacciones endpoint, fallback to pagos + gastos
+      let data: any[] = [];
+      try {
+        data = await api.getTransacciones(params);
+      } catch {
+        // Fallback: load pagos and gastos separately
+        const [pagos, gastos] = await Promise.all([
+          api.getPagos(params).catch(() => []),
+          api.getGastos(params).catch(() => [])
+        ]);
+
+        const pagosTransformed = (pagos || []).map((p: any) => ({
+          id: p.id,
+          fecha: p.fecha || p.created_at,
+          tipo: 'Ingreso' as const,
+          categoria: p.concepto?.includes('Check') ? 'Hospedaje' : (p.concepto?.includes('POS') ? 'POS' : 'Servicio'),
+          concepto: p.concepto || 'Pago',
+          referencia: p.reserva_id ? `RES-${p.reserva_id}` : undefined,
+          monto: Number(p.monto) || 0,
+          metodoPago: p.metodo_pago || 'Efectivo',
+          usuario: p.usuario_nombre || 'Sistema',
+          cliente: p.cliente_nombre,
+          habitacion: p.habitacion_numero,
+        }));
+
+        const gastosTransformed = (gastos || []).map((g: any) => ({
+          id: g.id,
+          fecha: g.fecha || g.created_at,
+          tipo: 'Egreso' as const,
+          categoria: 'Gasto',
+          concepto: g.descripcion || 'Gasto',
+          monto: Number(g.monto) || 0,
+          metodoPago: g.metodo_pago || 'Efectivo',
+          usuario: g.usuario_nombre || 'Admin',
+        }));
+
+        data = [...pagosTransformed, ...gastosTransformed].sort((a, b) => 
+          new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+        );
+      }
+
+      setTransacciones(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error cargando transacciones:', error);
+      toast({ title: 'Error', description: 'No se pudieron cargar las transacciones', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTransacciones = transacciones.filter(t => {
-    const matchSearch = t.concepto.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchSearch = t.concepto?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                        t.referencia?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                        t.cliente?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchTipo = filterTipo === 'all' || t.tipo === filterTipo;
@@ -75,7 +157,6 @@ export default function Historial() {
     return matchSearch && matchTipo && matchCategoria && matchMetodo;
   });
 
-  // Stats
   const totalIngresos = transacciones.filter(t => t.tipo === 'Ingreso').reduce((s, t) => s + t.monto, 0);
   const totalEgresos = transacciones.filter(t => t.tipo === 'Egreso').reduce((s, t) => s + t.monto, 0);
   const balance = totalIngresos - totalEgresos;
@@ -86,7 +167,7 @@ export default function Historial() {
       case 'POS': return <ShoppingCart className="h-4 w-4" />;
       case 'Servicio': return <Receipt className="h-4 w-4" />;
       case 'Gasto': return <ArrowUpCircle className="h-4 w-4" />;
-      case 'Compra': return <FileText className="h-4 w-4" />;
+      case 'Compra': return <ShoppingCart className="h-4 w-4" />;
       case 'Reembolso': return <ArrowUpCircle className="h-4 w-4" />;
       default: return <DollarSign className="h-4 w-4" />;
     }
@@ -104,12 +185,30 @@ export default function Historial() {
     }
   };
 
+  const handleVerDetalle = async (trans: Transaccion) => {
+    try {
+      const detalles = await api.getTransaccion(trans.id);
+      setDetalleModal({ open: true, transaccion: { ...trans, ...detalles } });
+    } catch {
+      setDetalleModal({ open: true, transaccion: trans });
+    }
+  };
+
+  if (loading) {
+    return (
+      <MainLayout title="Historial de Transacciones" subtitle="Cargando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout 
       title="Historial de Transacciones" 
       subtitle="Registro completo de movimientos financieros"
     >
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
@@ -167,7 +266,6 @@ export default function Historial() {
         </Card>
       </div>
 
-      {/* Filters */}
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">
@@ -190,7 +288,6 @@ export default function Historial() {
                 <SelectItem value="today">Hoy</SelectItem>
                 <SelectItem value="week">Esta semana</SelectItem>
                 <SelectItem value="month">Este mes</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
 
@@ -233,6 +330,10 @@ export default function Historial() {
               </SelectContent>
             </Select>
 
+            <Button variant="outline" size="icon" onClick={cargarTransacciones}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Exportar
@@ -241,7 +342,6 @@ export default function Historial() {
         </CardContent>
       </Card>
 
-      {/* Transactions Table */}
       <Card>
         <Table>
           <TableHeader>
@@ -257,11 +357,15 @@ export default function Historial() {
           </TableHeader>
           <TableBody>
             {filteredTransacciones.map(trans => (
-              <TableRow key={trans.id} className="cursor-pointer hover:bg-muted/50">
+              <TableRow 
+                key={trans.id} 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleVerDetalle(trans)}
+              >
                 <TableCell>
                   <div>
-                    <p className="font-medium">{format(trans.fecha, "d MMM yyyy", { locale: es })}</p>
-                    <p className="text-xs text-muted-foreground">{format(trans.fecha, "HH:mm")}</p>
+                    <p className="font-medium">{trans.fecha ? format(new Date(trans.fecha), "d MMM yyyy", { locale: es }) : '-'}</p>
+                    <p className="text-xs text-muted-foreground">{trans.fecha ? format(new Date(trans.fecha), "HH:mm") : ''}</p>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -311,6 +415,13 @@ export default function Historial() {
                 </TableCell>
               </TableRow>
             ))}
+            {filteredTransacciones.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No hay transacciones en el período seleccionado
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </Card>
@@ -318,6 +429,91 @@ export default function Historial() {
       <p className="text-sm text-muted-foreground mt-4 text-center">
         Mostrando {filteredTransacciones.length} de {transacciones.length} transacciones
       </p>
+
+      {/* Detalle Modal */}
+      <Dialog open={detalleModal.open} onOpenChange={(open) => setDetalleModal({ open, transaccion: open ? detalleModal.transaccion : null })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Detalle de Transacción
+            </DialogTitle>
+            <DialogDescription>
+              Información completa del movimiento
+            </DialogDescription>
+          </DialogHeader>
+          {detalleModal.transaccion && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha</p>
+                  <p className="font-medium">
+                    {detalleModal.transaccion.fecha
+                      ? format(new Date(detalleModal.transaccion.fecha), "d MMMM yyyy HH:mm", { locale: es })
+                      : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tipo</p>
+                  <Badge variant={detalleModal.transaccion.tipo === 'Ingreso' ? 'default' : 'destructive'}>
+                    {detalleModal.transaccion.tipo}
+                  </Badge>
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm text-muted-foreground">Concepto</p>
+                <p className="font-medium">{detalleModal.transaccion.concepto}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Monto</p>
+                  <p className={cn(
+                    "font-bold text-lg",
+                    detalleModal.transaccion.tipo === 'Ingreso' ? 'text-success' : 'text-destructive'
+                  )}>
+                    {detalleModal.transaccion.tipo === 'Ingreso' ? '+' : '-'}${detalleModal.transaccion.monto.toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Categoría</p>
+                  <Badge className={getCategoriaColor(detalleModal.transaccion.categoria)}>
+                    {detalleModal.transaccion.categoria}
+                  </Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Método de Pago</p>
+                  <Badge variant="outline">{detalleModal.transaccion.metodoPago}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Usuario</p>
+                  <p className="font-medium">{detalleModal.transaccion.usuario}</p>
+                </div>
+              </div>
+              {detalleModal.transaccion.referencia && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Referencia</p>
+                  <p className="font-medium">{detalleModal.transaccion.referencia}</p>
+                </div>
+              )}
+              {detalleModal.transaccion.cliente && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Cliente</p>
+                  <p className="font-medium">{detalleModal.transaccion.cliente}</p>
+                </div>
+              )}
+              {detalleModal.transaccion.habitacion && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Habitación</p>
+                  <p className="font-medium">{detalleModal.transaccion.habitacion}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

@@ -131,6 +131,16 @@ class ApiClient {
     this.request<any>(`/mantenimiento/${id}/estado`, { method: 'PATCH', body: { estado, costo_real: costoReal } });
   deleteTareaMantenimiento = (id: string) => this.request<any>(`/mantenimiento/${id}`, { method: 'DELETE' });
 
+  // Empleados
+  getEmpleados = (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return this.request<any[]>(`/empleados${query}`);
+  };
+  getEmpleado = (id: string) => this.request<any>(`/empleados/${id}`);
+  createEmpleado = (data: any) => this.request<any>('/empleados', { method: 'POST', body: data });
+  updateEmpleado = (id: string, data: any) => this.request<any>(`/empleados/${id}`, { method: 'PUT', body: data });
+  deleteEmpleado = (id: string) => this.request<any>(`/empleados/${id}`, { method: 'DELETE' });
+
   // Productos
   getCategorias = () => this.request<any[]>('/productos/categorias');
   createCategoria = (data: any) => this.request<any>('/productos/categorias', { method: 'POST', body: data });
@@ -158,6 +168,42 @@ class ApiClient {
   createGasto = (data: any) => this.request<any>('/gastos', { method: 'POST', body: data });
   updateGasto = (id: string, data: any) => this.request<any>(`/gastos/${id}`, { method: 'PUT', body: data });
   deleteGasto = (id: string) => this.request<any>(`/gastos/${id}`, { method: 'DELETE' });
+
+  // Proveedores
+  getProveedores = (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return this.request<any[]>(`/proveedores${query}`);
+  };
+  getProveedor = (id: string) => this.request<any>(`/proveedores/${id}`);
+  createProveedor = (data: any) => this.request<any>('/proveedores', { method: 'POST', body: data });
+  updateProveedor = (id: string, data: any) => this.request<any>(`/proveedores/${id}`, { method: 'PUT', body: data });
+  deleteProveedor = (id: string) => this.request<any>(`/proveedores/${id}`, { method: 'DELETE' });
+
+  // Compras
+  getCompras = (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return this.request<any[]>(`/compras${query}`);
+  };
+  getCompra = (id: string) => this.request<any>(`/compras/${id}`);
+  createCompra = (data: any) => this.request<any>('/compras', { method: 'POST', body: data });
+  updateCompra = (id: string, data: any) => this.request<any>(`/compras/${id}`, { method: 'PUT', body: data });
+  updateEstadoCompra = (id: string, estado: string) => this.request<any>(`/compras/${id}/estado`, { method: 'PATCH', body: { estado } });
+  deleteCompra = (id: string) => this.request<any>(`/compras/${id}`, { method: 'DELETE' });
+
+  // Ventas / Transacciones
+  getVentas = (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return this.request<any[]>(`/ventas${query}`);
+  };
+  getVenta = (id: string) => this.request<any>(`/ventas/${id}`);
+  createVenta = (data: any) => this.request<any>('/ventas', { method: 'POST', body: data });
+  
+  // Transacciones (Historial)
+  getTransacciones = (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return this.request<any[]>(`/transacciones${query}`);
+  };
+  getTransaccion = (id: string) => this.request<any>(`/transacciones/${id}`);
 
   // Hotel
   getHotel = () => this.request<any>('/hotel');
