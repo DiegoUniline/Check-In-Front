@@ -29,6 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
 export interface ReservationPreload {
   habitacion?: any;
@@ -366,16 +367,24 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
 
             <div className="space-y-2">
               <Label>Tipo de habitación</Label>
-              <Select value={formData.tipoHabitacion} onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
-                <SelectContent>
-                  {tiposHabitacion.map(tipo => (
-                    <SelectItem key={tipo.id} value={tipo.id}>
-                      {tipo.nombre} - ${tipo.precio_base?.toLocaleString()}/noche
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ComboboxCreatable
+                options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base?.toLocaleString()}/noche` }))}
+                value={formData.tipoHabitacion}
+                onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
+                onCreate={async (nombre) => {
+                  try {
+                    const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
+                    setTiposHabitacion([...tiposHabitacion, newTipo]);
+                    toast({ title: 'Tipo de habitación creado' });
+                    return { value: newTipo.id, label: `${newTipo.nombre} - $${newTipo.precio_base?.toLocaleString()}/noche` };
+                  } catch (e: any) {
+                    toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                  }
+                }}
+                placeholder="Seleccionar tipo..."
+                searchPlaceholder="Buscar o crear tipo..."
+                createLabel="Crear tipo"
+              />
             </div>
 
             <Card className="bg-muted/50">

@@ -55,6 +55,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
 const categoriasConfig = [
   { id: 'Operación', nombre: 'Operación', icon: Building, color: 'bg-blue-500' },
@@ -73,6 +74,7 @@ export default function Gastos() {
   const [isNewGastoOpen, setIsNewGastoOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [gastos, setGastos] = useState<any[]>([]);
+  const [proveedores, setProveedores] = useState<any[]>([]);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; gasto: any | null }>({ open: false, gasto: null });
   const [detalleModal, setDetalleModal] = useState<{ open: boolean; gasto: any | null }>({ open: false, gasto: null });
   
@@ -82,6 +84,7 @@ export default function Gastos() {
     descripcion: '',
     metodo_pago: 'Efectivo',
     proveedor: '',
+    proveedor_id: '',
     notas: '',
   });
 
@@ -92,8 +95,12 @@ export default function Gastos() {
   const cargarGastos = async () => {
     setLoading(true);
     try {
-      const data = await api.getGastos();
-      setGastos(Array.isArray(data) ? data : []);
+      const [gastosData, provData] = await Promise.all([
+        api.getGastos(),
+        api.getProveedores().catch(() => [])
+      ]);
+      setGastos(Array.isArray(gastosData) ? gastosData : []);
+      setProveedores(Array.isArray(provData) ? provData : []);
     } catch (error) {
       console.error('Error cargando gastos:', error);
       toast({ title: 'Error', description: 'No se pudieron cargar los gastos', variant: 'destructive' });
@@ -148,7 +155,7 @@ export default function Gastos() {
       });
       
       setIsNewGastoOpen(false);
-      setFormData({ categoria: '', monto: '', descripcion: '', metodo_pago: 'Efectivo', proveedor: '', notas: '' });
+      setFormData({ categoria: '', monto: '', descripcion: '', metodo_pago: 'Efectivo', proveedor: '', proveedor_id: '', notas: '' });
       cargarGastos();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -453,10 +460,27 @@ export default function Gastos() {
               </div>
               <div className="space-y-2">
                 <Label>Proveedor</Label>
-                <Input
-                  placeholder="Nombre del proveedor"
-                  value={formData.proveedor}
-                  onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
+                <ComboboxCreatable
+                  options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
+                  value={formData.proveedor_id}
+                  onValueChange={(v) => {
+                    const prov = proveedores.find(p => p.id === v);
+                    setFormData({ ...formData, proveedor_id: v, proveedor: prov?.nombre || '' });
+                  }}
+                  onCreate={async (nombre) => {
+                    try {
+                      const newProv = await api.createProveedor({ nombre });
+                      setProveedores([...proveedores, newProv]);
+                      toast({ title: 'Proveedor creado' });
+                      return { value: newProv.id, label: newProv.nombre };
+                    } catch (e: any) {
+                      // If API fails, just use the name
+                      setFormData({ ...formData, proveedor: nombre });
+                    }
+                  }}
+                  placeholder="Seleccionar proveedor..."
+                  searchPlaceholder="Buscar o crear proveedor..."
+                  createLabel="Crear proveedor"
                 />
               </div>
             </div>

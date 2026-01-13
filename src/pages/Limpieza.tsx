@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -25,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
+import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
 export default function Limpieza() {
   const { toast } = useToast();
@@ -41,9 +43,7 @@ export default function Limpieza() {
     try {
       const [tareasData, empleadosData] = await Promise.all([
         api.getTareasLimpieza(),
-        fetch(`${import.meta.env.VITE_API_URL || 'https://checkinapi-5cc3a2116a1c.herokuapp.com/api'}/empleados`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        }).then(r => r.ok ? r.json() : []).catch(() => [])
+        api.getEmpleados().catch(() => [])
       ]);
       setTareas(Array.isArray(tareasData) ? tareasData : []);
       setEmpleados(Array.isArray(empleadosData) ? empleadosData : []);
@@ -334,11 +334,11 @@ export default function Limpieza() {
         </div>
       )}
 
-      {/* Modal para asignar empleado */}
       <Dialog open={asignarModal.open} onOpenChange={(open) => setAsignarModal({ open, tarea: open ? asignarModal.tarea : null })}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Asignar tarea de limpieza</DialogTitle>
+            <DialogDescription>Selecciona o crea un empleado para esta tarea</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-3 bg-muted rounded-lg">
@@ -347,18 +347,24 @@ export default function Limpieza() {
             </div>
             <div className="space-y-2">
               <Label>Seleccionar empleado</Label>
-              <Select value={selectedEmpleado} onValueChange={setSelectedEmpleado}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar empleado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {empleados.map(e => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.nombre} {e.puesto ? `(${e.puesto})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ComboboxCreatable
+                options={empleados.map(e => ({ value: e.id, label: `${e.nombre}${e.puesto ? ` (${e.puesto})` : ''}` }))}
+                value={selectedEmpleado}
+                onValueChange={setSelectedEmpleado}
+                onCreate={async (nombre) => {
+                  try {
+                    const newEmp = await api.createEmpleado({ nombre, puesto: 'Limpieza' });
+                    setEmpleados([...empleados, newEmp]);
+                    toast({ title: 'Empleado creado' });
+                    return { value: newEmp.id, label: newEmp.nombre };
+                  } catch (e: any) {
+                    toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                  }
+                }}
+                placeholder="Seleccionar empleado..."
+                searchPlaceholder="Buscar o crear empleado..."
+                createLabel="Crear empleado"
+              />
             </div>
             <Button className="w-full" onClick={handleAsignar} disabled={!selectedEmpleado}>
               Asignar
