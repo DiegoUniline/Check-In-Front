@@ -100,12 +100,18 @@ export default function POS() {
 
   // Safely calculate totals - ensure numbers are valid
   const subtotal = cart.reduce((sum, item) => {
-    const precio = Number(item.producto.precio_venta) || 0;
-    const cantidad = Number(item.cantidad) || 0;
+    const precio = parseFloat(String(item.producto.precio_venta)) || 0;
+    const cantidad = parseInt(String(item.cantidad)) || 0;
     return sum + (precio * cantidad);
   }, 0);
-  const iva = subtotal * 0.16;
-  const total = subtotal + iva;
+  const iva = Math.round(subtotal * 0.16 * 100) / 100;
+  const total = Math.round((subtotal + iva) * 100) / 100;
+
+  // Format currency safely
+  const formatCurrency = (value: number) => {
+    const num = parseFloat(String(value)) || 0;
+    return isNaN(num) ? '$0.00' : `$${num.toFixed(2)}`;
+  };
 
   const handlePayment = async (method: string) => {
     if (cart.length === 0) {
@@ -148,7 +154,7 @@ export default function POS() {
       const habNumero = habitaciones.find(h => h.id === selectedRoom)?.numero;
       toast({
         title: '✅ Venta completada',
-        description: `Total: $${total.toLocaleString()} - ${method}${habNumero ? ` - Hab. ${habNumero}` : ''}`,
+        description: `Total: ${formatCurrency(total)} - ${method}${habNumero ? ` - Hab. ${habNumero}` : ''}`,
       });
       setCart([]);
       setSelectedRoom('');
@@ -219,9 +225,9 @@ export default function POS() {
                     </div>
                     <p className="font-medium text-sm truncate">{producto.nombre}</p>
                     <div className="flex items-center justify-between mt-2">
-                      <span className="font-bold text-primary">${Number(producto.precio_venta || 0).toLocaleString()}</span>
+                      <span className="font-bold text-primary">{formatCurrency(producto.precio_venta)}</span>
                       <Badge variant="secondary" className="text-xs">
-                        {producto.stock_actual || 0}
+                        {parseInt(String(producto.stock_actual)) || 0}
                       </Badge>
                     </div>
                   </CardContent>
@@ -282,7 +288,7 @@ export default function POS() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.producto.nombre}</p>
                         <p className="text-sm text-muted-foreground">
-                          ${Number(item.producto.precio_venta || 0).toLocaleString()} × {item.cantidad}
+                          {formatCurrency(item.producto.precio_venta)} × {item.cantidad}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
@@ -322,16 +328,16 @@ export default function POS() {
             <div className="pt-4 mt-4 border-t space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>${subtotal.toLocaleString()}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">IVA (16%)</span>
-                <span>${iva.toLocaleString()}</span>
+                <span>{formatCurrency(iva)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span className="text-primary">${total.toLocaleString()}</span>
+                <span className="text-primary">{formatCurrency(total)}</span>
               </div>
             </div>
 
