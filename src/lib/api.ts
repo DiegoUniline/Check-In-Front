@@ -208,6 +208,17 @@ class ApiClient {
   // Hotel
   getHotel = () => this.request<any>('/hotel');
   updateHotel = (data: any) => this.request<any>('/hotel', { method: 'POST', body: data });
+
+  // Usuarios
+  getUsuarios = (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return this.request<any[]>(`/usuarios${query}`);
+  };
+  getUsuario = (id: string) => this.request<any>(`/usuarios/${id}`);
+  createUsuario = (data: any) => this.request<any>('/usuarios', { method: 'POST', body: data });
+  updateUsuario = (id: string, data: any) => this.request<any>(`/usuarios/${id}`, { method: 'PUT', body: data });
+  deleteUsuario = (id: string) => this.request<any>(`/usuarios/${id}`, { method: 'DELETE' });
+  getRoles = () => this.request<any[]>('/usuarios/roles');
 }
 
 export const api = new ApiClient();
