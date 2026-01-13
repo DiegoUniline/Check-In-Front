@@ -32,13 +32,25 @@ export function TimelineGrid({
     return Array.from({ length: daysToShow }, (_, i) => addDays(startDate, i));
   }, [startDate, daysToShow]);
 
+  // Filtrar reservas activas (excluir CheckOut, Cancelada, NoShow)
   const getReservasForRoom = (habitacionId: string) => {
-    return reservas.filter(r => r.habitacion_id === habitacionId);
+    return reservas.filter(r => 
+      r.habitacion_id === habitacionId &&
+      r.estado !== 'CheckOut' &&
+      r.estado !== 'Cancelada' &&
+      r.estado !== 'NoShow' &&
+      r.fecha_checkin && r.fecha_checkout
+    );
   };
 
   const getReservationPosition = (reserva: any, dayIndex: number) => {
+    if (!reserva.fecha_checkin || !reserva.fecha_checkout) return null;
+    
     const checkin = startOfDay(new Date(reserva.fecha_checkin));
     const checkout = startOfDay(new Date(reserva.fecha_checkout));
+    
+    if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) return null;
+    
     const currentDay = startOfDay(days[dayIndex]);
 
     if (isSameDay(currentDay, checkin)) {
@@ -58,8 +70,13 @@ export function TimelineGrid({
     const currentDay = startOfDay(days[dayIndex]);
 
     return roomReservas.find(r => {
+      if (!r.fecha_checkin || !r.fecha_checkout) return false;
+      
       const checkin = startOfDay(new Date(r.fecha_checkin));
       const checkout = startOfDay(new Date(r.fecha_checkout));
+      
+      if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) return false;
+      
       return isWithinInterval(currentDay, { start: checkin, end: addDays(checkout, -1) });
     });
   };
@@ -89,6 +106,11 @@ export function TimelineGrid({
       onReservationClick(reserva);
       return;
     }
+    
+    // No permitir crear reservas en fechas pasadas
+    const selectedDay = days[dayIndex];
+    if (selectedDay < startOfDay(new Date())) return;
+    
     setDragStart({ roomId: habitacionId, dayIndex });
     setDragEnd(dayIndex);
     setIsDragging(true);
@@ -128,8 +150,10 @@ export function TimelineGrid({
   const roomColumnWidth = 120;
 
   const getReservationDays = (reserva: any) => {
+    if (!reserva.fecha_checkin || !reserva.fecha_checkout) return 0;
     const checkin = startOfDay(new Date(reserva.fecha_checkin));
     const checkout = startOfDay(new Date(reserva.fecha_checkout));
+    if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) return 0;
     const diffTime = checkout.getTime() - checkin.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
@@ -153,13 +177,15 @@ export function TimelineGrid({
             {days.map((day, index) => {
               const isToday = isSameDay(day, new Date());
               const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+              const isPast = day < startOfDay(new Date());
               return (
                 <div
                   key={index}
                   className={cn(
                     "flex-shrink-0 px-2 py-2 text-center border-r text-xs",
                     isToday && "bg-primary/10",
-                    isWeekend && "bg-muted/30"
+                    isWeekend && !isToday && "bg-muted/30",
+                    isPast && "bg-muted/40 opacity-60"
                   )}
                   style={{ width: cellWidth }}
                 >
@@ -188,6 +214,9 @@ export function TimelineGrid({
                 {habitacion.estado_limpieza === 'Sucia' && (
                   <Badge variant="outline" className="text-[10px] px-1 py-0">🧹</Badge>
                 )}
+                {habitacion.estado_mantenimiento !== 'OK' && habitacion.estado_mantenimiento && (
+                  <Badge variant="destructive" className="text-[10px] px-1 py-0">🔧</Badge>
+                )}
               </div>
               {days.map((day, dayIndex) => {
                 const reserva = getReservationForCell(habitacion.id, dayIndex);
@@ -195,6 +224,7 @@ export function TimelineGrid({
                 const isToday = isSameDay(day, new Date());
                 const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                 const isSelected = isDragSelected(habitacion.id, dayIndex);
+                const isPast = day < startOfDay(new Date());
 
                 return (
                   <TooltipProvider key={dayIndex}>
@@ -202,11 +232,13 @@ export function TimelineGrid({
                       <TooltipTrigger asChild>
                         <div
                           className={cn(
-                            "flex-shrink-0 h-12 border-r cursor-pointer transition-colors relative",
+                            "flex-shrink-0 h-12 border-r transition-colors relative",
                             isToday && "bg-primary/5",
                             isWeekend && !isToday && "bg-muted/20",
-                            !reserva && !isSelected && "hover:bg-primary/10",
-                            isSelected && "bg-primary/20"
+                            isPast && !reserva && "bg-muted/30 cursor-not-allowed",
+                            !reserva && !isSelected && !isPast && "hover:bg-primary/10 cursor-crosshair",
+                            isSelected && "bg-primary/20",
+                            reserva && "cursor-pointer"
                           )}
                           style={{ width: cellWidth }}
                           onMouseDown={() => handleMouseDown(habitacion.id, dayIndex, reserva)}
@@ -242,7 +274,7 @@ export function TimelineGrid({
                       {reserva && (
                         <TooltipContent side="top" className="max-w-xs">
                           <div className="text-sm space-y-1">
-                            <p className="font-semibold text-base">{reserva.cliente_nombre || 'Huésped'}</p>
+                            <p className="font-semibold text-base">{reserva.cliente_nombre || 'Huésped'} {reserva.apellido_paterno || ''}</p>
                             {reserva.cliente_email && (
                               <p className="text-muted-foreground text-xs">{reserva.cliente_email}</p>
                             )}
@@ -253,9 +285,16 @@ export function TimelineGrid({
                             {reserva.total && (
                               <p className="font-medium text-primary">${Number(reserva.total).toLocaleString()}</p>
                             )}
-                            <Badge className={cn("mt-1", getStatusColor(reserva.estado))}>
-                              {reserva.estado}
-                            </Badge>
+                            <div className="flex gap-2 items-center">
+                              <Badge className={cn("mt-1", getStatusColor(reserva.estado))}>
+                                {reserva.estado}
+                              </Badge>
+                              {parseFloat(reserva.saldo_pendiente) > 0 && (
+                                <span className="text-xs text-destructive">
+                                  Debe: ${Number(reserva.saldo_pendiente).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </TooltipContent>
                       )}
@@ -274,6 +313,11 @@ export function TimelineGrid({
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
+      
+      {/* Hint */}
+      <div className="p-2 bg-muted/30 border-t text-center text-xs text-muted-foreground">
+        💡 Arrastra sobre las celdas vacías para crear una reserva rápida
+      </div>
     </div>
   );
 }
