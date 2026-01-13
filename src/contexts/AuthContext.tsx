@@ -1,15 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import api from '@/lib/api';
 
 export interface User {
   id: string;
   email: string;
   nombre: string;
-  apellidoPaterno: string;
-  apellidoMaterno?: string;
-  rol: 'SuperAdmin' | 'Admin' | 'Gerente' | 'Recepcion' | 'Housekeeping' | 'Mantenimiento' | 'Contador';
-  fotoUrl?: string;
-  hotelId: string;
-  hotelNombre: string;
+  rol: string;
 }
 
 interface AuthContextType {
@@ -22,33 +18,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user for development
-const mockUser: User = {
-  id: 'usr-001',
-  email: 'admin@hotel.com',
-  nombre: 'Carlos',
-  apellidoPaterno: 'Mendoza',
-  apellidoMaterno: 'García',
-  rol: 'Admin',
-  hotelId: 'htl-001',
-  hotelNombre: 'Hotel Vista Mar',
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored auth on mount
-    const storedAuth = localStorage.getItem('hotel_auth');
-    if (storedAuth) {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    if (token && storedUser) {
       try {
-        const parsed = JSON.parse(storedAuth);
-        if (parsed.user) {
-          setUser(parsed.user);
-        }
+        setUser(JSON.parse(storedUser));
       } catch (e) {
-        localStorage.removeItem('hotel_auth');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
     }
     setIsLoading(false);
@@ -56,25 +38,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Mock validation
-    if (email === 'admin@hotel.com' && password === 'Admin123!') {
-      setUser(mockUser);
-      localStorage.setItem('hotel_auth', JSON.stringify({ user: mockUser }));
+    try {
+      const data = await api.login(email, password);
+      setUser(data.user);
+      localStorage.setItem('user', JSON.stringify(data.user));
       setIsLoading(false);
       return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      setIsLoading(false);
+      return false;
     }
-    
-    setIsLoading(false);
-    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('hotel_auth');
+    api.logout();
+    localStorage.removeItem('user');
   };
 
   return (
