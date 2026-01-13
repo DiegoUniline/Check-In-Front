@@ -154,7 +154,9 @@ class ApiClient {
   deleteProducto = (id: string) => this.request<any>(`/productos/${id}`, { method: 'DELETE' });
   movimientoInventario = (id: string, data: any) => this.request<any>(`/productos/${id}/movimiento`, { method: 'POST', body: data });
   getMovimientosProducto = (id: string) => this.request<any[]>(`/productos/${id}/movimientos`);
-  cargoHabitacion = (data: any) => this.request<any>('/productos/cargo-habitacion', { method: 'POST', body: data });
+  cargoHabitacion = (data: any) => this.request<any>('/cargos-habitacion', { method: 'POST', body: data });
+  getCargosHabitacion = (habitacionId: string) => this.request<any[]>(`/cargos-habitacion/habitacion/${habitacionId}`);
+  getCargosReserva = (reservaId: string) => this.request<any[]>(`/cargos-habitacion/reserva/${reservaId}`);
 
   // Gastos
   getGastos = (params?: Record<string, string>) => {

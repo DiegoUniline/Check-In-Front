@@ -131,25 +131,42 @@ export default function POS() {
 
       // If charging to room
       if (selectedRoom && selectedRoom !== 'direct') {
-        for (const item of cart) {
-          await api.cargoHabitacion({
-            habitacion_id: selectedRoom,
-            producto_id: item.producto.id,
-            cantidad: Number(item.cantidad) || 1,
-            precio: Number(item.producto.precio_venta) || 0,
+        try {
+          for (const item of cart) {
+            await api.cargoHabitacion({
+              habitacion_id: selectedRoom,
+              producto_id: item.producto.id,
+              producto_nombre: item.producto.nombre,
+              cantidad: Number(item.cantidad) || 1,
+              precio_unitario: Number(item.producto.precio_venta) || 0,
+              total: (Number(item.producto.precio_venta) || 0) * (Number(item.cantidad) || 1),
+            });
+          }
+        } catch (cargoError: any) {
+          console.error('Error en cargo a habitación:', cargoError);
+          // Si falla el cargo, preguntar si quiere continuar como venta directa
+          toast({ 
+            title: 'Cargo a habitación falló', 
+            description: 'Se registrará como venta directa', 
+            variant: 'destructive' 
           });
         }
       }
       
       // Register sale
-      await api.createVenta({
-        items: ventaItems,
-        subtotal,
-        iva,
-        total,
-        metodo_pago: method,
-        habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
-      }).catch(() => {}); // Continue even if this fails
+      try {
+        await api.createVenta({
+          items: ventaItems,
+          subtotal,
+          iva,
+          total,
+          metodo_pago: method,
+          habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
+        });
+      } catch (ventaError) {
+        console.error('Error registrando venta:', ventaError);
+        // Continuar aunque falle el registro de venta
+      }
 
       const habNumero = habitaciones.find(h => h.id === selectedRoom)?.numero;
       toast({
