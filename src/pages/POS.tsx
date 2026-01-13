@@ -46,23 +46,37 @@ export default function POS() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [prodsData, habsData, catsData, reservasData] = await Promise.all([
+      const [prodsData, habsData, catsData] = await Promise.all([
         api.getProductos(),
         api.getHabitaciones({ estado_habitacion: 'Ocupada' }),
         api.getCategorias(),
-        api.getReservas({ estado: 'checked_in' }).catch(() => []) // Reservas activas
       ]);
+      
+      // Intentar obtener reservas de múltiples formas
+      let reservasData: any[] = [];
+      try {
+        // Primero intentar sin filtro
+        const allReservas = await api.getReservas();
+        reservasData = (Array.isArray(allReservas) ? allReservas : [])
+          .filter(r => r.estado === 'checked_in' || r.estado === 'Checked-in' || r.estado === 'checkin');
+        console.log('📋 Reservas activas encontradas:', reservasData.length);
+      } catch (e) {
+        console.warn('⚠️ No se pudieron obtener reservas:', e);
+      }
       
       // Mapear habitaciones con su reserva activa
       const habitacionesConReserva = (Array.isArray(habsData) ? habsData : [])
         .filter(h => h.estado_habitacion === 'Ocupada')
         .map(hab => {
           // Buscar reserva activa para esta habitación
-          const reservaActiva = (Array.isArray(reservasData) ? reservasData : [])
-            .find(r => r.habitacion_id === hab.id && r.estado === 'checked_in');
+          const reservaActiva = reservasData.find(r => r.habitacion_id === hab.id);
+          const reservaId = reservaActiva?.id || hab.reserva_id || hab.reserva_activa_id || hab.reservaId || null;
+          
+          console.log(`🛏️ Hab ${hab.numero}: reserva_id=${reservaId}, reserva encontrada:`, reservaActiva?.id);
+          
           return {
             ...hab,
-            reserva_id: reservaActiva?.id || hab.reserva_id || hab.reserva_activa_id || null
+            reserva_id: reservaId
           };
         });
       
