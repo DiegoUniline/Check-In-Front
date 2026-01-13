@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, AlertCircle, Printer } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, AlertCircle, Printer, ShoppingCart } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
   
   const [historialPagos, setHistorialPagos] = useState<any[]>([]);
   const [loadingPagos, setLoadingPagos] = useState(false);
+  const [cargos, setCargos] = useState<any[]>([]);
+  const [loadingCargos, setLoadingCargos] = useState(false);
 
   // Cargar historial de pagos cuando se abre el modal
   const cargarPagos = async () => {
@@ -51,13 +53,30 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
     }
   };
 
-  // Cargar pagos cuando cambia la reserva o se abre el modal
+  // Cargar cargos a habitación
+  const cargarCargos = async () => {
+    if (!reserva?.id) return;
+    setLoadingCargos(true);
+    try {
+      const cargosData = await api.getCargosReserva(reserva.id);
+      setCargos(Array.isArray(cargosData) ? cargosData : []);
+    } catch (error) {
+      console.error('Error cargando cargos:', error);
+      setCargos([]);
+    } finally {
+      setLoadingCargos(false);
+    }
+  };
+
+  // Cargar pagos y cargos cuando cambia la reserva o se abre el modal
   useEffect(() => {
     if (open && reserva?.id) {
       cargarPagos();
+      cargarCargos();
     }
     if (!open) {
       setHistorialPagos([]);
+      setCargos([]);
     }
   }, [open, reserva?.id]);
 
@@ -193,9 +212,10 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="resumen">Resumen</TabsTrigger>
                 <TabsTrigger value="huesped">Huésped</TabsTrigger>
+                <TabsTrigger value="cargos">Cargos</TabsTrigger>
                 <TabsTrigger value="pagos">Pagos</TabsTrigger>
               </TabsList>
 
@@ -297,6 +317,50 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
                         <span className="text-sm">{reserva.cliente_telefono || 'Sin teléfono'}</span>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="cargos" className="mt-4 space-y-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4" /> 
+                      Cargos a Habitación
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingCargos ? (
+                      <p className="text-sm text-muted-foreground">Cargando cargos...</p>
+                    ) : cargos.length > 0 ? (
+                      <div className="space-y-2">
+                        {cargos.map((cargo, index) => (
+                          <div key={cargo.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{cargo.producto_nombre || cargo.descripcion || 'Producto'}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {cargo.cantidad || 1} × ${Number(cargo.precio_unitario || cargo.precio || 0).toFixed(2)}
+                                {cargo.fecha && ` · ${format(new Date(cargo.fecha), "d MMM HH:mm", { locale: es })}`}
+                              </span>
+                            </div>
+                            <span className="font-bold text-primary">
+                              ${Number(cargo.total || (cargo.cantidad || 1) * (cargo.precio_unitario || cargo.precio || 0)).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                        <Separator className="my-3" />
+                        <div className="flex justify-between font-bold">
+                          <span>Total Cargos</span>
+                          <span className="text-primary">
+                            ${cargos.reduce((sum, c) => sum + Number(c.total || (c.cantidad || 1) * (c.precio_unitario || c.precio || 0)), 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No hay cargos registrados para esta habitación
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
