@@ -96,14 +96,14 @@ export default function Usuarios() {
     try {
       const data = await api.getUsuarios();
       setUsuarios(Array.isArray(data) ? data : []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cargando usuarios:', error);
-      // Datos mock para desarrollo
-      setUsuarios([
-        { id: '1', email: 'admin@hotel.com', nombre: 'Admin', apellidoPaterno: 'Sistema', rol: 'admin', activo: true },
-        { id: '2', email: 'recepcion@hotel.com', nombre: 'María', apellidoPaterno: 'López', rol: 'recepcion', activo: true },
-        { id: '3', email: 'limpieza@hotel.com', nombre: 'Juan', apellidoPaterno: 'García', rol: 'limpieza', activo: true },
-      ]);
+      toast({ 
+        title: 'Error de conexión', 
+        description: 'No se pudieron cargar los usuarios desde el servidor', 
+        variant: 'destructive' 
+      });
+      setUsuarios([]);
     } finally {
       setLoading(false);
     }
