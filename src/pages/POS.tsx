@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ShoppingCart, Minus, Plus, Trash2, CreditCard, 
-  Banknote, Building2, Search
+  Banknote, Building2, Search, RefreshCw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -19,11 +19,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { mockProductos, mockHabitaciones, Producto } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import api from '@/lib/api';
 
 interface CartItem {
-  producto: Producto;
+  producto: any;
   cantidad: number;
 }
 
@@ -33,18 +33,44 @@ export default function POS() {
   const [selectedRoom, setSelectedRoom] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-
-  const categories = [...new Set(mockProductos.map(p => p.categoria))];
+  const [loading, setLoading] = useState(true);
   
-  const filteredProducts = mockProductos.filter(p => {
-    const matchSearch = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCategory = activeCategory === 'all' || p.categoria === activeCategory;
+  const [productos, setProductos] = useState<any[]>([]);
+  const [habitaciones, setHabitaciones] = useState<any[]>([]);
+  const [categorias, setCategorias] = useState<any[]>([]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    setLoading(true);
+    try {
+      const [prodsData, habsData, catsData] = await Promise.all([
+        api.getProductos(),
+        api.getHabitaciones({ estado_habitacion: 'Ocupada' }),
+        api.getCategorias()
+      ]);
+      setProductos(Array.isArray(prodsData) ? prodsData : []);
+      setHabitaciones(Array.isArray(habsData) ? habsData.filter(h => h.estado_habitacion === 'Ocupada') : []);
+      setCategorias(Array.isArray(catsData) ? catsData : []);
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+      toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categoryNames = ['all', ...new Set(productos.map(p => p.categoria_nombre || p.categoria).filter(Boolean))];
+  
+  const filteredProducts = productos.filter(p => {
+    const matchSearch = p.nombre?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCategory = activeCategory === 'all' || (p.categoria_nombre || p.categoria) === activeCategory;
     return matchSearch && matchCategory;
   });
 
-  const habitacionesOcupadas = mockHabitaciones.filter(h => h.estadoHabitacion === 'Ocupada');
-
-  const addToCart = (producto: Producto) => {
+  const addToCart = (producto: any) => {
     setCart(prev => {
       const existing = prev.find(item => item.producto.id === producto.id);
       if (existing) {
@@ -72,23 +98,51 @@ export default function POS() {
     setCart(prev => prev.filter(item => item.producto.id !== productoId));
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.producto.precioVenta * item.cantidad), 0);
+  const subtotal = cart.reduce((sum, item) => sum + ((item.producto.precio_venta || 0) * item.cantidad), 0);
   const iva = subtotal * 0.16;
   const total = subtotal + iva;
 
-  const handlePayment = (method: string) => {
+  const handlePayment = async (method: string) => {
     if (cart.length === 0) {
       toast({ variant: 'destructive', title: 'Carrito vacío', description: 'Agrega productos para continuar.' });
       return;
     }
 
-    toast({
-      title: '✅ Venta completada',
-      description: `Total: $${total.toLocaleString()} - ${method}${selectedRoom ? ` - Hab. ${mockHabitaciones.find(h => h.id === selectedRoom)?.numero}` : ''}`,
-    });
-    setCart([]);
-    setSelectedRoom('');
+    try {
+      if (selectedRoom && selectedRoom !== 'direct') {
+        // Cargo a habitación
+        for (const item of cart) {
+          await api.cargoHabitacion({
+            habitacion_id: selectedRoom,
+            producto_id: item.producto.id,
+            cantidad: item.cantidad,
+            precio: item.producto.precio_venta,
+          });
+        }
+      }
+      // TODO: Registrar venta en sistema
+
+      const habNumero = habitaciones.find(h => h.id === selectedRoom)?.numero;
+      toast({
+        title: '✅ Venta completada',
+        description: `Total: $${total.toLocaleString()} - ${method}${habNumero ? ` - Hab. ${habNumero}` : ''}`,
+      });
+      setCart([]);
+      setSelectedRoom('');
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
+
+  if (loading) {
+    return (
+      <MainLayout title="Punto de Venta" subtitle="Cargando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout title="Punto de Venta" subtitle="Sistema de ventas y cargos a habitación">
@@ -96,21 +150,26 @@ export default function POS() {
         {/* Left: Products */}
         <div className="flex-1 flex flex-col">
           {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar producto..."
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex items-center gap-2 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar producto..."
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" size="icon" onClick={cargarDatos}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Categories */}
           <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-4">
             <TabsList className="flex-wrap h-auto">
               <TabsTrigger value="all">Todos</TabsTrigger>
-              {categories.map(cat => (
+              {categoryNames.filter(c => c !== 'all').map(cat => (
                 <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
               ))}
             </TabsList>
@@ -128,23 +187,28 @@ export default function POS() {
                   <CardContent className="p-4">
                     <div className="h-16 bg-muted rounded-lg mb-3 flex items-center justify-center">
                       <span className="text-2xl">
-                        {producto.categoria === 'Bebidas' ? '🥤' : 
-                         producto.categoria === 'Snacks' ? '🍿' :
-                         producto.categoria === 'Alimentos' ? '🍔' :
-                         producto.categoria === 'Servicios' ? '🛎️' :
-                         producto.categoria === 'Minibar' ? '🍷' : '📦'}
+                        {(producto.categoria_nombre || producto.categoria) === 'Bebidas' ? '🥤' : 
+                         (producto.categoria_nombre || producto.categoria) === 'Snacks' ? '🍿' :
+                         (producto.categoria_nombre || producto.categoria) === 'Alimentos' ? '🍔' :
+                         (producto.categoria_nombre || producto.categoria) === 'Servicios' ? '🛎️' :
+                         (producto.categoria_nombre || producto.categoria) === 'Minibar' ? '🍷' : '📦'}
                       </span>
                     </div>
                     <p className="font-medium text-sm truncate">{producto.nombre}</p>
                     <div className="flex items-center justify-between mt-2">
-                      <span className="font-bold text-primary">${producto.precioVenta}</span>
+                      <span className="font-bold text-primary">${Number(producto.precio_venta || 0).toLocaleString()}</span>
                       <Badge variant="secondary" className="text-xs">
-                        {producto.stockActual}
+                        {producto.stock_actual || 0}
                       </Badge>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+              {filteredProducts.length === 0 && (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  No hay productos disponibles
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -171,7 +235,7 @@ export default function POS() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="direct">Venta directa</SelectItem>
-                  {habitacionesOcupadas.map(hab => (
+                  {habitaciones.map(hab => (
                     <SelectItem key={hab.id} value={hab.id}>
                       Habitación {hab.numero}
                     </SelectItem>
@@ -195,7 +259,7 @@ export default function POS() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.producto.nombre}</p>
                         <p className="text-sm text-muted-foreground">
-                          ${item.producto.precioVenta} × {item.cantidad}
+                          ${Number(item.producto.precio_venta || 0).toLocaleString()} × {item.cantidad}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">

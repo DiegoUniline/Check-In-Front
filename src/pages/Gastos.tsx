@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Receipt, Plus, Search, Filter, DollarSign, Calendar,
   Tag, Building, Car, Utensils, Wrench, Package, Users,
-  TrendingDown, FileText, MoreVertical, Eye, Trash2
+  TrendingDown, FileText, MoreVertical, Eye, Trash2, RefreshCw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -39,32 +40,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import api from '@/lib/api';
 
-interface Gasto {
-  id: string;
-  fecha: Date;
-  categoria: string;
-  subcategoria: string;
-  descripcion: string;
-  monto: number;
-  metodoPago: string;
-  proveedor?: string;
-  comprobante?: string;
-  notas?: string;
-  createdBy: string;
-}
-
-const categorias = [
-  { id: 'operacion', nombre: 'Operación', icon: Building, color: 'bg-blue-500' },
-  { id: 'mantenimiento', nombre: 'Mantenimiento', icon: Wrench, color: 'bg-orange-500' },
-  { id: 'suministros', nombre: 'Suministros', icon: Package, color: 'bg-green-500' },
-  { id: 'alimentos', nombre: 'Alimentos y Bebidas', icon: Utensils, color: 'bg-purple-500' },
-  { id: 'transporte', nombre: 'Transporte', icon: Car, color: 'bg-yellow-500' },
-  { id: 'personal', nombre: 'Personal', icon: Users, color: 'bg-pink-500' },
-  { id: 'otros', nombre: 'Otros', icon: Tag, color: 'bg-gray-500' },
+const categoriasConfig = [
+  { id: 'Operación', nombre: 'Operación', icon: Building, color: 'bg-blue-500' },
+  { id: 'Mantenimiento', nombre: 'Mantenimiento', icon: Wrench, color: 'bg-orange-500' },
+  { id: 'Suministros', nombre: 'Suministros', icon: Package, color: 'bg-green-500' },
+  { id: 'Alimentos', nombre: 'Alimentos y Bebidas', icon: Utensils, color: 'bg-purple-500' },
+  { id: 'Transporte', nombre: 'Transporte', icon: Car, color: 'bg-yellow-500' },
+  { id: 'Personal', nombre: 'Personal', icon: Users, color: 'bg-pink-500' },
+  { id: 'Otros', nombre: 'Otros', icon: Tag, color: 'bg-gray-500' },
 ];
 
 export default function Gastos() {
@@ -72,46 +70,59 @@ export default function Gastos() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('all');
   const [isNewGastoOpen, setIsNewGastoOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [gastos, setGastos] = useState<any[]>([]);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; gasto: any | null }>({ open: false, gasto: null });
   
   // Form state
-  const [nuevaCategoria, setNuevaCategoria] = useState('');
-  const [nuevoMonto, setNuevoMonto] = useState('');
-  const [nuevaDescripcion, setNuevaDescripcion] = useState('');
-  const [nuevoMetodo, setNuevoMetodo] = useState('Efectivo');
-  const [nuevoProveedor, setNuevoProveedor] = useState('');
-  const [nuevasNotas, setNuevasNotas] = useState('');
+  const [formData, setFormData] = useState({
+    categoria: '',
+    monto: '',
+    descripcion: '',
+    metodo_pago: 'Efectivo',
+    proveedor: '',
+    notas: '',
+  });
 
-  // Mock data
-  const [gastos] = useState<Gasto[]>([
-    { id: '1', fecha: new Date(), categoria: 'suministros', subcategoria: 'Limpieza', descripcion: 'Productos de limpieza', monto: 1250, metodoPago: 'Efectivo', proveedor: 'Distribuidora ABC', createdBy: 'Carlos García' },
-    { id: '2', fecha: new Date(), categoria: 'mantenimiento', subcategoria: 'Reparaciones', descripcion: 'Reparación AC Hab 201', monto: 3500, metodoPago: 'Transferencia', proveedor: 'Clima Express', createdBy: 'Carlos García' },
-    { id: '3', fecha: new Date(Date.now() - 86400000), categoria: 'alimentos', subcategoria: 'Insumos', descripcion: 'Compra de café y bebidas', monto: 890, metodoPago: 'Tarjeta', proveedor: 'Costco', createdBy: 'María López' },
-    { id: '4', fecha: new Date(Date.now() - 86400000), categoria: 'operacion', subcategoria: 'Servicios', descripcion: 'Pago luz mensual', monto: 8500, metodoPago: 'Transferencia', createdBy: 'Admin' },
-    { id: '5', fecha: new Date(Date.now() - 172800000), categoria: 'personal', subcategoria: 'Extras', descripcion: 'Horas extra personal limpieza', monto: 2400, metodoPago: 'Efectivo', createdBy: 'Carlos García' },
-    { id: '6', fecha: new Date(Date.now() - 172800000), categoria: 'transporte', subcategoria: 'Combustible', descripcion: 'Gasolina van aeropuerto', monto: 1200, metodoPago: 'Tarjeta', createdBy: 'María López' },
-  ]);
+  useEffect(() => {
+    cargarGastos();
+  }, []);
+
+  const cargarGastos = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getGastos();
+      setGastos(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error cargando gastos:', error);
+      toast({ title: 'Error', description: 'No se pudieron cargar los gastos', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredGastos = gastos.filter(g => {
-    const matchSearch = g.descripcion.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchSearch = g.descripcion?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                        g.proveedor?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchCategoria = filterCategoria === 'all' || g.categoria === filterCategoria;
     return matchSearch && matchCategoria;
   });
 
   // Stats
-  const totalMes = gastos.reduce((sum, g) => sum + g.monto, 0);
-  const totalHoy = gastos.filter(g => format(g.fecha, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')).reduce((sum, g) => sum + g.monto, 0);
-  const gastosPorCategoria = categorias.map(cat => ({
+  const totalMes = gastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
+  const hoy = format(new Date(), 'yyyy-MM-dd');
+  const totalHoy = gastos.filter(g => g.fecha?.startsWith(hoy) || (g.created_at && g.created_at.startsWith(hoy))).reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
+  const gastosPorCategoria = categoriasConfig.map(cat => ({
     ...cat,
-    total: gastos.filter(g => g.categoria === cat.id).reduce((sum, g) => sum + g.monto, 0),
+    total: gastos.filter(g => g.categoria === cat.id).reduce((sum, g) => sum + (Number(g.monto) || 0), 0),
   })).sort((a, b) => b.total - a.total);
 
   const getCategoriaInfo = (catId: string) => {
-    return categorias.find(c => c.id === catId) || categorias[categorias.length - 1];
+    return categoriasConfig.find(c => c.id === catId) || categoriasConfig[categoriasConfig.length - 1];
   };
 
-  const handleNuevoGasto = () => {
-    if (!nuevaCategoria || !nuevoMonto || !nuevaDescripcion) {
+  const handleNuevoGasto = async () => {
+    if (!formData.categoria || !formData.monto || !formData.descripcion) {
       toast({
         title: 'Campos requeridos',
         description: 'Complete todos los campos obligatorios',
@@ -120,18 +131,51 @@ export default function Gastos() {
       return;
     }
 
-    toast({
-      title: 'Gasto registrado',
-      description: `${nuevaDescripcion} - $${parseFloat(nuevoMonto).toFixed(2)}`,
-    });
-    
-    setIsNewGastoOpen(false);
-    setNuevaCategoria('');
-    setNuevoMonto('');
-    setNuevaDescripcion('');
-    setNuevoProveedor('');
-    setNuevasNotas('');
+    try {
+      await api.createGasto({
+        categoria: formData.categoria,
+        monto: parseFloat(formData.monto),
+        descripcion: formData.descripcion,
+        metodo_pago: formData.metodo_pago,
+        proveedor: formData.proveedor || null,
+        notas: formData.notas || null,
+        fecha: new Date().toISOString().split('T')[0],
+      });
+      
+      toast({
+        title: 'Gasto registrado',
+        description: `${formData.descripcion} - $${parseFloat(formData.monto).toFixed(2)}`,
+      });
+      
+      setIsNewGastoOpen(false);
+      setFormData({ categoria: '', monto: '', descripcion: '', metodo_pago: 'Efectivo', proveedor: '', notas: '' });
+      cargarGastos();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
+
+  const handleDeleteGasto = async () => {
+    if (!deleteDialog.gasto) return;
+    try {
+      await api.deleteGasto(deleteDialog.gasto.id);
+      toast({ title: 'Gasto eliminado' });
+      setDeleteDialog({ open: false, gasto: null });
+      cargarGastos();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <MainLayout title="Control de Gastos" subtitle="Cargando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout 
@@ -186,7 +230,7 @@ export default function Gastos() {
                 <Tag className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{categorias.length}</p>
+                <p className="text-2xl font-bold">{categoriasConfig.length}</p>
                 <p className="text-sm text-muted-foreground">Categorías</p>
               </div>
             </div>
@@ -234,11 +278,14 @@ export default function Gastos() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las categorías</SelectItem>
-              {categorias.map(cat => (
+              {categoriasConfig.map(cat => (
                 <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" size="icon" onClick={cargarGastos}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
         <Button onClick={() => setIsNewGastoOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
@@ -264,12 +311,13 @@ export default function Gastos() {
             {filteredGastos.map(gasto => {
               const cat = getCategoriaInfo(gasto.categoria);
               const Icon = cat.icon;
+              const fecha = gasto.fecha || gasto.created_at;
               return (
                 <TableRow key={gasto.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{format(gasto.fecha, "d MMM", { locale: es })}</p>
-                      <p className="text-xs text-muted-foreground">{format(gasto.fecha, "HH:mm")}</p>
+                      <p className="font-medium">{fecha ? format(new Date(fecha), "d MMM", { locale: es }) : '-'}</p>
+                      <p className="text-xs text-muted-foreground">{fecha ? format(new Date(fecha), "HH:mm") : ''}</p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -282,14 +330,14 @@ export default function Gastos() {
                   </TableCell>
                   <TableCell>
                     <p className="font-medium">{gasto.descripcion}</p>
-                    <p className="text-xs text-muted-foreground">{gasto.subcategoria}</p>
+                    <p className="text-xs text-muted-foreground">{gasto.subcategoria || ''}</p>
                   </TableCell>
                   <TableCell>{gasto.proveedor || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{gasto.metodoPago}</Badge>
+                    <Badge variant="outline">{gasto.metodo_pago || gasto.metodoPago || 'N/A'}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-bold text-destructive">
-                    -${gasto.monto.toLocaleString()}
+                    -${Number(gasto.monto).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -305,7 +353,7 @@ export default function Gastos() {
                         <DropdownMenuItem>
                           <FileText className="mr-2 h-4 w-4" /> Ver comprobante
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteDialog({ open: true, gasto })}>
                           <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -314,6 +362,13 @@ export default function Gastos() {
                 </TableRow>
               );
             })}
+            {filteredGastos.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No hay gastos registrados
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </Card>
@@ -330,16 +385,19 @@ export default function Gastos() {
               <Receipt className="h-5 w-5" />
               Registrar Nuevo Gasto
             </DialogTitle>
+            <DialogDescription>
+              Complete la información del gasto a registrar
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Categoría *</Label>
-              <Select value={nuevaCategoria} onValueChange={setNuevaCategoria}>
+              <Select value={formData.categoria} onValueChange={(v) => setFormData({ ...formData, categoria: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar categoría" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categorias.map(cat => (
+                  {categoriasConfig.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
                       <div className="flex items-center gap-2">
                         <cat.icon className="h-4 w-4" />
@@ -359,8 +417,8 @@ export default function Gastos() {
                   type="number"
                   placeholder="0.00"
                   className="pl-9"
-                  value={nuevoMonto}
-                  onChange={(e) => setNuevoMonto(e.target.value)}
+                  value={formData.monto}
+                  onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
                 />
               </div>
             </div>
@@ -369,15 +427,15 @@ export default function Gastos() {
               <Label>Descripción *</Label>
               <Input
                 placeholder="Descripción del gasto"
-                value={nuevaDescripcion}
-                onChange={(e) => setNuevaDescripcion(e.target.value)}
+                value={formData.descripcion}
+                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Método de Pago</Label>
-                <Select value={nuevoMetodo} onValueChange={setNuevoMetodo}>
+                <Select value={formData.metodo_pago} onValueChange={(v) => setFormData({ ...formData, metodo_pago: v })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -392,8 +450,8 @@ export default function Gastos() {
                 <Label>Proveedor</Label>
                 <Input
                   placeholder="Nombre del proveedor"
-                  value={nuevoProveedor}
-                  onChange={(e) => setNuevoProveedor(e.target.value)}
+                  value={formData.proveedor}
+                  onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
                 />
               </div>
             </div>
@@ -402,8 +460,8 @@ export default function Gastos() {
               <Label>Notas</Label>
               <Textarea
                 placeholder="Notas adicionales..."
-                value={nuevasNotas}
-                onChange={(e) => setNuevasNotas(e.target.value)}
+                value={formData.notas}
+                onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
               />
             </div>
           </div>
@@ -418,6 +476,22 @@ export default function Gastos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, gasto: open ? deleteDialog.gasto : null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar gasto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente el registro del gasto.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteGasto}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
