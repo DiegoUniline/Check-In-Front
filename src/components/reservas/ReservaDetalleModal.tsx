@@ -28,15 +28,33 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
   const [activeTab, setActiveTab] = useState('resumen');
   const [processing, setProcessing] = useState(false);
   
-  const [documentoVerificado, setDocumentoVerificado] = useState(false);
-  const [tarjetaRegistrada, setTarjetaRegistrada] = useState(false);
-  const [firmaDigital, setFirmaDigital] = useState(false);
-  
   const [habitacionInspeccionada, setHabitacionInspeccionada] = useState(false);
   const [llaveDevuelta, setLlaveDevuelta] = useState(false);
   
   const [montoAbono, setMontoAbono] = useState('');
   const [metodoPago, setMetodoPago] = useState('Efectivo');
+  
+  const [historialPagos, setHistorialPagos] = useState<any[]>([]);
+  const [loadingPagos, setLoadingPagos] = useState(false);
+
+  // Cargar historial de pagos cuando se abre el modal
+  const cargarPagos = async () => {
+    if (!reserva?.id) return;
+    setLoadingPagos(true);
+    try {
+      const pagos = await api.getPagosReserva(reserva.id);
+      setHistorialPagos(pagos);
+    } catch (error) {
+      console.error('Error cargando pagos:', error);
+    } finally {
+      setLoadingPagos(false);
+    }
+  };
+
+  // Cargar pagos cuando cambia la reserva o se abre
+  if (open && reserva?.id && historialPagos.length === 0 && !loadingPagos) {
+    cargarPagos();
+  }
 
   if (!reserva) return null;
 
@@ -61,11 +79,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
   };
 
   const handleCheckin = async () => {
-    if (!documentoVerificado || !tarjetaRegistrada || !firmaDigital) {
-      toast({ title: 'Faltan requisitos', description: 'Complete todos los campos obligatorios', variant: 'destructive' });
-      return;
-    }
-    
     setProcessing(true);
     try {
       await api.checkin(reserva.id, reserva.habitacion_id);
@@ -119,6 +132,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
       });
       toast({ title: 'Pago registrado', description: `Se abonaron $${monto.toFixed(2)} con ${metodoPago}` });
       setMontoAbono('');
+      // Recargar historial de pagos y actualizar datos
+      await cargarPagos();
       onUpdate?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -168,19 +183,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
           </div>
         </DialogHeader>
 
-        {reserva.estado === 'Confirmada' && (
-          <Card className="bg-primary/5 border-primary">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium flex items-center gap-2"><DoorOpen className="h-4 w-4" /> Proceso de Check-in</span>
-                <span className="text-sm text-muted-foreground">
-                  {[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length}/3 pasos
-                </span>
-              </div>
-              <Progress value={[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length * 33.33} className="h-2" />
-            </CardContent>
-          </Card>
-        )}
 
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2">
@@ -249,25 +251,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
                   </Card>
                 )}
 
-                {reserva.estado === 'Confirmada' && (
-                  <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-base">Verificaciones Check-in</CardTitle></CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="documento" checked={documentoVerificado} onCheckedChange={(c) => setDocumentoVerificado(!!c)} />
-                        <label htmlFor="documento" className="text-sm cursor-pointer">Documento de identidad verificado</label>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="tarjeta" checked={tarjetaRegistrada} onCheckedChange={(c) => setTarjetaRegistrada(!!c)} />
-                        <label htmlFor="tarjeta" className="text-sm cursor-pointer">Tarjeta de crédito/garantía registrada</label>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="firma" checked={firmaDigital} onCheckedChange={(c) => setFirmaDigital(!!c)} />
-                        <label htmlFor="firma" className="text-sm cursor-pointer">Firma de registro completada</label>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
                 {reserva.estado === 'CheckIn' && (
                   <Card>
@@ -312,7 +295,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
                 </Card>
               </TabsContent>
 
-              <TabsContent value="pagos" className="mt-4">
+              <TabsContent value="pagos" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-base">Registrar Pago</CardTitle></CardHeader>
                   <CardContent>
@@ -328,6 +311,32 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
                       </Select>
                       <Button onClick={handleAbonar}><CreditCard className="h-4 w-4 mr-1" /> Abonar</Button>
                     </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Historial de Pagos</CardTitle></CardHeader>
+                  <CardContent>
+                    {loadingPagos ? (
+                      <p className="text-sm text-muted-foreground">Cargando pagos...</p>
+                    ) : historialPagos.length > 0 ? (
+                      <div className="space-y-2">
+                        {historialPagos.map((pago, index) => (
+                          <div key={pago.id || index} className="flex items-center justify-between p-2 border rounded-lg">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">{pago.concepto || 'Abono'}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {pago.fecha ? format(new Date(pago.fecha), "d MMM yyyy HH:mm", { locale: es }) : 'Sin fecha'}
+                                {pago.metodo_pago && ` · ${pago.metodo_pago}`}
+                              </span>
+                            </div>
+                            <span className="font-semibold text-primary">${Number(pago.monto).toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No hay pagos registrados</p>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

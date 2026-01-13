@@ -225,7 +225,7 @@ export function TimelineGrid({
                               {position === 'start' && (
                                 <div className="flex flex-col leading-tight truncate">
                                   <span className="font-semibold truncate text-[11px]">
-                                    {reserva.cliente_nombre || 'Huésped'}
+                                    {reserva.cliente_nombre || reserva.nombre || reserva.huesped_nombre || 'Huésped'}
                                   </span>
                                   <span className="opacity-80 text-[9px]">
                                     {getReservationDays(reserva)} noches
