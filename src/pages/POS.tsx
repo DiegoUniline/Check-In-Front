@@ -214,39 +214,49 @@ export default function POS() {
         return; // No continuar si falla la venta
       }
 
-      // If charging to room - create cargos (con o sin reserva_id)
+      // If charging to room - create cargos (requiere reserva_id)
       if (selectedRoom && selectedRoom !== 'direct') {
-        console.log('💳 Creando cargos a habitación...');
-        try {
-          for (const item of cart) {
-            const precio = safeNumber(item.producto.precio_venta, 0);
-            const cantidad = safeNumber(item.cantidad, 1);
-            const itemTotal = Math.round(precio * cantidad * 100) / 100;
-            
-            const cargoPayload = {
-              habitacion_id: selectedRoom,
-              reserva_id: reservaId,
-              producto_id: item.producto.id || '',
-              concepto: item.producto.nombre || 'Producto POS',
-              descripcion: item.producto.nombre || 'Producto',
-              cantidad: cantidad,
-              precio_unitario: precio,
-              total: itemTotal,
-              venta_id: ventaId,
-              fecha: new Date().toISOString(),
-            };
-            
-            console.log('📤 Enviando cargo:', cargoPayload);
-            const cargoResponse = await api.cargoHabitacion(cargoPayload);
-            console.log('📥 Respuesta cargo:', cargoResponse);
-          }
-        } catch (cargoError: any) {
-          console.error('❌ Error en cargo a habitación:', cargoError);
+        if (!reservaId) {
+          console.warn('⚠️ No se encontró reserva_id para la habitación, no se pueden crear cargos');
           toast({ 
-            title: 'Cargo a habitación falló', 
-            description: cargoError.message || 'Verifique el endpoint /api/cargos-habitacion', 
+            title: 'Advertencia', 
+            description: 'Venta registrada pero sin cargo a habitación (no hay reserva activa)', 
             variant: 'destructive' 
           });
+        } else {
+          console.log('💳 Creando cargos a habitación con reserva:', reservaId);
+          try {
+            for (const item of cart) {
+              const precio = safeNumber(item.producto.precio_venta, 0);
+              const cantidad = safeNumber(item.cantidad, 1);
+              const itemSubtotal = Math.round(precio * cantidad * 100) / 100;
+              const itemImpuesto = Math.round(itemSubtotal * 0.16 * 100) / 100; // 16% IVA
+              const itemTotal = Math.round((itemSubtotal + itemImpuesto) * 100) / 100;
+              
+              // Payload según estructura de tabla cargos_habitacion
+              const cargoPayload = {
+                reserva_id: reservaId,
+                producto_id: item.producto.id || null,
+                concepto: item.producto.nombre || 'Producto POS',
+                cantidad: cantidad,
+                precio_unitario: precio,
+                subtotal: itemSubtotal,
+                impuesto: itemImpuesto,
+                total: itemTotal,
+              };
+              
+              console.log('📤 Enviando cargo:', cargoPayload);
+              const cargoResponse = await api.cargoHabitacion(cargoPayload);
+              console.log('📥 Respuesta cargo:', cargoResponse);
+            }
+          } catch (cargoError: any) {
+            console.error('❌ Error en cargo a habitación:', cargoError);
+            toast({ 
+              title: 'Cargo a habitación falló', 
+              description: cargoError.message || 'Verifique el endpoint /api/cargos-habitacion', 
+              variant: 'destructive' 
+            });
+          }
         }
       }
 
