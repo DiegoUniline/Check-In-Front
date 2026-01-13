@@ -29,10 +29,23 @@ export default function Dashboard() {
           api.getDashboardTareasCriticas()
         ]);
         console.log('Dashboard data:', { statsData, checkins, checkouts, ventasData, tareas });
+        
         setStats(statsData || { ocupadas: 0, disponibles: 0, pendientes_limpieza: 0, pendientes_mantenimiento: 0, total_habitaciones: 0, ocupacion_porcentaje: 0 });
         setCheckinsHoy(Array.isArray(checkins) ? checkins : []);
         setCheckoutsHoy(Array.isArray(checkouts) ? checkouts : []);
-        setVentas(ventasData || { total: 0, alojamiento: 0, alimentos: 0, servicios: 0 });
+        
+        // Map ventas data - handle different API response structures
+        if (ventasData) {
+          setVentas({
+            total: ventasData.total || ventasData.total_ventas || ventasData.ingresos_total || 0,
+            alojamiento: ventasData.alojamiento || ventasData.hospedaje || ventasData.ingresos_hospedaje || 0,
+            alimentos: ventasData.alimentos || ventasData.alimentos_bebidas || ventasData.ingresos_alimentos || 0,
+            servicios: ventasData.servicios || ventasData.otros_servicios || ventasData.ingresos_servicios || 0,
+          });
+        } else {
+          setVentas({ total: 0, alojamiento: 0, alimentos: 0, servicios: 0 });
+        }
+        
         // Handle tareas - could be array or object with limpieza property
         if (Array.isArray(tareas)) {
           setTareasCriticas({ limpieza: tareas, mantenimiento: [] });
