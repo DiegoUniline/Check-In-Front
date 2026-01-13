@@ -17,6 +17,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -28,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import api from '@/lib/api';
+import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
 export default function Mantenimiento() {
   const { toast } = useToast();
@@ -55,9 +57,7 @@ export default function Mantenimiento() {
       const [tareasData, habsData, empleadosData] = await Promise.all([
         api.getTareasMantenimiento(),
         api.getHabitaciones(),
-        fetch(`${import.meta.env.VITE_API_URL || 'https://checkinapi-5cc3a2116a1c.herokuapp.com/api'}/empleados`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        }).then(r => r.ok ? r.json() : []).catch(() => [])
+        api.getEmpleados().catch(() => [])
       ]);
       setTickets(Array.isArray(tareasData) ? tareasData : []);
       setHabitaciones(Array.isArray(habsData) ? habsData : []);
@@ -250,6 +250,7 @@ export default function Mantenimiento() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Nuevo Ticket de Mantenimiento</DialogTitle>
+              <DialogDescription>Registra un nuevo problema de mantenimiento</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -321,22 +322,24 @@ export default function Mantenimiento() {
                 </div>
                 <div className="space-y-2">
                   <Label>Asignar a</Label>
-                  <Select
+                  <ComboboxCreatable
+                    options={empleados.map(e => ({ value: e.id, label: `${e.nombre}${e.puesto ? ` (${e.puesto})` : ''}` }))}
                     value={formData.asignado_a}
                     onValueChange={(v) => setFormData({...formData, asignado_a: v})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sin asignar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Sin asignar</SelectItem>
-                      {empleados.map(e => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.nombre} {e.puesto ? `(${e.puesto})` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onCreate={async (nombre) => {
+                      try {
+                        const newEmp = await api.createEmpleado({ nombre, puesto: 'Mantenimiento' });
+                        setEmpleados([...empleados, newEmp]);
+                        toast({ title: 'Empleado creado' });
+                        return { value: newEmp.id, label: newEmp.nombre };
+                      } catch (e: any) {
+                        toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                      }
+                    }}
+                    placeholder="Sin asignar"
+                    searchPlaceholder="Buscar o crear empleado..."
+                    createLabel="Crear empleado"
+                  />
                 </div>
               </div>
 

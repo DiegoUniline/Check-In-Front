@@ -27,6 +27,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -52,6 +53,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
 export default function Habitaciones() {
   const { toast } = useToast();
@@ -431,11 +433,13 @@ export default function Habitaciones() {
         Mostrando {filteredHabitaciones.length} de {habitaciones.length} habitaciones
       </p>
 
-      {/* Modal Crear/Editar */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingHab ? 'Editar Habitación' : 'Nueva Habitación'}</DialogTitle>
+            <DialogDescription>
+              {editingHab ? 'Modifica los datos de la habitación' : 'Ingresa los datos de la nueva habitación'}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -448,16 +452,24 @@ export default function Habitaciones() {
             </div>
             <div className="grid gap-2">
               <Label>Tipo de Habitación</Label>
-              <Select value={formData.tipo_id} onValueChange={(v) => setFormData({ ...formData, tipo_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tiposHabitacion.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.nombre} - ${t.precio_base}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ComboboxCreatable
+                options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base}` }))}
+                value={formData.tipo_id}
+                onValueChange={(v) => setFormData({ ...formData, tipo_id: v })}
+                onCreate={async (nombre) => {
+                  try {
+                    const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
+                    setTiposHabitacion([...tiposHabitacion, newTipo]);
+                    toast({ title: 'Tipo de habitación creado' });
+                    return { value: newTipo.id, label: `${newTipo.nombre} - $${newTipo.precio_base}` };
+                  } catch (e: any) {
+                    toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                  }
+                }}
+                placeholder="Seleccionar tipo..."
+                searchPlaceholder="Buscar o crear tipo..."
+                createLabel="Crear tipo"
+              />
             </div>
             <div className="grid gap-2">
               <Label>Piso</Label>

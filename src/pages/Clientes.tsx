@@ -26,6 +26,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -276,7 +277,6 @@ export default function Clientes() {
         Mostrando {Math.min(20, filteredClientes.length)} de {filteredClientes.length} clientes
       </p>
 
-      {/* Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -294,6 +294,7 @@ export default function Clientes() {
                 <p className="text-sm font-normal text-muted-foreground">{selectedCliente?.email}</p>
               </div>
             </DialogTitle>
+            <DialogDescription>Información detallada del cliente</DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="info">
