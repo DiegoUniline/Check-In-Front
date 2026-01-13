@@ -11,7 +11,7 @@ interface TareasCriticasCardProps {
 }
 
 export function TareasCriticasCard({ tareas, onAtender }: TareasCriticasCardProps) {
-  const getPrioridadColor = (prioridad: TareaLimpieza['prioridad']) => {
+  const getPrioridadColor = (prioridad?: string) => {
     switch (prioridad) {
       case 'Urgente': return 'bg-destructive/10 text-destructive border-destructive/20';
       case 'Alta': return 'bg-warning/10 text-warning border-warning/20';
@@ -20,7 +20,7 @@ export function TareasCriticasCard({ tareas, onAtender }: TareasCriticasCardProp
     }
   };
 
-  const getTipoIcon = (tipo: TareaLimpieza['tipo']) => {
+  const getTipoIcon = (tipo?: string) => {
     switch (tipo) {
       case 'Checkout': return '🧹';
       case 'Ocupada': return '🛏️';
@@ -28,6 +28,11 @@ export function TareasCriticasCard({ tareas, onAtender }: TareasCriticasCardProp
       case 'Inspeccion': return '🔍';
       default: return '📋';
     }
+  };
+
+  const getHabitacionNumero = (tarea: any) => {
+    if (tarea.habitacion?.numero) return tarea.habitacion.numero;
+    return tarea.habitacion_numero || 'Sin asignar';
   };
 
   return (
@@ -38,11 +43,11 @@ export function TareasCriticasCard({ tareas, onAtender }: TareasCriticasCardProp
           Tareas Críticas
         </CardTitle>
         <Badge variant="destructive" className="font-normal">
-          {tareas.length} pendientes
+          {tareas?.length || 0} pendientes
         </Badge>
       </CardHeader>
       <CardContent>
-        {tareas.length === 0 ? (
+        {!tareas || tareas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div className="rounded-full bg-success/10 p-3 mb-3">
               <span className="text-2xl">✅</span>
@@ -53,7 +58,7 @@ export function TareasCriticasCard({ tareas, onAtender }: TareasCriticasCardProp
           </div>
         ) : (
           <div className="space-y-3">
-            {tareas.map((tarea) => (
+            {tareas.map((tarea: any) => (
               <div
                 key={tarea.id}
                 className="flex items-center gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3"
@@ -65,7 +70,7 @@ export function TareasCriticasCard({ tareas, onAtender }: TareasCriticasCardProp
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">
-                      Habitación {tarea.habitacion.numero}
+                      Habitación {getHabitacionNumero(tarea)}
                     </p>
                     <Badge 
                       variant="outline" 
