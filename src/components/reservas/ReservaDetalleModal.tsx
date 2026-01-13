@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar, User, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, FileText, AlertCircle, Check, Printer } from 'lucide-react';
+import { Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, AlertCircle, Printer } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,10 +40,13 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
 
   if (!reserva) return null;
 
-  const noches = differenceInDays(new Date(reserva.fecha_checkout), new Date(reserva.fecha_checkin));
-  const total = reserva.total || (reserva.tarifa_noche * noches * 1.16);
-  const pagado = reserva.total_pagado || 0;
-  const saldoPendiente = total - pagado;
+  const noches = reserva.noches || differenceInDays(new Date(reserva.fecha_checkout), new Date(reserva.fecha_checkin));
+  const tarifaNoche = parseFloat(reserva.tarifa_noche) || 0;
+  const subtotal = tarifaNoche * noches;
+  const impuestos = subtotal * 0.16;
+  const total = parseFloat(reserva.total) || (subtotal + impuestos);
+  const pagado = parseFloat(reserva.total_pagado) || 0;
+  const saldoPendiente = parseFloat(reserva.saldo_pendiente) || (total - pagado);
   const porcentajePagado = total > 0 ? (pagado / total) * 100 : 0;
 
   const getEstadoBadge = (estado: string) => {
@@ -190,8 +193,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{reserva.tipo_nombre || 'Sin asignar'}</p>
-                        <p className="text-sm text-muted-foreground">${reserva.tarifa_noche?.toLocaleString()} por noche</p>
+                        <p className="font-medium">{reserva.tipo_habitacion_nombre || 'Sin asignar'}</p>
+                        <p className="text-sm text-muted-foreground">${tarifaNoche.toLocaleString()} por noche</p>
                       </div>
                       {reserva.habitacion_numero ? (
                         <Badge variant="outline" className="text-lg px-3 py-1">{reserva.habitacion_numero}</Badge>
@@ -258,10 +261,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4 mb-4">
                       <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
-                        {reserva.cliente_nombre?.charAt(0)}{reserva.cliente_apellido?.charAt(0)}
+                        {reserva.cliente_nombre?.charAt(0)}{reserva.apellido_paterno?.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold">{reserva.cliente_nombre} {reserva.cliente_apellido}</h3>
+                        <h3 className="text-lg font-semibold">{reserva.cliente_nombre} {reserva.apellido_paterno} {reserva.apellido_materno}</h3>
+                        {reserva.es_vip && <Badge className="mt-1">VIP</Badge>}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -308,31 +312,31 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm opacity-80">
-                    <span>Total Estancia</span>
-                    <span>${(reserva.tarifa_noche * noches)?.toLocaleString()}</span>
+                    <span>Subtotal ({noches} noches)</span>
+                    <span>${subtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm opacity-80">
                     <span>Impuestos (16%)</span>
-                    <span>${(reserva.tarifa_noche * noches * 0.16)?.toLocaleString()}</span>
+                    <span>${impuestos.toLocaleString()}</span>
                   </div>
                   <Separator className="bg-primary-foreground/20" />
                   <div className="flex justify-between font-bold text-xl">
                     <span>Total</span>
-                    <span>${total?.toLocaleString()}</span>
+                    <span>${total.toLocaleString()}</span>
                   </div>
                 </div>
                 
                 <div className="mt-4 p-3 rounded-lg bg-primary-foreground/10">
                   <div className="flex justify-between text-sm mb-1">
                     <span>Pagado</span>
-                    <span>${pagado?.toLocaleString()}</span>
+                    <span>${pagado.toLocaleString()}</span>
                   </div>
                   <Progress value={porcentajePagado} className="h-2 bg-primary-foreground/20" />
                 </div>
                 
                 <div className="mt-4 p-4 rounded-lg bg-primary-foreground/10 text-center">
                   <p className="text-sm opacity-80">Saldo Pendiente</p>
-                  <p className="text-3xl font-bold">${saldoPendiente?.toLocaleString()}</p>
+                  <p className="text-3xl font-bold">${saldoPendiente.toLocaleString()}</p>
                 </div>
               </CardContent>
             </Card>
