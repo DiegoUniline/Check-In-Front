@@ -26,6 +26,7 @@ import Gastos from "./pages/Gastos";
 import Compras from "./pages/Compras";
 import Historial from "./pages/Historial";
 import NotFound from "./pages/NotFound";
+import Catalogos from "./pages/Catalogos";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,17 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+<Route
+                path="/catalogos"
+                element={
+                  <ProtectedRoute>
+                    <Catalogos />
+                  </ProtectedRoute>
+                }
+              />
+
+
+              
               <Route
                 path="/checkin/:id"
                 element={
