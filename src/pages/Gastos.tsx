@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { 
-  Receipt, Plus, Search, Filter, DollarSign, Calendar,
+  Receipt, Plus, Search, DollarSign,
   Tag, Building, Car, Utensils, Wrench, Package, Users,
-  TrendingDown, FileText, MoreVertical, Eye, Trash2, RefreshCw
+  TrendingDown, FileText, MoreVertical, Eye, Trash2, RefreshCw, Edit
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -73,8 +74,8 @@ export default function Gastos() {
   const [loading, setLoading] = useState(true);
   const [gastos, setGastos] = useState<any[]>([]);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; gasto: any | null }>({ open: false, gasto: null });
+  const [detalleModal, setDetalleModal] = useState<{ open: boolean; gasto: any | null }>({ open: false, gasto: null });
   
-  // Form state
   const [formData, setFormData] = useState({
     categoria: '',
     monto: '',
@@ -108,7 +109,6 @@ export default function Gastos() {
     return matchSearch && matchCategoria;
   });
 
-  // Stats
   const totalMes = gastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
   const hoy = format(new Date(), 'yyyy-MM-dd');
   const totalHoy = gastos.filter(g => g.fecha?.startsWith(hoy) || (g.created_at && g.created_at.startsWith(hoy))).reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
@@ -167,6 +167,15 @@ export default function Gastos() {
     }
   };
 
+  const handleVerDetalle = async (gasto: any) => {
+    try {
+      const detalles = await api.getGasto(gasto.id);
+      setDetalleModal({ open: true, gasto: detalles });
+    } catch {
+      setDetalleModal({ open: true, gasto });
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout title="Control de Gastos" subtitle="Cargando...">
@@ -182,7 +191,6 @@ export default function Gastos() {
       title="Control de Gastos" 
       subtitle="Registro y seguimiento de egresos"
     >
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
@@ -238,7 +246,6 @@ export default function Gastos() {
         </Card>
       </div>
 
-      {/* Category Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
         {gastosPorCategoria.map(cat => {
           const Icon = cat.icon;
@@ -260,7 +267,6 @@ export default function Gastos() {
         })}
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex flex-1 items-center gap-4">
           <div className="relative flex-1 max-w-sm">
@@ -293,7 +299,6 @@ export default function Gastos() {
         </Button>
       </div>
 
-      {/* Table */}
       <Card>
         <Table>
           <TableHeader>
@@ -347,7 +352,7 @@ export default function Gastos() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleVerDetalle(gasto)}>
                           <Eye className="mr-2 h-4 w-4" /> Ver detalle
                         </DropdownMenuItem>
                         <DropdownMenuItem>
@@ -474,6 +479,68 @@ export default function Gastos() {
               Registrar Gasto
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detalle Modal */}
+      <Dialog open={detalleModal.open} onOpenChange={(open) => setDetalleModal({ open, gasto: open ? detalleModal.gasto : null })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Detalle del Gasto
+            </DialogTitle>
+            <DialogDescription>
+              Información completa del registro
+            </DialogDescription>
+          </DialogHeader>
+          {detalleModal.gasto && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha</p>
+                  <p className="font-medium">
+                    {detalleModal.gasto.fecha || detalleModal.gasto.created_at
+                      ? format(new Date(detalleModal.gasto.fecha || detalleModal.gasto.created_at), "d MMMM yyyy HH:mm", { locale: es })
+                      : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Categoría</p>
+                  <Badge className={getCategoriaInfo(detalleModal.gasto.categoria).color}>
+                    {getCategoriaInfo(detalleModal.gasto.categoria).nombre}
+                  </Badge>
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm text-muted-foreground">Descripción</p>
+                <p className="font-medium">{detalleModal.gasto.descripcion}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Monto</p>
+                  <p className="font-bold text-lg text-destructive">-${Number(detalleModal.gasto.monto).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Método de Pago</p>
+                  <Badge variant="outline">{detalleModal.gasto.metodo_pago || 'N/A'}</Badge>
+                </div>
+              </div>
+              {detalleModal.gasto.proveedor && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Proveedor</p>
+                  <p className="font-medium">{detalleModal.gasto.proveedor}</p>
+                </div>
+              )}
+              {detalleModal.gasto.notas && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Notas</p>
+                  <p>{detalleModal.gasto.notas}</p>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

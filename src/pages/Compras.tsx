@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Plus, Search, Filter, Package, Truck, 
+  ShoppingBag, Plus, Search, Package, Truck, 
   Calendar, DollarSign, CheckCircle2, Clock, AlertCircle,
-  MoreVertical, Eye, FileText, Building
+  MoreVertical, Eye, FileText, Building, RefreshCw, X
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -45,125 +46,53 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-
-interface OrdenCompra {
-  id: string;
-  numero: string;
-  proveedor: Proveedor;
-  fecha: Date;
-  fechaEntrega?: Date;
-  items: ItemCompra[];
-  subtotal: number;
-  iva: number;
-  total: number;
-  estado: 'Borrador' | 'Enviada' | 'Confirmada' | 'EnTransito' | 'Recibida' | 'Cancelada';
-  notas?: string;
-}
-
-interface Proveedor {
-  id: string;
-  nombre: string;
-  rfc: string;
-  contacto: string;
-  telefono: string;
-  email: string;
-}
-
-interface ItemCompra {
-  id: string;
-  producto: string;
-  cantidad: number;
-  unidad: string;
-  precioUnitario: number;
-  total: number;
-}
-
-const mockProveedores: Proveedor[] = [
-  { id: 'prov1', nombre: 'Distribuidora ABC', rfc: 'DAB123456789', contacto: 'Juan Pérez', telefono: '+52 55 1234 5678', email: 'ventas@distri-abc.com' },
-  { id: 'prov2', nombre: 'Suministros Hoteleros', rfc: 'SHO987654321', contacto: 'María García', telefono: '+52 55 8765 4321', email: 'contacto@sumhotel.com' },
-  { id: 'prov3', nombre: 'Alimentos del Pacífico', rfc: 'ADP456789123', contacto: 'Roberto Sánchez', telefono: '+52 744 123 4567', email: 'pedidos@alipacifico.com' },
-];
+import api from '@/lib/api';
 
 export default function Compras() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEstado, setFilterEstado] = useState('all');
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [ordenes, setOrdenes] = useState<any[]>([]);
+  const [proveedores, setProveedores] = useState<any[]>([]);
   const [selectedProveedor, setSelectedProveedor] = useState('');
   const [orderItems, setOrderItems] = useState<{producto: string, cantidad: string, precio: string}[]>([
     { producto: '', cantidad: '', precio: '' }
   ]);
+  const [notas, setNotas] = useState('');
+  const [detalleModal, setDetalleModal] = useState<{ open: boolean; orden: any | null }>({ open: false, orden: null });
 
-  // Mock orders
-  const [ordenes] = useState<OrdenCompra[]>([
-    {
-      id: '1',
-      numero: 'OC-2024-001',
-      proveedor: mockProveedores[0],
-      fecha: new Date(),
-      fechaEntrega: new Date(Date.now() + 86400000 * 3),
-      items: [
-        { id: 'i1', producto: 'Jabón líquido 5L', cantidad: 10, unidad: 'Pza', precioUnitario: 180, total: 1800 },
-        { id: 'i2', producto: 'Shampoo 5L', cantidad: 10, unidad: 'Pza', precioUnitario: 220, total: 2200 },
-      ],
-      subtotal: 4000,
-      iva: 640,
-      total: 4640,
-      estado: 'Confirmada',
-    },
-    {
-      id: '2',
-      numero: 'OC-2024-002',
-      proveedor: mockProveedores[2],
-      fecha: new Date(Date.now() - 86400000),
-      items: [
-        { id: 'i3', producto: 'Café gourmet 1kg', cantidad: 20, unidad: 'Kg', precioUnitario: 450, total: 9000 },
-        { id: 'i4', producto: 'Leche 1L', cantidad: 50, unidad: 'Pza', precioUnitario: 28, total: 1400 },
-      ],
-      subtotal: 10400,
-      iva: 1664,
-      total: 12064,
-      estado: 'EnTransito',
-    },
-    {
-      id: '3',
-      numero: 'OC-2024-003',
-      proveedor: mockProveedores[1],
-      fecha: new Date(Date.now() - 86400000 * 3),
-      fechaEntrega: new Date(Date.now() - 86400000),
-      items: [
-        { id: 'i5', producto: 'Toallas de baño', cantidad: 50, unidad: 'Pza', precioUnitario: 180, total: 9000 },
-        { id: 'i6', producto: 'Sábanas king', cantidad: 30, unidad: 'Juego', precioUnitario: 850, total: 25500 },
-      ],
-      subtotal: 34500,
-      iva: 5520,
-      total: 40020,
-      estado: 'Recibida',
-    },
-    {
-      id: '4',
-      numero: 'OC-2024-004',
-      proveedor: mockProveedores[0],
-      fecha: new Date(),
-      items: [
-        { id: 'i7', producto: 'Aromatizante', cantidad: 24, unidad: 'Pza', precioUnitario: 85, total: 2040 },
-      ],
-      subtotal: 2040,
-      iva: 326.40,
-      total: 2366.40,
-      estado: 'Borrador',
-    },
-  ]);
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    setLoading(true);
+    try {
+      const [ordenesData, proveedoresData] = await Promise.all([
+        api.getCompras().catch(() => []),
+        api.getProveedores().catch(() => [])
+      ]);
+      setOrdenes(Array.isArray(ordenesData) ? ordenesData : []);
+      setProveedores(Array.isArray(proveedoresData) ? proveedoresData : []);
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredOrdenes = ordenes.filter(o => {
-    const matchSearch = o.numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       o.proveedor.nombre.toLowerCase().includes(searchQuery.toLowerCase());
+    const numero = o.numero || o.codigo || '';
+    const provNombre = o.proveedor?.nombre || o.proveedor_nombre || '';
+    const matchSearch = numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                       provNombre.toLowerCase().includes(searchQuery.toLowerCase());
     const matchEstado = filterEstado === 'all' || o.estado === filterEstado;
     return matchSearch && matchEstado;
   });
 
-  // Stats
-  const totalPendiente = ordenes.filter(o => ['Enviada', 'Confirmada', 'EnTransito'].includes(o.estado)).reduce((s, o) => s + o.total, 0);
+  const totalPendiente = ordenes.filter(o => ['Enviada', 'Confirmada', 'EnTransito'].includes(o.estado)).reduce((s, o) => s + (Number(o.total) || 0), 0);
   const ordenesActivas = ordenes.filter(o => !['Recibida', 'Cancelada'].includes(o.estado)).length;
 
   const getEstadoColor = (estado: string) => {
@@ -194,23 +123,77 @@ export default function Compras() {
     setOrderItems([...orderItems, { producto: '', cantidad: '', precio: '' }]);
   };
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     if (!selectedProveedor) {
-      toast({
-        title: 'Seleccione un proveedor',
-        variant: 'destructive',
-      });
+      toast({ title: 'Seleccione un proveedor', variant: 'destructive' });
       return;
     }
 
-    toast({
-      title: 'Orden creada',
-      description: 'La orden de compra ha sido creada exitosamente',
-    });
-    setIsNewOrderOpen(false);
-    setSelectedProveedor('');
-    setOrderItems([{ producto: '', cantidad: '', precio: '' }]);
+    const validItems = orderItems.filter(i => i.producto && i.cantidad && i.precio);
+    if (validItems.length === 0) {
+      toast({ title: 'Agregue al menos un producto', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const items = validItems.map(i => ({
+        producto: i.producto,
+        cantidad: parseFloat(i.cantidad),
+        precio_unitario: parseFloat(i.precio),
+        total: parseFloat(i.cantidad) * parseFloat(i.precio)
+      }));
+      const subtotal = items.reduce((s, i) => s + i.total, 0);
+      const iva = subtotal * 0.16;
+
+      await api.createCompra({
+        proveedor_id: selectedProveedor,
+        items,
+        subtotal,
+        iva,
+        total: subtotal + iva,
+        notas: notas || null,
+        estado: 'Borrador'
+      });
+
+      toast({ title: 'Orden creada', description: 'La orden de compra ha sido creada exitosamente' });
+      setIsNewOrderOpen(false);
+      setSelectedProveedor('');
+      setOrderItems([{ producto: '', cantidad: '', precio: '' }]);
+      setNotas('');
+      cargarDatos();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
+
+  const handleUpdateEstado = async (ordenId: string, nuevoEstado: string) => {
+    try {
+      await api.updateEstadoCompra(ordenId, nuevoEstado);
+      toast({ title: 'Estado actualizado' });
+      cargarDatos();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleVerDetalle = async (orden: any) => {
+    try {
+      const detalles = await api.getCompra(orden.id);
+      setDetalleModal({ open: true, orden: detalles });
+    } catch {
+      setDetalleModal({ open: true, orden });
+    }
+  };
+
+  if (loading) {
+    return (
+      <MainLayout title="Órdenes de Compra" subtitle="Cargando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout 
@@ -224,7 +207,6 @@ export default function Compras() {
         </TabsList>
 
         <TabsContent value="ordenes">
-          {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardContent className="p-4">
@@ -280,7 +262,6 @@ export default function Compras() {
             </Card>
           </div>
 
-          {/* Toolbar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex flex-1 items-center gap-4">
               <div className="relative flex-1 max-w-sm">
@@ -305,6 +286,9 @@ export default function Compras() {
                   <SelectItem value="Recibida">Recibida</SelectItem>
                 </SelectContent>
               </Select>
+              <Button variant="outline" size="icon" onClick={cargarDatos}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
             <Button onClick={() => setIsNewOrderOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -312,7 +296,6 @@ export default function Compras() {
             </Button>
           </div>
 
-          {/* Orders Table */}
           <Card>
             <Table>
               <TableHeader>
@@ -327,61 +310,90 @@ export default function Compras() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrdenes.map(orden => (
-                  <TableRow key={orden.id}>
-                    <TableCell className="font-medium">{orden.numero}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{orden.proveedor.nombre}</p>
-                        <p className="text-xs text-muted-foreground">{orden.proveedor.contacto}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p>{format(orden.fecha, "d MMM yyyy", { locale: es })}</p>
-                        {orden.fechaEntrega && (
-                          <p className="text-xs text-muted-foreground">
-                            Entrega: {format(orden.fechaEntrega, "d MMM", { locale: es })}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {orden.items.length} productos
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cn("flex items-center gap-1 w-fit", getEstadoColor(orden.estado))}>
-                        {getEstadoIcon(orden.estado)}
-                        {orden.estado === 'EnTransito' ? 'En Tránsito' : orden.estado}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-bold">
-                      ${orden.total.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" /> Ver detalle
-                          </DropdownMenuItem>
-                          {orden.estado === 'EnTransito' && (
-                            <DropdownMenuItem>
-                              <Package className="mr-2 h-4 w-4" /> Marcar recibida
-                            </DropdownMenuItem>
+                {filteredOrdenes.map(orden => {
+                  const numero = orden.numero || orden.codigo || `OC-${orden.id}`;
+                  const provNombre = orden.proveedor?.nombre || orden.proveedor_nombre || '-';
+                  const provContacto = orden.proveedor?.contacto || orden.proveedor_contacto || '';
+                  const fecha = orden.fecha || orden.created_at;
+                  const itemsCount = orden.items?.length || orden.items_count || 0;
+                  return (
+                    <TableRow key={orden.id}>
+                      <TableCell className="font-medium">{numero}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{provNombre}</p>
+                          {provContacto && <p className="text-xs text-muted-foreground">{provContacto}</p>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p>{fecha ? format(new Date(fecha), "d MMM yyyy", { locale: es }) : '-'}</p>
+                          {orden.fecha_entrega && (
+                            <p className="text-xs text-muted-foreground">
+                              Entrega: {format(new Date(orden.fecha_entrega), "d MMM", { locale: es })}
+                            </p>
                           )}
-                          <DropdownMenuItem>
-                            <FileText className="mr-2 h-4 w-4" /> Generar PDF
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {itemsCount} productos
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={cn("flex items-center gap-1 w-fit", getEstadoColor(orden.estado))}>
+                          {getEstadoIcon(orden.estado)}
+                          {orden.estado === 'EnTransito' ? 'En Tránsito' : orden.estado}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        ${Number(orden.total || 0).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleVerDetalle(orden)}>
+                              <Eye className="mr-2 h-4 w-4" /> Ver detalle
+                            </DropdownMenuItem>
+                            {orden.estado === 'Borrador' && (
+                              <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Enviada')}>
+                                <Clock className="mr-2 h-4 w-4" /> Enviar orden
+                              </DropdownMenuItem>
+                            )}
+                            {orden.estado === 'Enviada' && (
+                              <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Confirmada')}>
+                                <CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar
+                              </DropdownMenuItem>
+                            )}
+                            {orden.estado === 'Confirmada' && (
+                              <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'EnTransito')}>
+                                <Truck className="mr-2 h-4 w-4" /> Marcar en tránsito
+                              </DropdownMenuItem>
+                            )}
+                            {orden.estado === 'EnTransito' && (
+                              <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Recibida')}>
+                                <Package className="mr-2 h-4 w-4" /> Marcar recibida
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem>
+                              <FileText className="mr-2 h-4 w-4" /> Generar PDF
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filteredOrdenes.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No hay órdenes de compra
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -400,7 +412,7 @@ export default function Compras() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockProveedores.map(prov => (
+            {proveedores.map(prov => (
               <Card key={prov.id} className="hover:shadow-md transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
@@ -409,18 +421,23 @@ export default function Compras() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold">{prov.nombre}</h3>
-                      <p className="text-sm text-muted-foreground">{prov.rfc}</p>
+                      <p className="text-sm text-muted-foreground">{prov.rfc || ''}</p>
                       <Separator className="my-2" />
                       <div className="space-y-1 text-sm">
-                        <p><span className="text-muted-foreground">Contacto:</span> {prov.contacto}</p>
-                        <p><span className="text-muted-foreground">Tel:</span> {prov.telefono}</p>
-                        <p><span className="text-muted-foreground">Email:</span> {prov.email}</p>
+                        {prov.contacto && <p><span className="text-muted-foreground">Contacto:</span> {prov.contacto}</p>}
+                        {prov.telefono && <p><span className="text-muted-foreground">Tel:</span> {prov.telefono}</p>}
+                        {prov.email && <p><span className="text-muted-foreground">Email:</span> {prov.email}</p>}
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {proveedores.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">
+                No hay proveedores registrados
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
@@ -433,6 +450,9 @@ export default function Compras() {
               <ShoppingBag className="h-5 w-5" />
               Nueva Orden de Compra
             </DialogTitle>
+            <DialogDescription>
+              Complete la información de la orden de compra
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -442,7 +462,7 @@ export default function Compras() {
                   <SelectValue placeholder="Seleccionar proveedor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockProveedores.map(prov => (
+                  {proveedores.map(prov => (
                     <SelectItem key={prov.id} value={prov.id}>
                       {prov.nombre}
                     </SelectItem>
@@ -503,7 +523,7 @@ export default function Compras() {
                       onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
                       disabled={orderItems.length === 1}
                     >
-                      ×
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
@@ -512,7 +532,11 @@ export default function Compras() {
 
             <div className="space-y-2">
               <Label>Notas</Label>
-              <Textarea placeholder="Notas adicionales para el proveedor..." />
+              <Textarea 
+                placeholder="Notas adicionales para el proveedor..."
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -523,6 +547,84 @@ export default function Compras() {
               Crear Orden
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detalle Modal */}
+      <Dialog open={detalleModal.open} onOpenChange={(open) => setDetalleModal({ open, orden: open ? detalleModal.orden : null })}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Detalle de Orden {detalleModal.orden?.numero || detalleModal.orden?.codigo || ''}
+            </DialogTitle>
+            <DialogDescription>
+              Información completa de la orden de compra
+            </DialogDescription>
+          </DialogHeader>
+          {detalleModal.orden && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Proveedor</p>
+                  <p className="font-medium">{detalleModal.orden.proveedor?.nombre || detalleModal.orden.proveedor_nombre || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Estado</p>
+                  <Badge className={getEstadoColor(detalleModal.orden.estado)}>{detalleModal.orden.estado}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha</p>
+                  <p className="font-medium">
+                    {detalleModal.orden.fecha || detalleModal.orden.created_at
+                      ? format(new Date(detalleModal.orden.fecha || detalleModal.orden.created_at), "d MMMM yyyy", { locale: es })
+                      : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="font-bold text-lg">${Number(detalleModal.orden.total || 0).toLocaleString()}</p>
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Productos</p>
+                {detalleModal.orden.items && detalleModal.orden.items.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Producto</TableHead>
+                        <TableHead>Cantidad</TableHead>
+                        <TableHead>P. Unitario</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detalleModal.orden.items.map((item: any, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell>{item.producto || item.nombre}</TableCell>
+                          <TableCell>{item.cantidad}</TableCell>
+                          <TableCell>${Number(item.precio_unitario || item.precioUnitario || 0).toLocaleString()}</TableCell>
+                          <TableCell className="text-right">${Number(item.total || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-muted-foreground">No hay productos registrados</p>
+                )}
+              </div>
+              {detalleModal.orden.notas && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Notas</p>
+                    <p>{detalleModal.orden.notas}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </MainLayout>
