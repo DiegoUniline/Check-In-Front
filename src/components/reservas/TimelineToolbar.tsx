@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarDays, Filter, Download, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Download, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
@@ -13,7 +13,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { mockTiposHabitacion } from '@/data/mockData';
 
 interface TimelineToolbarProps {
   viewMode: 'dia' | 'semana' | 'mes';
@@ -23,6 +22,7 @@ interface TimelineToolbarProps {
   tipoFilter: string;
   onTipoFilterChange: (tipo: string) => void;
   onNewReservation: () => void;
+  tiposHabitacion: any[];
 }
 
 export function TimelineToolbar({
@@ -33,6 +33,7 @@ export function TimelineToolbar({
   tipoFilter,
   onTipoFilterChange,
   onNewReservation,
+  tiposHabitacion,
 }: TimelineToolbarProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -52,7 +53,6 @@ export function TimelineToolbar({
 
   return (
     <div className="flex flex-col gap-4 mb-4">
-      {/* Top row: Title and actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Calendario de Reservas</h1>
@@ -72,9 +72,7 @@ export function TimelineToolbar({
         </div>
       </div>
 
-      {/* Bottom row: Filters and navigation */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-card rounded-lg border">
-        {/* Left: View mode toggle */}
         <div className="flex items-center gap-4">
           <ToggleGroup
             type="single"
@@ -82,34 +80,24 @@ export function TimelineToolbar({
             onValueChange={(value) => value && onViewModeChange(value as 'dia' | 'semana' | 'mes')}
             className="bg-muted p-1 rounded-lg"
           >
-            <ToggleGroupItem value="dia" className="px-4 data-[state=on]:bg-background">
-              Día
-            </ToggleGroupItem>
-            <ToggleGroupItem value="semana" className="px-4 data-[state=on]:bg-background">
-              Semana
-            </ToggleGroupItem>
-            <ToggleGroupItem value="mes" className="px-4 data-[state=on]:bg-background">
-              Mes
-            </ToggleGroupItem>
+            <ToggleGroupItem value="dia" className="px-4 data-[state=on]:bg-background">Día</ToggleGroupItem>
+            <ToggleGroupItem value="semana" className="px-4 data-[state=on]:bg-background">Semana</ToggleGroupItem>
+            <ToggleGroupItem value="mes" className="px-4 data-[state=on]:bg-background">Mes</ToggleGroupItem>
           </ToggleGroup>
 
-          {/* Room type filter */}
           <Select value={tipoFilter} onValueChange={onTipoFilterChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Todas las habitaciones" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las habitaciones</SelectItem>
-              {mockTiposHabitacion.map((tipo) => (
-                <SelectItem key={tipo.id} value={tipo.id}>
-                  {tipo.nombre}
-                </SelectItem>
+              {tiposHabitacion.map((tipo) => (
+                <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Right: Date navigation */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={handlePrev}>
             <ChevronLeft className="h-4 w-4" />
@@ -141,9 +129,7 @@ export function TimelineToolbar({
             <ChevronRight className="h-4 w-4" />
           </Button>
 
-          <Button variant="secondary" size="sm" onClick={handleToday}>
-            Hoy
-          </Button>
+          <Button variant="secondary" size="sm" onClick={handleToday}>Hoy</Button>
         </div>
       </div>
     </div>
