@@ -68,6 +68,13 @@ export default function Inventario() {
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; producto: any | null }>({ open: false, producto: null });
   const [ajusteData, setAjusteData] = useState({ tipo: 'entrada', cantidad: '', motivo: '' });
   
+  // Generar código automático
+  const generarCodigo = () => {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `PROD-${timestamp.slice(-4)}${random}`;
+  };
+
   const [formData, setFormData] = useState({
     codigo: '',
     nombre: '',
@@ -113,7 +120,7 @@ export default function Inventario() {
   const openNewModal = () => {
     setEditingProduct(null);
     setFormData({
-      codigo: '',
+      codigo: generarCodigo(), // Auto-generar código
       nombre: '',
       categoria_id: categorias[0]?.id || '',
       precio_venta: '',
