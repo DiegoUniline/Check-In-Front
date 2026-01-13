@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Sparkles, Clock, CheckCircle, AlertTriangle, 
-  User, Play, Check, Eye
+  User, Play, Check, Eye, RefreshCw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import {
   Select,
@@ -15,26 +15,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockTareasLimpieza, TareaLimpieza } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import api from '@/lib/api';
 
 export default function Limpieza() {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [tareas, setTareas] = useState<any[]>([]);
   const [filterEstado, setFilterEstado] = useState('all');
   const [filterPrioridad, setFilterPrioridad] = useState('all');
 
-  // Extended mock data for demo
-  const allTareas: TareaLimpieza[] = [
-    ...mockTareasLimpieza,
-    ...mockTareasLimpieza.map((t, i) => ({
-      ...t,
-      id: `extra-${i}`,
-      estado: ['Completada', 'Verificada'][i % 2] as TareaLimpieza['estado'],
-    })),
-  ];
+  const cargarTareas = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getTareasLimpieza();
+      setTareas(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error cargando tareas:', error);
+      toast({ title: 'Error', description: 'No se pudieron cargar las tareas', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredTareas = allTareas.filter(t => {
+  useEffect(() => {
+    cargarTareas();
+  }, []);
+
+  const filteredTareas = tareas.filter(t => {
     const matchEstado = filterEstado === 'all' || t.estado === filterEstado;
     const matchPrioridad = filterPrioridad === 'all' || t.prioridad === filterPrioridad;
     return matchEstado && matchPrioridad;
@@ -42,14 +51,14 @@ export default function Limpieza() {
 
   // Stats
   const stats = {
-    pendientes: allTareas.filter(t => t.estado === 'Pendiente').length,
-    enProceso: allTareas.filter(t => t.estado === 'EnProceso').length,
-    completadas: allTareas.filter(t => t.estado === 'Completada' || t.estado === 'Verificada').length,
-    inspecciones: allTareas.filter(t => t.estado === 'Completada').length,
+    pendientes: tareas.filter(t => t.estado === 'Pendiente').length,
+    enProceso: tareas.filter(t => t.estado === 'EnProceso' || t.estado === 'En Proceso').length,
+    completadas: tareas.filter(t => t.estado === 'Completada' || t.estado === 'Verificada').length,
+    inspecciones: tareas.filter(t => t.estado === 'Completada').length,
   };
 
-  const totalTareas = stats.pendientes + stats.enProceso + stats.completadas;
-  const progreso = Math.round((stats.completadas / totalTareas) * 100);
+  const totalTareas = tareas.length || 1;
+  const progreso = Math.round((stats.completadas / totalTareas) * 100) || 0;
 
   const getPrioridadColor = (p?: string) => {
     switch (p) {
@@ -60,32 +69,38 @@ export default function Limpieza() {
     }
   };
 
-  const getEstadoIcon = (e?: string) => {
-    switch (e) {
-      case 'Pendiente': return <Clock className="h-4 w-4" />;
-      case 'EnProceso': return <Play className="h-4 w-4" />;
-      case 'Completada': return <Check className="h-4 w-4" />;
-      case 'Verificada': return <CheckCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
-  };
-
   const getHabitacionNumero = (tarea: any) => {
     if (tarea.habitacion?.numero) return tarea.habitacion.numero;
-    return tarea.habitacion_numero || 'N/A';
+    return tarea.habitacion_numero || tarea.numero_habitacion || 'N/A';
   };
 
   const getHabitacionTipo = (tarea: any) => {
     if (tarea.habitacion?.tipo?.nombre) return tarea.habitacion.tipo.nombre;
-    return tarea.tipo_habitacion_nombre || tarea.habitacion_tipo || '';
+    return tarea.tipo_habitacion_nombre || tarea.habitacion_tipo || tarea.tipo_habitacion || '';
   };
 
-  const handleAction = (tarea: any, action: string) => {
-    toast({
-      title: `Tarea ${action}`,
-      description: `Habitación ${getHabitacionNumero(tarea)} - ${action}`,
-    });
+  const handleCambiarEstado = async (tarea: any, nuevoEstado: string) => {
+    try {
+      await api.updateEstadoLimpieza(tarea.id, nuevoEstado);
+      toast({
+        title: 'Estado actualizado',
+        description: `Habitación ${getHabitacionNumero(tarea)} - ${nuevoEstado}`,
+      });
+      cargarTareas();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
+
+  if (loading) {
+    return (
+      <MainLayout title="Módulo de Limpieza" subtitle="Cargando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout 
@@ -178,68 +193,81 @@ export default function Limpieza() {
             <SelectItem value="Baja">Baja</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button variant="outline" size="icon" onClick={cargarTareas}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Task list */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTareas.map((tarea: any) => (
-          <Card key={tarea.id} className={cn(
-            "transition-all hover:shadow-md",
-            tarea.prioridad === 'Urgente' && "border-destructive/50"
-          )}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted font-bold text-lg">
-                    {getHabitacionNumero(tarea)}
+      {filteredTareas.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">No hay tareas de limpieza</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredTareas.map((tarea: any) => (
+            <Card key={tarea.id} className={cn(
+              "transition-all hover:shadow-md",
+              tarea.prioridad === 'Urgente' && "border-destructive/50"
+            )}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted font-bold text-lg">
+                      {getHabitacionNumero(tarea)}
+                    </div>
+                    <div>
+                      <p className="font-medium">{tarea.tipo || tarea.tipo_limpieza || 'Limpieza'}</p>
+                      <p className="text-sm text-muted-foreground">{getHabitacionTipo(tarea)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{tarea.tipo}</p>
-                    <p className="text-sm text-muted-foreground">{getHabitacionTipo(tarea)}</p>
-                  </div>
-                </div>
-                <Badge className={getPrioridadColor(tarea.prioridad)}>
-                  {tarea.prioridad}
-                </Badge>
-              </div>
-
-              <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                <User className="h-4 w-4" />
-                <span>{tarea.asignadoNombre || 'Sin asignar'}</span>
-              </div>
-
-              {tarea.notas && (
-                <p className="text-sm text-muted-foreground mb-3 bg-muted p-2 rounded">
-                  {tarea.notas}
-                </p>
-              )}
-
-              <div className="flex items-center gap-2">
-                {tarea.estado === 'Pendiente' && (
-                  <Button size="sm" className="flex-1" onClick={() => handleAction(tarea, 'iniciada')}>
-                    <Play className="mr-1 h-4 w-4" /> Iniciar
-                  </Button>
-                )}
-                {tarea.estado === 'EnProceso' && (
-                  <Button size="sm" className="flex-1" onClick={() => handleAction(tarea, 'completada')}>
-                    <Check className="mr-1 h-4 w-4" /> Completar
-                  </Button>
-                )}
-                {tarea.estado === 'Completada' && (
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => handleAction(tarea, 'verificada')}>
-                    <Eye className="mr-1 h-4 w-4" /> Inspeccionar
-                  </Button>
-                )}
-                {tarea.estado === 'Verificada' && (
-                  <Badge className="bg-success flex-1 justify-center py-2">
-                    <CheckCircle className="mr-1 h-4 w-4" /> Verificada
+                  <Badge className={getPrioridadColor(tarea.prioridad)}>
+                    {tarea.prioridad || 'Normal'}
                   </Badge>
+                </div>
+
+                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>{tarea.asignado_nombre || tarea.asignadoNombre || 'Sin asignar'}</span>
+                </div>
+
+                {(tarea.notas || tarea.observaciones) && (
+                  <p className="text-sm text-muted-foreground mb-3 bg-muted p-2 rounded">
+                    {tarea.notas || tarea.observaciones}
+                  </p>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+
+                <div className="flex items-center gap-2">
+                  {(tarea.estado === 'Pendiente') && (
+                    <Button size="sm" className="flex-1" onClick={() => handleCambiarEstado(tarea, 'EnProceso')}>
+                      <Play className="mr-1 h-4 w-4" /> Iniciar
+                    </Button>
+                  )}
+                  {(tarea.estado === 'EnProceso' || tarea.estado === 'En Proceso') && (
+                    <Button size="sm" className="flex-1" onClick={() => handleCambiarEstado(tarea, 'Completada')}>
+                      <Check className="mr-1 h-4 w-4" /> Completar
+                    </Button>
+                  )}
+                  {tarea.estado === 'Completada' && (
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCambiarEstado(tarea, 'Verificada')}>
+                      <Eye className="mr-1 h-4 w-4" /> Inspeccionar
+                    </Button>
+                  )}
+                  {tarea.estado === 'Verificada' && (
+                    <Badge className="bg-success flex-1 justify-center py-2">
+                      <CheckCircle className="mr-1 h-4 w-4" /> Verificada
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </MainLayout>
   );
 }
