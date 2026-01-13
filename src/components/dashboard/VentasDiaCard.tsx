@@ -13,6 +13,12 @@ interface VentasDiaCardProps {
 }
 
 export function VentasDiaCard({ ventas }: VentasDiaCardProps) {
+  // Ensure values are valid numbers
+  const total = Number(ventas?.total) || 0;
+  const alojamiento = Number(ventas?.alojamiento) || 0;
+  const alimentos = Number(ventas?.alimentos) || 0;
+  const servicios = Number(ventas?.servicios) || 0;
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -21,12 +27,12 @@ export function VentasDiaCard({ ventas }: VentasDiaCardProps) {
     }).format(amount);
   };
 
-  const getPercentage = (value: number) => Math.round((value / ventas.total) * 100);
+  const getPercentage = (value: number) => total > 0 ? Math.round((value / total) * 100) : 0;
 
   const breakdown = [
-    { label: 'Alojamiento', value: ventas.alojamiento, color: 'bg-primary' },
-    { label: 'Alimentos y Bebidas', value: ventas.alimentos, color: 'bg-info' },
-    { label: 'Servicios', value: ventas.servicios, color: 'bg-warning' },
+    { label: 'Alojamiento', value: alojamiento, color: 'bg-primary' },
+    { label: 'Alimentos y Bebidas', value: alimentos, color: 'bg-info' },
+    { label: 'Servicios', value: servicios, color: 'bg-warning' },
   ];
 
   return (
@@ -40,7 +46,7 @@ export function VentasDiaCard({ ventas }: VentasDiaCardProps) {
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <p className="text-3xl font-bold tracking-tight">{formatCurrency(ventas.total)}</p>
+          <p className="text-3xl font-bold tracking-tight">{formatCurrency(total)}</p>
           <p className="text-sm text-muted-foreground">Total recaudado hoy</p>
         </div>
 
