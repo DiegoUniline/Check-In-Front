@@ -127,16 +127,18 @@ export default function POS() {
     }
 
     try {
-      // Build items for sale with sanitized values
+      // Build items for sale - formato compatible con compras.js
       const ventaItems = cart.map(item => {
         const precio = safeNumber(item.producto.precio_venta, 0);
         const cantidad = safeNumber(item.cantidad, 1);
+        const itemTotal = Math.round(precio * cantidad * 100) / 100;
         return {
           producto_id: item.producto.id || '',
           nombre: item.producto.nombre || 'Producto',
           cantidad: cantidad,
           precio_unitario: precio,
-          subtotal: Math.round(precio * cantidad * 100) / 100,
+          subtotal: itemTotal,
+          total: itemTotal, // algunos backends usan total en vez de subtotal
         };
       });
 
@@ -149,56 +151,68 @@ export default function POS() {
       const habitacionSeleccionada = habitaciones.find(h => h.id === selectedRoom);
       const reservaId = habitacionSeleccionada?.reserva_id || habitacionSeleccionada?.reserva_activa_id || null;
 
+      // Preparar payload de venta
+      const ventaPayload = {
+        detalle: ventaItems,
+        subtotal: ventaSubtotal,
+        iva: ventaIva,
+        total: ventaTotal,
+        metodo_pago: method,
+        habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
+        reserva_id: reservaId,
+        fecha: new Date().toISOString(),
+      };
+
+      console.log('📤 Enviando venta:', JSON.stringify(ventaPayload, null, 2));
+
       // Register sale first
       let ventaId: string | null = null;
       try {
-        const ventaResponse = await api.createVenta({
-          // Formato alternativo que algunos backends esperan
-          detalle: ventaItems,
-          items: ventaItems,
-          productos: ventaItems,
-          subtotal: ventaSubtotal,
-          iva: ventaIva,
-          total: ventaTotal,
-          metodo_pago: method,
-          habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
-          reserva_id: reservaId,
-        });
-        ventaId = ventaResponse?.id || null;
+        const ventaResponse = await api.createVenta(ventaPayload);
+        console.log('📥 Respuesta venta:', ventaResponse);
+        ventaId = ventaResponse?.id || ventaResponse?.venta_id || null;
+        
+        if (!ventaId) {
+          console.warn('⚠️ Venta creada pero sin ID en respuesta');
+        }
       } catch (ventaError: any) {
-        console.error('Error registrando venta:', ventaError);
-        // Show error but continue
+        console.error('❌ Error registrando venta:', ventaError);
         toast({ 
-          title: 'Advertencia', 
-          description: 'Venta completada pero sin registrar en historial', 
+          title: 'Error en venta', 
+          description: ventaError.message || 'No se pudo registrar la venta', 
           variant: 'destructive' 
         });
+        return; // No continuar si falla la venta
       }
 
       // If charging to room - create cargos
-      if (selectedRoom && selectedRoom !== 'direct') {
+      if (selectedRoom && selectedRoom !== 'direct' && reservaId) {
+        console.log('💳 Creando cargos a habitación...');
         try {
-          // Intentar crear cargos para cada item
           for (const item of cart) {
             const precio = safeNumber(item.producto.precio_venta, 0);
             const cantidad = safeNumber(item.cantidad, 1);
+            const itemTotal = Math.round(precio * cantidad * 100) / 100;
             
-            await api.cargoHabitacion({
+            const cargoPayload = {
               habitacion_id: selectedRoom,
               reserva_id: reservaId,
               producto_id: item.producto.id || '',
-              producto_nombre: item.producto.nombre || 'Producto',
+              concepto: item.producto.nombre || 'Producto POS',
               descripcion: item.producto.nombre || 'Producto',
               cantidad: cantidad,
               precio_unitario: precio,
-              precio: precio,
-              total: Math.round(precio * cantidad * 100) / 100,
-              subtotal: Math.round(precio * cantidad * 100) / 100,
+              total: itemTotal,
               venta_id: ventaId,
-            });
+              fecha: new Date().toISOString(),
+            };
+            
+            console.log('📤 Enviando cargo:', cargoPayload);
+            const cargoResponse = await api.cargoHabitacion(cargoPayload);
+            console.log('📥 Respuesta cargo:', cargoResponse);
           }
         } catch (cargoError: any) {
-          console.error('Error en cargo a habitación:', cargoError);
+          console.error('❌ Error en cargo a habitación:', cargoError);
           toast({ 
             title: 'Cargo a habitación falló', 
             description: cargoError.message || 'Verifique el endpoint /api/cargos-habitacion', 
@@ -215,6 +229,7 @@ export default function POS() {
       setCart([]);
       setSelectedRoom('');
     } catch (error: any) {
+      console.error('❌ Error general:', error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
