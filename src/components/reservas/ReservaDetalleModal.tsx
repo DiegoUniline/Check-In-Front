@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, AlertCircle, Printer } from 'lucide-react';
@@ -51,12 +51,18 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
     }
   };
 
-  // Cargar pagos cuando cambia la reserva o se abre
-  if (open && reserva?.id && historialPagos.length === 0 && !loadingPagos) {
-    cargarPagos();
-  }
+  // Cargar pagos cuando cambia la reserva o se abre el modal
+  useEffect(() => {
+    if (open && reserva?.id) {
+      cargarPagos();
+    }
+    if (!open) {
+      setHistorialPagos([]);
+    }
+  }, [open, reserva?.id]);
 
   if (!reserva) return null;
+
 
   const noches = reserva.noches || differenceInDays(new Date(reserva.fecha_checkout), new Date(reserva.fecha_checkin));
   const tarifaNoche = parseFloat(reserva.tarifa_noche) || 0;
