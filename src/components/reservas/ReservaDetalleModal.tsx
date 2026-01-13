@@ -125,6 +125,36 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
     }
   };
 
+  const handleConfirmar = async () => {
+    setProcessing(true);
+    try {
+      await api.confirmarReserva(reserva.id);
+      toast({ title: '✓ Reserva confirmada' });
+      onOpenChange(false);
+      onUpdate?.();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCancelar = async () => {
+    if (!confirm('¿Seguro que desea cancelar esta reserva?')) return;
+    
+    setProcessing(true);
+    try {
+      await api.cancelarReserva(reserva.id);
+      toast({ title: 'Reserva cancelada' });
+      onOpenChange(false);
+      onUpdate?.();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -341,19 +371,52 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva, onUpdate }: R
               </CardContent>
             </Card>
 
+            {/* Botones según estado */}
+            {reserva.estado === 'Pendiente' && (
+              <div className="space-y-2">
+                <Button className="w-full" size="lg" onClick={handleConfirmar} disabled={processing}>
+                  {processing ? 'Procesando...' : '✓ Confirmar Reserva'}
+                </Button>
+                <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
+                  Cancelar Reserva
+                </Button>
+              </div>
+            )}
+
             {reserva.estado === 'Confirmada' && (
-              <Button className="w-full" size="lg" onClick={handleCheckin} disabled={processing}>
-                {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Completar Check-in</>}
-              </Button>
+              <div className="space-y-2">
+                <Button className="w-full" size="lg" onClick={handleCheckin} disabled={processing}>
+                  {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Completar Check-in</>}
+                </Button>
+                <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
+                  Cancelar Reserva
+                </Button>
+              </div>
             )}
 
             {reserva.estado === 'CheckIn' && (
-              <>
+              <div className="space-y-2">
                 <Button className="w-full bg-success hover:bg-success/90" size="lg" onClick={handleCheckout} disabled={processing || saldoPendiente > 0}>
                   {processing ? 'Procesando...' : <><DoorClosed className="h-5 w-5 mr-2" /> Completar Check-out</>}
                 </Button>
                 {saldoPendiente > 0 && <p className="text-xs text-center text-destructive">* Debe liquidar el saldo pendiente</p>}
-              </>
+              </div>
+            )}
+
+            {reserva.estado === 'CheckOut' && (
+              <Card className="bg-muted">
+                <CardContent className="p-4 text-center">
+                  <p className="text-sm text-muted-foreground">Reserva finalizada</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {reserva.estado === 'Cancelada' && (
+              <Card className="bg-destructive/10 border-destructive">
+                <CardContent className="p-4 text-center">
+                  <p className="text-sm text-destructive font-medium">Reserva cancelada</p>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
