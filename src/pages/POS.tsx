@@ -113,6 +113,13 @@ export default function POS() {
     return isNaN(num) ? '$0.00' : `$${num.toFixed(2)}`;
   };
 
+  // Sanitize number to prevent NaN
+  const safeNumber = (value: any, defaultValue: number = 0): number => {
+    if (value === null || value === undefined || value === '') return defaultValue;
+    const num = parseFloat(String(value));
+    return isNaN(num) ? defaultValue : num;
+  };
+
   const handlePayment = async (method: string) => {
     if (cart.length === 0) {
       toast({ variant: 'destructive', title: 'Carrito vacío', description: 'Agrega productos para continuar.' });
@@ -120,34 +127,45 @@ export default function POS() {
     }
 
     try {
-      // Build items for sale
-      const ventaItems = cart.map(item => ({
-        producto_id: item.producto.id,
-        nombre: item.producto.nombre,
-        cantidad: Number(item.cantidad) || 1,
-        precio_unitario: Number(item.producto.precio_venta) || 0,
-        total: (Number(item.producto.precio_venta) || 0) * (Number(item.cantidad) || 1),
-      }));
+      // Build items for sale with sanitized values
+      const ventaItems = cart.map(item => {
+        const precio = safeNumber(item.producto.precio_venta, 0);
+        const cantidad = safeNumber(item.cantidad, 1);
+        return {
+          producto_id: item.producto.id || '',
+          nombre: item.producto.nombre || 'Producto',
+          cantidad: cantidad,
+          precio_unitario: precio,
+          total: Math.round(precio * cantidad * 100) / 100,
+        };
+      });
+
+      // Calculate totals with sanitized values
+      const ventaSubtotal = safeNumber(subtotal, 0);
+      const ventaIva = safeNumber(iva, 0);
+      const ventaTotal = safeNumber(total, 0);
 
       // If charging to room
       if (selectedRoom && selectedRoom !== 'direct') {
         try {
           for (const item of cart) {
+            const precio = safeNumber(item.producto.precio_venta, 0);
+            const cantidad = safeNumber(item.cantidad, 1);
+            
             await api.cargoHabitacion({
               habitacion_id: selectedRoom,
-              producto_id: item.producto.id,
-              producto_nombre: item.producto.nombre,
-              cantidad: Number(item.cantidad) || 1,
-              precio_unitario: Number(item.producto.precio_venta) || 0,
-              total: (Number(item.producto.precio_venta) || 0) * (Number(item.cantidad) || 1),
+              producto_id: item.producto.id || '',
+              producto_nombre: item.producto.nombre || 'Producto',
+              cantidad: cantidad,
+              precio_unitario: precio,
+              total: Math.round(precio * cantidad * 100) / 100,
             });
           }
         } catch (cargoError: any) {
           console.error('Error en cargo a habitación:', cargoError);
-          // Si falla el cargo, preguntar si quiere continuar como venta directa
           toast({ 
             title: 'Cargo a habitación falló', 
-            description: 'Se registrará como venta directa', 
+            description: cargoError.message || 'Se registrará como venta directa', 
             variant: 'destructive' 
           });
         }
@@ -157,21 +175,20 @@ export default function POS() {
       try {
         await api.createVenta({
           items: ventaItems,
-          subtotal,
-          iva,
-          total,
+          subtotal: ventaSubtotal,
+          iva: ventaIva,
+          total: ventaTotal,
           metodo_pago: method,
           habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
         });
       } catch (ventaError) {
         console.error('Error registrando venta:', ventaError);
-        // Continuar aunque falle el registro de venta
       }
 
       const habNumero = habitaciones.find(h => h.id === selectedRoom)?.numero;
       toast({
         title: '✅ Venta completada',
-        description: `Total: ${formatCurrency(total)} - ${method}${habNumero ? ` - Hab. ${habNumero}` : ''}`,
+        description: `Total: ${formatCurrency(ventaTotal)} - ${method}${habNumero ? ` - Hab. ${habNumero}` : ''}`,
       });
       setCart([]);
       setSelectedRoom('');
