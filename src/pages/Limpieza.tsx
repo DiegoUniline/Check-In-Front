@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Sparkles, Clock, CheckCircle, AlertTriangle, 
-  User, Play, Check, Eye, RefreshCw
+  User, Play, Check, Eye, RefreshCw, UserPlus
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
@@ -23,14 +30,23 @@ export default function Limpieza() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [tareas, setTareas] = useState<any[]>([]);
+  const [empleados, setEmpleados] = useState<any[]>([]);
   const [filterEstado, setFilterEstado] = useState('all');
   const [filterPrioridad, setFilterPrioridad] = useState('all');
+  const [asignarModal, setAsignarModal] = useState<{ open: boolean; tarea: any | null }>({ open: false, tarea: null });
+  const [selectedEmpleado, setSelectedEmpleado] = useState('');
 
-  const cargarTareas = async () => {
+  const cargarDatos = async () => {
     setLoading(true);
     try {
-      const data = await api.getTareasLimpieza();
-      setTareas(Array.isArray(data) ? data : []);
+      const [tareasData, empleadosData] = await Promise.all([
+        api.getTareasLimpieza(),
+        fetch(`${import.meta.env.VITE_API_URL || 'https://checkinapi-5cc3a2116a1c.herokuapp.com/api'}/empleados`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        }).then(r => r.ok ? r.json() : []).catch(() => [])
+      ]);
+      setTareas(Array.isArray(tareasData) ? tareasData : []);
+      setEmpleados(Array.isArray(empleadosData) ? empleadosData : []);
     } catch (error) {
       console.error('Error cargando tareas:', error);
       toast({ title: 'Error', description: 'No se pudieron cargar las tareas', variant: 'destructive' });
@@ -40,7 +56,7 @@ export default function Limpieza() {
   };
 
   useEffect(() => {
-    cargarTareas();
+    cargarDatos();
   }, []);
 
   const filteredTareas = tareas.filter(t => {
@@ -86,7 +102,25 @@ export default function Limpieza() {
         title: 'Estado actualizado',
         description: `Habitación ${getHabitacionNumero(tarea)} - ${nuevoEstado}`,
       });
-      cargarTareas();
+      cargarDatos();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleAsignar = async () => {
+    if (!asignarModal.tarea || !selectedEmpleado) return;
+    
+    try {
+      const empleado = empleados.find(e => e.id === selectedEmpleado);
+      await api.asignarLimpieza(asignarModal.tarea.id, selectedEmpleado, empleado?.nombre || '');
+      toast({
+        title: 'Tarea asignada',
+        description: `Asignada a ${empleado?.nombre}`,
+      });
+      setAsignarModal({ open: false, tarea: null });
+      setSelectedEmpleado('');
+      cargarDatos();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -194,7 +228,25 @@ export default function Limpieza() {
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="icon" onClick={cargarTareas}>
+        <Select value="all" onValueChange={(v) => {
+          if (v !== 'all') {
+            setFilterEstado('all');
+            setFilterPrioridad('all');
+          }
+        }}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrar por empleado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="sin_asignar">Sin asignar</SelectItem>
+            {empleados.map(e => (
+              <SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button variant="outline" size="icon" onClick={cargarDatos}>
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
@@ -233,6 +285,19 @@ export default function Limpieza() {
                 <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
                   <User className="h-4 w-4" />
                   <span>{tarea.asignado_nombre || tarea.asignadoNombre || 'Sin asignar'}</span>
+                  {!tarea.asignado_nombre && !tarea.asignadoNombre && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 px-2 text-xs"
+                      onClick={() => {
+                        setAsignarModal({ open: true, tarea });
+                        setSelectedEmpleado('');
+                      }}
+                    >
+                      <UserPlus className="h-3 w-3 mr-1" /> Asignar
+                    </Button>
+                  )}
                 </div>
 
                 {(tarea.notas || tarea.observaciones) && (
@@ -268,6 +333,39 @@ export default function Limpieza() {
           ))}
         </div>
       )}
+
+      {/* Modal para asignar empleado */}
+      <Dialog open={asignarModal.open} onOpenChange={(open) => setAsignarModal({ open, tarea: open ? asignarModal.tarea : null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar tarea de limpieza</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="font-medium">Habitación {asignarModal.tarea ? getHabitacionNumero(asignarModal.tarea) : ''}</p>
+              <p className="text-sm text-muted-foreground">{asignarModal.tarea?.tipo || 'Limpieza general'}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Seleccionar empleado</Label>
+              <Select value={selectedEmpleado} onValueChange={setSelectedEmpleado}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar empleado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {empleados.map(e => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.nombre} {e.puesto ? `(${e.puesto})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleAsignar} disabled={!selectedEmpleado}>
+              Asignar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

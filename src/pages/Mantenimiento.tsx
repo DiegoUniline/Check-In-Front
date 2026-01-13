@@ -37,23 +37,31 @@ export default function Mantenimiento() {
   const [filterEstado, setFilterEstado] = useState('all');
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
   
+  const [empleados, setEmpleados] = useState<any[]>([]);
+  
   // Form state
   const [formData, setFormData] = useState({
     habitacion_id: '',
+    titulo: '',
     categoria: '',
     descripcion: '',
     prioridad: 'Normal',
+    asignado_a: '',
   });
 
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [tareasData, habsData] = await Promise.all([
+      const [tareasData, habsData, empleadosData] = await Promise.all([
         api.getTareasMantenimiento(),
-        api.getHabitaciones()
+        api.getHabitaciones(),
+        fetch(`${import.meta.env.VITE_API_URL || 'https://checkinapi-5cc3a2116a1c.herokuapp.com/api'}/empleados`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        }).then(r => r.ok ? r.json() : []).catch(() => [])
       ]);
       setTickets(Array.isArray(tareasData) ? tareasData : []);
       setHabitaciones(Array.isArray(habsData) ? habsData : []);
+      setEmpleados(Array.isArray(empleadosData) ? empleadosData : []);
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
@@ -106,25 +114,29 @@ export default function Mantenimiento() {
   };
 
   const handleCreateTicket = async () => {
-    if (!formData.habitacion_id || !formData.descripcion) {
-      toast({ title: 'Error', description: 'Complete los campos requeridos', variant: 'destructive' });
+    if (!formData.habitacion_id || !formData.titulo || !formData.descripcion) {
+      toast({ title: 'Error', description: 'Complete los campos requeridos (Habitación, Título y Descripción)', variant: 'destructive' });
       return;
     }
 
     try {
+      const empleadoSeleccionado = empleados.find(e => e.id === formData.asignado_a);
       await api.createTareaMantenimiento({
         habitacion_id: formData.habitacion_id,
+        titulo: formData.titulo,
         categoria: formData.categoria || 'General',
         descripcion: formData.descripcion,
         prioridad: formData.prioridad,
         estado: 'Pendiente',
+        asignado_a: formData.asignado_a || null,
+        asignado_nombre: empleadoSeleccionado?.nombre || null,
       });
       toast({
         title: 'Ticket creado',
         description: 'El ticket de mantenimiento ha sido registrado.',
       });
       setIsNewTicketOpen(false);
-      setFormData({ habitacion_id: '', categoria: '', descripcion: '', prioridad: 'Normal' });
+      setFormData({ habitacion_id: '', titulo: '', categoria: '', descripcion: '', prioridad: 'Normal', asignado_a: '' });
       cargarDatos();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -279,23 +291,55 @@ export default function Mantenimiento() {
                   </Select>
                 </div>
               </div>
+
               <div className="space-y-2">
-                <Label>Prioridad</Label>
-                <Select
-                  value={formData.prioridad}
-                  onValueChange={(v) => setFormData({...formData, prioridad: v})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Baja">Baja</SelectItem>
-                    <SelectItem value="Normal">Normal</SelectItem>
-                    <SelectItem value="Alta">Alta</SelectItem>
-                    <SelectItem value="Urgente">Urgente</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Título del ticket *</Label>
+                <Input 
+                  placeholder="Ej: Fuga de agua en baño"
+                  value={formData.titulo}
+                  onChange={(e) => setFormData({...formData, titulo: e.target.value})}
+                />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Prioridad</Label>
+                  <Select
+                    value={formData.prioridad}
+                    onValueChange={(v) => setFormData({...formData, prioridad: v})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Baja">Baja</SelectItem>
+                      <SelectItem value="Normal">Normal</SelectItem>
+                      <SelectItem value="Alta">Alta</SelectItem>
+                      <SelectItem value="Urgente">Urgente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Asignar a</Label>
+                  <Select
+                    value={formData.asignado_a}
+                    onValueChange={(v) => setFormData({...formData, asignado_a: v})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sin asignar</SelectItem>
+                      {empleados.map(e => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.nombre} {e.puesto ? `(${e.puesto})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label>Descripción del problema *</Label>
                 <Textarea 
