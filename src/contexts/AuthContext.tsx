@@ -5,7 +5,10 @@ export interface User {
   id: string;
   email: string;
   nombre: string;
+  apellidoPaterno?: string;
   rol: string;
+  hotelNombre?: string;
+  fotoUrl?: string;
 }
 
 interface AuthContextType {
