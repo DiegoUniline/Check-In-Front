@@ -46,7 +46,8 @@ export function TimelineGrid({
     return reservas.filter(r => 
       r.habitacion_id === habitacionId &&
       r.estado !== 'Cancelada' &&
-      r.estado !== 'NoShow'
+      r.estado !== 'NoShow' &&
+      r.fecha_checkin && r.fecha_checkout
     );
   };
 
@@ -55,12 +56,14 @@ export function TimelineGrid({
     const roomReservations = reservas.filter(r => 
       r.habitacion_id === habitacionId &&
       r.estado !== 'Cancelada' &&
-      r.estado !== 'NoShow'
+      r.estado !== 'NoShow' &&
+      r.fecha_checkin && r.fecha_checkout
     );
     
     return roomReservations.some(r => {
       const checkin = startOfDay(new Date(r.fecha_checkin));
       const checkout = startOfDay(new Date(r.fecha_checkout));
+      if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) return false;
       return date >= checkin && date < checkout;
     });
   }, [reservas, dates]);
@@ -120,8 +123,13 @@ export function TimelineGrid({
   };
 
   const getReservationBarStyle = (reserva: any) => {
+    if (!reserva.fecha_checkin || !reserva.fecha_checkout) return null;
+    
     const checkin = startOfDay(new Date(reserva.fecha_checkin));
     const checkout = startOfDay(new Date(reserva.fecha_checkout));
+    
+    if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) return null;
+    
     const gridStart = startOfDay(startDate);
     const gridEnd = addDays(gridStart, daysToShow);
 
@@ -283,19 +291,20 @@ export function TimelineGrid({
                           >
                             {getStatusIcon(reserva.estado)}
                             <span className="truncate">
-                              {reserva.cliente_nombre} {reserva.cliente_apellido?.charAt(0)}.
+                              {reserva.cliente_nombre} {reserva.apellido_paterno?.charAt(0)}.
                             </span>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[280px]">
                           <div className="space-y-1">
-                            <p className="font-semibold">{reserva.cliente_nombre} {reserva.cliente_apellido}</p>
+                            <p className="font-semibold">{reserva.cliente_nombre} {reserva.apellido_paterno}</p>
                             <p className="text-xs text-muted-foreground">
                               {format(new Date(reserva.fecha_checkin), 'd MMM', { locale: es })} - {format(new Date(reserva.fecha_checkout), 'd MMM', { locale: es })}
+                              {' '}({reserva.noches || differenceInDays(new Date(reserva.fecha_checkout), new Date(reserva.fecha_checkin))} noche{reserva.noches !== 1 ? 's' : ''})
                             </p>
                             <div className="flex items-center gap-2 pt-1">
                               <Badge variant="outline" className="text-xs">{reserva.estado}</Badge>
-                              <span className="text-xs">${reserva.total?.toLocaleString()}</span>
+                              <span className="text-xs">${parseFloat(reserva.total || 0).toLocaleString()}</span>
                             </div>
                           </div>
                         </TooltipContent>
