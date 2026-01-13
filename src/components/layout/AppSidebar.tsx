@@ -13,7 +13,8 @@ import {
   Clock,
   Receipt,
   ShoppingBag,
-  History
+  History,
+  BookOpen
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -55,6 +56,7 @@ const salesNavItems = [
 
 const configNavItems = [
   { title: 'Turnos', url: '/turnos', icon: Clock },
+  { title: 'Catálogos', url: '/catalogos', icon: BookOpen },
   { title: 'Configuración', url: '/configuracion', icon: Settings },
 ];
 
