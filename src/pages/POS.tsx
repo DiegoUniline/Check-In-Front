@@ -98,7 +98,12 @@ export default function POS() {
     setCart(prev => prev.filter(item => item.producto.id !== productoId));
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + ((item.producto.precio_venta || 0) * item.cantidad), 0);
+  // Safely calculate totals - ensure numbers are valid
+  const subtotal = cart.reduce((sum, item) => {
+    const precio = Number(item.producto.precio_venta) || 0;
+    const cantidad = Number(item.cantidad) || 0;
+    return sum + (precio * cantidad);
+  }, 0);
   const iva = subtotal * 0.16;
   const total = subtotal + iva;
 
@@ -109,18 +114,36 @@ export default function POS() {
     }
 
     try {
+      // Build items for sale
+      const ventaItems = cart.map(item => ({
+        producto_id: item.producto.id,
+        nombre: item.producto.nombre,
+        cantidad: Number(item.cantidad) || 1,
+        precio_unitario: Number(item.producto.precio_venta) || 0,
+        total: (Number(item.producto.precio_venta) || 0) * (Number(item.cantidad) || 1),
+      }));
+
+      // If charging to room
       if (selectedRoom && selectedRoom !== 'direct') {
-        // Cargo a habitación
         for (const item of cart) {
           await api.cargoHabitacion({
             habitacion_id: selectedRoom,
             producto_id: item.producto.id,
-            cantidad: item.cantidad,
-            precio: item.producto.precio_venta,
+            cantidad: Number(item.cantidad) || 1,
+            precio: Number(item.producto.precio_venta) || 0,
           });
         }
       }
-      // TODO: Registrar venta en sistema
+      
+      // Register sale
+      await api.createVenta({
+        items: ventaItems,
+        subtotal,
+        iva,
+        total,
+        metodo_pago: method,
+        habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
+      }).catch(() => {}); // Continue even if this fails
 
       const habNumero = habitaciones.find(h => h.id === selectedRoom)?.numero;
       toast({

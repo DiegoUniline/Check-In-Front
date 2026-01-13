@@ -47,6 +47,14 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
+import { ComboboxCreatable, ComboboxOption } from '@/components/ui/combobox-creatable';
+
+interface OrderItem {
+  producto_id: string;
+  producto_nombre: string;
+  cantidad: string;
+  precio: string;
+}
 
 export default function Compras() {
   const { toast } = useToast();
@@ -56,12 +64,15 @@ export default function Compras() {
   const [loading, setLoading] = useState(true);
   const [ordenes, setOrdenes] = useState<any[]>([]);
   const [proveedores, setProveedores] = useState<any[]>([]);
+  const [productos, setProductos] = useState<any[]>([]);
   const [selectedProveedor, setSelectedProveedor] = useState('');
-  const [orderItems, setOrderItems] = useState<{producto: string, cantidad: string, precio: string}[]>([
-    { producto: '', cantidad: '', precio: '' }
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([
+    { producto_id: '', producto_nombre: '', cantidad: '', precio: '' }
   ]);
   const [notas, setNotas] = useState('');
   const [detalleModal, setDetalleModal] = useState<{ open: boolean; orden: any | null }>({ open: false, orden: null });
+  const [isNewProveedorOpen, setIsNewProveedorOpen] = useState(false);
+  const [newProveedor, setNewProveedor] = useState({ nombre: '', rfc: '', contacto: '', telefono: '', email: '' });
 
   useEffect(() => {
     cargarDatos();
@@ -70,12 +81,14 @@ export default function Compras() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [ordenesData, proveedoresData] = await Promise.all([
+      const [ordenesData, proveedoresData, productosData] = await Promise.all([
         api.getCompras().catch(() => []),
-        api.getProveedores().catch(() => [])
+        api.getProveedores().catch(() => []),
+        api.getProductos().catch(() => [])
       ]);
       setOrdenes(Array.isArray(ordenesData) ? ordenesData : []);
       setProveedores(Array.isArray(proveedoresData) ? proveedoresData : []);
+      setProductos(Array.isArray(productosData) ? productosData : []);
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
@@ -120,7 +133,7 @@ export default function Compras() {
   };
 
   const handleAddItem = () => {
-    setOrderItems([...orderItems, { producto: '', cantidad: '', precio: '' }]);
+    setOrderItems([...orderItems, { producto_id: '', producto_nombre: '', cantidad: '', precio: '' }]);
   };
 
   const handleCreateOrder = async () => {
@@ -129,7 +142,7 @@ export default function Compras() {
       return;
     }
 
-    const validItems = orderItems.filter(i => i.producto && i.cantidad && i.precio);
+    const validItems = orderItems.filter(i => i.producto_nombre && i.cantidad && i.precio);
     if (validItems.length === 0) {
       toast({ title: 'Agregue al menos un producto', variant: 'destructive' });
       return;
@@ -137,7 +150,8 @@ export default function Compras() {
 
     try {
       const items = validItems.map(i => ({
-        producto: i.producto,
+        producto_id: i.producto_id || null,
+        producto: i.producto_nombre,
         cantidad: parseFloat(i.cantidad),
         precio_unitario: parseFloat(i.precio),
         total: parseFloat(i.cantidad) * parseFloat(i.precio)
@@ -158,7 +172,7 @@ export default function Compras() {
       toast({ title: 'Orden creada', description: 'La orden de compra ha sido creada exitosamente' });
       setIsNewOrderOpen(false);
       setSelectedProveedor('');
-      setOrderItems([{ producto: '', cantidad: '', precio: '' }]);
+      setOrderItems([{ producto_id: '', producto_nombre: '', cantidad: '', precio: '' }]);
       setNotas('');
       cargarDatos();
     } catch (error: any) {
@@ -457,18 +471,24 @@ export default function Compras() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Proveedor *</Label>
-              <Select value={selectedProveedor} onValueChange={setSelectedProveedor}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar proveedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {proveedores.map(prov => (
-                    <SelectItem key={prov.id} value={prov.id}>
-                      {prov.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ComboboxCreatable
+                options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
+                value={selectedProveedor}
+                onValueChange={setSelectedProveedor}
+                onCreate={async (nombre) => {
+                  try {
+                    const newProv = await api.createProveedor({ nombre });
+                    setProveedores([...proveedores, newProv]);
+                    toast({ title: 'Proveedor creado' });
+                    return { value: newProv.id, label: newProv.nombre };
+                  } catch (e: any) {
+                    toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                  }
+                }}
+                placeholder="Seleccionar proveedor..."
+                searchPlaceholder="Buscar o crear proveedor..."
+                createLabel="Crear proveedor"
+              />
             </div>
 
             <Separator />
@@ -482,51 +502,77 @@ export default function Compras() {
               </div>
               
               <div className="space-y-2">
-                {orderItems.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2">
-                    <Input 
-                      placeholder="Producto" 
-                      className="col-span-6"
-                      value={item.producto}
-                      onChange={(e) => {
-                        const newItems = [...orderItems];
-                        newItems[idx].producto = e.target.value;
-                        setOrderItems(newItems);
-                      }}
-                    />
-                    <Input 
-                      placeholder="Cant." 
-                      type="number"
-                      className="col-span-2"
-                      value={item.cantidad}
-                      onChange={(e) => {
-                        const newItems = [...orderItems];
-                        newItems[idx].cantidad = e.target.value;
-                        setOrderItems(newItems);
-                      }}
-                    />
-                    <Input 
-                      placeholder="Precio" 
-                      type="number"
-                      className="col-span-3"
-                      value={item.precio}
-                      onChange={(e) => {
-                        const newItems = [...orderItems];
-                        newItems[idx].precio = e.target.value;
-                        setOrderItems(newItems);
-                      }}
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      className="col-span-1"
-                      onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
-                      disabled={orderItems.length === 1}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                {orderItems.map((item, idx) => {
+                  const productoOptions: ComboboxOption[] = productos.map(p => ({
+                    value: p.id,
+                    label: p.nombre
+                  }));
+
+                  return (
+                    <div key={idx} className="grid grid-cols-12 gap-2">
+                      <div className="col-span-6">
+                        <ComboboxCreatable
+                          options={productoOptions}
+                          value={item.producto_id}
+                          onValueChange={(val) => {
+                            const newItems = [...orderItems];
+                            const prod = productos.find(p => p.id === val);
+                            newItems[idx].producto_id = val;
+                            newItems[idx].producto_nombre = prod?.nombre || val;
+                            if (prod?.precio_compra) {
+                              newItems[idx].precio = String(prod.precio_compra);
+                            }
+                            setOrderItems(newItems);
+                          }}
+                          onCreate={async (nombre) => {
+                            try {
+                              const newProd = await api.createProducto({ nombre, stock_actual: 0 });
+                              setProductos([...productos, newProd]);
+                              toast({ title: 'Producto creado' });
+                              return { value: newProd.id, label: newProd.nombre };
+                            } catch (e: any) {
+                              toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                            }
+                          }}
+                          placeholder="Seleccionar producto..."
+                          searchPlaceholder="Buscar o crear producto..."
+                          createLabel="Crear producto"
+                        />
+                      </div>
+                      <Input 
+                        placeholder="Cant." 
+                        type="number"
+                        className="col-span-2"
+                        value={item.cantidad}
+                        onChange={(e) => {
+                          const newItems = [...orderItems];
+                          newItems[idx].cantidad = e.target.value;
+                          setOrderItems(newItems);
+                        }}
+                      />
+                      <Input 
+                        placeholder="Precio" 
+                        type="number"
+                        className="col-span-3"
+                        value={item.precio}
+                        onChange={(e) => {
+                          const newItems = [...orderItems];
+                          newItems[idx].precio = e.target.value;
+                          setOrderItems(newItems);
+                        }}
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="col-span-1"
+                        onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
+                        disabled={orderItems.length === 1}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
