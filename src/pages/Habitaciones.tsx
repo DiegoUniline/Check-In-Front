@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   BedDouble, Grid3X3, List, Search, Filter, Plus, 
   MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed
@@ -32,8 +32,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { mockHabitaciones, mockTiposHabitacion, Habitacion } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
+import api from '@/lib/api';
 
 export default function Habitaciones() {
   const { toast } = useToast();
@@ -42,21 +42,44 @@ export default function Habitaciones() {
   const [filterPiso, setFilterPiso] = useState('all');
   const [filterTipo, setFilterTipo] = useState('all');
   const [filterEstado, setFilterEstado] = useState('all');
+  const [habitaciones, setHabitaciones] = useState<any[]>([]);
+  const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const pisos = [...new Set(mockHabitaciones.map(h => h.piso))].sort();
+  useEffect(() => {
+    cargarDatos();
+  }, []);
 
-  const filteredHabitaciones = mockHabitaciones.filter(h => {
+  const cargarDatos = async () => {
+    try {
+      const [habData, tiposData] = await Promise.all([
+        api.getHabitaciones(),
+        api.getTiposHabitacion()
+      ]);
+      setHabitaciones(habData);
+      setTiposHabitacion(tiposData);
+    } catch (error) {
+      console.error('Error cargando habitaciones:', error);
+      toast({ title: 'Error', description: 'No se pudieron cargar las habitaciones', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pisos = [...new Set(habitaciones.map(h => h.piso))].sort();
+
+  const filteredHabitaciones = habitaciones.filter(h => {
     const matchSearch = h.numero.includes(searchQuery);
     const matchPiso = filterPiso === 'all' || h.piso.toString() === filterPiso;
-    const matchTipo = filterTipo === 'all' || h.tipoId === filterTipo;
-    const matchEstado = filterEstado === 'all' || h.estadoHabitacion === filterEstado;
+    const matchTipo = filterTipo === 'all' || h.tipo_id === filterTipo;
+    const matchEstado = filterEstado === 'all' || h.estado_habitacion === filterEstado;
     return matchSearch && matchPiso && matchTipo && matchEstado;
   });
 
-  const getStatusColor = (hab: Habitacion) => {
-    if (hab.estadoMantenimiento !== 'OK') return 'border-destructive bg-destructive/5';
-    if (hab.estadoLimpieza !== 'Limpia') return 'border-info bg-info/5';
-    switch (hab.estadoHabitacion) {
+  const getStatusColor = (hab: any) => {
+    if (hab.estado_mantenimiento !== 'OK') return 'border-destructive bg-destructive/5';
+    if (hab.estado_limpieza !== 'Limpia') return 'border-info bg-info/5';
+    switch (hab.estado_habitacion) {
       case 'Disponible': return 'border-success bg-success/5';
       case 'Ocupada': return 'border-warning bg-warning/5';
       case 'Reservada': return 'border-primary bg-primary/5';
@@ -65,14 +88,14 @@ export default function Habitaciones() {
     }
   };
 
-  const getStatusBadge = (hab: Habitacion) => {
-    if (hab.estadoMantenimiento !== 'OK') {
+  const getStatusBadge = (hab: any) => {
+    if (hab.estado_mantenimiento !== 'OK') {
       return <Badge variant="destructive">Mantenimiento</Badge>;
     }
-    if (hab.estadoLimpieza !== 'Limpia') {
+    if (hab.estado_limpieza !== 'Limpia') {
       return <Badge className="bg-info">Limpieza</Badge>;
     }
-    switch (hab.estadoHabitacion) {
+    switch (hab.estado_habitacion) {
       case 'Disponible': return <Badge className="bg-success">Disponible</Badge>;
       case 'Ocupada': return <Badge className="bg-warning text-warning-foreground">Ocupada</Badge>;
       case 'Reservada': return <Badge>Reservada</Badge>;
@@ -80,12 +103,34 @@ export default function Habitaciones() {
     }
   };
 
-  const handleChangeStatus = (hab: Habitacion, newStatus: string) => {
-    toast({
-      title: 'Estado actualizado',
-      description: `Habitación ${hab.numero} cambiada a ${newStatus}`,
-    });
+  const handleChangeStatus = async (hab: any, newStatus: string) => {
+    try {
+      if (newStatus === 'Limpieza') {
+        await api.updateEstadoHabitacion(hab.id, { estado_limpieza: 'Sucia' });
+      } else if (newStatus === 'Mantenimiento') {
+        await api.updateEstadoHabitacion(hab.id, { estado_mantenimiento: 'Pendiente' });
+      } else {
+        await api.updateEstadoHabitacion(hab.id, { estado_habitacion: newStatus });
+      }
+      toast({
+        title: 'Estado actualizado',
+        description: `Habitación ${hab.numero} cambiada a ${newStatus}`,
+      });
+      cargarDatos();
+    } catch (error) {
+      toast({ title: 'Error', description: 'No se pudo actualizar el estado', variant: 'destructive' });
+    }
   };
+
+  if (loading) {
+    return (
+      <MainLayout title="Gestión de Habitaciones" subtitle="Cargando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout 
@@ -123,7 +168,7 @@ export default function Habitaciones() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los tipos</SelectItem>
-              {mockTiposHabitacion.map(t => (
+              {tiposHabitacion.map(t => (
                 <SelectItem key={t.id} value={t.id}>{t.nombre}</SelectItem>
               ))}
             </SelectContent>
@@ -163,11 +208,11 @@ export default function Habitaciones() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {[
-          { label: 'Disponibles', count: mockHabitaciones.filter(h => h.estadoHabitacion === 'Disponible' && h.estadoLimpieza === 'Limpia').length, color: 'text-success' },
-          { label: 'Ocupadas', count: mockHabitaciones.filter(h => h.estadoHabitacion === 'Ocupada').length, color: 'text-warning' },
-          { label: 'Reservadas', count: mockHabitaciones.filter(h => h.estadoHabitacion === 'Reservada').length, color: 'text-primary' },
-          { label: 'Limpieza', count: mockHabitaciones.filter(h => h.estadoLimpieza !== 'Limpia').length, color: 'text-info' },
-          { label: 'Mantenimiento', count: mockHabitaciones.filter(h => h.estadoMantenimiento !== 'OK').length, color: 'text-destructive' },
+          { label: 'Disponibles', count: habitaciones.filter(h => h.estado_habitacion === 'Disponible' && h.estado_limpieza === 'Limpia').length, color: 'text-success' },
+          { label: 'Ocupadas', count: habitaciones.filter(h => h.estado_habitacion === 'Ocupada').length, color: 'text-warning' },
+          { label: 'Reservadas', count: habitaciones.filter(h => h.estado_habitacion === 'Reservada').length, color: 'text-primary' },
+          { label: 'Limpieza', count: habitaciones.filter(h => h.estado_limpieza !== 'Limpia').length, color: 'text-info' },
+          { label: 'Mantenimiento', count: habitaciones.filter(h => h.estado_mantenimiento !== 'OK').length, color: 'text-destructive' },
         ].map(stat => (
           <Card key={stat.label}>
             <CardContent className="p-4 text-center">
@@ -188,7 +233,7 @@ export default function Habitaciones() {
                   <div>
                     <p className="text-2xl font-bold">{hab.numero}</p>
                     <Badge variant="outline" className="text-xs mt-1">
-                      {hab.tipo.codigo}
+                      {hab.tipo_codigo}
                     </Badge>
                   </div>
                   <DropdownMenu>
@@ -215,7 +260,7 @@ export default function Habitaciones() {
                   </DropdownMenu>
                 </div>
                 
-                <p className="text-sm text-muted-foreground mb-2">{hab.tipo.nombre}</p>
+                <p className="text-sm text-muted-foreground mb-2">{hab.tipo_nombre}</p>
                 {getStatusBadge(hab)}
               </CardContent>
             </Card>
@@ -242,17 +287,17 @@ export default function Habitaciones() {
               {filteredHabitaciones.map(hab => (
                 <TableRow key={hab.id}>
                   <TableCell className="font-medium">{hab.numero}</TableCell>
-                  <TableCell>{hab.tipo.nombre}</TableCell>
+                  <TableCell>{hab.tipo_nombre}</TableCell>
                   <TableCell>{hab.piso}</TableCell>
                   <TableCell>{getStatusBadge(hab)}</TableCell>
                   <TableCell>
-                    <Badge variant={hab.estadoLimpieza === 'Limpia' ? 'secondary' : 'outline'}>
-                      {hab.estadoLimpieza}
+                    <Badge variant={hab.estado_limpieza === 'Limpia' ? 'secondary' : 'outline'}>
+                      {hab.estado_limpieza}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={hab.estadoMantenimiento === 'OK' ? 'secondary' : 'destructive'}>
-                      {hab.estadoMantenimiento}
+                    <Badge variant={hab.estado_mantenimiento === 'OK' ? 'secondary' : 'destructive'}>
+                      {hab.estado_mantenimiento}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -277,7 +322,7 @@ export default function Habitaciones() {
       )}
 
       <p className="text-sm text-muted-foreground mt-4 text-center">
-        Mostrando {filteredHabitaciones.length} de {mockHabitaciones.length} habitaciones
+        Mostrando {filteredHabitaciones.length} de {habitaciones.length} habitaciones
       </p>
     </MainLayout>
   );
