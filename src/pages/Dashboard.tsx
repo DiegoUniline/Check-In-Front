@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BedDouble, DoorOpen, Sparkles, Wrench } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -6,21 +7,40 @@ import { CheckInsCard } from '@/components/dashboard/CheckInsCard';
 import { VentasDiaCard } from '@/components/dashboard/VentasDiaCard';
 import { TareasCriticasCard } from '@/components/dashboard/TareasCriticasCard';
 import { OcupacionChart } from '@/components/dashboard/OcupacionChart';
-import { 
-  getDashboardStats, 
-  getCheckinsHoy, 
-  getCheckoutsHoy, 
-  getVentasHoy, 
-  getTareasCriticas 
-} from '@/data/mockData';
+import api from '@/lib/api';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const stats = getDashboardStats();
-  const checkinsHoy = getCheckinsHoy();
-  const checkoutsHoy = getCheckoutsHoy();
-  const ventas = getVentasHoy();
-  const tareasCriticas = getTareasCriticas();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ ocupadas: 0, disponibles: 0, pendientes_limpieza: 0, pendientes_mantenimiento: 0, total_habitaciones: 0 });
+  const [checkinsHoy, setCheckinsHoy] = useState([]);
+  const [checkoutsHoy, setCheckoutsHoy] = useState([]);
+  const [ventas, setVentas] = useState({ total_cobrado: 0, total_cargos: 0, por_metodo: [] });
+  const [tareasCriticas, setTareasCriticas] = useState({ limpieza: [], mantenimiento: [] });
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        const [statsData, checkins, checkouts, ventasData, tareas] = await Promise.all([
+          api.getDashboardStats(),
+          api.getDashboardCheckinsHoy(),
+          api.getDashboardCheckoutsHoy(),
+          api.getDashboardVentasHoy(),
+          api.getDashboardTareasCriticas()
+        ]);
+        setStats(statsData);
+        setCheckinsHoy(checkins);
+        setCheckoutsHoy(checkouts);
+        setVentas(ventasData);
+        setTareasCriticas(tareas);
+      } catch (error) {
+        console.error('Error cargando dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    cargarDatos();
+  }, []);
 
   const handleCheckin = (reservaId: string) => {
     navigate(`/checkin/${reservaId}`);
@@ -34,6 +54,16 @@ export default function Dashboard() {
     navigate(`/limpieza?tarea=${tareaId}`);
   };
 
+  if (loading) {
+    return (
+      <MainLayout title="Panel Principal" subtitle="Cargando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout 
       title="Panel Principal" 
@@ -44,9 +74,9 @@ export default function Dashboard() {
         <KPICard
           title="Habitaciones Ocupadas"
           value={stats.ocupadas}
-          subtitle={`de ${stats.total} habitaciones`}
+          subtitle={`de ${stats.total_habitaciones} habitaciones`}
           icon={BedDouble}
-          trend={{ value: '+3 hoy', positive: true }}
+          trend={{ value: `${stats.ocupacion_porcentaje || 0}%`, positive: true }}
           iconColor="text-warning"
           iconBgColor="bg-warning/10"
         />
@@ -60,17 +90,17 @@ export default function Dashboard() {
         />
         <KPICard
           title="En Limpieza"
-          value={stats.limpieza}
+          value={stats.pendientes_limpieza}
           icon={Sparkles}
-          badge={stats.limpieza > 5 ? { text: 'Prioridad', variant: 'destructive' } : undefined}
+          badge={stats.pendientes_limpieza > 5 ? { text: 'Prioridad', variant: 'destructive' } : undefined}
           iconColor="text-info"
           iconBgColor="bg-info/10"
         />
         <KPICard
           title="En Mantenimiento"
-          value={stats.mantenimiento}
+          value={stats.pendientes_mantenimiento}
           icon={Wrench}
-          badge={stats.mantenimiento > 0 ? { text: 'Fuera de servicio', variant: 'outline' } : undefined}
+          badge={stats.pendientes_mantenimiento > 0 ? { text: 'Fuera de servicio', variant: 'outline' } : undefined}
           iconColor="text-destructive"
           iconBgColor="bg-destructive/10"
         />
@@ -98,7 +128,7 @@ export default function Dashboard() {
         <div className="space-y-6">
           <VentasDiaCard ventas={ventas} />
           <TareasCriticasCard 
-            tareas={tareasCriticas} 
+            tareas={tareasCriticas.limpieza || []} 
             onAtender={handleAtenderTarea}
           />
         </div>
