@@ -46,41 +46,31 @@ export default function POS() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [prodsData, habsData, catsData] = await Promise.all([
+      const [prodsData, habsData, catsData, reservasData] = await Promise.all([
         api.getProductos(),
         api.getHabitaciones({ estado_habitacion: 'Ocupada' }),
         api.getCategorias(),
+        api.getReservas(),
       ]);
       
-      // Intentar obtener reservas de múltiples formas
-      let reservasData: any[] = [];
-      try {
-        // Primero intentar sin filtro
-        const allReservas = await api.getReservas();
-        reservasData = (Array.isArray(allReservas) ? allReservas : [])
-          .filter(r => r.estado === 'checked_in' || r.estado === 'Checked-in' || r.estado === 'checkin');
-        console.log('📋 Reservas activas encontradas:', reservasData.length);
-      } catch (e) {
-        console.warn('⚠️ No se pudieron obtener reservas:', e);
-      }
+      // Filtrar reservas con CheckIn activo
+      const reservasActivas = (Array.isArray(reservasData) ? reservasData : [])
+        .filter(r => r.estado === 'CheckIn');
+      
+      console.log('📋 Reservas activas (CheckIn):', reservasActivas.length);
       
       // Mapear habitaciones con su reserva activa
       const habitacionesConReserva = (Array.isArray(habsData) ? habsData : [])
         .filter(h => h.estado_habitacion === 'Ocupada')
         .map(hab => {
-          // Buscar reserva activa para esta habitación
-          const reservaActiva = reservasData.find(r => r.habitacion_id === hab.id);
-          const reservaId = reservaActiva?.id || hab.reserva_id || hab.reserva_activa_id || hab.reservaId || null;
-          
-          console.log(`🛏️ Hab ${hab.numero}: reserva_id=${reservaId}, reserva encontrada:`, reservaActiva?.id);
-          
+          const reservaActiva = reservasActivas.find(r => r.habitacion_id === hab.id);
+          console.log(`🛏️ Hab ${hab.numero}: reserva_id=${reservaActiva?.id || 'ninguna'}`);
           return {
             ...hab,
-            reserva_id: reservaId
+            reserva_id: reservaActiva?.id || null,
+            cliente_nombre: reservaActiva?.cliente_nombre || null,
           };
         });
-      
-      console.log('🏨 Habitaciones con reserva:', habitacionesConReserva);
       
       setProductos(Array.isArray(prodsData) ? prodsData : []);
       setHabitaciones(habitacionesConReserva);
@@ -129,7 +119,6 @@ export default function POS() {
     setCart(prev => prev.filter(item => item.producto.id !== productoId));
   };
 
-  // Safely calculate totals - ensure numbers are valid
   const subtotal = cart.reduce((sum, item) => {
     const precio = parseFloat(String(item.producto.precio_venta)) || 0;
     const cantidad = parseInt(String(item.cantidad)) || 0;
@@ -138,13 +127,11 @@ export default function POS() {
   const iva = Math.round(subtotal * 0.16 * 100) / 100;
   const total = Math.round((subtotal + iva) * 100) / 100;
 
-  // Format currency safely
   const formatCurrency = (value: number) => {
     const num = parseFloat(String(value)) || 0;
     return isNaN(num) ? '$0.00' : `$${num.toFixed(2)}`;
   };
 
-  // Sanitize number to prevent NaN
   const safeNumber = (value: any, defaultValue: number = 0): number => {
     if (value === null || value === undefined || value === '') return defaultValue;
     const num = parseFloat(String(value));
@@ -158,7 +145,6 @@ export default function POS() {
     }
 
     try {
-      // Build items for sale - formato compatible con compras.js
       const ventaItems = cart.map(item => {
         const precio = safeNumber(item.producto.precio_venta, 0);
         const cantidad = safeNumber(item.cantidad, 1);
@@ -169,35 +155,25 @@ export default function POS() {
           cantidad: cantidad,
           precio_unitario: precio,
           subtotal: itemTotal,
-          total: itemTotal, // algunos backends usan total en vez de subtotal
         };
       });
 
-      // Calculate totals with sanitized values
       const ventaSubtotal = safeNumber(subtotal, 0);
       const ventaImpuestos = safeNumber(iva, 0);
       const ventaTotal = safeNumber(total, 0);
 
-      // Get habitacion info if selected
       const habitacionSeleccionada = habitaciones.find(h => h.id === selectedRoom);
-      const reservaId = habitacionSeleccionada?.reserva_id || habitacionSeleccionada?.reserva_activa_id || null;
+      const reservaId = habitacionSeleccionada?.reserva_id || null;
 
-      // Mapear método de pago al enum del backend
       const metodoPagoMap: Record<string, string> = {
         'Tarjeta': 'Tarjeta',
         'Efectivo': 'Efectivo',
-        'Cargo a habitación': 'Transferencia', // O el que prefieras para cargos
-        'Credit Card': 'Tarjeta',
-        'Cash': 'Efectivo',
+        'Cargo a habitación': 'Transferencia',
       };
       const metodoPagoBackend = metodoPagoMap[method] || 'Efectivo';
 
-      // Generar folio único
-      const folio = `POS-${Date.now()}`;
-
-      // Preparar payload de venta
       const ventaPayload = {
-        folio: folio,
+        folio: `POS-${Date.now()}`,
         detalle: ventaItems,
         subtotal: ventaSubtotal,
         impuestos: ventaImpuestos,
@@ -206,68 +182,45 @@ export default function POS() {
         reserva_id: reservaId,
       };
 
-      console.log('📤 Enviando venta:', JSON.stringify(ventaPayload, null, 2));
+      console.log('📤 Enviando venta:', ventaPayload);
 
-      // Register sale first
-      let ventaId: string | null = null;
-      try {
-        const ventaResponse = await api.createVenta(ventaPayload);
-        console.log('📥 Respuesta venta:', ventaResponse);
-        ventaId = ventaResponse?.id || ventaResponse?.venta_id || null;
+      const ventaResponse = await api.createVenta(ventaPayload);
+      console.log('📥 Respuesta venta:', ventaResponse);
+
+      // Si es cargo a habitación, crear los cargos
+      if (method === 'Cargo a habitación' && selectedRoom && selectedRoom !== 'direct') {
+        console.log('💳 Creando cargos a habitación:', selectedRoom);
         
-        if (!ventaId) {
-          console.warn('⚠️ Venta creada pero sin ID en respuesta');
-        }
-      } catch (ventaError: any) {
-        console.error('❌ Error registrando venta:', ventaError);
-        toast({ 
-          title: 'Error en venta', 
-          description: ventaError.message || 'No se pudo registrar la venta', 
-          variant: 'destructive' 
-        });
-        return; // No continuar si falla la venta
-      }
-
-      // If charging to room - create cargos (requiere reserva_id)
-      if (selectedRoom && selectedRoom !== 'direct') {
-        if (!reservaId) {
-          console.warn('⚠️ No se encontró reserva_id para la habitación, no se pueden crear cargos');
-          toast({ 
-            title: 'Advertencia', 
-            description: 'Venta registrada pero sin cargo a habitación (no hay reserva activa)', 
-            variant: 'destructive' 
-          });
-        } else {
-          console.log('💳 Creando cargos a habitación con reserva:', reservaId);
+        for (const item of cart) {
+          const precio = safeNumber(item.producto.precio_venta, 0);
+          const cantidad = safeNumber(item.cantidad, 1);
+          const itemSubtotal = Math.round(precio * cantidad * 100) / 100;
+          const itemImpuesto = Math.round(itemSubtotal * 0.16 * 100) / 100;
+          const itemTotal = Math.round((itemSubtotal + itemImpuesto) * 100) / 100;
+          
+          // Enviar habitacion_id - el backend buscará la reserva activa
+          const cargoPayload = {
+            habitacion_id: selectedRoom,
+            reserva_id: reservaId, // También enviamos si lo tenemos
+            producto_id: item.producto.id || null,
+            concepto: item.producto.nombre || 'Producto POS',
+            cantidad: cantidad,
+            precio_unitario: precio,
+            subtotal: itemSubtotal,
+            impuesto: itemImpuesto,
+            total: itemTotal,
+          };
+          
+          console.log('📤 Enviando cargo:', cargoPayload);
+          
           try {
-            for (const item of cart) {
-              const precio = safeNumber(item.producto.precio_venta, 0);
-              const cantidad = safeNumber(item.cantidad, 1);
-              const itemSubtotal = Math.round(precio * cantidad * 100) / 100;
-              const itemImpuesto = Math.round(itemSubtotal * 0.16 * 100) / 100; // 16% IVA
-              const itemTotal = Math.round((itemSubtotal + itemImpuesto) * 100) / 100;
-              
-              // Payload según estructura de tabla cargos_habitacion
-              const cargoPayload = {
-                reserva_id: reservaId,
-                producto_id: item.producto.id || null,
-                concepto: item.producto.nombre || 'Producto POS',
-                cantidad: cantidad,
-                precio_unitario: precio,
-                subtotal: itemSubtotal,
-                impuesto: itemImpuesto,
-                total: itemTotal,
-              };
-              
-              console.log('📤 Enviando cargo:', cargoPayload);
-              const cargoResponse = await api.cargoHabitacion(cargoPayload);
-              console.log('📥 Respuesta cargo:', cargoResponse);
-            }
+            const cargoResponse = await api.cargoHabitacion(cargoPayload);
+            console.log('📥 Respuesta cargo:', cargoResponse);
           } catch (cargoError: any) {
-            console.error('❌ Error en cargo a habitación:', cargoError);
+            console.error('❌ Error en cargo:', cargoError);
             toast({ 
-              title: 'Cargo a habitación falló', 
-              description: cargoError.message || 'Verifique el endpoint /api/cargos-habitacion', 
+              title: 'Error en cargo', 
+              description: cargoError.message || 'No se pudo cargar a habitación', 
               variant: 'destructive' 
             });
           }
@@ -281,6 +234,7 @@ export default function POS() {
       });
       setCart([]);
       setSelectedRoom('');
+      
     } catch (error: any) {
       console.error('❌ Error general:', error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -302,7 +256,6 @@ export default function POS() {
       <div className="flex gap-6 h-[calc(100vh-180px)]">
         {/* Left: Products */}
         <div className="flex-1 flex flex-col">
-          {/* Search */}
           <div className="flex items-center gap-2 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -318,7 +271,6 @@ export default function POS() {
             </Button>
           </div>
 
-          {/* Categories */}
           <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-4">
             <TabsList className="flex-wrap h-auto">
               <TabsTrigger value="all">Todos</TabsTrigger>
@@ -328,7 +280,6 @@ export default function POS() {
             </TabsList>
           </Tabs>
 
-          {/* Products Grid */}
           <ScrollArea className="flex-1">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {filteredProducts.map(producto => (
@@ -379,7 +330,6 @@ export default function POS() {
           </CardHeader>
 
           <CardContent className="flex-1 flex flex-col p-4 pt-0">
-            {/* Room selector */}
             <div className="mb-4">
               <Select value={selectedRoom} onValueChange={setSelectedRoom}>
                 <SelectTrigger>
@@ -390,14 +340,14 @@ export default function POS() {
                   <SelectItem value="direct">Venta directa</SelectItem>
                   {habitaciones.map(hab => (
                     <SelectItem key={hab.id} value={hab.id}>
-                      Habitación {hab.numero}
+                      Hab. {hab.numero} {hab.cliente_nombre ? `- ${hab.cliente_nombre}` : ''}
+                      {!hab.reserva_id && ' (sin reserva)'}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Cart items */}
             <ScrollArea className="flex-1 -mx-4 px-4">
               {cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-center text-muted-foreground">
@@ -448,7 +398,6 @@ export default function POS() {
               )}
             </ScrollArea>
 
-            {/* Totals */}
             <div className="pt-4 mt-4 border-t space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
@@ -465,20 +414,12 @@ export default function POS() {
               </div>
             </div>
 
-            {/* Payment buttons */}
             <div className="grid grid-cols-2 gap-2 mt-4">
-              <Button 
-                className="h-12"
-                onClick={() => handlePayment('Tarjeta')}
-              >
+              <Button className="h-12" onClick={() => handlePayment('Tarjeta')}>
                 <CreditCard className="mr-2 h-4 w-4" />
                 Tarjeta
               </Button>
-              <Button 
-                variant="outline"
-                className="h-12"
-                onClick={() => handlePayment('Efectivo')}
-              >
+              <Button variant="outline" className="h-12" onClick={() => handlePayment('Efectivo')}>
                 <Banknote className="mr-2 h-4 w-4" />
                 Efectivo
               </Button>
