@@ -46,13 +46,30 @@ export default function POS() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [prodsData, habsData, catsData] = await Promise.all([
+      const [prodsData, habsData, catsData, reservasData] = await Promise.all([
         api.getProductos(),
         api.getHabitaciones({ estado_habitacion: 'Ocupada' }),
-        api.getCategorias()
+        api.getCategorias(),
+        api.getReservas({ estado: 'checked_in' }).catch(() => []) // Reservas activas
       ]);
+      
+      // Mapear habitaciones con su reserva activa
+      const habitacionesConReserva = (Array.isArray(habsData) ? habsData : [])
+        .filter(h => h.estado_habitacion === 'Ocupada')
+        .map(hab => {
+          // Buscar reserva activa para esta habitación
+          const reservaActiva = (Array.isArray(reservasData) ? reservasData : [])
+            .find(r => r.habitacion_id === hab.id && r.estado === 'checked_in');
+          return {
+            ...hab,
+            reserva_id: reservaActiva?.id || hab.reserva_id || hab.reserva_activa_id || null
+          };
+        });
+      
+      console.log('🏨 Habitaciones con reserva:', habitacionesConReserva);
+      
       setProductos(Array.isArray(prodsData) ? prodsData : []);
-      setHabitaciones(Array.isArray(habsData) ? habsData.filter(h => h.estado_habitacion === 'Ocupada') : []);
+      setHabitaciones(habitacionesConReserva);
       setCategorias(Array.isArray(catsData) ? catsData : []);
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -197,8 +214,8 @@ export default function POS() {
         return; // No continuar si falla la venta
       }
 
-      // If charging to room - create cargos
-      if (selectedRoom && selectedRoom !== 'direct' && reservaId) {
+      // If charging to room - create cargos (con o sin reserva_id)
+      if (selectedRoom && selectedRoom !== 'direct') {
         console.log('💳 Creando cargos a habitación...');
         try {
           for (const item of cart) {
