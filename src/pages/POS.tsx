@@ -136,7 +136,7 @@ export default function POS() {
           nombre: item.producto.nombre || 'Producto',
           cantidad: cantidad,
           precio_unitario: precio,
-          total: Math.round(precio * cantidad * 100) / 100,
+          subtotal: Math.round(precio * cantidad * 100) / 100,
         };
       });
 
@@ -145,47 +145,69 @@ export default function POS() {
       const ventaIva = safeNumber(iva, 0);
       const ventaTotal = safeNumber(total, 0);
 
-      // If charging to room
+      // Get habitacion info if selected
+      const habitacionSeleccionada = habitaciones.find(h => h.id === selectedRoom);
+      const reservaId = habitacionSeleccionada?.reserva_id || habitacionSeleccionada?.reserva_activa_id || null;
+
+      // Register sale first
+      let ventaId: string | null = null;
+      try {
+        const ventaResponse = await api.createVenta({
+          // Formato alternativo que algunos backends esperan
+          detalle: ventaItems,
+          items: ventaItems,
+          productos: ventaItems,
+          subtotal: ventaSubtotal,
+          iva: ventaIva,
+          total: ventaTotal,
+          metodo_pago: method,
+          habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
+          reserva_id: reservaId,
+        });
+        ventaId = ventaResponse?.id || null;
+      } catch (ventaError: any) {
+        console.error('Error registrando venta:', ventaError);
+        // Show error but continue
+        toast({ 
+          title: 'Advertencia', 
+          description: 'Venta completada pero sin registrar en historial', 
+          variant: 'destructive' 
+        });
+      }
+
+      // If charging to room - create cargos
       if (selectedRoom && selectedRoom !== 'direct') {
         try {
+          // Intentar crear cargos para cada item
           for (const item of cart) {
             const precio = safeNumber(item.producto.precio_venta, 0);
             const cantidad = safeNumber(item.cantidad, 1);
             
             await api.cargoHabitacion({
               habitacion_id: selectedRoom,
+              reserva_id: reservaId,
               producto_id: item.producto.id || '',
               producto_nombre: item.producto.nombre || 'Producto',
+              descripcion: item.producto.nombre || 'Producto',
               cantidad: cantidad,
               precio_unitario: precio,
+              precio: precio,
               total: Math.round(precio * cantidad * 100) / 100,
+              subtotal: Math.round(precio * cantidad * 100) / 100,
+              venta_id: ventaId,
             });
           }
         } catch (cargoError: any) {
           console.error('Error en cargo a habitación:', cargoError);
           toast({ 
             title: 'Cargo a habitación falló', 
-            description: cargoError.message || 'Se registrará como venta directa', 
+            description: cargoError.message || 'Verifique el endpoint /api/cargos-habitacion', 
             variant: 'destructive' 
           });
         }
       }
-      
-      // Register sale
-      try {
-        await api.createVenta({
-          items: ventaItems,
-          subtotal: ventaSubtotal,
-          iva: ventaIva,
-          total: ventaTotal,
-          metodo_pago: method,
-          habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
-        });
-      } catch (ventaError) {
-        console.error('Error registrando venta:', ventaError);
-      }
 
-      const habNumero = habitaciones.find(h => h.id === selectedRoom)?.numero;
+      const habNumero = habitacionSeleccionada?.numero;
       toast({
         title: '✅ Venta completada',
         description: `Total: ${formatCurrency(ventaTotal)} - ${method}${habNumero ? ` - Hab. ${habNumero}` : ''}`,
