@@ -151,15 +151,13 @@ export default function POS() {
       const habitacionSeleccionada = habitaciones.find(h => h.id === selectedRoom);
       const reservaId = habitacionSeleccionada?.reserva_id || habitacionSeleccionada?.reserva_activa_id || null;
 
-      // Preparar payload de venta
+      // Preparar payload de venta (sin habitacion_id/reserva_id - esos van en cargos)
       const ventaPayload = {
         detalle: ventaItems,
         subtotal: ventaSubtotal,
         iva: ventaIva,
         total: ventaTotal,
         metodo_pago: method,
-        habitacion_id: selectedRoom && selectedRoom !== 'direct' ? selectedRoom : null,
-        reserva_id: reservaId,
         fecha: new Date().toISOString(),
       };
 
