@@ -21,45 +21,71 @@ export default function Dashboard() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [statsData, checkins, checkouts, ventasData, tareas] = await Promise.all([
+        // Cargar datos básicos - algunos endpoints pueden no existir
+        const results = await Promise.allSettled([
           api.getDashboardStats(),
           api.getDashboardCheckinsHoy(),
           api.getDashboardCheckoutsHoy(),
-          api.getDashboardVentasHoy(),
-          api.getDashboardTareasCriticas()
+          api.getDashboardVentasHoy().catch(() => null),
+          api.getDashboardTareasCriticas().catch(() => ({ limpieza: [], mantenimiento: [] }))
         ]);
-        console.log('Dashboard data:', { statsData, checkins, checkouts, ventasData, tareas });
+
+        const [statsResult, checkinsResult, checkoutsResult, ventasResult, tareasResult] = results;
         
-        setStats(statsData || { ocupadas: 0, disponibles: 0, pendientes_limpieza: 0, pendientes_mantenimiento: 0, total_habitaciones: 0, ocupacion_porcentaje: 0 });
-        setCheckinsHoy(Array.isArray(checkins) ? checkins : []);
-        setCheckoutsHoy(Array.isArray(checkouts) ? checkouts : []);
-        
-        // Map ventas data - handle different API response structures
-        if (ventasData) {
-          setVentas({
-            total: ventasData.total || ventasData.total_ventas || ventasData.ingresos_total || 0,
-            alojamiento: ventasData.alojamiento || ventasData.hospedaje || ventasData.ingresos_hospedaje || 0,
-            alimentos: ventasData.alimentos || ventasData.alimentos_bebidas || ventasData.ingresos_alimentos || 0,
-            servicios: ventasData.servicios || ventasData.otros_servicios || ventasData.ingresos_servicios || 0,
-          });
-        } else {
-          setVentas({ total: 0, alojamiento: 0, alimentos: 0, servicios: 0 });
+        // Stats
+        if (statsResult.status === 'fulfilled' && statsResult.value) {
+          setStats(statsResult.value);
         }
         
-        // Handle tareas - could be array or object with limpieza property
-        if (Array.isArray(tareas)) {
-          setTareasCriticas({ limpieza: tareas, mantenimiento: [] });
+        // Checkins
+        if (checkinsResult.status === 'fulfilled') {
+          setCheckinsHoy(Array.isArray(checkinsResult.value) ? checkinsResult.value : []);
+        }
+        
+        // Checkouts
+        if (checkoutsResult.status === 'fulfilled') {
+          setCheckoutsHoy(Array.isArray(checkoutsResult.value) ? checkoutsResult.value : []);
+        }
+        
+        // Ventas - si el endpoint no existe, intentar calcular desde pagos
+        if (ventasResult.status === 'fulfilled' && ventasResult.value) {
+          const v = ventasResult.value;
+          setVentas({
+            total: v.total || v.total_ventas || v.ingresos_total || 0,
+            alojamiento: v.alojamiento || v.hospedaje || v.ingresos_hospedaje || 0,
+            alimentos: v.alimentos || v.alimentos_bebidas || v.ingresos_alimentos || 0,
+            servicios: v.servicios || v.otros_servicios || v.ingresos_servicios || 0,
+          });
         } else {
-          setTareasCriticas(tareas || { limpieza: [], mantenimiento: [] });
+          // Intentar obtener ventas desde pagos del día
+          try {
+            const hoy = new Date().toISOString().split('T')[0];
+            const pagos = await api.getPagos({ fecha: hoy });
+            if (Array.isArray(pagos) && pagos.length > 0) {
+              const totalPagos = pagos.reduce((sum: number, p: any) => sum + (Number(p.monto) || 0), 0);
+              setVentas({
+                total: totalPagos,
+                alojamiento: totalPagos, // Asumir todo es alojamiento si no hay desglose
+                alimentos: 0,
+                servicios: 0,
+              });
+            }
+          } catch {
+            // Si no hay endpoint de pagos, dejar en 0
+          }
+        }
+        
+        // Tareas
+        if (tareasResult.status === 'fulfilled') {
+          const tareas = tareasResult.value;
+          if (Array.isArray(tareas)) {
+            setTareasCriticas({ limpieza: tareas, mantenimiento: [] });
+          } else {
+            setTareasCriticas(tareas || { limpieza: [], mantenimiento: [] });
+          }
         }
       } catch (error) {
         console.error('Error cargando dashboard:', error);
-        // Set default values on error
-        setStats({ ocupadas: 0, disponibles: 0, pendientes_limpieza: 0, pendientes_mantenimiento: 0, total_habitaciones: 0, ocupacion_porcentaje: 0 });
-        setCheckinsHoy([]);
-        setCheckoutsHoy([]);
-        setVentas({ total: 0, alojamiento: 0, alimentos: 0, servicios: 0 });
-        setTareasCriticas({ limpieza: [], mantenimiento: [] });
       } finally {
         setLoading(false);
       }
