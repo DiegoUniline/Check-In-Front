@@ -27,6 +27,7 @@ import Compras from "./pages/Compras";
 import Historial from "./pages/Historial";
 import NotFound from "./pages/NotFound";
 import Catalogos from "./pages/Catalogos";
+import Usuarios from "./pages/Usuarios";
 
 const queryClient = new QueryClient();
 
@@ -180,6 +181,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Historial />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/usuarios"
+                element={
+                  <ProtectedRoute>
+                    <Usuarios />
                   </ProtectedRoute>
                 }
               />
