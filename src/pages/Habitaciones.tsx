@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
-  BedDouble, Grid3X3, List, Search, Filter, Plus, 
-  MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed
+  Grid3X3, List, Search, Plus, 
+  MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed, Pencil, Trash2
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -23,6 +24,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -45,6 +63,22 @@ export default function Habitaciones() {
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingHab, setEditingHab] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [habToDelete, setHabToDelete] = useState<any>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    tipo_id: '',
+    numero: '',
+    piso: '',
+    estado_habitacion: 'Disponible',
+    estado_limpieza: 'Limpia',
+    estado_mantenimiento: 'OK',
+  });
 
   useEffect(() => {
     cargarDatos();
@@ -112,14 +146,77 @@ export default function Habitaciones() {
       } else {
         await api.updateEstadoHabitacion(hab.id, { estado_habitacion: newStatus });
       }
-      toast({
-        title: 'Estado actualizado',
-        description: `Habitación ${hab.numero} cambiada a ${newStatus}`,
-      });
+      toast({ title: 'Estado actualizado', description: `Habitación ${hab.numero} actualizada` });
       cargarDatos();
     } catch (error) {
       toast({ title: 'Error', description: 'No se pudo actualizar el estado', variant: 'destructive' });
     }
+  };
+
+  const openNewModal = () => {
+    setEditingHab(null);
+    setFormData({
+      tipo_id: tiposHabitacion[0]?.id || '',
+      numero: '',
+      piso: '1',
+      estado_habitacion: 'Disponible',
+      estado_limpieza: 'Limpia',
+      estado_mantenimiento: 'OK',
+    });
+    setModalOpen(true);
+  };
+
+  const openEditModal = (hab: any) => {
+    setEditingHab(hab);
+    setFormData({
+      tipo_id: hab.tipo_id,
+      numero: hab.numero,
+      piso: hab.piso.toString(),
+      estado_habitacion: hab.estado_habitacion,
+      estado_limpieza: hab.estado_limpieza,
+      estado_mantenimiento: hab.estado_mantenimiento,
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      const data = {
+        ...formData,
+        piso: parseInt(formData.piso),
+      };
+      
+      if (editingHab) {
+        await api.updateHabitacion(editingHab.id, data);
+        toast({ title: 'Habitación actualizada', description: `Habitación ${formData.numero} guardada` });
+      } else {
+        await api.createHabitacion(data);
+        toast({ title: 'Habitación creada', description: `Habitación ${formData.numero} creada exitosamente` });
+      }
+      
+      setModalOpen(false);
+      cargarDatos();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'No se pudo guardar', variant: 'destructive' });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!habToDelete) return;
+    try {
+      await api.deleteHabitacion(habToDelete.id);
+      toast({ title: 'Habitación eliminada', description: `Habitación ${habToDelete.numero} eliminada` });
+      setDeleteDialogOpen(false);
+      setHabToDelete(null);
+      cargarDatos();
+    } catch (error) {
+      toast({ title: 'Error', description: 'No se pudo eliminar', variant: 'destructive' });
+    }
+  };
+
+  const confirmDelete = (hab: any) => {
+    setHabToDelete(hab);
+    setDeleteDialogOpen(true);
   };
 
   if (loading) {
@@ -139,8 +236,8 @@ export default function Habitaciones() {
     >
       {/* Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-        <div className="flex flex-1 items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-1 items-center gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Buscar por número..."
@@ -198,7 +295,7 @@ export default function Habitaciones() {
             </ToggleGroupItem>
           </ToggleGroup>
 
-          <Button>
+          <Button onClick={openNewModal}>
             <Plus className="mr-2 h-4 w-4" />
             Nueva Habitación
           </Button>
@@ -243,6 +340,10 @@ export default function Habitaciones() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditModal(hab)}>
+                        <Pencil className="mr-2 h-4 w-4" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Disponible')}>
                         <DoorOpen className="mr-2 h-4 w-4" /> Disponible
                       </DropdownMenuItem>
@@ -255,6 +356,10 @@ export default function Habitaciones() {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Mantenimiento')}>
                         <Wrench className="mr-2 h-4 w-4" /> Reportar falla
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => confirmDelete(hab)} className="text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -303,14 +408,15 @@ export default function Habitaciones() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          Acciones
-                        </Button>
+                        <Button variant="ghost" size="sm">Acciones</Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-                        <DropdownMenuItem>Cambiar estado</DropdownMenuItem>
-                        <DropdownMenuItem>Historial</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEditModal(hab)}>
+                          <Pencil className="mr-2 h-4 w-4" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => confirmDelete(hab)} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -324,6 +430,83 @@ export default function Habitaciones() {
       <p className="text-sm text-muted-foreground mt-4 text-center">
         Mostrando {filteredHabitaciones.length} de {habitaciones.length} habitaciones
       </p>
+
+      {/* Modal Crear/Editar */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingHab ? 'Editar Habitación' : 'Nueva Habitación'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Número de Habitación</Label>
+              <Input
+                value={formData.numero}
+                onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                placeholder="Ej: 101"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Tipo de Habitación</Label>
+              <Select value={formData.tipo_id} onValueChange={(v) => setFormData({ ...formData, tipo_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposHabitacion.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.nombre} - ${t.precio_base}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Piso</Label>
+              <Input
+                type="number"
+                value={formData.piso}
+                onChange={(e) => setFormData({ ...formData, piso: e.target.value })}
+                placeholder="Ej: 1"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Estado</Label>
+              <Select value={formData.estado_habitacion} onValueChange={(v) => setFormData({ ...formData, estado_habitacion: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Disponible">Disponible</SelectItem>
+                  <SelectItem value="Ocupada">Ocupada</SelectItem>
+                  <SelectItem value="Reservada">Reservada</SelectItem>
+                  <SelectItem value="Bloqueada">Bloqueada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave}>{editingHab ? 'Guardar' : 'Crear'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Confirmar Eliminar */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar habitación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de eliminar la habitación {habToDelete?.numero}? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
