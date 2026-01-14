@@ -49,9 +49,6 @@ class ApiClient {
   getDashboardTareasCriticas = () => this.request<any>('/dashboard/tareas-criticas');
   getDashboardOcupacionTipo = () => this.request<any[]>('/dashboard/ocupacion-tipo');
   getDashboardIngresosMes = () => this.request<any>('/dashboard/ingresos-mes');
-  getEntregables: () => fetchApi('/entregables'),
-asignarEntregable: (reservaId: string, data: any) => fetchApi(`/entregables/reserva/${reservaId}`, { method: 'POST', body: JSON.stringify(data) }),
-getConceptosCargo: () => fetchApi('/conceptos-cargo'),
 
   // Habitaciones
   getHabitaciones = (params?: Record<string, string>) => {
@@ -110,6 +107,21 @@ getConceptosCargo: () => fetchApi('/conceptos-cargo'),
   createPago = (data: any) => this.request<any>('/pagos', { method: 'POST', body: data });
   deletePago = (id: string) => this.request<any>(`/pagos/${id}`, { method: 'DELETE' });
 
+  // Cargos
+  getCargosReserva = (reservaId: string) => this.request<any[]>(`/cargos/reserva/${reservaId}`);
+  createCargo = (data: any) => this.request<any>('/cargos', { method: 'POST', body: data });
+  deleteCargo = (id: string) => this.request<any>(`/cargos/${id}`, { method: 'DELETE' });
+
+  // Conceptos Cargo
+  getConceptosCargo = () => this.request<any[]>('/conceptos-cargo');
+  createConceptoCargo = (data: any) => this.request<any>('/conceptos-cargo', { method: 'POST', body: data });
+
+  // Entregables
+  getEntregables = () => this.request<any[]>('/entregables');
+  getEntregablesReserva = (reservaId: string) => this.request<any[]>(`/entregables/reserva/${reservaId}`);
+  asignarEntregable = (reservaId: string, data: any) => this.request<any>(`/entregables/reserva/${reservaId}`, { method: 'POST', body: data });
+  devolverEntregable = (id: string) => this.request<any>(`/entregables/devolver/${id}`, { method: 'PATCH' });
+
   // Limpieza
   getTareasLimpieza = (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -157,9 +169,8 @@ getConceptosCargo: () => fetchApi('/conceptos-cargo'),
   deleteProducto = (id: string) => this.request<any>(`/productos/${id}`, { method: 'DELETE' });
   movimientoInventario = (id: string, data: any) => this.request<any>(`/productos/${id}/movimiento`, { method: 'POST', body: data });
   getMovimientosProducto = (id: string) => this.request<any[]>(`/productos/${id}/movimientos`);
-  cargoHabitacion = (data: any) => this.request<any>('/cargos-habitacion', { method: 'POST', body: data });
-  getCargosHabitacion = (habitacionId: string) => this.request<any[]>(`/cargos-habitacion/habitacion/${habitacionId}`);
-  getCargosReserva = (reservaId: string) => this.request<any[]>(`/cargos-habitacion/reserva/${reservaId}`);
+  cargoHabitacion = (data: any) => this.request<any>('/cargos', { method: 'POST', body: data });
+  getCargosHabitacion = (habitacionId: string) => this.request<any[]>(`/cargos/habitacion/${habitacionId}/reserva-activa`);
 
   // Gastos
   getGastos = (params?: Record<string, string>) => {
@@ -213,10 +224,6 @@ getConceptosCargo: () => fetchApi('/conceptos-cargo'),
   // Hotel
   getHotel = () => this.request<any>('/hotel');
   updateHotel = (data: any) => this.request<any>('/hotel', { method: 'POST', body: data });
-
-getEntregablesReserva: (reservaId: string) => fetchApi(`/entregables/reserva/${reservaId}`),
-devolverEntregable: (id: string) => fetchApi(`/entregables/devolver/${id}`, { method: 'PATCH' }),
-createCargo: (data: any) => fetchApi('/cargos', { method: 'POST', body: JSON.stringify(data) }),
 
   // Usuarios
   getUsuarios = (params?: Record<string, string>) => {
