@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { format, addDays, subDays, startOfWeek, startOfMonth } from 'date-fns';
+import { format, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  Calendar, ChevronLeft, ChevronRight, Plus, Search, Filter,
-  LayoutGrid, List, CalendarDays, BedDouble, Users, RefreshCw
+  Calendar, ChevronLeft, ChevronRight, Plus, Search,
+  BedDouble, Users, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,10 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { DetalleReservaModal } from '@/components/reservas/DetalleReservaModal';
@@ -31,19 +31,16 @@ export default function Reservas() {
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
   const { toast } = useToast();
 
-  // Estado del timeline
   const [startDate, setStartDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('Semana');
   const [filtroTipo, setFiltroTipo] = useState<string>('all');
   const [busqueda, setBusqueda] = useState('');
 
-  // Modales
   const [modalNuevaReserva, setModalNuevaReserva] = useState(false);
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
   const [modalDetalle, setModalDetalle] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
 
-  // Días a mostrar según vista
   const daysToShow = viewMode === 'Dia' ? 1 : viewMode === 'Semana' ? 14 : 31;
 
   useEffect(() => {
@@ -58,53 +55,37 @@ export default function Reservas() {
         api.getReservas(),
         api.getTiposHabitacion()
       ]);
-      
       setHabitaciones(habData);
       setReservas(resData);
       setTiposHabitacion(tiposData);
     } catch (error) {
       console.error('Error cargando datos:', error);
-      toast({ 
-        title: 'Error', 
-        description: 'No se pudieron cargar los datos', 
-        variant: 'destructive' 
-      });
+      toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  // Navegación del timeline
   const navegarFecha = (direccion: 'prev' | 'next' | 'today') => {
     if (direccion === 'today') {
       setStartDate(new Date());
       return;
     }
-    
     const dias = viewMode === 'Dia' ? 1 : viewMode === 'Semana' ? 7 : 30;
-    setStartDate(prev => 
-      direccion === 'next' ? addDays(prev, dias) : subDays(prev, dias)
-    );
+    setStartDate(prev => direccion === 'next' ? addDays(prev, dias) : subDays(prev, dias));
   };
 
-  // Filtrar habitaciones
   const habitacionesFiltradas = habitaciones.filter(h => {
     if (filtroTipo !== 'all' && h.tipo_id !== filtroTipo) return false;
     if (busqueda) {
       const search = busqueda.toLowerCase();
-      return h.numero?.toLowerCase().includes(search) || 
-             h.tipo_nombre?.toLowerCase().includes(search);
+      return h.numero?.toLowerCase().includes(search) || h.tipo_nombre?.toLowerCase().includes(search);
     }
     return true;
   });
 
-  // Handlers de modales
   const handleCreateReservation = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
-    setPreloadReserva({
-      habitacion,
-      fechaCheckin,
-      fechaCheckout
-    });
+    setPreloadReserva({ habitacion, fechaCheckin, fechaCheckout });
     setModalNuevaReserva(true);
   };
 
@@ -117,11 +98,8 @@ export default function Reservas() {
     cargarDatos();
   };
 
-  // Stats rápidos
   const totalHabitaciones = habitaciones.length;
-  const habitacionesOcupadas = reservas.filter(r => 
-    ['CheckIn', 'Hospedado'].includes(r.estado)
-  ).length;
+  const habitacionesOcupadas = reservas.filter(r => ['CheckIn', 'Hospedado'].includes(r.estado)).length;
   const llegadasHoy = reservas.filter(r => {
     const checkin = r.fecha_checkin?.substring(0, 10);
     const hoy = format(new Date(), 'yyyy-MM-dd');
@@ -134,30 +112,21 @@ export default function Reservas() {
   }).length;
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CalendarDays className="h-6 w-6" />
-            Recepción
-          </h1>
-          <p className="text-muted-foreground">Gestión de reservas y check-in/out</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={cargarDatos} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
-          <Button onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Reserva
-          </Button>
-        </div>
+    <MainLayout title="Recepción" subtitle="Gestión de reservas y check-in/out">
+      {/* Header con botones */}
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Button variant="outline" size="sm" onClick={cargarDatos} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Actualizar
+        </Button>
+        <Button onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nueva Reserva
+        </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-4 mb-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -207,10 +176,9 @@ export default function Reservas() {
       </div>
 
       {/* Controles del Timeline */}
-      <Card>
+      <Card className="mb-4">
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-4">
-            {/* Navegación de fechas */}
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => navegarFecha('prev')}>
                 <ChevronLeft className="h-4 w-4" />
@@ -226,7 +194,6 @@ export default function Reservas() {
               </span>
             </div>
 
-            {/* Vista */}
             <div className="flex items-center gap-2">
               <div className="flex gap-1 bg-muted p-1 rounded-lg">
                 {(['Dia', 'Semana', 'Mes'] as ViewMode[]).map(mode => (
@@ -242,7 +209,6 @@ export default function Reservas() {
               </div>
             </div>
 
-            {/* Filtros */}
             <div className="flex items-center gap-2">
               <Select value={filtroTipo} onValueChange={setFiltroTipo}>
                 <SelectTrigger className="w-40">
@@ -303,6 +269,6 @@ export default function Reservas() {
         habitaciones={habitaciones}
         onSuccess={handleSuccess}
       />
-    </div>
+    </MainLayout>
   );
 }
