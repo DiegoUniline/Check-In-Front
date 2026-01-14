@@ -359,15 +359,22 @@ const noches = differenceInDays(
         }
       }
 
-      for (const cargo of formData.cargos) {
-        try {
-          await api.createCargo({
-            reserva_id: reserva.id, concepto_id: cargo.concepto_id, concepto: cargo.concepto_nombre,
-            cantidad: cargo.cantidad, precio_unitario: cargo.precio_unitario,
-            subtotal: cargo.subtotal, impuesto: cargo.impuesto, total: cargo.total,
-          });
-        } catch {}
-      }
+ for (const cargo of formData.cargos) {
+  try {
+    await api.createCargo({
+      reserva_id: reserva.id, 
+      concepto_id: cargo.concepto_id, 
+      concepto: cargo.concepto_nombre,
+      cantidad: cargo.cantidad, 
+      precio_unitario: cargo.precio_unitario,
+      subtotal: cargo.subtotal, 
+      impuesto: cargo.impuesto, 
+      total: cargo.total,
+    });
+  } catch (err) {
+    console.error('Error creando cargo:', err);
+  }
+}
 
       for (const pago of formData.pagos) {
         try {
