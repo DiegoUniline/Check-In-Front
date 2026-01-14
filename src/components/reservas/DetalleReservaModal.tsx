@@ -9,6 +9,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -51,6 +52,12 @@ interface DetalleReservaModalProps {
   onSuccess?: () => void;
 }
 
+// Helper para parsear números de forma segura
+const safeParseFloat = (value: any, defaultValue: number = 0): number => {
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? defaultValue : parsed;
+};
+
 export function DetalleReservaModal({ 
   open, 
   onOpenChange, 
@@ -85,7 +92,7 @@ export function DetalleReservaModal({
   useEffect(() => {
     if (open && reserva) {
       setFechaCheckout(new Date(reserva.fecha_checkout));
-      setHabitacionId(reserva.habitacion_id);
+      setHabitacionId(reserva.habitacion_id || '');
       setEditMode(false);
       cargarDetalles();
     }
@@ -100,9 +107,9 @@ export function DetalleReservaModal({
         api.getPagos?.(reserva.id) || Promise.resolve([]),
         api.getConceptosCargo?.() || Promise.resolve([])
       ]);
-      setCargos(cargosData);
-      setPagos(pagosData);
-      setConceptosCargo(conceptosData);
+      setCargos(Array.isArray(cargosData) ? cargosData : []);
+      setPagos(Array.isArray(pagosData) ? pagosData : []);
+      setConceptosCargo(Array.isArray(conceptosData) ? conceptosData : []);
     } catch (error) {
       console.error('Error cargando detalles:', error);
     } finally {
@@ -132,35 +139,38 @@ export function DetalleReservaModal({
     }
   }, [editMode, fechaCheckout]);
 
-  // Cálculos
+  // Cálculos con valores seguros
   const fechaCheckin = reserva ? new Date(reserva.fecha_checkin) : new Date();
   const nochesOriginales = reserva ? differenceInDays(new Date(reserva.fecha_checkout), fechaCheckin) : 0;
-  const nochesNuevas = differenceInDays(fechaCheckout, fechaCheckin);
+  const nochesNuevas = differenceInDays(fechaCheckout, fechaCheckin) || 1; // Mínimo 1 noche
   const diferenciasNoches = nochesNuevas - nochesOriginales;
 
-  const tarifaNoche = reserva?.tarifa_noche || 0;
+  const tarifaNoche = safeParseFloat(reserva?.tarifa_noche, 0);
   const subtotalHospedaje = tarifaNoche * nochesNuevas;
-  const totalCargos = cargos.reduce((sum, c) => sum + (parseFloat(c.total) || 0), 0);
+  const totalCargos = cargos.reduce((sum, c) => sum + safeParseFloat(c.total, 0), 0);
   const subtotal = subtotalHospedaje + totalCargos;
   
   // Descuento
   let descuentoMonto = 0;
   if (reserva?.descuento_tipo === 'Monto') {
-    descuentoMonto = parseFloat(reserva.descuento_valor) || 0;
+    descuentoMonto = safeParseFloat(reserva.descuento_valor, 0);
   } else if (reserva?.descuento_tipo === 'Porcentaje') {
-    descuentoMonto = subtotal * ((parseFloat(reserva.descuento_valor) || 0) / 100);
+    descuentoMonto = subtotal * (safeParseFloat(reserva.descuento_valor, 0) / 100);
   }
   
   const subtotalConDescuento = subtotal - descuentoMonto;
   const impuestos = subtotalConDescuento * 0.16;
   const totalGeneral = subtotalConDescuento + impuestos;
-  const totalPagado = pagos.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+  const totalPagado = pagos.reduce((sum, p) => sum + safeParseFloat(p.monto, 0), 0);
   const saldoPendiente = totalGeneral - totalPagado;
 
   // Handlers
   const handleAgregarPago = async () => {
-    const monto = parseFloat(pagoMonto);
-    if (!monto || monto <= 0) return;
+    const monto = safeParseFloat(pagoMonto, 0);
+    if (monto <= 0) {
+      toast({ title: 'Monto inválido', variant: 'destructive' });
+      return;
+    }
     
     setLoading(true);
     try {
@@ -173,6 +183,7 @@ export function DetalleReservaModal({
       toast({ title: '✅ Pago registrado', description: `$${monto.toLocaleString()} - ${pagoMetodo}` });
       setPagoMonto('');
       cargarDetalles();
+      onSuccess?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -185,17 +196,27 @@ export function DetalleReservaModal({
       await api.deletePago?.(pagoId);
       toast({ title: 'Pago eliminado' });
       cargarDetalles();
+      onSuccess?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
   const handleAgregarCargo = async () => {
-    if (!cargoConcepto || !cargoMonto) return;
+    if (!cargoConcepto || !cargoMonto) {
+      toast({ title: 'Completa los campos', variant: 'destructive' });
+      return;
+    }
     
     const concepto = conceptosCargo.find(c => c.id === cargoConcepto);
-    const cantidad = parseFloat(cargoCantidad) || 1;
-    const precioUnitario = parseFloat(cargoMonto);
+    const cantidad = safeParseFloat(cargoCantidad, 1);
+    const precioUnitario = safeParseFloat(cargoMonto, 0);
+    
+    if (precioUnitario <= 0) {
+      toast({ title: 'Precio inválido', variant: 'destructive' });
+      return;
+    }
+    
     const subtotalCargo = cantidad * precioUnitario;
     const aplicaIva = concepto?.aplica_iva ?? true;
     const impuestoCargo = aplicaIva ? subtotalCargo * 0.16 : 0;
@@ -217,6 +238,7 @@ export function DetalleReservaModal({
       setCargoCantidad('1');
       setCargoMonto('');
       cargarDetalles();
+      onSuccess?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -229,6 +251,7 @@ export function DetalleReservaModal({
       await api.deleteCargo?.(cargoId);
       toast({ title: 'Cargo eliminado' });
       cargarDetalles();
+      onSuccess?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -239,14 +262,27 @@ export function DetalleReservaModal({
     try {
       const updates: any = {};
       
+      const checkoutOriginal = format(new Date(reserva.fecha_checkout), 'yyyy-MM-dd');
+      const checkoutNuevo = format(fechaCheckout, 'yyyy-MM-dd');
+      
       // Si cambió el checkout
-      if (format(fechaCheckout, 'yyyy-MM-dd') !== format(new Date(reserva.fecha_checkout), 'yyyy-MM-dd')) {
-        updates.fecha_checkout = format(fechaCheckout, 'yyyy-MM-dd');
+      if (checkoutNuevo !== checkoutOriginal) {
+        updates.fecha_checkout = checkoutNuevo;
+        updates.noches = nochesNuevas;
+        updates.subtotal_hospedaje = subtotalHospedaje;
+        updates.total_impuestos = impuestos;
+        updates.total = totalGeneral;
+        updates.saldo_pendiente = saldoPendiente;
       }
       
       // Si cambió la habitación
-      if (habitacionId !== reserva.habitacion_id) {
+      if (habitacionId && habitacionId !== reserva.habitacion_id) {
         updates.habitacion_id = habitacionId;
+        // Buscar número de habitación
+        const hab = habitaciones.find(h => h.id === habitacionId);
+        if (hab) {
+          updates.habitacion_numero = hab.numero;
+        }
       }
 
       if (Object.keys(updates).length > 0) {
@@ -255,6 +291,7 @@ export function DetalleReservaModal({
         setEditMode(false);
         onSuccess?.();
       } else {
+        toast({ title: 'Sin cambios' });
         setEditMode(false);
       }
     } catch (error: any) {
@@ -279,7 +316,7 @@ export function DetalleReservaModal({
   };
 
   const handleCheckOut = async () => {
-    if (saldoPendiente > 0) {
+    if (saldoPendiente > 0.01) { // Tolerancia para decimales
       toast({ 
         title: '⚠️ Saldo pendiente', 
         description: `Hay un saldo de $${saldoPendiente.toLocaleString()} por cobrar`,
@@ -357,13 +394,16 @@ export function DetalleReservaModal({
               </Button>
             )}
           </DialogTitle>
+          <DialogDescription>
+            Gestiona los detalles de la reserva, cargos y pagos
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="detalle" className="mt-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="detalle">Detalle</TabsTrigger>
-            <TabsTrigger value="cargos">Cargos</TabsTrigger>
-            <TabsTrigger value="pagos">Pagos</TabsTrigger>
+            <TabsTrigger value="cargos">Cargos ({cargos.length})</TabsTrigger>
+            <TabsTrigger value="pagos">Pagos ({pagos.length})</TabsTrigger>
           </TabsList>
 
           {/* TAB DETALLE */}
@@ -468,7 +508,7 @@ export function DetalleReservaModal({
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs">Huéspedes</Label>
-                    <p className="font-medium">{reserva.adultos} adultos{reserva.ninos > 0 && `, ${reserva.ninos} niños`}</p>
+                    <p className="font-medium">{reserva.adultos || 1} adultos{reserva.ninos > 0 && `, ${reserva.ninos} niños`}</p>
                   </div>
                 </div>
               </CardContent>
@@ -509,7 +549,7 @@ export function DetalleReservaModal({
                   </div>
                   <div className="flex justify-between font-bold">
                     <span>Saldo pendiente</span>
-                    <span className={saldoPendiente <= 0 ? "text-green-600" : "text-red-600"}>
+                    <span className={saldoPendiente <= 0.01 ? "text-green-600" : "text-red-600"}>
                       ${saldoPendiente.toLocaleString()}
                     </span>
                   </div>
@@ -526,7 +566,7 @@ export function DetalleReservaModal({
               )}
               {puedeHacerCheckout && (
                 <>
-                  {saldoPendiente > 0 && (
+                  {saldoPendiente > 0.01 && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" className="border-orange-500 text-orange-600">
@@ -550,7 +590,7 @@ export function DetalleReservaModal({
                   )}
                   <Button 
                     onClick={handleCheckOut} 
-                    disabled={loading || saldoPendiente > 0}
+                    disabled={loading || saldoPendiente > 0.01}
                     className="bg-slate-600 hover:bg-slate-700"
                   >
                     <ChevronRight className="h-4 w-4 mr-2" /> Check-out
@@ -628,7 +668,7 @@ export function DetalleReservaModal({
                           <span className="text-sm text-muted-foreground ml-2">x{c.cantidad}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">${parseFloat(c.total).toLocaleString()}</span>
+                          <span className="font-medium">${safeParseFloat(c.total).toLocaleString()}</span>
                           {puedeEditar && (
                             <Button variant="ghost" size="sm" onClick={() => handleEliminarCargo(c.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -700,7 +740,7 @@ export function DetalleReservaModal({
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-green-600">${parseFloat(p.monto).toLocaleString()}</span>
+                          <span className="font-medium text-green-600">${safeParseFloat(p.monto).toLocaleString()}</span>
                           {puedeEditar && (
                             <Button variant="ghost" size="sm" onClick={() => handleEliminarPago(p.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -725,7 +765,7 @@ export function DetalleReservaModal({
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Saldo pendiente</span>
-                    <span className={saldoPendiente <= 0 ? "text-green-600" : "text-red-600"}>
+                    <span className={saldoPendiente <= 0.01 ? "text-green-600" : "text-red-600"}>
                       ${saldoPendiente.toLocaleString()}
                     </span>
                   </div>
