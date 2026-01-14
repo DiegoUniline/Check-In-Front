@@ -3,7 +3,8 @@ import { format, addDays, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   CalendarDays, Users, Search, BedDouble, Check, ChevronRight, ChevronLeft, 
-  CalendarPlus, UserPlus, Clock, Percent, DollarSign, Package, Plus, Trash2, Receipt
+  CalendarPlus, UserPlus, Clock, Percent, DollarSign, Package, Plus, Trash2, 
+  Receipt, Phone, Mail, CreditCard, X
 } from 'lucide-react';
 import {
   Dialog,
@@ -63,6 +64,13 @@ interface CargoTemp {
   notas: string;
 }
 
+interface PagoTemp {
+  id: string;
+  monto: number;
+  metodo_pago: string;
+  concepto: string;
+}
+
 interface FormData {
   fechaCheckin: Date;
   fechaCheckout: Date;
@@ -74,6 +82,7 @@ interface FormData {
   tipoHabitacion: string;
   habitacionId: string;
   clienteId: string;
+  clienteData: any;
   nuevoCliente: {
     nombre: string;
     apellido_paterno: string;
@@ -87,10 +96,9 @@ interface FormData {
   notasInternas: string;
   descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
   descuentoValor: number;
-  metodoPago: string;
-  anticipo: number;
   entregablesSeleccionados: string[];
   cargos: CargoTemp[];
+  pagos: PagoTemp[];
 }
 
 const initialFormData: FormData = {
@@ -104,6 +112,7 @@ const initialFormData: FormData = {
   tipoHabitacion: '',
   habitacionId: '',
   clienteId: '',
+  clienteData: null,
   nuevoCliente: {
     nombre: '',
     apellido_paterno: '',
@@ -117,10 +126,9 @@ const initialFormData: FormData = {
   notasInternas: '',
   descuentoTipo: 'none',
   descuentoValor: 0,
-  metodoPago: 'Efectivo',
-  anticipo: 0,
   entregablesSeleccionados: [],
   cargos: [],
+  pagos: [],
 };
 
 export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: NuevaReservaModalProps) {
@@ -132,7 +140,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const [origen, setOrigen] = useState<'Reserva' | 'Recepcion'>('Reserva');
   const { toast } = useToast();
 
-  // Data from API
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
   const [habitacionesDisponibles, setHabitacionesDisponibles] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
@@ -143,12 +150,14 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const [cargoConcepto, setCargoConcepto] = useState('');
   const [cargoCantidad, setCargoCantidad] = useState('1');
   const [cargoMonto, setCargoMonto] = useState('');
-  const [cargoNotas, setCargoNotas] = useState('');
+
+  // Pago temporal
+  const [pagoMonto, setPagoMonto] = useState('');
+  const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
 
   useEffect(() => {
     if (open) {
       cargarDatos();
-      // Reset
       setStep(1);
       setFormData(initialFormData);
       setOrigen('Reserva');
@@ -167,7 +176,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         newFormData.tipoHabitacion = preload.habitacion.tipo_id;
       }
       setFormData(newFormData);
-      // NO saltar steps - siempre mostrar desde el inicio
     }
   }, [open, preload]);
 
@@ -192,23 +200,14 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
       const checkout = format(formData.fechaCheckout, 'yyyy-MM-dd');
       const data = await api.getHabitacionesDisponibles(checkin, checkout, formData.tipoHabitacion || undefined);
       setHabitacionesDisponibles(data);
-      
-      // Si hay preload, verificar que siga disponible
-      if (preload?.habitacion) {
-        const sigueDisponible = data.find((h: any) => h.id === preload.habitacion.id);
-        if (!sigueDisponible) {
-          setFormData(prev => ({ ...prev, habitacionId: '' }));
-        }
-      }
     } catch (error) {
-      console.error('Error buscando habitaciones:', error);
       try {
         const data = await api.getHabitaciones({ estado_habitacion: 'Disponible' });
         setHabitacionesDisponibles(data.filter((h: any) => 
           !formData.tipoHabitacion || h.tipo_id === formData.tipoHabitacion
         ));
       } catch (e) {
-        console.error('Error fallback:', e);
+        console.error('Error:', e);
       }
     }
   };
@@ -222,16 +221,34 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
       const data = await api.getClientes({ search: query });
       setClientes(data.slice(0, 5));
     } catch (error) {
-      console.error('Error buscando clientes:', error);
+      console.error('Error:', error);
     }
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      buscarClientes(searchCliente);
-    }, 300);
+    const timer = setTimeout(() => buscarClientes(searchCliente), 300);
     return () => clearTimeout(timer);
   }, [searchCliente]);
+
+  // Seleccionar cliente existente
+  const handleSelectCliente = (cliente: any) => {
+    setFormData({ 
+      ...formData, 
+      clienteId: cliente.id, 
+      clienteData: cliente 
+    });
+    setSearchCliente('');
+    setClientes([]);
+  };
+
+  // Limpiar cliente seleccionado
+  const handleClearCliente = () => {
+    setFormData({ 
+      ...formData, 
+      clienteId: '', 
+      clienteData: null 
+    });
+  };
 
   // Cálculos
   const noches = differenceInDays(formData.fechaCheckout, formData.fechaCheckin);
@@ -239,43 +256,32 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     (preload?.habitacion?.id === formData.habitacionId ? preload.habitacion : null);
   const selectedTipo = tiposHabitacion.find(t => t.id === formData.tipoHabitacion) || 
     (selectedHabitacion ? { precio_base: selectedHabitacion.precio_base, nombre: selectedHabitacion.tipo_nombre } : null);
-  const selectedCliente = clientes.find(c => c.id === formData.clienteId);
 
   const tarifaNoche = selectedTipo?.precio_base || 0;
   const subtotalHospedaje = tarifaNoche * noches;
   const totalPersonaExtra = formData.personasExtra * formData.cargoPersonaExtra * noches;
-  
-  // Total de cargos extras
   const totalCargosExtras = formData.cargos.reduce((sum, c) => sum + c.total, 0);
-  
   const subtotal = subtotalHospedaje + totalPersonaExtra + totalCargosExtras;
   
   let descuentoMonto = 0;
-  if (formData.descuentoTipo === 'Monto') {
-    descuentoMonto = formData.descuentoValor;
-  } else if (formData.descuentoTipo === 'Porcentaje') {
-    descuentoMonto = subtotal * (formData.descuentoValor / 100);
-  }
+  if (formData.descuentoTipo === 'Monto') descuentoMonto = formData.descuentoValor;
+  else if (formData.descuentoTipo === 'Porcentaje') descuentoMonto = subtotal * (formData.descuentoValor / 100);
   
   const subtotalConDescuento = subtotal - descuentoMonto;
   const impuestos = subtotalConDescuento * 0.16;
   const total = subtotalConDescuento + impuestos;
+  const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
+  const saldoPendiente = total - totalPagado;
 
   const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
     setOrigen(nuevoOrigen);
     if (nuevoOrigen === 'Recepcion') {
-      setFormData({ 
-        ...formData, 
-        fechaCheckin: new Date(), 
-        fechaCheckout: addDays(new Date(), 1) 
-      });
+      setFormData({ ...formData, fechaCheckin: new Date(), fechaCheckout: addDays(new Date(), 1) });
     }
   };
 
   const handleNext = async () => {
-    if (step === 1) {
-      await buscarHabitaciones();
-    }
+    if (step === 1) await buscarHabitaciones();
     if (step < 4) setStep((step + 1) as Step);
   };
 
@@ -283,13 +289,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     if (step > 1) setStep((step - 1) as Step);
   };
 
-  // Agregar cargo temporal
+  // Agregar cargo
   const handleAgregarCargo = () => {
-    if (!cargoConcepto || !cargoMonto) {
-      toast({ title: 'Completa concepto y monto', variant: 'destructive' });
-      return;
-    }
-    
+    if (!cargoConcepto || !cargoMonto) return;
     const concepto = conceptosCargo.find(c => c.id === cargoConcepto);
     const cantidad = parseFloat(cargoCantidad) || 1;
     const precioUnitario = parseFloat(cargoMonto);
@@ -297,31 +299,39 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     const aplicaIva = concepto?.aplica_iva ?? true;
     const impuestoCargo = aplicaIva ? subtotalCargo * 0.16 : 0;
     
-    const nuevoCargo: CargoTemp = {
-      id: `temp-${Date.now()}`,
-      concepto_id: cargoConcepto,
-      concepto_nombre: concepto?.nombre || 'Cargo adicional',
-      cantidad,
-      precio_unitario: precioUnitario,
-      aplica_iva: aplicaIva,
-      subtotal: subtotalCargo,
-      impuesto: impuestoCargo,
-      total: subtotalCargo + impuestoCargo,
-      notas: cargoNotas,
-    };
-    
-    setFormData(prev => ({ ...prev, cargos: [...prev.cargos, nuevoCargo] }));
-    setCargoConcepto('');
-    setCargoCantidad('1');
-    setCargoMonto('');
-    setCargoNotas('');
+    setFormData(prev => ({ 
+      ...prev, 
+      cargos: [...prev.cargos, {
+        id: `temp-${Date.now()}`,
+        concepto_id: cargoConcepto,
+        concepto_nombre: concepto?.nombre || 'Cargo',
+        cantidad, precio_unitario: precioUnitario, aplica_iva: aplicaIva,
+        subtotal: subtotalCargo, impuesto: impuestoCargo, total: subtotalCargo + impuestoCargo,
+        notas: '',
+      }] 
+    }));
+    setCargoConcepto(''); setCargoCantidad('1'); setCargoMonto('');
   };
 
-  const handleEliminarCargo = (cargoId: string) => {
+  // Agregar pago
+  const handleAgregarPago = () => {
+    const monto = parseFloat(pagoMonto);
+    if (!monto || monto <= 0) return;
+    
     setFormData(prev => ({
       ...prev,
-      cargos: prev.cargos.filter(c => c.id !== cargoId)
+      pagos: [...prev.pagos, {
+        id: `pago-${Date.now()}`,
+        monto,
+        metodo_pago: pagoMetodo,
+        concepto: origen === 'Recepcion' ? 'Pago check-in' : 'Anticipo',
+      }]
     }));
+    setPagoMonto('');
+  };
+
+  const handleEliminarPago = (pagoId: string) => {
+    setFormData(prev => ({ ...prev, pagos: prev.pagos.filter(p => p.id !== pagoId) }));
   };
 
   const handleConfirm = async () => {
@@ -361,67 +371,49 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
 
       const reserva = await api.createReserva(reservaData);
 
-      // Si es Recepción, hacer check-in automático
+      // Check-in automático si es Recepción
       if (origen === 'Recepcion' && formData.habitacionId) {
         await api.checkin(reserva.id, formData.habitacionId);
-        
-        // Asignar entregables seleccionados
         for (const entregableId of formData.entregablesSeleccionados) {
-          try {
-            await api.asignarEntregable?.(reserva.id, { entregable_id: entregableId, cantidad: 1 });
-          } catch (e) {
-            console.error('Error asignando entregable:', e);
-          }
+          try { await api.asignarEntregable?.(reserva.id, { entregable_id: entregableId, cantidad: 1 }); } catch {}
         }
       }
 
-      // Crear cargos extras
+      // Crear cargos
       for (const cargo of formData.cargos) {
         try {
           await api.createCargo({
-            reserva_id: reserva.id,
-            concepto_id: cargo.concepto_id,
-            concepto: cargo.concepto_nombre,
-            cantidad: cargo.cantidad,
-            precio_unitario: cargo.precio_unitario,
-            subtotal: cargo.subtotal,
-            impuesto: cargo.impuesto,
-            total: cargo.total,
-            notas: cargo.notas,
+            reserva_id: reserva.id, concepto_id: cargo.concepto_id, concepto: cargo.concepto_nombre,
+            cantidad: cargo.cantidad, precio_unitario: cargo.precio_unitario,
+            subtotal: cargo.subtotal, impuesto: cargo.impuesto, total: cargo.total,
           });
-        } catch (e) {
-          console.error('Error creando cargo:', e);
-        }
+        } catch {}
       }
 
-      // Registrar pago/anticipo
-      if (formData.anticipo > 0) {
-        await api.createPago({
-          reserva_id: reserva.id,
-          monto: formData.anticipo,
-          metodo_pago: formData.metodoPago,
-          concepto: origen === 'Recepcion' ? 'Pago en recepción' : 'Anticipo de reserva',
-        });
+      // Crear pagos
+      for (const pago of formData.pagos) {
+        try {
+          await api.createPago({
+            reserva_id: reserva.id,
+            monto: pago.monto,
+            metodo_pago: pago.metodo_pago,
+            concepto: pago.concepto,
+          });
+        } catch {}
       }
 
       toast({
-        title: origen === 'Recepcion' ? '✅ Huésped registrado' : '¡Reserva creada!',
-        description: origen === 'Recepcion' 
-          ? `Habitación ${selectedHabitacion?.numero} - Check-in completado`
-          : `Reserva #${reserva.numero_reserva || reserva.id.slice(0, 8)} confirmada`,
+        title: origen === 'Recepcion' ? '✅ Check-in completado' : '✅ Reserva creada',
+        description: `Habitación ${selectedHabitacion?.numero} - ${formData.clienteData?.nombre || formData.nuevoCliente.nombre}`,
       });
 
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'No se pudo procesar', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClose = () => {
-    onOpenChange(false);
   };
 
   const toggleEntregable = (id: string) => {
@@ -436,66 +428,48 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const progressValue = (step / 4) * 100;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {origen === 'Recepcion' ? '🚶 Entrada Directa' : '📅 Nueva Reserva'}
+          <DialogTitle className="flex items-center gap-2">
+            {origen === 'Recepcion' ? <><UserPlus className="h-5 w-5" /> Check-in Directo</> : <><CalendarPlus className="h-5 w-5" /> Nueva Reserva</>}
           </DialogTitle>
           <DialogDescription>
-            Paso {step} de 4 - {step === 1 ? 'Fechas y huéspedes' : step === 2 ? 'Habitación' : step === 3 ? 'Huésped' : 'Confirmación'}
+            Paso {step} de 4 - {step === 1 ? 'Fechas' : step === 2 ? 'Habitación' : step === 3 ? 'Huésped' : 'Confirmar'}
           </DialogDescription>
         </DialogHeader>
 
         <Progress value={progressValue} className="h-2 mb-4" />
 
-        {/* Step 1: Fechas y huéspedes */}
+        {/* STEP 1 */}
         {step === 1 && (
           <div className="space-y-4">
-            {/* Toggle Origen - SIEMPRE VISIBLE */}
             <div className="flex gap-2 p-1 bg-muted rounded-lg">
-              <Button
-                type="button"
-                variant={origen === 'Reserva' ? 'default' : 'ghost'}
-                className="flex-1"
-                onClick={() => handleOrigenChange('Reserva')}
-              >
-                <CalendarPlus className="h-4 w-4 mr-2" />
-                Reserva
+              <Button type="button" variant={origen === 'Reserva' ? 'default' : 'ghost'} className="flex-1" onClick={() => handleOrigenChange('Reserva')}>
+                <CalendarPlus className="h-4 w-4 mr-2" /> Reserva
               </Button>
-              <Button
-                type="button"
-                variant={origen === 'Recepcion' ? 'default' : 'ghost'}
-                className="flex-1"
-                onClick={() => handleOrigenChange('Recepcion')}
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Recepción (Walk-in)
+              <Button type="button" variant={origen === 'Recepcion' ? 'default' : 'ghost'} className="flex-1" onClick={() => handleOrigenChange('Recepcion')}>
+                <UserPlus className="h-4 w-4 mr-2" /> Recepción
               </Button>
             </div>
 
             {origen === 'Recepcion' && (
-              <Card className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+              <Card className="bg-amber-50 border-amber-200 dark:bg-amber-950/20">
                 <CardContent className="p-3 text-sm text-amber-800 dark:text-amber-200">
-                  🚶 El huésped está presente. Se hará check-in automático al confirmar.
+                  🚶 Check-in automático al confirmar
                 </CardContent>
               </Card>
             )}
 
-            {/* Info de habitación preseleccionada */}
             {preload?.habitacion && (
               <Card className="bg-primary/5 border-primary/20">
                 <CardContent className="p-3 flex items-center gap-3">
                   <BedDouble className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="font-medium">Habitación {preload.habitacion.numero} preseleccionada</p>
-                    <p className="text-sm text-muted-foreground">{preload.habitacion.tipo_nombre}</p>
-                  </div>
+                  <span className="font-medium">Hab. {preload.habitacion.numero} - {preload.habitacion.tipo_nombre}</span>
                 </CardContent>
               </Card>
             )}
 
-            {/* Fechas */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Check-in</Label>
@@ -507,12 +481,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.fechaCheckin}
-                      onSelect={(date) => date && setFormData({ ...formData, fechaCheckin: date })}
-                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                    />
+                    <Calendar mode="single" selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d })} disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -526,12 +495,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.fechaCheckout}
-                      onSelect={(date) => date && setFormData({ ...formData, fechaCheckout: date })}
-                      disabled={(date) => date <= formData.fechaCheckin}
-                    />
+                    <Calendar mode="single" selected={formData.fechaCheckout} onSelect={(d) => d && setFormData({ ...formData, fechaCheckout: d })} disabled={(d) => d <= formData.fechaCheckin} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -539,236 +503,185 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 <Label>Hora llegada</Label>
                 <div className="relative">
                   <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="time"
-                    className="pl-9"
-                    value={formData.horaLlegada}
-                    onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })}
-                  />
+                  <Input type="time" className="pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
                 </div>
               </div>
             </div>
 
-            {/* Huéspedes */}
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Adultos</Label>
                 <Select value={formData.adultos.toString()} onValueChange={(v) => setFormData({ ...formData, adultos: parseInt(v) })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5, 6].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{[1,2,3,4,5,6].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Niños</Label>
                 <Select value={formData.ninos.toString()} onValueChange={(v) => setFormData({ ...formData, ninos: parseInt(v) })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[0, 1, 2, 3, 4].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{[0,1,2,3,4].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Pers. extra</Label>
+                <Label>Extras</Label>
                 <Select value={formData.personasExtra.toString()} onValueChange={(v) => setFormData({ ...formData, personasExtra: parseInt(v) })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[0, 1, 2, 3].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{[0,1,2,3].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Cargo extra</Label>
-                <Input
-                  type="number"
-                  value={formData.cargoPersonaExtra}
-                  onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })}
-                  disabled={formData.personasExtra === 0}
-                />
+                <Input type="number" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
               </div>
             </div>
 
-            {/* Tipo habitación */}
             <div className="space-y-2">
               <Label>Tipo de habitación</Label>
               <ComboboxCreatable
                 options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base?.toLocaleString()}/noche` }))}
                 value={formData.tipoHabitacion}
-                onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: preload?.habitacion?.tipo_id === v ? preload.habitacion.id : '' })}
+                onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
                 onCreate={async (nombre) => {
-                  try {
-                    const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
-                    setTiposHabitacion([...tiposHabitacion, newTipo]);
-                    toast({ title: 'Tipo creado' });
-                    return { value: newTipo.id, label: `${newTipo.nombre} - $${newTipo.precio_base?.toLocaleString()}/noche` };
-                  } catch (e: any) {
-                    toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                  }
+                  const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
+                  setTiposHabitacion([...tiposHabitacion, newTipo]);
+                  return { value: newTipo.id, label: `${newTipo.nombre} - $1,000/noche` };
                 }}
-                placeholder="Seleccionar tipo..."
-                searchPlaceholder="Buscar o crear..."
-                createLabel="Crear tipo"
+                placeholder="Seleccionar..." searchPlaceholder="Buscar..." createLabel="Crear"
               />
             </div>
-
-            {/* Resumen */}
-            <Card className="bg-muted/50">
-              <CardContent className="p-4 grid grid-cols-3 gap-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Noches:</span>
-                  <span className="font-medium">{noches}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Huéspedes:</span>
-                  <span className="font-medium">{formData.adultos + formData.ninos + formData.personasExtra}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tipo:</span>
-                  <Badge variant={origen === 'Recepcion' ? 'default' : 'secondary'}>{origen}</Badge>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
 
-        {/* Step 2: Habitación */}
+        {/* STEP 2 */}
         {step === 2 && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} habitaciones disponibles</p>
+            <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles</p>
             <div className="grid gap-3 max-h-[400px] overflow-y-auto">
               {habitacionesDisponibles.map(hab => (
-                <Card
-                  key={hab.id}
-                  className={cn("cursor-pointer transition-all hover:border-primary", formData.habitacionId === hab.id && "border-primary bg-primary/5")}
-                  onClick={() => setFormData({ ...formData, habitacionId: hab.id, tipoHabitacion: hab.tipo_id })}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                          <BedDouble className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">Habitación {hab.numero}</span>
-                            <Badge variant="outline">{hab.tipo_codigo || hab.tipo_nombre?.slice(0,3).toUpperCase()}</Badge>
-                            {preload?.habitacion?.id === hab.id && <Badge variant="default">Preseleccionada</Badge>}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{hab.tipo_nombre}</p>
-                        </div>
+                <Card key={hab.id} className={cn("cursor-pointer hover:border-primary", formData.habitacionId === hab.id && "border-primary bg-primary/5")} onClick={() => setFormData({ ...formData, habitacionId: hab.id, tipoHabitacion: hab.tipo_id })}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <BedDouble className="h-6 w-6 text-primary" />
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-lg">${hab.precio_base?.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">por noche</p>
+                      <div>
+                        <p className="font-semibold">Habitación {hab.numero}</p>
+                        <p className="text-sm text-muted-foreground">{hab.tipo_nombre}</p>
                       </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-lg">${hab.precio_base?.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">/noche</p>
                     </div>
                   </CardContent>
                 </Card>
               ))}
-              {habitacionesDisponibles.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">No hay habitaciones disponibles para estas fechas</p>
-              )}
             </div>
           </div>
         )}
 
-        {/* Step 3: Huésped */}
+        {/* STEP 3 - HUÉSPED CON DATOS VISIBLES */}
         {step === 3 && (
           <div className="space-y-4">
-            {!crearNuevoCliente ? (
+            {/* Cliente seleccionado */}
+            {formData.clienteData ? (
+              <Card className="border-primary bg-primary/5">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
+                        {formData.clienteData.nombre?.charAt(0)}{formData.clienteData.apellido_paterno?.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          {formData.clienteData.nombre} {formData.clienteData.apellido_paterno} {formData.clienteData.apellido_materno}
+                        </h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                          {formData.clienteData.telefono && (
+                            <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{formData.clienteData.telefono}</span>
+                          )}
+                          {formData.clienteData.email && (
+                            <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{formData.clienteData.email}</span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          {formData.clienteData.es_vip && <Badge>VIP</Badge>}
+                          {formData.clienteData.total_estancias > 0 && <Badge variant="outline">{formData.clienteData.total_estancias} estancias</Badge>}
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={handleClearCliente}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : !crearNuevoCliente ? (
               <>
                 <div className="space-y-2">
                   <Label>Buscar cliente</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Nombre, email o teléfono..."
-                      className="pl-9"
-                      value={searchCliente}
-                      onChange={(e) => setSearchCliente(e.target.value)}
-                    />
+                    <Input placeholder="Nombre, email o teléfono..." className="pl-9" value={searchCliente} onChange={(e) => setSearchCliente(e.target.value)} />
                   </div>
                 </div>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {clientes.map(cliente => (
-                    <Card
-                      key={cliente.id}
-                      className={cn("cursor-pointer transition-all hover:border-primary", formData.clienteId === cliente.id && "border-primary bg-primary/5")}
-                      onClick={() => setFormData({ ...formData, clienteId: cliente.id })}
-                    >
-                      <CardContent className="p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-medium">
-                            {cliente.nombre?.charAt(0)}{cliente.apellido_paterno?.charAt(0)}
+                {clientes.length > 0 && (
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {clientes.map(cliente => (
+                      <Card key={cliente.id} className="cursor-pointer hover:border-primary" onClick={() => handleSelectCliente(cliente)}>
+                        <CardContent className="p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                              {cliente.nombre?.charAt(0)}{cliente.apellido_paterno?.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-medium">{cliente.nombre} {cliente.apellido_paterno}</p>
+                              <p className="text-sm text-muted-foreground">{cliente.telefono || cliente.email}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{cliente.nombre} {cliente.apellido_paterno}</p>
-                            <p className="text-sm text-muted-foreground">{cliente.email || cliente.telefono}</p>
-                          </div>
-                        </div>
-                        {cliente.es_vip && <Badge>VIP</Badge>}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                          {cliente.es_vip && <Badge>VIP</Badge>}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
                 <Separator />
-                <Button variant="outline" className="w-full" onClick={() => setCrearNuevoCliente(true)}>
-                  + Crear nuevo cliente
-                </Button>
+                <Button variant="outline" className="w-full" onClick={() => setCrearNuevoCliente(true)}>+ Nuevo cliente</Button>
               </>
             ) : (
               <div className="space-y-4">
                 <Button variant="ghost" size="sm" onClick={() => setCrearNuevoCliente(false)}>
-                  <ChevronLeft className="mr-1 h-4 w-4" /> Buscar existente
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Buscar
                 </Button>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre *</Label>
-                    <Input
-                      value={formData.nuevoCliente.nombre}
-                      onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })}
-                    />
+                    <Input value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Apellido Paterno *</Label>
-                    <Input
-                      value={formData.nuevoCliente.apellido_paterno}
-                      onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_paterno: e.target.value } })}
-                    />
+                    <Label>Ap. Paterno *</Label>
+                    <Input value={formData.nuevoCliente.apellido_paterno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_paterno: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ap. Materno</Label>
+                    <Input value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Apellido Materno</Label>
-                    <Input
-                      value={formData.nuevoCliente.apellido_materno}
-                      onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })}
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label>Teléfono *</Label>
-                    <Input
-                      value={formData.nuevoCliente.telefono}
-                      onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })}
-                    />
+                    <Input value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input type="email" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={formData.nuevoCliente.email}
-                      onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })}
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Tipo documento</Label>
-                    <Select
-                      value={formData.nuevoCliente.tipo_documento}
-                      onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}
-                    >
+                    <Select value={formData.nuevoCliente.tipo_documento} onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="INE">INE</SelectItem>
@@ -777,66 +690,50 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Número documento</Label>
-                  <Input
-                    value={formData.nuevoCliente.numero_documento}
-                    onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })}
-                  />
+                  <div className="space-y-2">
+                    <Label>Número documento</Label>
+                    <Input value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
+                  </div>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Step 4: Confirmación y Extras */}
+        {/* STEP 4 - CONFIRMACIÓN */}
         {step === 4 && (
           <div className="grid grid-cols-5 gap-6">
-            {/* Columna izquierda - Info y Extras */}
             <div className="col-span-3 space-y-4">
-              {/* Resumen reserva */}
+              {/* Resumen */}
               <Card>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                        <BedDouble className="h-6 w-6 text-primary" />
-                      </div>
+                      <BedDouble className="h-8 w-8 text-primary" />
                       <div>
-                        <p className="font-semibold">Habitación {selectedHabitacion?.numero}</p>
+                        <p className="font-bold text-lg">Habitación {selectedHabitacion?.numero}</p>
                         <p className="text-sm text-muted-foreground">{selectedTipo?.nombre}</p>
                       </div>
                     </div>
-                    <Badge variant={origen === 'Recepcion' ? 'default' : 'secondary'}>{origen}</Badge>
+                    <Badge variant={origen === 'Recepcion' ? 'default' : 'secondary'} className={origen === 'Recepcion' ? 'bg-green-600' : ''}>
+                      {origen}
+                    </Badge>
                   </div>
-                  <Separator />
-                  <div className="grid grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Check-in</p>
-                      <p className="font-medium">{format(formData.fechaCheckin, 'd MMM', { locale: es })}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Check-out</p>
-                      <p className="font-medium">{format(formData.fechaCheckout, 'd MMM', { locale: es })}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Noches</p>
-                      <p className="font-medium">{noches}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Huéspedes</p>
-                      <p className="font-medium">{formData.adultos}A {formData.ninos}N {formData.personasExtra > 0 && `+${formData.personasExtra}`}</p>
-                    </div>
+                  <Separator className="my-3" />
+                  <div className="grid grid-cols-4 gap-3 text-sm">
+                    <div><p className="text-muted-foreground">Check-in</p><p className="font-medium">{format(formData.fechaCheckin, 'd MMM', { locale: es })}</p></div>
+                    <div><p className="text-muted-foreground">Check-out</p><p className="font-medium">{format(formData.fechaCheckout, 'd MMM', { locale: es })}</p></div>
+                    <div><p className="text-muted-foreground">Noches</p><p className="font-medium">{noches}</p></div>
+                    <div><p className="text-muted-foreground">Huéspedes</p><p className="font-medium">{formData.adultos + formData.ninos}</p></div>
                   </div>
-                  <Separator />
+                  <Separator className="my-3" />
                   <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                      {(formData.clienteData?.nombre || formData.nuevoCliente.nombre)?.charAt(0)}
+                    </div>
                     <div>
-                      <p className="font-medium">
-                        {selectedCliente ? `${selectedCliente.nombre} ${selectedCliente.apellido_paterno}` : `${formData.nuevoCliente.nombre} ${formData.nuevoCliente.apellido_paterno}`}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{selectedCliente?.telefono || formData.nuevoCliente.telefono}</p>
+                      <p className="font-medium">{formData.clienteData?.nombre || formData.nuevoCliente.nombre} {formData.clienteData?.apellido_paterno || formData.nuevoCliente.apellido_paterno}</p>
+                      <p className="text-sm text-muted-foreground">{formData.clienteData?.telefono || formData.nuevoCliente.telefono}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -846,39 +743,23 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Solicitudes especiales</Label>
-                  <Textarea
-                    placeholder="Cuna, piso alto..."
-                    rows={2}
-                    value={formData.solicitudesEspeciales}
-                    onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })}
-                  />
+                  <Textarea rows={2} value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto..." />
                 </div>
                 <div className="space-y-2">
-                  <Label>Notas internas (staff)</Label>
-                  <Textarea
-                    placeholder="Observaciones..."
-                    rows={2}
-                    value={formData.notasInternas}
-                    onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })}
-                  />
+                  <Label>Notas internas</Label>
+                  <Textarea rows={2} value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Para staff..." />
                 </div>
               </div>
 
-              {/* Entregables (solo si es Recepción) */}
+              {/* Entregables */}
               {origen === 'Recepcion' && entregables.length > 0 && (
                 <Card>
                   <CardContent className="p-4">
-                    <Label className="flex items-center gap-2 mb-3">
-                      <Package className="h-4 w-4" /> Entregables
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <Label className="flex items-center gap-2 mb-3"><Package className="h-4 w-4" /> Entregables</Label>
+                    <div className="grid grid-cols-3 gap-2">
                       {entregables.map(ent => (
                         <div key={ent.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={ent.id}
-                            checked={formData.entregablesSeleccionados.includes(ent.id)}
-                            onCheckedChange={() => toggleEntregable(ent.id)}
-                          />
+                          <Checkbox id={ent.id} checked={formData.entregablesSeleccionados.includes(ent.id)} onCheckedChange={() => toggleEntregable(ent.id)} />
                           <label htmlFor={ent.id} className="text-sm cursor-pointer">{ent.nombre}</label>
                         </div>
                       ))}
@@ -887,75 +768,28 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </Card>
               )}
 
-              {/* CARGOS EXTRAS */}
+              {/* Cargos */}
               <Card>
-                <CardContent className="p-4 space-y-4">
-                  <Label className="flex items-center gap-2">
-                    <Receipt className="h-4 w-4" /> Cargos Extras
-                  </Label>
-                  
-                  {/* Formulario agregar cargo */}
-                  <div className="grid grid-cols-4 gap-2">
-                    <Select value={cargoConcepto} onValueChange={(v) => {
-                      setCargoConcepto(v);
-                      const c = conceptosCargo.find(x => x.id === v);
-                      if (c?.precio_default) setCargoMonto(c.precio_default.toString());
-                    }}>
-                      <SelectTrigger><SelectValue placeholder="Concepto..." /></SelectTrigger>
-                      <SelectContent>
-                        {conceptosCargo.map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.nombre} {c.precio_default > 0 && `($${c.precio_default})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                <CardContent className="p-4 space-y-3">
+                  <Label className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Cargos Extras</Label>
+                  <div className="flex gap-2">
+                    <Select value={cargoConcepto} onValueChange={(v) => { setCargoConcepto(v); const c = conceptosCargo.find(x => x.id === v); if (c?.precio_default) setCargoMonto(c.precio_default.toString()); }}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Concepto..." /></SelectTrigger>
+                      <SelectContent>{conceptosCargo.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Input 
-                      type="number" 
-                      placeholder="Cant" 
-                      value={cargoCantidad} 
-                      onChange={(e) => setCargoCantidad(e.target.value)} 
-                    />
-                    <Input 
-                      type="number" 
-                      placeholder="Precio" 
-                      value={cargoMonto} 
-                      onChange={(e) => setCargoMonto(e.target.value)} 
-                    />
-                    <Button onClick={handleAgregarCargo} disabled={!cargoConcepto || !cargoMonto}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <Input className="w-20" type="number" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+                    <Input className="w-28" type="number" placeholder="$" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
+                    <Button onClick={handleAgregarCargo} disabled={!cargoConcepto}><Plus className="h-4 w-4" /></Button>
                   </div>
-
-                  {/* Lista de cargos agregados */}
-                  {formData.cargos.length > 0 && (
-                    <div className="space-y-2 max-h-[150px] overflow-y-auto">
-                      {formData.cargos.map(cargo => (
-                        <div key={cargo.id} className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
-                          <div>
-                            <p className="font-medium text-sm">{cargo.concepto_nombre}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {cargo.cantidad} x ${cargo.precio_unitario.toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">${cargo.total.toLocaleString()}</span>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleEliminarCargo(cargo.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                  {formData.cargos.map(c => (
+                    <div key={c.id} className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded">
+                      <span className="text-sm">{c.concepto_nombre} x{c.cantidad}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">${c.total.toLocaleString()}</span>
+                        <Button variant="ghost" size="sm" onClick={() => setFormData(p => ({ ...p, cargos: p.cargos.filter(x => x.id !== c.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
                     </div>
-                  )}
-
-                  {formData.cargos.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-2">Sin cargos extras</p>
-                  )}
+                  ))}
                 </CardContent>
               </Card>
 
@@ -963,14 +797,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
               <Card>
                 <CardContent className="p-4">
                   <Label className="mb-3 block">Descuento</Label>
-                  <div className="grid grid-cols-3 gap-4">
-                    <Select 
-                      value={formData.descuentoTipo} 
-                      onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sin descuento" />
-                      </SelectTrigger>
+                  <div className="flex gap-4">
+                    <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as any, descuentoValor: 0 })}>
+                      <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sin descuento</SelectItem>
                         <SelectItem value="Monto">Monto fijo</SelectItem>
@@ -979,38 +808,25 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                     </Select>
                     {formData.descuentoTipo !== 'none' && (
                       <div className="relative">
-                        {formData.descuentoTipo === 'Porcentaje' ? (
-                          <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        )}
-                        <Input
-                          type="number"
-                          className="pl-9"
-                          value={formData.descuentoValor}
-                          onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })}
-                        />
+                        {formData.descuentoTipo === 'Porcentaje' ? <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" /> : <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" />}
+                        <Input type="number" className="pl-9 w-32" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
                       </div>
                     )}
-                    {descuentoMonto > 0 && (
-                      <div className="flex items-center text-sm text-green-600">
-                        -${descuentoMonto.toLocaleString()}
-                      </div>
-                    )}
+                    {descuentoMonto > 0 && <span className="text-green-600 font-medium self-center">-${descuentoMonto.toLocaleString()}</span>}
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Columna derecha - Totales y Pago */}
-            <div className="col-span-2 space-y-4">
+            {/* COLUMNA DERECHA - TOTALES Y PAGOS */}
+            <div className="col-span-2">
               <Card className="bg-primary text-primary-foreground sticky top-0">
-                <CardContent className="p-4 space-y-3">
-                  <p className="font-semibold">Resumen de Pago</p>
+                <CardContent className="p-4 space-y-4">
+                  <p className="font-bold">Resumen de Cuenta</p>
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between opacity-80">
-                      <span>Hospedaje ({noches}n × ${tarifaNoche.toLocaleString()})</span>
+                      <span>Hospedaje ({noches}n)</span>
                       <span>${subtotalHospedaje.toLocaleString()}</span>
                     </div>
                     {totalPersonaExtra > 0 && (
@@ -1021,7 +837,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                     )}
                     {totalCargosExtras > 0 && (
                       <div className="flex justify-between opacity-80">
-                        <span>Cargos extras ({formData.cargos.length})</span>
+                        <span>Cargos ({formData.cargos.length})</span>
                         <span>${totalCargosExtras.toLocaleString()}</span>
                       </div>
                     )}
@@ -1039,42 +855,68 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                   
                   <Separator className="bg-primary-foreground/20" />
                   
-                  <div className="flex justify-between font-bold text-xl">
+                  <div className="flex justify-between font-bold text-2xl">
                     <span>Total</span>
                     <span>${total.toLocaleString()}</span>
                   </div>
                   
                   <Separator className="bg-primary-foreground/20" />
                   
+                  {/* PAGOS */}
                   <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label className="text-primary-foreground">Método pago</Label>
-                      <Select value={formData.metodoPago} onValueChange={(v) => setFormData({ ...formData, metodoPago: v })}>
-                        <SelectTrigger className="bg-primary-foreground/10 border-primary-foreground/20">
+                    <Label className="text-primary-foreground flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" /> Pagos
+                    </Label>
+                    
+                    <div className="flex gap-2">
+                      <Input 
+                        type="number" 
+                        placeholder="Monto" 
+                        className="bg-primary-foreground/10 border-primary-foreground/20 flex-1" 
+                        value={pagoMonto} 
+                        onChange={(e) => setPagoMonto(e.target.value)} 
+                      />
+                      <Select value={pagoMetodo} onValueChange={setPagoMetodo}>
+                        <SelectTrigger className="w-32 bg-primary-foreground/10 border-primary-foreground/20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Efectivo">Efectivo</SelectItem>
                           <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                          <SelectItem value="Transferencia">Transferencia</SelectItem>
+                          <SelectItem value="Transferencia">Transfer</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Button variant="secondary" onClick={handleAgregarPago}><Plus className="h-4 w-4" /></Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-primary-foreground">{origen === 'Recepcion' ? 'Pago inicial' : 'Anticipo'}</Label>
-                      <Input
-                        type="number"
-                        className="bg-primary-foreground/10 border-primary-foreground/20"
-                        value={formData.anticipo}
-                        onChange={(e) => setFormData({ ...formData, anticipo: parseFloat(e.target.value) || 0 })}
-                      />
-                    </div>
-                    {formData.anticipo > 0 && (
-                      <div className="p-3 rounded-lg bg-primary-foreground/10 text-center">
-                        <p className="text-xs opacity-80">Saldo pendiente</p>
-                        <p className="text-lg font-bold">${(total - formData.anticipo).toLocaleString()}</p>
+                    
+                    {/* Lista de pagos */}
+                    {formData.pagos.length > 0 && (
+                      <div className="space-y-2">
+                        {formData.pagos.map(p => (
+                          <div key={p.id} className="flex justify-between items-center py-2 px-3 bg-primary-foreground/10 rounded">
+                            <span className="text-sm">{p.metodo_pago}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">${p.monto.toLocaleString()}</span>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleEliminarPago(p.id)}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
+                    
+                    {/* Totales de pago */}
+                    <div className="p-3 rounded-lg bg-primary-foreground/10 space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Pagado:</span>
+                        <span>${totalPagado.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between font-bold">
+                        <span>Saldo:</span>
+                        <span className={saldoPendiente <= 0 ? 'text-green-300' : ''}>${saldoPendiente.toLocaleString()}</span>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -1082,25 +924,18 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
           </div>
         )}
 
-        {/* Footer */}
+        {/* FOOTER */}
         <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={step === 1 ? handleClose : handleBack}>
+          <Button variant="outline" onClick={step === 1 ? () => onOpenChange(false) : handleBack}>
             {step === 1 ? 'Cancelar' : <><ChevronLeft className="mr-1 h-4 w-4" /> Anterior</>}
           </Button>
           {step < 4 ? (
-            <Button
-              onClick={handleNext}
-              disabled={
-                (step === 1 && noches < 1) || 
-                (step === 2 && !formData.habitacionId) || 
-                (step === 3 && !formData.clienteId && !formData.nuevoCliente.nombre)
-              }
-            >
+            <Button onClick={handleNext} disabled={(step === 1 && noches < 1) || (step === 2 && !formData.habitacionId) || (step === 3 && !formData.clienteId && !formData.nuevoCliente.nombre)}>
               Siguiente <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleConfirm} disabled={loading} size="lg">
-              {loading ? 'Procesando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Registrar Check-in' : 'Confirmar Reserva'}</>}
+            <Button onClick={handleConfirm} disabled={loading} size="lg" className={origen === 'Recepcion' ? 'bg-green-600 hover:bg-green-700' : ''}>
+              {loading ? 'Procesando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Completar Check-in' : 'Confirmar Reserva'}</>}
             </Button>
           )}
         </div>
