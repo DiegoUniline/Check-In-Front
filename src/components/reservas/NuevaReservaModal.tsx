@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  CalendarDays, Users, Search, BedDouble, Check, ChevronRight, ChevronLeft, 
+  CalendarDays, Search, BedDouble, Check, ChevronRight, ChevronLeft, 
   CalendarPlus, UserPlus, Clock, Percent, DollarSign, Package, Plus, Trash2, 
   Receipt, Phone, Mail, CreditCard, X
 } from 'lucide-react';
@@ -101,7 +101,6 @@ interface FormData {
   pagos: PagoTemp[];
 }
 
-// Función para crear formData inicial
 const createInitialFormData = (preload?: ReservationPreload): FormData => ({
   fechaCheckin: preload?.fechaCheckin || new Date(),
   fechaCheckout: preload?.fechaCheckout || addDays(new Date(), 1),
@@ -147,16 +146,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const [entregables, setEntregables] = useState<any[]>([]);
   const [conceptosCargo, setConceptosCargo] = useState<any[]>([]);
 
-  // Cargo temporal
   const [cargoConcepto, setCargoConcepto] = useState('');
   const [cargoCantidad, setCargoCantidad] = useState('1');
   const [cargoMonto, setCargoMonto] = useState('');
 
-  // Pago temporal
   const [pagoMonto, setPagoMonto] = useState('');
   const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
 
-  // UN SOLO useEffect para inicializar todo cuando se abre el modal
   useEffect(() => {
     if (open) {
       cargarDatos();
@@ -164,16 +160,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
       setOrigen('Reserva');
       setCrearNuevoCliente(false);
       setSearchCliente('');
-      
-      // Crear formData con las fechas del preload (o fechas por defecto)
-      const newFormData = createInitialFormData(preload);
-      setFormData(newFormData);
-      
-      // Debug
-      console.log('=== MODAL ABIERTO ===');
-      console.log('preload:', preload);
-      console.log('fechaCheckin:', newFormData.fechaCheckin);
-      console.log('fechaCheckout:', newFormData.fechaCheckout);
+      setFormData(createInitialFormData(preload));
     }
   }, [open, preload]);
 
@@ -229,21 +216,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   }, [searchCliente]);
 
   const handleSelectCliente = (cliente: any) => {
-    setFormData({ 
-      ...formData, 
-      clienteId: cliente.id, 
-      clienteData: cliente 
-    });
+    setFormData({ ...formData, clienteId: cliente.id, clienteData: cliente });
     setSearchCliente('');
     setClientes([]);
   };
 
   const handleClearCliente = () => {
-    setFormData({ 
-      ...formData, 
-      clienteId: '', 
-      clienteData: null 
-    });
+    setFormData({ ...formData, clienteId: '', clienteData: null });
   };
 
   // Cálculos
@@ -269,10 +248,15 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = total - totalPagado;
 
+  // FIX: Solo cambiar checkin a hoy, mantener checkout seleccionado
   const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
     setOrigen(nuevoOrigen);
     if (nuevoOrigen === 'Recepcion') {
-      setFormData({ ...formData, fechaCheckin: new Date(), fechaCheckout: addDays(new Date(), 1) });
+      const hoy = new Date();
+      const checkoutActual = formData.fechaCheckout;
+      // Si el checkout es menor o igual a hoy, ajustarlo a mañana
+      const nuevoCheckout = checkoutActual <= hoy ? addDays(hoy, 1) : checkoutActual;
+      setFormData({ ...formData, fechaCheckin: hoy, fechaCheckout: nuevoCheckout });
     }
   };
 
@@ -363,9 +347,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         origen,
       };
 
-      console.log('=== ENVIANDO RESERVA ===');
-      console.log('reservaData:', reservaData);
-
       const reserva = await api.createReserva(reservaData);
 
       if (origen === 'Recepcion' && formData.habitacionId) {
@@ -435,7 +416,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
 
         <Progress value={progressValue} className="h-2 mb-4" />
 
-        {/* STEP 1 */}
+        {/* STEP 1 - FECHAS */}
         {step === 1 && (
           <div className="space-y-4">
             <div className="flex gap-2 p-1 bg-muted rounded-lg">
@@ -547,13 +528,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
           </div>
         )}
 
-        {/* STEP 2 */}
+        {/* STEP 2 - HABITACIÓN */}
         {step === 2 && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles</p>
+            <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles para {format(formData.fechaCheckin, 'd MMM', { locale: es })} - {format(formData.fechaCheckout, 'd MMM', { locale: es })}</p>
             <div className="grid gap-3 max-h-[400px] overflow-y-auto">
               {habitacionesDisponibles.map(hab => (
-                <Card key={hab.id} className={cn("cursor-pointer hover:border-primary", formData.habitacionId === hab.id && "border-primary bg-primary/5")} onClick={() => setFormData({ ...formData, habitacionId: hab.id, tipoHabitacion: hab.tipo_id })}>
+                <Card key={hab.id} className={cn("cursor-pointer hover:border-primary transition-colors", formData.habitacionId === hab.id && "border-primary bg-primary/5")} onClick={() => setFormData({ ...formData, habitacionId: hab.id, tipoHabitacion: hab.tipo_id })}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -571,11 +552,16 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                   </CardContent>
                 </Card>
               ))}
+              {habitacionesDisponibles.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No hay habitaciones disponibles para las fechas seleccionadas
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* STEP 3 */}
+        {/* STEP 3 - HUÉSPED */}
         {step === 3 && (
           <div className="space-y-4">
             {formData.clienteData ? (
@@ -622,7 +608,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 {clientes.length > 0 && (
                   <div className="space-y-2 max-h-[200px] overflow-y-auto">
                     {clientes.map(cliente => (
-                      <Card key={cliente.id} className="cursor-pointer hover:border-primary" onClick={() => handleSelectCliente(cliente)}>
+                      <Card key={cliente.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => handleSelectCliente(cliente)}>
                         <CardContent className="p-3 flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
@@ -645,7 +631,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
             ) : (
               <div className="space-y-4">
                 <Button variant="ghost" size="sm" onClick={() => setCrearNuevoCliente(false)}>
-                  <ChevronLeft className="mr-1 h-4 w-4" /> Buscar
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Buscar existente
                 </Button>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
@@ -693,10 +679,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
           </div>
         )}
 
-        {/* STEP 4 */}
+        {/* STEP 4 - CONFIRMACIÓN */}
         {step === 4 && (
           <div className="grid grid-cols-5 gap-6">
             <div className="col-span-3 space-y-4">
+              {/* Resumen de reserva */}
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -708,13 +695,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                       </div>
                     </div>
                     <Badge variant={origen === 'Recepcion' ? 'default' : 'secondary'} className={origen === 'Recepcion' ? 'bg-green-600' : ''}>
-                      {origen}
+                      {origen === 'Recepcion' ? 'Check-in Directo' : 'Reserva'}
                     </Badge>
                   </div>
                   <Separator className="my-3" />
                   <div className="grid grid-cols-4 gap-3 text-sm">
-                    <div><p className="text-muted-foreground">Check-in</p><p className="font-medium">{format(formData.fechaCheckin, 'd MMM', { locale: es })}</p></div>
-                    <div><p className="text-muted-foreground">Check-out</p><p className="font-medium">{format(formData.fechaCheckout, 'd MMM', { locale: es })}</p></div>
+                    <div><p className="text-muted-foreground">Check-in</p><p className="font-medium">{format(formData.fechaCheckin, 'd MMM yyyy', { locale: es })}</p></div>
+                    <div><p className="text-muted-foreground">Check-out</p><p className="font-medium">{format(formData.fechaCheckout, 'd MMM yyyy', { locale: es })}</p></div>
                     <div><p className="text-muted-foreground">Noches</p><p className="font-medium">{noches}</p></div>
                     <div><p className="text-muted-foreground">Huéspedes</p><p className="font-medium">{formData.adultos + formData.ninos}</p></div>
                   </div>
@@ -731,6 +718,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </CardContent>
               </Card>
 
+              {/* Notas */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Solicitudes especiales</Label>
@@ -742,6 +730,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </div>
               </div>
 
+              {/* Entregables - Solo para Recepción */}
               {origen === 'Recepcion' && entregables.length > 0 && (
                 <Card>
                   <CardContent className="p-4">
@@ -758,6 +747,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </Card>
               )}
 
+              {/* Cargos extras */}
               <Card>
                 <CardContent className="p-4 space-y-3">
                   <Label className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Cargos Extras</Label>
@@ -782,6 +772,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </CardContent>
               </Card>
 
+              {/* Descuento */}
               <Card>
                 <CardContent className="p-4">
                   <Label className="mb-3 block">Descuento</Label>
@@ -806,25 +797,26 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
               </Card>
             </div>
 
+            {/* COLUMNA DERECHA - TOTALES Y PAGOS */}
             <div className="col-span-2">
               <Card className="bg-primary text-primary-foreground sticky top-0">
                 <CardContent className="p-4 space-y-4">
-                  <p className="font-bold">Resumen de Cuenta</p>
+                  <p className="font-bold text-lg">Resumen de Cuenta</p>
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between opacity-80">
-                      <span>Hospedaje ({noches}n)</span>
+                      <span>Hospedaje ({noches} {noches === 1 ? 'noche' : 'noches'})</span>
                       <span>${subtotalHospedaje.toLocaleString()}</span>
                     </div>
                     {totalPersonaExtra > 0 && (
                       <div className="flex justify-between opacity-80">
-                        <span>Persona extra</span>
+                        <span>Persona extra ({formData.personasExtra})</span>
                         <span>${totalPersonaExtra.toLocaleString()}</span>
                       </div>
                     )}
                     {totalCargosExtras > 0 && (
                       <div className="flex justify-between opacity-80">
-                        <span>Cargos ({formData.cargos.length})</span>
+                        <span>Cargos extras ({formData.cargos.length})</span>
                         <span>${totalCargosExtras.toLocaleString()}</span>
                       </div>
                     )}
@@ -849,6 +841,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                   
                   <Separator className="bg-primary-foreground/20" />
                   
+                  {/* Pagos */}
                   <div className="space-y-3">
                     <Label className="text-primary-foreground flex items-center gap-2">
                       <CreditCard className="h-4 w-4" /> Pagos
@@ -858,7 +851,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                       <Input 
                         type="number" 
                         placeholder="Monto" 
-                        className="bg-primary-foreground/10 border-primary-foreground/20 flex-1" 
+                        className="bg-primary-foreground/10 border-primary-foreground/20 flex-1 placeholder:text-primary-foreground/50" 
                         value={pagoMonto} 
                         onChange={(e) => setPagoMonto(e.target.value)} 
                       />
@@ -882,7 +875,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                             <span className="text-sm">{p.metodo_pago}</span>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">${p.monto.toLocaleString()}</span>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleEliminarPago(p.id)}>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-primary-foreground/20" onClick={() => handleEliminarPago(p.id)}>
                                 <X className="h-3 w-3" />
                               </Button>
                             </div>
@@ -897,8 +890,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                         <span>${totalPagado.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between font-bold">
-                        <span>Saldo:</span>
-                        <span className={saldoPendiente <= 0 ? 'text-green-300' : ''}>${saldoPendiente.toLocaleString()}</span>
+                        <span>Saldo pendiente:</span>
+                        <span className={saldoPendiente <= 0 ? 'text-green-300' : 'text-yellow-300'}>${saldoPendiente.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
