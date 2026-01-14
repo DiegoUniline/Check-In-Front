@@ -101,16 +101,17 @@ interface FormData {
   pagos: PagoTemp[];
 }
 
-const initialFormData: FormData = {
-  fechaCheckin: new Date(),
-  fechaCheckout: addDays(new Date(), 1),
+// Función para crear formData inicial
+const createInitialFormData = (preload?: ReservationPreload): FormData => ({
+  fechaCheckin: preload?.fechaCheckin || new Date(),
+  fechaCheckout: preload?.fechaCheckout || addDays(new Date(), 1),
   horaLlegada: '15:00',
   adultos: 2,
   ninos: 0,
   personasExtra: 0,
   cargoPersonaExtra: 250,
-  tipoHabitacion: '',
-  habitacionId: '',
+  tipoHabitacion: preload?.habitacion?.tipo_id || '',
+  habitacionId: preload?.habitacion?.id || '',
   clienteId: '',
   clienteData: null,
   nuevoCliente: {
@@ -129,11 +130,11 @@ const initialFormData: FormData = {
   entregablesSeleccionados: [],
   cargos: [],
   pagos: [],
-};
+});
 
 export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: NuevaReservaModalProps) {
   const [step, setStep] = useState<Step>(1);
-  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [formData, setFormData] = useState<FormData>(createInitialFormData());
   const [searchCliente, setSearchCliente] = useState('');
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -155,27 +156,24 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const [pagoMonto, setPagoMonto] = useState('');
   const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
 
+  // UN SOLO useEffect para inicializar todo cuando se abre el modal
   useEffect(() => {
     if (open) {
       cargarDatos();
       setStep(1);
-      setFormData(initialFormData);
       setOrigen('Reserva');
       setCrearNuevoCliente(false);
       setSearchCliente('');
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (open && preload) {
-      const newFormData = { ...initialFormData };
-      if (preload.fechaCheckin) newFormData.fechaCheckin = preload.fechaCheckin;
-      if (preload.fechaCheckout) newFormData.fechaCheckout = preload.fechaCheckout;
-      if (preload.habitacion) {
-        newFormData.habitacionId = preload.habitacion.id;
-        newFormData.tipoHabitacion = preload.habitacion.tipo_id;
-      }
+      
+      // Crear formData con las fechas del preload (o fechas por defecto)
+      const newFormData = createInitialFormData(preload);
       setFormData(newFormData);
+      
+      // Debug
+      console.log('=== MODAL ABIERTO ===');
+      console.log('preload:', preload);
+      console.log('fechaCheckin:', newFormData.fechaCheckin);
+      console.log('fechaCheckout:', newFormData.fechaCheckout);
     }
   }, [open, preload]);
 
@@ -230,7 +228,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     return () => clearTimeout(timer);
   }, [searchCliente]);
 
-  // Seleccionar cliente existente
   const handleSelectCliente = (cliente: any) => {
     setFormData({ 
       ...formData, 
@@ -241,7 +238,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     setClientes([]);
   };
 
-  // Limpiar cliente seleccionado
   const handleClearCliente = () => {
     setFormData({ 
       ...formData, 
@@ -289,7 +285,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     if (step > 1) setStep((step - 1) as Step);
   };
 
-  // Agregar cargo
   const handleAgregarCargo = () => {
     if (!cargoConcepto || !cargoMonto) return;
     const concepto = conceptosCargo.find(c => c.id === cargoConcepto);
@@ -313,7 +308,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     setCargoConcepto(''); setCargoCantidad('1'); setCargoMonto('');
   };
 
-  // Agregar pago
   const handleAgregarPago = () => {
     const monto = parseFloat(pagoMonto);
     if (!monto || monto <= 0) return;
@@ -369,9 +363,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         origen,
       };
 
+      console.log('=== ENVIANDO RESERVA ===');
+      console.log('reservaData:', reservaData);
+
       const reserva = await api.createReserva(reservaData);
 
-      // Check-in automático si es Recepción
       if (origen === 'Recepcion' && formData.habitacionId) {
         await api.checkin(reserva.id, formData.habitacionId);
         for (const entregableId of formData.entregablesSeleccionados) {
@@ -379,7 +375,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         }
       }
 
-      // Crear cargos
       for (const cargo of formData.cargos) {
         try {
           await api.createCargo({
@@ -390,7 +385,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         } catch {}
       }
 
-      // Crear pagos
       for (const pago of formData.pagos) {
         try {
           await api.createPago({
@@ -581,10 +575,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
           </div>
         )}
 
-        {/* STEP 3 - HUÉSPED CON DATOS VISIBLES */}
+        {/* STEP 3 */}
         {step === 3 && (
           <div className="space-y-4">
-            {/* Cliente seleccionado */}
             {formData.clienteData ? (
               <Card className="border-primary bg-primary/5">
                 <CardContent className="p-4">
@@ -700,11 +693,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
           </div>
         )}
 
-        {/* STEP 4 - CONFIRMACIÓN */}
+        {/* STEP 4 */}
         {step === 4 && (
           <div className="grid grid-cols-5 gap-6">
             <div className="col-span-3 space-y-4">
-              {/* Resumen */}
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -739,7 +731,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </CardContent>
               </Card>
 
-              {/* Notas */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Solicitudes especiales</Label>
@@ -751,7 +742,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </div>
               </div>
 
-              {/* Entregables */}
               {origen === 'Recepcion' && entregables.length > 0 && (
                 <Card>
                   <CardContent className="p-4">
@@ -768,7 +758,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </Card>
               )}
 
-              {/* Cargos */}
               <Card>
                 <CardContent className="p-4 space-y-3">
                   <Label className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Cargos Extras</Label>
@@ -793,7 +782,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </CardContent>
               </Card>
 
-              {/* Descuento */}
               <Card>
                 <CardContent className="p-4">
                   <Label className="mb-3 block">Descuento</Label>
@@ -818,7 +806,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
               </Card>
             </div>
 
-            {/* COLUMNA DERECHA - TOTALES Y PAGOS */}
             <div className="col-span-2">
               <Card className="bg-primary text-primary-foreground sticky top-0">
                 <CardContent className="p-4 space-y-4">
@@ -862,7 +849,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                   
                   <Separator className="bg-primary-foreground/20" />
                   
-                  {/* PAGOS */}
                   <div className="space-y-3">
                     <Label className="text-primary-foreground flex items-center gap-2">
                       <CreditCard className="h-4 w-4" /> Pagos
@@ -889,7 +875,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                       <Button variant="secondary" onClick={handleAgregarPago}><Plus className="h-4 w-4" /></Button>
                     </div>
                     
-                    {/* Lista de pagos */}
                     {formData.pagos.length > 0 && (
                       <div className="space-y-2">
                         {formData.pagos.map(p => (
@@ -906,7 +891,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                       </div>
                     )}
                     
-                    {/* Totales de pago */}
                     <div className="p-3 rounded-lg bg-primary-foreground/10 space-y-1">
                       <div className="flex justify-between text-sm">
                         <span>Pagado:</span>
