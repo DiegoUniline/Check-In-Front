@@ -4,9 +4,9 @@ import { es } from 'date-fns/locale';
 import { 
   Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, 
   AlertCircle, Printer, RefreshCw, Package, Plus, Trash2, Receipt,
-  Users, Clock, Percent, Tag
+  Users, Clock, Percent, Tag, Pencil, Save, X
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,8 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 
@@ -34,6 +36,12 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const [processing, setProcessing] = useState(false);
   const [reserva, setReserva] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Modo edición
+  const [editMode, setEditMode] = useState(false);
+  const [fechaCheckout, setFechaCheckout] = useState<Date>(new Date());
+  const [habitacionId, setHabitacionId] = useState('');
+  const [habitaciones, setHabitaciones] = useState<any[]>([]);
   
   // Check-in
   const [documentoVerificado, setDocumentoVerificado] = useState(false);
@@ -65,6 +73,14 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       cargarReserva();
       cargarConceptos();
       cargarEntregables();
+      cargarHabitaciones();
+      // Reset estados
+      setEditMode(false);
+      setDocumentoVerificado(false);
+      setTarjetaRegistrada(false);
+      setFirmaDigital(false);
+      setHabitacionInspeccionada(false);
+      setLlaveDevuelta(false);
     }
   }, [open, reservaInicial?.id]);
 
@@ -74,13 +90,21 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     try {
       const data = await api.getReserva(reservaInicial.id);
       setReserva(data);
+      setFechaCheckout(new Date(data.fecha_checkout));
+      setHabitacionId(data.habitacion_id || '');
       
       // Cargar entregables de la reserva
-      const entData = await api.getEntregablesReserva?.(reservaInicial.id) || [];
-      setReservaEntregables(entData);
+      try {
+        const entData = await api.getEntregablesReserva?.(reservaInicial.id) || [];
+        setReservaEntregables(entData);
+      } catch {
+        setReservaEntregables([]);
+      }
     } catch (error) {
       console.error('Error cargando reserva:', error);
       setReserva(reservaInicial);
+      setFechaCheckout(new Date(reservaInicial.fecha_checkout));
+      setHabitacionId(reservaInicial.habitacion_id || '');
     } finally {
       setLoading(false);
     }
@@ -104,32 +128,57 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
+  const cargarHabitaciones = async () => {
+    try {
+      const data = await api.getHabitaciones?.() || [];
+      setHabitaciones(data);
+    } catch (error) {
+      console.error('Error cargando habitaciones:', error);
+    }
+  };
+
   if (!reserva && !reservaInicial) return null;
   
   const r = reserva || reservaInicial;
 
-  // Cálculos
-  const noches = r.noches || differenceInDays(new Date(r.fecha_checkout), new Date(r.fecha_checkin));
-  const tarifaNoche = parseFloat(r.tarifa_noche) || 0;
-  const subtotalHospedaje = parseFloat(r.subtotal_hospedaje) || (tarifaNoche * noches);
-  const personasExtra = r.personas_extra || 0;
-  const cargoPersonaExtra = parseFloat(r.cargo_persona_extra) || 0;
-  const totalPersonaExtra = personasExtra * cargoPersonaExtra * noches;
-  const descuentoMonto = parseFloat(r.descuento_monto) || 0;
-  const impuestos = parseFloat(r.total_impuestos) || 0;
-  const total = parseFloat(r.total) || 0;
-  const pagado = parseFloat(r.total_pagado) || 0;
-  const saldoPendiente = parseFloat(r.saldo_pendiente) ?? (total - pagado);
-  const porcentajePagado = total > 0 ? (pagado / total) * 100 : 0;
+  // Helper para parseo seguro
+  const safeNumber = (val: any, def: number = 0): number => {
+    const n = parseFloat(val);
+    return isNaN(n) ? def : n;
+  };
 
+  // Cálculos base
+  const fechaCheckin = new Date(r.fecha_checkin);
+  const nochesOriginales = r.noches || differenceInDays(new Date(r.fecha_checkout), fechaCheckin);
+  
+  // Cálculos en modo edición
+  const nochesEditadas = differenceInDays(fechaCheckout, fechaCheckin) || 1;
+  const nochesActuales = editMode ? nochesEditadas : nochesOriginales;
+  const diferenciaNOches = nochesEditadas - nochesOriginales;
+  
+  const tarifaNoche = safeNumber(r.tarifa_noche);
+  const subtotalHospedaje = editMode ? (tarifaNoche * nochesEditadas) : safeNumber(r.subtotal_hospedaje, tarifaNoche * nochesOriginales);
+  const personasExtra = r.personas_extra || 0;
+  const cargoPersonaExtra = safeNumber(r.cargo_persona_extra);
+  const totalPersonaExtra = personasExtra * cargoPersonaExtra * nochesActuales;
+  const descuentoMonto = safeNumber(r.descuento_monto);
+  
   // Calcular total de cargos extras
-  const totalCargos = r.cargos?.reduce((sum: number, c: any) => sum + parseFloat(c.total || 0), 0) || 0;
+  const totalCargos = r.cargos?.reduce((sum: number, c: any) => sum + safeNumber(c.total), 0) || 0;
+  
+  // Recalcular totales en modo edición
+  const subtotalBase = subtotalHospedaje + totalPersonaExtra + totalCargos - descuentoMonto;
+  const impuestos = editMode ? (subtotalBase * 0.16) : safeNumber(r.total_impuestos);
+  const total = editMode ? (subtotalBase + impuestos) : safeNumber(r.total);
+  const pagado = safeNumber(r.total_pagado);
+  const saldoPendiente = total - pagado;
+  const porcentajePagado = total > 0 ? (pagado / total) * 100 : 0;
 
   const getEstadoBadge = (estado: string) => {
     const colors: Record<string, string> = {
       'Pendiente': 'bg-yellow-500',
       'Confirmada': 'bg-blue-500',
-      'CheckIn': 'bg-green-500',
+      'CheckIn': 'bg-orange-500',
       'CheckOut': 'bg-slate-500',
       'Cancelada': 'bg-red-500',
       'NoShow': 'bg-orange-500',
@@ -139,10 +188,53 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
 
   const getOrigenBadge = (origen: string) => {
     return origen === 'Recepcion' 
-      ? <Badge variant="default">Recepción</Badge>
+      ? <Badge variant="default" className="bg-green-600">Walk-in</Badge>
       : <Badge variant="secondary">Reserva</Badge>;
   };
 
+  // ============ GUARDAR CAMBIOS (edición) ============
+  const handleGuardarCambios = async () => {
+    setProcessing(true);
+    try {
+      const updates: any = {};
+      
+      const checkoutOriginal = format(new Date(r.fecha_checkout), 'yyyy-MM-dd');
+      const checkoutNuevo = format(fechaCheckout, 'yyyy-MM-dd');
+      
+      if (checkoutNuevo !== checkoutOriginal) {
+        updates.fecha_checkout = checkoutNuevo;
+      }
+      
+      if (habitacionId && habitacionId !== r.habitacion_id) {
+        updates.habitacion_id = habitacionId;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await api.updateReserva(r.id, updates);
+        toast({ title: '✅ Reserva actualizada' });
+        
+        // Recargar datos frescos
+        await cargarReserva();
+        setEditMode(false);
+        onUpdate?.();
+      } else {
+        toast({ title: 'Sin cambios' });
+        setEditMode(false);
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCancelarEdicion = () => {
+    setFechaCheckout(new Date(r.fecha_checkout));
+    setHabitacionId(r.habitacion_id || '');
+    setEditMode(false);
+  };
+
+  // ============ CHECK-IN ============
   const handleCheckin = async () => {
     if (!documentoVerificado || !tarjetaRegistrada || !firmaDigital) {
       toast({ title: 'Faltan requisitos', description: 'Complete todos los campos obligatorios', variant: 'destructive' });
@@ -151,9 +243,9 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     
     setProcessing(true);
     try {
-      await api.checkin(r.id, r.habitacion_id);
+      await api.checkin(r.id, habitacionId || r.habitacion_id);
       toast({ title: '✓ Check-in completado', description: `Habitación ${r.habitacion_numero} asignada` });
-      onOpenChange(false);
+      await cargarReserva();
       onUpdate?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -162,6 +254,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
+  // ============ CHECK-OUT ============
   const handleCheckout = async () => {
     if (!habitacionInspeccionada || !llaveDevuelta) {
       toast({ title: 'Faltan verificaciones', description: 'Complete la inspección y devolución de llaves', variant: 'destructive' });
@@ -175,7 +268,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       return;
     }
     
-    if (saldoPendiente > 0) {
+    if (saldoPendiente > 0.01) {
       toast({ title: 'Saldo pendiente', description: `El huésped debe liquidar $${saldoPendiente.toFixed(2)}`, variant: 'destructive' });
       return;
     }
@@ -193,9 +286,10 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
+  // ============ PAGOS ============
   const handleAbonar = async () => {
-    const monto = parseFloat(montoAbono);
-    if (isNaN(monto) || monto <= 0) {
+    const monto = safeNumber(montoAbono);
+    if (monto <= 0) {
       toast({ title: 'Monto inválido', variant: 'destructive' });
       return;
     }
@@ -219,6 +313,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
+  // ============ CARGOS ============
   const handleAgregarCargo = async () => {
     if (!cargoConcepto || !cargoMonto) {
       toast({ title: 'Completa los campos', variant: 'destructive' });
@@ -226,8 +321,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
     
     const concepto = conceptosCargo.find(c => c.id === cargoConcepto);
-    const cantidad = parseFloat(cargoCantidad) || 1;
-    const precioUnitario = parseFloat(cargoMonto);
+    const cantidad = safeNumber(cargoCantidad, 1);
+    const precioUnitario = safeNumber(cargoMonto);
     const subtotal = cantidad * precioUnitario;
     const impuesto = concepto?.aplica_iva ? subtotal * 0.16 : 0;
     
@@ -258,6 +353,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
+  // ============ ENTREGABLES ============
   const handleAsignarEntregable = async () => {
     if (!entregableSeleccionado) return;
     
@@ -287,12 +383,13 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
+  // ============ CONFIRMAR / CANCELAR ============
   const handleConfirmar = async () => {
     setProcessing(true);
     try {
       await api.confirmarReserva(r.id);
       toast({ title: '✓ Reserva confirmada' });
-      onOpenChange(false);
+      await cargarReserva();
       onUpdate?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -317,7 +414,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
-  const conceptoSeleccionado = conceptosCargo.find(c => c.id === cargoConcepto);
+  // Habitación actual para mostrar
+  const habitacionActual = habitaciones.find(h => h.id === (habitacionId || r.habitacion_id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -331,14 +429,32 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               {loading && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
             <div className="flex gap-2">
+              {/* Botón Editar / Guardar */}
+              {!editMode && r.estado !== 'CheckOut' && r.estado !== 'Cancelada' && (
+                <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
+                  <Pencil className="h-4 w-4 mr-1" /> Editar
+                </Button>
+              )}
+              {editMode && (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleCancelarEdicion}>
+                    <X className="h-4 w-4 mr-1" /> Cancelar
+                  </Button>
+                  <Button size="sm" onClick={handleGuardarCambios} disabled={processing}>
+                    <Save className="h-4 w-4 mr-1" /> Guardar
+                  </Button>
+                </>
+              )}
               <Button variant="outline" size="sm" onClick={cargarReserva} disabled={loading}>
-                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
               <Button variant="outline" size="sm"><Printer className="h-4 w-4" /></Button>
             </div>
           </div>
+          <DialogDescription>Gestiona los detalles de la reserva, cargos y pagos</DialogDescription>
         </DialogHeader>
 
+        {/* Barra de progreso check-in */}
         {r.estado === 'Confirmada' && (
           <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
             <CardContent className="p-4">
@@ -364,7 +480,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 <TabsTrigger value="pagos">Pagos {r.pagos?.length > 0 && `(${r.pagos.length})`}</TabsTrigger>
               </TabsList>
 
-              {/* TAB RESUMEN */}
+              {/* ============ TAB RESUMEN ============ */}
               <TabsContent value="resumen" className="space-y-4 mt-4">
                 <Card>
                   <CardHeader className="pb-2">
@@ -373,16 +489,43 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   <CardContent className="grid grid-cols-4 gap-4">
                     <div>
                       <Label className="text-muted-foreground text-xs">Check-in</Label>
-                      <p className="font-medium">{format(new Date(r.fecha_checkin), "EEE d MMM", { locale: es })}</p>
+                      <p className="font-medium">{format(fechaCheckin, "EEE d MMM yyyy", { locale: es })}</p>
                       {r.hora_llegada && <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{r.hora_llegada}</p>}
                     </div>
                     <div>
                       <Label className="text-muted-foreground text-xs">Check-out</Label>
-                      <p className="font-medium">{format(new Date(r.fecha_checkout), "EEE d MMM", { locale: es })}</p>
+                      {editMode ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left font-normal h-9">
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {format(fechaCheckout, "d MMM yyyy", { locale: es })}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={fechaCheckout}
+                              onSelect={(d) => d && setFechaCheckout(d)}
+                              disabled={(d) => d <= fechaCheckin}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <p className="font-medium">{format(new Date(r.fecha_checkout), "EEE d MMM yyyy", { locale: es })}</p>
+                      )}
                     </div>
                     <div>
                       <Label className="text-muted-foreground text-xs">Noches</Label>
-                      <p className="font-medium">{noches}</p>
+                      <p className="font-medium">
+                        {nochesActuales}
+                        {editMode && diferenciaNOches !== 0 && (
+                          <span className={`ml-1 text-sm ${diferenciaNOches > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            ({diferenciaNOches > 0 ? '+' : ''}{diferenciaNOches})
+                          </span>
+                        )}
+                      </p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground text-xs">Huéspedes</Label>
@@ -396,17 +539,37 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     <CardTitle className="text-base flex items-center gap-2"><BedDouble className="h-4 w-4" /> Habitación</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{r.tipo_habitacion_nombre || 'Sin tipo'}</p>
-                        <p className="text-sm text-muted-foreground">${tarifaNoche.toLocaleString()} /noche</p>
+                    {editMode ? (
+                      <div className="flex items-center gap-4">
+                        <Select value={habitacionId} onValueChange={setHabitacionId}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Seleccionar habitación..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {habitaciones.map(h => (
+                              <SelectItem key={h.id} value={h.id}>
+                                {h.numero} - {h.tipo_nombre || h.tipo_habitacion_nombre} ({h.estado_habitacion})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">${tarifaNoche.toLocaleString()} /noche</p>
+                        </div>
                       </div>
-                      {r.habitacion_numero ? (
-                        <Badge variant="outline" className="text-2xl px-4 py-2">{r.habitacion_numero}</Badge>
-                      ) : (
-                        <Badge variant="secondary">Sin asignar</Badge>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{r.tipo_habitacion_nombre || 'Sin tipo'}</p>
+                          <p className="text-sm text-muted-foreground">${tarifaNoche.toLocaleString()} /noche</p>
+                        </div>
+                        {r.habitacion_numero ? (
+                          <Badge variant="outline" className="text-2xl px-4 py-2">{r.habitacion_numero}</Badge>
+                        ) : (
+                          <Badge variant="secondary">Sin asignar</Badge>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -444,19 +607,19 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 {/* Verificaciones Check-in */}
                 {r.estado === 'Confirmada' && (
                   <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-base">Verificaciones Check-in</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-base">✓ Verificaciones Check-in</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center space-x-3">
                         <Checkbox id="doc" checked={documentoVerificado} onCheckedChange={(c) => setDocumentoVerificado(!!c)} />
-                        <label htmlFor="doc" className="text-sm cursor-pointer">Documento verificado</label>
+                        <label htmlFor="doc" className="text-sm cursor-pointer">Documento de identidad verificado</label>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Checkbox id="tarjeta" checked={tarjetaRegistrada} onCheckedChange={(c) => setTarjetaRegistrada(!!c)} />
-                        <label htmlFor="tarjeta" className="text-sm cursor-pointer">Garantía registrada</label>
+                        <label htmlFor="tarjeta" className="text-sm cursor-pointer">Garantía/tarjeta registrada</label>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Checkbox id="firma" checked={firmaDigital} onCheckedChange={(c) => setFirmaDigital(!!c)} />
-                        <label htmlFor="firma" className="text-sm cursor-pointer">Registro firmado</label>
+                        <label htmlFor="firma" className="text-sm cursor-pointer">Registro de huésped firmado</label>
                       </div>
                     </CardContent>
                   </Card>
@@ -465,7 +628,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 {/* Verificaciones Check-out */}
                 {r.estado === 'CheckIn' && (
                   <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-base">Verificaciones Check-out</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-base">✓ Verificaciones Check-out</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center space-x-3">
                         <Checkbox id="insp" checked={habitacionInspeccionada} onCheckedChange={(c) => setHabitacionInspeccionada(!!c)} />
@@ -475,12 +638,22 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                         <Checkbox id="llave" checked={llaveDevuelta} onCheckedChange={(c) => setLlaveDevuelta(!!c)} />
                         <label htmlFor="llave" className="text-sm cursor-pointer">Llaves devueltas</label>
                       </div>
+                      {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length > 0 && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm text-red-700 font-medium">⚠️ Entregables pendientes de devolución:</p>
+                          <ul className="text-sm text-red-600 mt-1">
+                            {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).map(e => (
+                              <li key={e.id}>• {e.nombre}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
               </TabsContent>
 
-              {/* TAB HUÉSPED */}
+              {/* ============ TAB HUÉSPED ============ */}
               <TabsContent value="huesped" className="mt-4">
                 <Card>
                   <CardContent className="p-4">
@@ -510,7 +683,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Card>
               </TabsContent>
 
-              {/* TAB CARGOS */}
+              {/* ============ TAB CARGOS ============ */}
               <TabsContent value="cargos" className="mt-4 space-y-4">
                 {r.estado === 'CheckIn' && (
                   <Card>
@@ -569,12 +742,12 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                             <div>
                               <p className="font-medium">{cargo.concepto || cargo.producto_nombre}</p>
                               <p className="text-xs text-muted-foreground">
-                                {cargo.cantidad} x ${parseFloat(cargo.precio_unitario).toLocaleString()}
+                                {cargo.cantidad} x ${safeNumber(cargo.precio_unitario).toLocaleString()}
                                 {cargo.notas && ` • ${cargo.notas}`}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-medium">${parseFloat(cargo.total).toLocaleString()}</p>
+                              <p className="font-medium">${safeNumber(cargo.total).toLocaleString()}</p>
                               <p className="text-xs text-muted-foreground">
                                 {cargo.fecha ? format(new Date(cargo.fecha), 'd MMM HH:mm', { locale: es }) : ''}
                               </p>
@@ -593,7 +766,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Card>
               </TabsContent>
 
-              {/* TAB ENTREGABLES */}
+              {/* ============ TAB ENTREGABLES ============ */}
               <TabsContent value="entregables" className="mt-4 space-y-4">
                 {r.estado === 'CheckIn' && (
                   <Card>
@@ -637,7 +810,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                             <div className="flex items-center gap-2">
                               {ent.requiere_devolucion && (
                                 ent.devuelto ? (
-                                  <Badge variant="outline" className="text-green-600">Devuelto</Badge>
+                                  <Badge variant="outline" className="text-green-600">✓ Devuelto</Badge>
                                 ) : (
                                   <Button 
                                     variant="outline" 
@@ -663,7 +836,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Card>
               </TabsContent>
 
-              {/* TAB PAGOS */}
+              {/* ============ TAB PAGOS ============ */}
               <TabsContent value="pagos" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-base">Registrar Pago</CardTitle></CardHeader>
@@ -688,18 +861,27 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                         <CreditCard className="h-4 w-4 mr-1" /> Pagar
                       </Button>
                     </div>
+                    {saldoPendiente > 0 && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full mt-2" 
+                        onClick={() => setMontoAbono(saldoPendiente.toFixed(2))}
+                      >
+                        Liquidar total: ${saldoPendiente.toLocaleString()}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
 
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-base">Historial</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Historial de Pagos</CardTitle></CardHeader>
                   <CardContent>
                     {r.pagos && r.pagos.length > 0 ? (
                       <div className="space-y-2">
                         {r.pagos.map((pago: any, idx: number) => (
                           <div key={pago.id || idx} className="flex items-center justify-between py-2 border-b last:border-0">
                             <div>
-                              <p className="font-medium">${parseFloat(pago.monto).toLocaleString()}</p>
+                              <p className="font-medium">${safeNumber(pago.monto).toLocaleString()}</p>
                               <p className="text-xs text-muted-foreground">{pago.metodo_pago} • {pago.concepto}</p>
                             </div>
                             <span className="text-xs text-muted-foreground">
@@ -717,15 +899,15 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
             </Tabs>
           </div>
 
-          {/* SIDEBAR DERECHO */}
+          {/* ============ SIDEBAR DERECHO ============ */}
           <div className="space-y-4">
             <Card className="bg-primary text-primary-foreground">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Resumen</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Cuenta</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between opacity-80">
-                  <span>Hospedaje ({noches}n)</span>
+                  <span>Hospedaje ({nochesActuales}n × ${tarifaNoche.toLocaleString()})</span>
                   <span>${subtotalHospedaje.toLocaleString()}</span>
                 </div>
                 {totalPersonaExtra > 0 && (
@@ -762,54 +944,61 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 <div className="mt-3 p-3 rounded-lg bg-primary-foreground/10">
                   <div className="flex justify-between text-sm mb-1">
                     <span>Pagado</span>
-                    <span>${pagado.toLocaleString()}</span>
+                    <span className="text-green-300">${pagado.toLocaleString()}</span>
                   </div>
                   <Progress value={porcentajePagado} className="h-2 bg-primary-foreground/20" />
                 </div>
                 
-                <div className="p-4 rounded-lg bg-primary-foreground/10 text-center">
-                  <p className="text-xs opacity-80">Saldo</p>
+                <div className={`p-4 rounded-lg text-center ${saldoPendiente > 0 ? 'bg-red-500/20' : 'bg-green-500/20'}`}>
+                  <p className="text-xs opacity-80">Saldo pendiente</p>
                   <p className="text-2xl font-bold">${saldoPendiente.toLocaleString()}</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* ACCIONES */}
+            {/* ============ ACCIONES ============ */}
             {r.estado === 'Pendiente' && (
               <div className="space-y-2">
                 <Button className="w-full" size="lg" onClick={handleConfirmar} disabled={processing}>
-                  {processing ? 'Procesando...' : '✓ Confirmar'}
+                  {processing ? 'Procesando...' : '✓ Confirmar Reserva'}
                 </Button>
                 <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
-                  Cancelar
+                  Cancelar Reserva
                 </Button>
               </div>
             )}
 
             {r.estado === 'Confirmada' && (
               <div className="space-y-2">
-                <Button className="w-full" size="lg" onClick={handleCheckin} disabled={processing}>
-                  {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Check-in</>}
+                <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" onClick={handleCheckin} disabled={processing}>
+                  {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Hacer Check-in</>}
                 </Button>
                 <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
-                  Cancelar
+                  Cancelar Reserva
                 </Button>
               </div>
             )}
 
             {r.estado === 'CheckIn' && (
               <div className="space-y-2">
-                <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" onClick={handleCheckout} disabled={processing || saldoPendiente > 0}>
-                  {processing ? 'Procesando...' : <><DoorClosed className="h-5 w-5 mr-2" /> Check-out</>}
+                <Button 
+                  className="w-full bg-orange-600 hover:bg-orange-700" 
+                  size="lg" 
+                  onClick={handleCheckout} 
+                  disabled={processing || saldoPendiente > 0.01}
+                >
+                  {processing ? 'Procesando...' : <><DoorClosed className="h-5 w-5 mr-2" /> Hacer Check-out</>}
                 </Button>
-                {saldoPendiente > 0 && <p className="text-xs text-center text-destructive">* Liquidar saldo pendiente</p>}
+                {saldoPendiente > 0.01 && (
+                  <p className="text-xs text-center text-destructive">* Debe liquidar el saldo pendiente</p>
+                )}
               </div>
             )}
 
             {r.estado === 'CheckOut' && (
               <Card className="bg-muted">
                 <CardContent className="p-4 text-center">
-                  <p className="text-sm text-muted-foreground">✓ Finalizada</p>
+                  <p className="text-sm text-muted-foreground">✓ Estancia finalizada</p>
                 </CardContent>
               </Card>
             )}
@@ -817,7 +1006,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
             {r.estado === 'Cancelada' && (
               <Card className="bg-destructive/10 border-destructive">
                 <CardContent className="p-4 text-center">
-                  <p className="text-sm text-destructive font-medium">Cancelada</p>
+                  <p className="text-sm text-destructive font-medium">Reserva cancelada</p>
                 </CardContent>
               </Card>
             )}
