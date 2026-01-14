@@ -33,7 +33,7 @@ export function TimelineGrid({
     return Array.from({ length: daysToShow }, (_, i) => addDays(startDate, i));
   }, [startDate, daysToShow]);
 
-  // Filtrar reservas activas
+  // Filtrar reservas activas (NO incluir checkout completado ni canceladas)
   const getReservasForRoom = (habitacionId: string) => {
     return reservas.filter(r => 
       r.habitacion_id === habitacionId &&
@@ -44,7 +44,7 @@ export function TimelineGrid({
     );
   };
 
-  // Buscar reserva para una celda específica
+  // Buscar reserva para una celda - INCLUYE día de checkout para visualización
   const getReservationForCell = (habitacionId: string, dayIndex: number) => {
     const roomReservas = getReservasForRoom(habitacionId);
     const currentDay = days[dayIndex];
@@ -54,8 +54,28 @@ export function TimelineGrid({
       if (!r.fecha_checkin || !r.fecha_checkout) return false;
       const checkinStr = r.fecha_checkin.substring(0, 10);
       const checkoutStr = r.fecha_checkout.substring(0, 10);
+      // Pinta desde checkin hasta checkout (inclusive para mostrar salida)
+      return currentDateStr >= checkinStr && currentDateStr <= checkoutStr;
+    });
+  };
+
+  // Verificar si una celda está disponible para NUEVA reserva
+  // El día de checkout SÍ está disponible para nuevas reservas
+  const isCellAvailableForNewReservation = (habitacionId: string, dayIndex: number) => {
+    const roomReservas = getReservasForRoom(habitacionId);
+    const currentDay = days[dayIndex];
+    const currentDateStr = format(currentDay, 'yyyy-MM-dd');
+
+    // Verificar que no haya reserva activa (excepto si es su día de checkout)
+    const conflicto = roomReservas.find(r => {
+      if (!r.fecha_checkin || !r.fecha_checkout) return false;
+      const checkinStr = r.fecha_checkin.substring(0, 10);
+      const checkoutStr = r.fecha_checkout.substring(0, 10);
+      // Conflicto si está entre checkin y checkout (excluyendo checkout)
       return currentDateStr >= checkinStr && currentDateStr < checkoutStr;
     });
+
+    return !conflicto;
   };
 
   // Determinar posición de la reserva en la celda
@@ -66,28 +86,14 @@ export function TimelineGrid({
     const checkinStr = reserva.fecha_checkin.substring(0, 10);
     const checkoutStr = reserva.fecha_checkout.substring(0, 10);
     
-    // Calcular noches
-    const checkinDate = new Date(checkinStr + 'T00:00:00');
-    const checkoutDate = new Date(checkoutStr + 'T00:00:00');
-    const noches = Math.round((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // Reserva de 1 noche: solo tiene 'start'
-    if (noches === 1) {
-      if (currentDateStr === checkinStr) {
-        return 'single'; // Nueva posición para reservas de 1 noche
-      }
-      return null;
+    // Día de checkout = 'end' (medio día, salida)
+    if (currentDateStr === checkoutStr) {
+      return 'end';
     }
     
-    // Primer día
+    // Primer día = 'start'
     if (currentDateStr === checkinStr) {
       return 'start';
-    }
-    
-    // Último día ocupado (día anterior al checkout)
-    const dayBeforeCheckout = format(addDays(checkoutDate, -1), 'yyyy-MM-dd');
-    if (currentDateStr === dayBeforeCheckout) {
-      return 'end';
     }
     
     // Días intermedios
@@ -98,69 +104,78 @@ export function TimelineGrid({
     return null;
   };
 
-  // Color por ORIGEN y ESTADO
- // Color por ORIGEN y ESTADO
-const getStatusColor = (reserva: any, position?: string) => {
-  const estado = reserva.estado?.toLowerCase();
-  const esWalkin = reserva.origen === 'Recepcion';
-  
-  // El día de checkout es más claro (medio día)
-  if (position === 'end') {
-    if (estado === 'checkin' || estado === 'hospedado') {
-      return 'bg-orange-300 text-orange-900';
+  // Color por ESTADO - OCUPADA = NARANJA
+  const getStatusColor = (reserva: any, position?: string) => {
+    const estado = reserva.estado?.toLowerCase();
+    const esWalkin = reserva.origen === 'Recepcion';
+    
+    // El día de checkout es más claro (medio día)
+    if (position === 'end') {
+      if (estado === 'checkin' || estado === 'hospedado') {
+        return 'bg-orange-300 text-orange-900';
+      }
+      if (estado === 'confirmada') {
+        return esWalkin ? 'bg-amber-300 text-amber-800' : 'bg-blue-300 text-blue-800';
+      }
+      if (estado === 'pendiente') {
+        return 'bg-yellow-200 text-yellow-800';
+      }
     }
+    
+    // Cancelada / NoShow
+    if (estado === 'cancelada' || estado === 'noshow') {
+      return 'bg-red-400 text-white';
+    }
+    
+    // CheckOut completado
+    if (estado === 'checkout') {
+      return 'bg-slate-400 text-white';
+    }
+    
+    // OCUPADA - CheckIn / Hospedado (NARANJA)
+    if (estado === 'checkin' || estado === 'hospedado') {
+      return esWalkin 
+        ? 'bg-orange-500 text-white'    // Walk-in ocupado
+        : 'bg-orange-600 text-white';   // Reserva ocupada
+    }
+    
+    // CONFIRMADA - Llegará pronto (AZUL)
     if (estado === 'confirmada') {
       return esWalkin
-        ? 'bg-amber-300 text-amber-800'
-        : 'bg-blue-300 text-blue-800';
+        ? 'bg-amber-500 text-white'     // Walk-in confirmado
+        : 'bg-blue-500 text-white';     // Reserva confirmada
     }
+    
+    // PENDIENTE - Sin confirmar (AMARILLO)
     if (estado === 'pendiente') {
-      return 'bg-yellow-200 text-yellow-800';
+      return esWalkin
+        ? 'bg-yellow-500 text-yellow-900'
+        : 'bg-yellow-400 text-yellow-900';
     }
-  }
-  
-  // Cancelada / NoShow
-  if (estado === 'cancelada' || estado === 'noshow') {
-    return 'bg-red-400 text-white';
-  }
-  
-  // CheckOut completado
-  if (estado === 'checkout') {
-    return 'bg-slate-400 text-white';
-  }
-  
-  // OCUPADA - CheckIn / Hospedado (naranja fuerte)
-  if (estado === 'checkin' || estado === 'hospedado') {
-    return esWalkin 
-      ? 'bg-orange-500 text-white'    // Walk-in ocupado
-      : 'bg-orange-600 text-white';   // Reserva ocupada
-  }
-  
-  // CONFIRMADA - Llegará pronto
-  if (estado === 'confirmada') {
-    return esWalkin
-      ? 'bg-amber-500 text-white'     // Walk-in confirmado (raro pero posible)
-      : 'bg-blue-500 text-white';     // Reserva confirmada
-  }
-  
-  // PENDIENTE - Sin confirmar
-  if (estado === 'pendiente') {
-    return esWalkin
-      ? 'bg-yellow-500 text-yellow-900'  // Walk-in pendiente
-      : 'bg-yellow-400 text-yellow-900'; // Reserva pendiente
-  }
-  
-  return 'bg-gray-400 text-white';
-};
+    
+    return 'bg-gray-400 text-white';
+  };
 
-  const handleMouseDown = (habitacionId: string, dayIndex: number, reserva: any) => {
-    if (reserva) {
+  const handleMouseDown = (habitacionId: string, dayIndex: number, reserva: any, position: string | null) => {
+    // Si hay reserva y NO es día de checkout, abrir detalle
+    if (reserva && position !== 'end') {
       onReservationClick(reserva);
       return;
     }
     
+    // Si es día de checkout, permitir iniciar drag para nueva reserva
+    // O si no hay reserva
     const selectedDay = days[dayIndex];
     if (selectedDay < startOfDay(new Date())) return;
+    
+    // Verificar disponibilidad para nueva reserva
+    if (!isCellAvailableForNewReservation(habitacionId, dayIndex)) {
+      // Si no está disponible y hay reserva, mostrar detalle
+      if (reserva) {
+        onReservationClick(reserva);
+      }
+      return;
+    }
     
     setDragStart({ roomId: habitacionId, dayIndex });
     setDragEnd(dayIndex);
@@ -173,25 +188,22 @@ const getStatusColor = (reserva: any, position?: string) => {
     }
   };
 
-const handleMouseUp = () => {
-  if (isDragging && dragStart && dragEnd !== null) {
-    const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
-    if (habitacion) {
-      const startIdx = Math.min(dragStart.dayIndex, dragEnd);
-      const endIdx = Math.max(dragStart.dayIndex, dragEnd);
-      const fechaCheckin = days[startIdx];
-      // Si es 1 sola celda = 1 noche mínimo
-      // Si son múltiples celdas, la última ES el checkout
-      const fechaCheckout = startIdx === endIdx 
-        ? addDays(days[endIdx], 1)  // 1 celda = sale al día siguiente
-        : days[endIdx];             // múltiples celdas = última es checkout
-      onCreateReservation(habitacion, fechaCheckin, fechaCheckout);
+  const handleMouseUp = () => {
+    if (isDragging && dragStart && dragEnd !== null) {
+      const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
+      if (habitacion) {
+        const startIdx = Math.min(dragStart.dayIndex, dragEnd);
+        const endIdx = Math.max(dragStart.dayIndex, dragEnd);
+        const fechaCheckin = days[startIdx];
+        // La última celda seleccionada ES el día de checkout
+        const fechaCheckout = days[endIdx];
+        onCreateReservation(habitacion, fechaCheckin, fechaCheckout);
+      }
     }
-  }
-  setDragStart(null);
-  setDragEnd(null);
-  setIsDragging(false);
-};
+    setDragStart(null);
+    setDragEnd(null);
+    setIsDragging(false);
+  };
 
   const isDragSelected = (roomId: string, dayIndex: number) => {
     if (!isDragging || !dragStart || dragEnd === null) return false;
@@ -281,6 +293,7 @@ const handleMouseUp = () => {
                 const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                 const isSelected = isDragSelected(habitacion.id, dayIndex);
                 const isPast = day < startOfDay(new Date());
+                const isAvailableForNew = isCellAvailableForNewReservation(habitacion.id, dayIndex);
 
                 return (
                   <TooltipProvider key={dayIndex}>
@@ -293,25 +306,26 @@ const handleMouseUp = () => {
                             isWeekend && !isToday && "bg-muted/20",
                             isPast && !reserva && "bg-muted/30 cursor-not-allowed",
                             !reserva && !isSelected && !isPast && "hover:bg-primary/10 cursor-crosshair",
+                            // Día de checkout: fondo rayado para indicar que se puede reservar
+                            position === 'end' && !isPast && "cursor-crosshair",
                             isSelected && "bg-primary/20",
-                            reserva && "cursor-pointer"
+                            reserva && position !== 'end' && "cursor-pointer"
                           )}
                           style={{ width: cellWidth }}
-                          onMouseDown={() => handleMouseDown(habitacion.id, dayIndex, reserva)}
+                          onMouseDown={() => handleMouseDown(habitacion.id, dayIndex, reserva, position)}
                           onMouseEnter={() => handleMouseEnter(dayIndex)}
                         >
                           {reserva && position && (
                             <div
                               className={cn(
                                 "absolute inset-y-1 flex items-center text-[10px] font-medium overflow-hidden",
-                                getStatusColor(reserva),
+                                getStatusColor(reserva, position),
                                 position === 'start' && "left-1 right-0 rounded-l-md pl-1.5",
-                                position === 'end' && "left-0 right-1 rounded-r-md justify-end pr-1.5",
-                                position === 'middle' && "left-0 right-0 justify-center",
-                                position === 'single' && "left-1 right-1 rounded-md pl-1.5" // Reserva de 1 noche
+                                position === 'end' && "left-0 right-1 rounded-r-md opacity-70",
+                                position === 'middle' && "left-0 right-0"
                               )}
                             >
-                              {(position === 'start' || position === 'single') && (
+                              {position === 'start' && (
                                 <div className="flex flex-col leading-tight truncate">
                                   <span className="font-semibold truncate text-[11px] flex items-center gap-1">
                                     {reserva.origen === 'Recepcion' && <UserPlus className="h-3 w-3 flex-shrink-0" />}
@@ -323,7 +337,10 @@ const handleMouseUp = () => {
                                 </div>
                               )}
                               {position === 'middle' && (
-                                <span className="opacity-60">─</span>
+                                <span className="opacity-60 w-full text-center">─</span>
+                              )}
+                              {position === 'end' && (
+                                <span className="opacity-70 text-[9px] w-full text-center">salida</span>
                               )}
                             </div>
                           )}
@@ -335,7 +352,7 @@ const handleMouseUp = () => {
                             <div className="flex items-center gap-2">
                               <p className="font-semibold text-base">{reserva.cliente_nombre || 'Huésped'} {reserva.apellido_paterno || ''}</p>
                               {reserva.origen === 'Recepcion' ? (
-                                <Badge variant="outline" className="text-[10px] border-green-500 text-green-700 bg-green-50">
+                                <Badge variant="outline" className="text-[10px] border-orange-500 text-orange-700 bg-orange-50">
                                   <UserPlus className="h-3 w-3 mr-1" />Walk-in
                                 </Badge>
                               ) : (
@@ -364,6 +381,11 @@ const handleMouseUp = () => {
                                 </span>
                               )}
                             </div>
+                            {position === 'end' && (
+                              <p className="text-xs text-green-600 mt-1">
+                                ✓ Disponible para nueva reserva
+                              </p>
+                            )}
                           </div>
                         </TooltipContent>
                       )}
@@ -383,8 +405,15 @@ const handleMouseUp = () => {
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
       
-      <div className="p-2 bg-muted/30 border-t text-center text-xs text-muted-foreground">
-        💡 Arrastra sobre las celdas vacías para crear una nueva entrada
+      {/* Leyenda */}
+      <div className="p-2 bg-muted/30 border-t flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex gap-4">
+          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-orange-500"></div> Ocupada</span>
+          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500"></div> Confirmada</span>
+          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-yellow-400"></div> Pendiente</span>
+          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-slate-400"></div> Checkout</span>
+        </div>
+        <span>💡 Arrastra sobre las celdas vacías para crear una nueva reserva</span>
       </div>
     </div>
   );
