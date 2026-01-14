@@ -120,7 +120,7 @@ class ApiClient {
   getEntregables = () => this.request<any[]>('/entregables');
   getEntregablesReserva = (reservaId: string) => this.request<any[]>(`/entregables/reserva/${reservaId}`);
   asignarEntregable = (reservaId: string, data: any) => this.request<any>(`/entregables/reserva/${reservaId}`, { method: 'POST', body: data });
-  devolverEntregable = (id: string) => this.request<any>(`/entregables/devolver/${id}`, { method: 'PATCH' });
+devolverEntregable = (id: string, data?: any) => this.request<any>(`/entregables/devolver/${id}`, { method: 'PATCH', body: data });
 
   // Limpieza
   getTareasLimpieza = (params?: Record<string, string>) => {
