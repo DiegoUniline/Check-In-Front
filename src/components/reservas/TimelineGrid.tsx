@@ -33,7 +33,7 @@ export function TimelineGrid({
     return Array.from({ length: daysToShow }, (_, i) => addDays(startDate, i));
   }, [startDate, daysToShow]);
 
-  // Filtrar reservas activas (excluir CheckOut, Cancelada, NoShow)
+  // Filtrar reservas activas
   const getReservasForRoom = (habitacionId: string) => {
     return reservas.filter(r => 
       r.habitacion_id === habitacionId &&
@@ -44,38 +44,21 @@ export function TimelineGrid({
     );
   };
 
-  // FIX: Usar strings de fecha para evitar problemas de zona horaria
-const getReservationForCell = (habitacionId: string, dayIndex: number) => {
-  const roomReservas = getReservasForRoom(habitacionId);
-  const currentDay = days[dayIndex];
-  const currentDateStr = format(currentDay, 'yyyy-MM-dd');
+  // Buscar reserva para una celda específica
+  const getReservationForCell = (habitacionId: string, dayIndex: number) => {
+    const roomReservas = getReservasForRoom(habitacionId);
+    const currentDay = days[dayIndex];
+    const currentDateStr = format(currentDay, 'yyyy-MM-dd');
 
-  // DEBUG
-  if (dayIndex === 0) {
-    console.log('=== DEBUG getReservationForCell ===');
-    console.log('currentDateStr:', currentDateStr);
-    console.log('roomReservas:', roomReservas.length);
-    roomReservas.forEach(r => {
-      const checkinStr = r.fecha_checkin.substring(0, 10);
-      const checkoutStr = r.fecha_checkout.substring(0, 10);
-      const match = currentDateStr >= checkinStr && currentDateStr < checkoutStr;
-      console.log(`  Reserva: checkin=${checkinStr}, checkout=${checkoutStr}, match=${match}`);
-    });
-  }
-
-  return roomReservas.find(r => {
+    return roomReservas.find(r => {
       if (!r.fecha_checkin || !r.fecha_checkout) return false;
-      
-      // Extraer solo la parte de fecha (YYYY-MM-DD)
       const checkinStr = r.fecha_checkin.substring(0, 10);
       const checkoutStr = r.fecha_checkout.substring(0, 10);
-      
-      // currentDay debe ser >= checkin Y < checkout
       return currentDateStr >= checkinStr && currentDateStr < checkoutStr;
     });
   };
 
-  // FIX: Usar strings de fecha para posición
+  // Determinar posición de la reserva en la celda
   const getReservationPosition = (reserva: any, dayIndex: number) => {
     if (!reserva.fecha_checkin || !reserva.fecha_checkout) return null;
     
@@ -83,15 +66,27 @@ const getReservationForCell = (habitacionId: string, dayIndex: number) => {
     const checkinStr = reserva.fecha_checkin.substring(0, 10);
     const checkoutStr = reserva.fecha_checkout.substring(0, 10);
     
-    // Primer día de la reserva
+    // Calcular noches
+    const checkinDate = new Date(checkinStr + 'T00:00:00');
+    const checkoutDate = new Date(checkoutStr + 'T00:00:00');
+    const noches = Math.round((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Reserva de 1 noche: solo tiene 'start'
+    if (noches === 1) {
+      if (currentDateStr === checkinStr) {
+        return 'single'; // Nueva posición para reservas de 1 noche
+      }
+      return null;
+    }
+    
+    // Primer día
     if (currentDateStr === checkinStr) {
       return 'start';
     }
     
-    // Último día (día anterior al checkout)
-    const checkoutDate = new Date(checkoutStr + 'T00:00:00');
+    // Último día ocupado (día anterior al checkout)
     const dayBeforeCheckout = format(addDays(checkoutDate, -1), 'yyyy-MM-dd');
-    if (currentDateStr === dayBeforeCheckout && currentDateStr !== checkinStr) {
+    if (currentDateStr === dayBeforeCheckout) {
       return 'end';
     }
     
@@ -287,10 +282,11 @@ const getReservationForCell = (habitacionId: string, dayIndex: number) => {
                                 getStatusColor(reserva),
                                 position === 'start' && "left-1 right-0 rounded-l-md pl-1.5",
                                 position === 'end' && "left-0 right-1 rounded-r-md justify-end pr-1.5",
-                                position === 'middle' && "left-0 right-0 justify-center"
+                                position === 'middle' && "left-0 right-0 justify-center",
+                                position === 'single' && "left-1 right-1 rounded-md pl-1.5" // Reserva de 1 noche
                               )}
                             >
-                              {position === 'start' && (
+                              {(position === 'start' || position === 'single') && (
                                 <div className="flex flex-col leading-tight truncate">
                                   <span className="font-semibold truncate text-[11px] flex items-center gap-1">
                                     {reserva.origen === 'Recepcion' && <UserPlus className="h-3 w-3 flex-shrink-0" />}
