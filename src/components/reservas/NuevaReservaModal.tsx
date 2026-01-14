@@ -72,11 +72,10 @@ interface FormData {
   };
   solicitudesEspeciales: string;
   notasInternas: string;
-descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
+  descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
   descuentoValor: number;
   metodoPago: string;
   anticipo: number;
-  // Entregables seleccionados
   entregablesSeleccionados: string[];
 }
 
@@ -102,7 +101,7 @@ const initialFormData: FormData = {
   },
   solicitudesEspeciales: '',
   notasInternas: '',
-descuentoTipo: 'none',
+  descuentoTipo: 'none',
   descuentoValor: 0,
   metodoPago: 'Efectivo',
   anticipo: 0,
@@ -118,7 +117,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const [origen, setOrigen] = useState<'Reserva' | 'Recepcion'>('Reserva');
   const { toast } = useToast();
 
-  // Data from API
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
   const [habitacionesDisponibles, setHabitacionesDisponibles] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
@@ -209,11 +207,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const subtotal = subtotalHospedaje + totalPersonaExtra;
   
   let descuentoMonto = 0;
-if (formData.descuentoTipo === 'Monto') {
-  descuentoMonto = formData.descuentoValor;
-} else if (formData.descuentoTipo === 'Porcentaje') {
-  descuentoMonto = subtotal * (formData.descuentoValor / 100);
-}
+  if (formData.descuentoTipo === 'Monto') {
+    descuentoMonto = formData.descuentoValor;
+  } else if (formData.descuentoTipo === 'Porcentaje') {
+    descuentoMonto = subtotal * (formData.descuentoValor / 100);
+  }
   
   const subtotalConDescuento = subtotal - descuentoMonto;
   const impuestos = subtotalConDescuento * 0.16;
@@ -269,7 +267,7 @@ if (formData.descuentoTipo === 'Monto') {
         personas_extra: formData.personasExtra,
         cargo_persona_extra: formData.cargoPersonaExtra,
         tarifa_noche: tarifaNoche,
-  descuento_tipo: formData.descuentoTipo === 'none' ? null : formData.descuentoTipo,
+        descuento_tipo: formData.descuentoTipo === 'none' ? null : formData.descuentoTipo,
         descuento_valor: formData.descuentoValor || 0,
         solicitudes_especiales: formData.solicitudesEspeciales,
         notas_internas: formData.notasInternas,
@@ -278,11 +276,9 @@ if (formData.descuentoTipo === 'Monto') {
 
       const reserva = await api.createReserva(reservaData);
 
-      // Si es Recepción, hacer check-in automático
       if (origen === 'Recepcion' && formData.habitacionId) {
         await api.checkin(reserva.id, formData.habitacionId);
         
-        // Asignar entregables seleccionados
         for (const entregableId of formData.entregablesSeleccionados) {
           await api.asignarEntregable?.(reserva.id, { entregable_id: entregableId, cantidad: 1 });
         }
@@ -356,10 +352,9 @@ if (formData.descuentoTipo === 'Monto') {
 
         {!isQuickCreate && <Progress value={progressValue} className="h-2 mb-4" />}
 
-        {/* Step 1: Fechas y huéspedes */}
+        {/* Step 1 */}
         {step === 1 && (
           <div className="space-y-4">
-            {/* Toggle Origen */}
             <div className="flex gap-2 p-1 bg-muted rounded-lg">
               <Button
                 type="button"
@@ -389,7 +384,6 @@ if (formData.descuentoTipo === 'Monto') {
               </Card>
             )}
 
-            {/* Fechas */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Check-in</Label>
@@ -443,7 +437,6 @@ if (formData.descuentoTipo === 'Monto') {
               </div>
             </div>
 
-            {/* Huéspedes */}
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Adultos</Label>
@@ -483,7 +476,6 @@ if (formData.descuentoTipo === 'Monto') {
               </div>
             </div>
 
-            {/* Tipo habitación */}
             <div className="space-y-2">
               <Label>Tipo de habitación</Label>
               <ComboboxCreatable
@@ -506,7 +498,6 @@ if (formData.descuentoTipo === 'Monto') {
               />
             </div>
 
-            {/* Resumen */}
             <Card className="bg-muted/50">
               <CardContent className="p-4 grid grid-cols-3 gap-4 text-sm">
                 <div className="flex justify-between">
@@ -526,7 +517,7 @@ if (formData.descuentoTipo === 'Monto') {
           </div>
         )}
 
-        {/* Step 2: Habitación */}
+        {/* Step 2 */}
         {step === 2 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} habitaciones disponibles</p>
@@ -566,7 +557,7 @@ if (formData.descuentoTipo === 'Monto') {
           </div>
         )}
 
-        {/* Step 3: Huésped */}
+        {/* Step 3 */}
         {step === 3 && (
           <div className="space-y-4">
             {!crearNuevoCliente ? (
@@ -683,10 +674,9 @@ if (formData.descuentoTipo === 'Monto') {
           </div>
         )}
 
-        {/* Step 4: Confirmación */}
+        {/* Step 4 */}
         {step === 4 && (
           <div className="space-y-4">
-            {/* Resumen reserva */}
             <Card>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -733,7 +723,6 @@ if (formData.descuentoTipo === 'Monto') {
               </CardContent>
             </Card>
 
-            {/* Notas */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Solicitudes especiales</Label>
@@ -755,7 +744,6 @@ if (formData.descuentoTipo === 'Monto') {
               </div>
             </div>
 
-            {/* Entregables (solo si es Recepción) */}
             {origen === 'Recepcion' && entregables.length > 0 && (
               <Card>
                 <CardContent className="p-4">
@@ -778,25 +766,24 @@ if (formData.descuentoTipo === 'Monto') {
               </Card>
             )}
 
-            {/* Descuento */}
             <Card>
               <CardContent className="p-4">
                 <Label className="mb-3 block">Descuento</Label>
                 <div className="grid grid-cols-3 gap-4">
                   <Select 
                     value={formData.descuentoTipo} 
-                    onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as '' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}
+                    onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Sin descuento" />
                     </SelectTrigger>
                     <SelectContent>
-               <SelectItem value="none">Sin descuento</SelectItem>
+                      <SelectItem value="none">Sin descuento</SelectItem>
                       <SelectItem value="Monto">Monto fijo</SelectItem>
                       <SelectItem value="Porcentaje">Porcentaje</SelectItem>
                     </SelectContent>
                   </Select>
-                  {formData.descuentoTipo && (
+                  {formData.descuentoTipo !== 'none' && (
                     <div className="relative">
                       {formData.descuentoTipo === 'Porcentaje' ? (
                         <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -820,7 +807,6 @@ if (formData.descuentoTipo === 'Monto') {
               </CardContent>
             </Card>
 
-            {/* Totales y Pago */}
             <Card className="bg-primary/5 border-primary/20">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between text-sm">
@@ -875,7 +861,6 @@ if (formData.descuentoTipo === 'Monto') {
           </div>
         )}
 
-        {/* Footer */}
         <div className="flex justify-between pt-4 border-t">
           <Button variant="outline" onClick={step === 1 ? handleClose : handleBack}>
             {step === 1 ? 'Cancelar' : <><ChevronLeft className="mr-1 h-4 w-4" /> Anterior</>}
