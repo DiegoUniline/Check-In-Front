@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, AlertCircle, Printer, RefreshCw } from 'lucide-react';
+import { 
+  Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, 
+  AlertCircle, Printer, RefreshCw, Package, Plus, Trash2, Receipt,
+  Users, Clock, Percent, Tag
+} from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 
@@ -30,20 +35,36 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const [reserva, setReserva] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   
+  // Check-in
   const [documentoVerificado, setDocumentoVerificado] = useState(false);
   const [tarjetaRegistrada, setTarjetaRegistrada] = useState(false);
   const [firmaDigital, setFirmaDigital] = useState(false);
   
+  // Check-out
   const [habitacionInspeccionada, setHabitacionInspeccionada] = useState(false);
   const [llaveDevuelta, setLlaveDevuelta] = useState(false);
   
+  // Pagos
   const [montoAbono, setMontoAbono] = useState('');
   const [metodoPago, setMetodoPago] = useState('Efectivo');
+  
+  // Cargos
+  const [conceptosCargo, setConceptosCargo] = useState<any[]>([]);
+  const [cargoConcepto, setCargoConcepto] = useState('');
+  const [cargoMonto, setCargoMonto] = useState('');
+  const [cargoCantidad, setCargoCantidad] = useState('1');
+  const [cargoNotas, setCargoNotas] = useState('');
+  
+  // Entregables
+  const [entregables, setEntregables] = useState<any[]>([]);
+  const [reservaEntregables, setReservaEntregables] = useState<any[]>([]);
+  const [entregableSeleccionado, setEntregableSeleccionado] = useState('');
 
-  // Cargar reserva completa cuando se abre el modal
   useEffect(() => {
     if (open && reservaInicial?.id) {
       cargarReserva();
+      cargarConceptos();
+      cargarEntregables();
     }
   }, [open, reservaInicial?.id]);
 
@@ -52,8 +73,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     setLoading(true);
     try {
       const data = await api.getReserva(reservaInicial.id);
-      console.log('📥 Reserva cargada:', data);
       setReserva(data);
+      
+      // Cargar entregables de la reserva
+      const entData = await api.getEntregablesReserva?.(reservaInicial.id) || [];
+      setReservaEntregables(entData);
     } catch (error) {
       console.error('Error cargando reserva:', error);
       setReserva(reservaInicial);
@@ -62,28 +86,61 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
+  const cargarConceptos = async () => {
+    try {
+      const data = await api.getConceptosCargo?.() || [];
+      setConceptosCargo(data);
+    } catch (error) {
+      console.error('Error cargando conceptos:', error);
+    }
+  };
+
+  const cargarEntregables = async () => {
+    try {
+      const data = await api.getEntregables?.() || [];
+      setEntregables(data);
+    } catch (error) {
+      console.error('Error cargando entregables:', error);
+    }
+  };
+
   if (!reserva && !reservaInicial) return null;
   
   const r = reserva || reservaInicial;
 
+  // Cálculos
   const noches = r.noches || differenceInDays(new Date(r.fecha_checkout), new Date(r.fecha_checkin));
   const tarifaNoche = parseFloat(r.tarifa_noche) || 0;
-  const subtotal = parseFloat(r.subtotal_hospedaje) || (tarifaNoche * noches);
-  const impuestos = parseFloat(r.total_impuestos) || (subtotal * 0.16);
-  const total = parseFloat(r.total) || (subtotal + impuestos);
+  const subtotalHospedaje = parseFloat(r.subtotal_hospedaje) || (tarifaNoche * noches);
+  const personasExtra = r.personas_extra || 0;
+  const cargoPersonaExtra = parseFloat(r.cargo_persona_extra) || 0;
+  const totalPersonaExtra = personasExtra * cargoPersonaExtra * noches;
+  const descuentoMonto = parseFloat(r.descuento_monto) || 0;
+  const impuestos = parseFloat(r.total_impuestos) || 0;
+  const total = parseFloat(r.total) || 0;
   const pagado = parseFloat(r.total_pagado) || 0;
   const saldoPendiente = parseFloat(r.saldo_pendiente) ?? (total - pagado);
   const porcentajePagado = total > 0 ? (pagado / total) * 100 : 0;
 
+  // Calcular total de cargos extras
+  const totalCargos = r.cargos?.reduce((sum: number, c: any) => sum + parseFloat(c.total || 0), 0) || 0;
+
   const getEstadoBadge = (estado: string) => {
     const colors: Record<string, string> = {
-      'Pendiente': 'bg-muted text-muted-foreground',
-      'Confirmada': 'bg-primary',
-      'CheckIn': 'bg-success',
+      'Pendiente': 'bg-yellow-500',
+      'Confirmada': 'bg-blue-500',
+      'CheckIn': 'bg-green-500',
       'CheckOut': 'bg-slate-500',
-      'Cancelada': 'bg-destructive',
+      'Cancelada': 'bg-red-500',
+      'NoShow': 'bg-orange-500',
     };
     return <Badge className={colors[estado] || 'bg-muted'}>{estado}</Badge>;
+  };
+
+  const getOrigenBadge = (origen: string) => {
+    return origen === 'Recepcion' 
+      ? <Badge variant="default">Recepción</Badge>
+      : <Badge variant="secondary">Reserva</Badge>;
   };
 
   const handleCheckin = async () => {
@@ -108,6 +165,13 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const handleCheckout = async () => {
     if (!habitacionInspeccionada || !llaveDevuelta) {
       toast({ title: 'Faltan verificaciones', description: 'Complete la inspección y devolución de llaves', variant: 'destructive' });
+      return;
+    }
+    
+    // Verificar entregables pendientes
+    const pendientes = reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto);
+    if (pendientes.length > 0) {
+      toast({ title: 'Entregables pendientes', description: `Faltan devolver: ${pendientes.map(p => p.nombre).join(', ')}`, variant: 'destructive' });
       return;
     }
     
@@ -144,12 +208,78 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
         metodo_pago: metodoPago,
         concepto: 'Abono a reserva',
       });
-      toast({ title: '✅ Pago registrado', description: `Se abonaron $${monto.toFixed(2)} con ${metodoPago}` });
+      toast({ title: '✅ Pago registrado', description: `$${monto.toFixed(2)} con ${metodoPago}` });
       setMontoAbono('');
-      
-      // Recargar la reserva para actualizar saldos
       await cargarReserva();
       onUpdate?.();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleAgregarCargo = async () => {
+    if (!cargoConcepto || !cargoMonto) {
+      toast({ title: 'Completa los campos', variant: 'destructive' });
+      return;
+    }
+    
+    const concepto = conceptosCargo.find(c => c.id === cargoConcepto);
+    const cantidad = parseFloat(cargoCantidad) || 1;
+    const precioUnitario = parseFloat(cargoMonto);
+    const subtotal = cantidad * precioUnitario;
+    const impuesto = concepto?.aplica_iva ? subtotal * 0.16 : 0;
+    
+    setProcessing(true);
+    try {
+      await api.createCargo?.({
+        reserva_id: r.id,
+        concepto_id: cargoConcepto,
+        concepto: concepto?.nombre || 'Cargo adicional',
+        cantidad,
+        precio_unitario: precioUnitario,
+        subtotal,
+        impuesto,
+        total: subtotal + impuesto,
+        notas: cargoNotas,
+      });
+      toast({ title: '✅ Cargo agregado' });
+      setCargoConcepto('');
+      setCargoMonto('');
+      setCargoCantidad('1');
+      setCargoNotas('');
+      await cargarReserva();
+      onUpdate?.();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleAsignarEntregable = async () => {
+    if (!entregableSeleccionado) return;
+    
+    setProcessing(true);
+    try {
+      await api.asignarEntregable?.(r.id, { entregable_id: entregableSeleccionado, cantidad: 1 });
+      toast({ title: '✅ Entregable asignado' });
+      setEntregableSeleccionado('');
+      await cargarReserva();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDevolverEntregable = async (entregableId: string) => {
+    setProcessing(true);
+    try {
+      await api.devolverEntregable?.(entregableId);
+      toast({ title: '✅ Entregable devuelto' });
+      await cargarReserva();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -187,32 +317,35 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
+  const conceptoSeleccionado = conceptosCargo.find(c => c.id === cargoConcepto);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <DialogTitle className="text-xl">Reserva #{r.numero_reserva || r.id?.slice(0, 8)}</DialogTitle>
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-xl">#{r.numero_reserva || r.id?.slice(0, 8)}</DialogTitle>
               {getEstadoBadge(r.estado)}
+              {getOrigenBadge(r.origen)}
               {loading && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={cargarReserva} disabled={loading}>
-                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
               </Button>
-              <Button variant="outline" size="sm"><Printer className="h-4 w-4 mr-1" /> Imprimir</Button>
+              <Button variant="outline" size="sm"><Printer className="h-4 w-4" /></Button>
             </div>
           </div>
         </DialogHeader>
 
         {r.estado === 'Confirmada' && (
-          <Card className="bg-primary/5 border-primary">
+          <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium flex items-center gap-2"><DoorOpen className="h-4 w-4" /> Proceso de Check-in</span>
+                <span className="font-medium flex items-center gap-2"><DoorOpen className="h-4 w-4" /> Check-in pendiente</span>
                 <span className="text-sm text-muted-foreground">
-                  {[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length}/3 pasos
+                  {[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length}/3
                 </span>
               </div>
               <Progress value={[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length * 33.33} className="h-2" />
@@ -223,33 +356,37 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="resumen">Resumen</TabsTrigger>
                 <TabsTrigger value="huesped">Huésped</TabsTrigger>
+                <TabsTrigger value="cargos">Cargos {r.cargos?.length > 0 && `(${r.cargos.length})`}</TabsTrigger>
+                <TabsTrigger value="entregables">Entregables</TabsTrigger>
                 <TabsTrigger value="pagos">Pagos {r.pagos?.length > 0 && `(${r.pagos.length})`}</TabsTrigger>
               </TabsList>
 
+              {/* TAB RESUMEN */}
               <TabsContent value="resumen" className="space-y-4 mt-4">
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" /> Detalles de Estancia</CardTitle>
+                    <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" /> Estancia</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-4">
+                  <CardContent className="grid grid-cols-4 gap-4">
                     <div>
                       <Label className="text-muted-foreground text-xs">Check-in</Label>
-                      <p className="font-medium">{format(new Date(r.fecha_checkin), "EEE d MMM yyyy", { locale: es })}</p>
+                      <p className="font-medium">{format(new Date(r.fecha_checkin), "EEE d MMM", { locale: es })}</p>
+                      {r.hora_llegada && <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{r.hora_llegada}</p>}
                     </div>
                     <div>
                       <Label className="text-muted-foreground text-xs">Check-out</Label>
-                      <p className="font-medium">{format(new Date(r.fecha_checkout), "EEE d MMM yyyy", { locale: es })}</p>
+                      <p className="font-medium">{format(new Date(r.fecha_checkout), "EEE d MMM", { locale: es })}</p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground text-xs">Noches</Label>
-                      <p className="font-medium">{noches} noches</p>
+                      <p className="font-medium">{noches}</p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground text-xs">Huéspedes</Label>
-                      <p className="font-medium">{r.adultos} adultos, {r.ninos || 0} niños</p>
+                      <p className="font-medium">{r.adultos}A {r.ninos || 0}N {personasExtra > 0 && <span className="text-primary">+{personasExtra}</span>}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -261,11 +398,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{r.tipo_habitacion_nombre || 'Sin asignar'}</p>
-                        <p className="text-sm text-muted-foreground">${tarifaNoche.toLocaleString()} por noche</p>
+                        <p className="font-medium">{r.tipo_habitacion_nombre || 'Sin tipo'}</p>
+                        <p className="text-sm text-muted-foreground">${tarifaNoche.toLocaleString()} /noche</p>
                       </div>
                       {r.habitacion_numero ? (
-                        <Badge variant="outline" className="text-lg px-3 py-1">{r.habitacion_numero}</Badge>
+                        <Badge variant="outline" className="text-2xl px-4 py-2">{r.habitacion_numero}</Badge>
                       ) : (
                         <Badge variant="secondary">Sin asignar</Badge>
                       )}
@@ -273,47 +410,66 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   </CardContent>
                 </Card>
 
-                {r.solicitudes_especiales && (
-                  <Card className="border-warning bg-warning/5">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
-                        <div>
-                          <p className="font-medium text-sm">Solicitudes Especiales</p>
-                          <p className="text-sm text-muted-foreground">{r.solicitudes_especiales}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {(r.solicitudes_especiales || r.notas_internas) && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {r.solicitudes_especiales && (
+                      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                            <div>
+                              <p className="font-medium text-sm">Solicitudes</p>
+                              <p className="text-sm text-muted-foreground">{r.solicitudes_especiales}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {r.notas_internas && (
+                      <Card className="border-slate-200 bg-slate-50 dark:bg-slate-950/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-2">
+                            <Receipt className="h-4 w-4 text-slate-600 mt-0.5" />
+                            <div>
+                              <p className="font-medium text-sm">Notas internas</p>
+                              <p className="text-sm text-muted-foreground">{r.notas_internas}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 )}
 
+                {/* Verificaciones Check-in */}
                 {r.estado === 'Confirmada' && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">Verificaciones Check-in</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center space-x-3">
-                        <Checkbox id="documento" checked={documentoVerificado} onCheckedChange={(c) => setDocumentoVerificado(!!c)} />
-                        <label htmlFor="documento" className="text-sm cursor-pointer">Documento de identidad verificado</label>
+                        <Checkbox id="doc" checked={documentoVerificado} onCheckedChange={(c) => setDocumentoVerificado(!!c)} />
+                        <label htmlFor="doc" className="text-sm cursor-pointer">Documento verificado</label>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Checkbox id="tarjeta" checked={tarjetaRegistrada} onCheckedChange={(c) => setTarjetaRegistrada(!!c)} />
-                        <label htmlFor="tarjeta" className="text-sm cursor-pointer">Tarjeta de crédito/garantía registrada</label>
+                        <label htmlFor="tarjeta" className="text-sm cursor-pointer">Garantía registrada</label>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Checkbox id="firma" checked={firmaDigital} onCheckedChange={(c) => setFirmaDigital(!!c)} />
-                        <label htmlFor="firma" className="text-sm cursor-pointer">Firma de registro completada</label>
+                        <label htmlFor="firma" className="text-sm cursor-pointer">Registro firmado</label>
                       </div>
                     </CardContent>
                   </Card>
                 )}
 
+                {/* Verificaciones Check-out */}
                 {r.estado === 'CheckIn' && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">Verificaciones Check-out</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center space-x-3">
-                        <Checkbox id="inspeccion" checked={habitacionInspeccionada} onCheckedChange={(c) => setHabitacionInspeccionada(!!c)} />
-                        <label htmlFor="inspeccion" className="text-sm cursor-pointer">Habitación inspeccionada</label>
+                        <Checkbox id="insp" checked={habitacionInspeccionada} onCheckedChange={(c) => setHabitacionInspeccionada(!!c)} />
+                        <label htmlFor="insp" className="text-sm cursor-pointer">Habitación inspeccionada</label>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Checkbox id="llave" checked={llaveDevuelta} onCheckedChange={(c) => setLlaveDevuelta(!!c)} />
@@ -324,6 +480,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 )}
               </TabsContent>
 
+              {/* TAB HUÉSPED */}
               <TabsContent value="huesped" className="mt-4">
                 <Card>
                   <CardContent className="p-4">
@@ -333,7 +490,10 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold">{r.cliente_nombre} {r.apellido_paterno} {r.apellido_materno}</h3>
-                        {r.es_vip && <Badge className="mt-1">VIP</Badge>}
+                        <div className="flex gap-2 mt-1">
+                          {r.es_vip && <Badge>VIP</Badge>}
+                          {r.total_estancias > 0 && <Badge variant="outline">{r.total_estancias} estancias</Badge>}
+                        </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -350,6 +510,160 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Card>
               </TabsContent>
 
+              {/* TAB CARGOS */}
+              <TabsContent value="cargos" className="mt-4 space-y-4">
+                {r.estado === 'CheckIn' && (
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-base">Agregar Cargo</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <Select value={cargoConcepto} onValueChange={(v) => {
+                          setCargoConcepto(v);
+                          const c = conceptosCargo.find(x => x.id === v);
+                          if (c?.precio_default) setCargoMonto(c.precio_default.toString());
+                        }}>
+                          <SelectTrigger><SelectValue placeholder="Concepto..." /></SelectTrigger>
+                          <SelectContent>
+                            {conceptosCargo.map(c => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.nombre} {c.precio_default > 0 && `- $${c.precio_default}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input 
+                            type="number" 
+                            placeholder="Cantidad" 
+                            value={cargoCantidad} 
+                            onChange={(e) => setCargoCantidad(e.target.value)} 
+                          />
+                          <Input 
+                            type="number" 
+                            placeholder="Precio" 
+                            value={cargoMonto} 
+                            onChange={(e) => setCargoMonto(e.target.value)} 
+                          />
+                        </div>
+                      </div>
+                      <Textarea 
+                        placeholder="Notas (opcional)" 
+                        rows={2}
+                        value={cargoNotas}
+                        onChange={(e) => setCargoNotas(e.target.value)}
+                      />
+                      <Button onClick={handleAgregarCargo} disabled={processing || !cargoConcepto}>
+                        <Plus className="h-4 w-4 mr-1" /> Agregar cargo
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Cargos ({r.cargos?.length || 0})</CardTitle></CardHeader>
+                  <CardContent>
+                    {r.cargos && r.cargos.length > 0 ? (
+                      <div className="space-y-2">
+                        {r.cargos.map((cargo: any, idx: number) => (
+                          <div key={cargo.id || idx} className="flex items-center justify-between py-2 border-b last:border-0">
+                            <div>
+                              <p className="font-medium">{cargo.concepto || cargo.producto_nombre}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {cargo.cantidad} x ${parseFloat(cargo.precio_unitario).toLocaleString()}
+                                {cargo.notas && ` • ${cargo.notas}`}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">${parseFloat(cargo.total).toLocaleString()}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {cargo.fecha ? format(new Date(cargo.fecha), 'd MMM HH:mm', { locale: es }) : ''}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex justify-between pt-2 font-bold">
+                          <span>Total cargos:</span>
+                          <span>${totalCargos.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">Sin cargos adicionales</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* TAB ENTREGABLES */}
+              <TabsContent value="entregables" className="mt-4 space-y-4">
+                {r.estado === 'CheckIn' && (
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-base">Asignar Entregable</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="flex gap-2">
+                        <Select value={entregableSeleccionado} onValueChange={setEntregableSeleccionado}>
+                          <SelectTrigger className="flex-1"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                          <SelectContent>
+                            {entregables.map(e => (
+                              <SelectItem key={e.id} value={e.id}>
+                                {e.nombre} {e.requiere_devolucion && '(requiere devolución)'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button onClick={handleAsignarEntregable} disabled={processing || !entregableSeleccionado}>
+                          <Plus className="h-4 w-4 mr-1" /> Asignar
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" /> Entregados</CardTitle></CardHeader>
+                  <CardContent>
+                    {reservaEntregables.length > 0 ? (
+                      <div className="space-y-2">
+                        {reservaEntregables.map((ent: any) => (
+                          <div key={ent.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                            <div className="flex items-center gap-3">
+                              <Package className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium">{ent.nombre}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Entregado: {ent.fecha_entrega ? format(new Date(ent.fecha_entrega), 'd MMM HH:mm', { locale: es }) : '-'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {ent.requiere_devolucion && (
+                                ent.devuelto ? (
+                                  <Badge variant="outline" className="text-green-600">Devuelto</Badge>
+                                ) : (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleDevolverEntregable(ent.id)}
+                                    disabled={processing}
+                                  >
+                                    Marcar devuelto
+                                  </Button>
+                                )
+                              )}
+                              {!ent.requiere_devolucion && (
+                                <Badge variant="secondary">No requiere devolución</Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">Sin entregables asignados</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* TAB PAGOS */}
               <TabsContent value="pagos" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-base">Registrar Pago</CardTitle></CardHeader>
@@ -371,23 +685,22 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                         </SelectContent>
                       </Select>
                       <Button onClick={handleAbonar} disabled={processing}>
-                        <CreditCard className="h-4 w-4 mr-1" /> Abonar
+                        <CreditCard className="h-4 w-4 mr-1" /> Pagar
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Lista de pagos */}
-                {r.pagos && r.pagos.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-base">Historial de Pagos</CardTitle></CardHeader>
-                    <CardContent>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Historial</CardTitle></CardHeader>
+                  <CardContent>
+                    {r.pagos && r.pagos.length > 0 ? (
                       <div className="space-y-2">
                         {r.pagos.map((pago: any, idx: number) => (
                           <div key={pago.id || idx} className="flex items-center justify-between py-2 border-b last:border-0">
                             <div>
                               <p className="font-medium">${parseFloat(pago.monto).toLocaleString()}</p>
-                              <p className="text-xs text-muted-foreground">{pago.metodo_pago} - {pago.concepto}</p>
+                              <p className="text-xs text-muted-foreground">{pago.metodo_pago} • {pago.concepto}</p>
                             </div>
                             <span className="text-xs text-muted-foreground">
                               {pago.created_at ? format(new Date(pago.created_at), 'd MMM HH:mm', { locale: es }) : ''}
@@ -395,36 +708,58 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                           </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">Sin pagos registrados</p>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>
 
+          {/* SIDEBAR DERECHO */}
           <div className="space-y-4">
             <Card className="bg-primary text-primary-foreground">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Resumen de Pago</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Resumen</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm opacity-80">
-                    <span>Subtotal ({noches} noches)</span>
-                    <span>${subtotal.toLocaleString()}</span>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between opacity-80">
+                  <span>Hospedaje ({noches}n)</span>
+                  <span>${subtotalHospedaje.toLocaleString()}</span>
+                </div>
+                {totalPersonaExtra > 0 && (
+                  <div className="flex justify-between opacity-80">
+                    <span>Persona extra ({personasExtra})</span>
+                    <span>${totalPersonaExtra.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm opacity-80">
-                    <span>Impuestos (16%)</span>
-                    <span>${impuestos.toLocaleString()}</span>
+                )}
+                {totalCargos > 0 && (
+                  <div className="flex justify-between opacity-80">
+                    <span>Cargos extras</span>
+                    <span>${totalCargos.toLocaleString()}</span>
                   </div>
-                  <Separator className="bg-primary-foreground/20" />
-                  <div className="flex justify-between font-bold text-xl">
-                    <span>Total</span>
-                    <span>${total.toLocaleString()}</span>
+                )}
+                {descuentoMonto > 0 && (
+                  <div className="flex justify-between text-green-300">
+                    <span className="flex items-center gap-1">
+                      <Tag className="h-3 w-3" />
+                      Descuento {r.descuento_tipo === 'Porcentaje' && `(${r.descuento_valor}%)`}
+                    </span>
+                    <span>-${descuentoMonto.toLocaleString()}</span>
                   </div>
+                )}
+                <div className="flex justify-between opacity-80">
+                  <span>IVA (16%)</span>
+                  <span>${impuestos.toLocaleString()}</span>
+                </div>
+                <Separator className="bg-primary-foreground/20" />
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span>${total.toLocaleString()}</span>
                 </div>
                 
-                <div className="mt-4 p-3 rounded-lg bg-primary-foreground/10">
+                <div className="mt-3 p-3 rounded-lg bg-primary-foreground/10">
                   <div className="flex justify-between text-sm mb-1">
                     <span>Pagado</span>
                     <span>${pagado.toLocaleString()}</span>
@@ -432,20 +767,21 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   <Progress value={porcentajePagado} className="h-2 bg-primary-foreground/20" />
                 </div>
                 
-                <div className="mt-4 p-4 rounded-lg bg-primary-foreground/10 text-center">
-                  <p className="text-sm opacity-80">Saldo Pendiente</p>
-                  <p className="text-3xl font-bold">${saldoPendiente.toLocaleString()}</p>
+                <div className="p-4 rounded-lg bg-primary-foreground/10 text-center">
+                  <p className="text-xs opacity-80">Saldo</p>
+                  <p className="text-2xl font-bold">${saldoPendiente.toLocaleString()}</p>
                 </div>
               </CardContent>
             </Card>
 
+            {/* ACCIONES */}
             {r.estado === 'Pendiente' && (
               <div className="space-y-2">
                 <Button className="w-full" size="lg" onClick={handleConfirmar} disabled={processing}>
-                  {processing ? 'Procesando...' : '✓ Confirmar Reserva'}
+                  {processing ? 'Procesando...' : '✓ Confirmar'}
                 </Button>
                 <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
-                  Cancelar Reserva
+                  Cancelar
                 </Button>
               </div>
             )}
@@ -453,27 +789,27 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
             {r.estado === 'Confirmada' && (
               <div className="space-y-2">
                 <Button className="w-full" size="lg" onClick={handleCheckin} disabled={processing}>
-                  {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Completar Check-in</>}
+                  {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Check-in</>}
                 </Button>
                 <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
-                  Cancelar Reserva
+                  Cancelar
                 </Button>
               </div>
             )}
 
             {r.estado === 'CheckIn' && (
               <div className="space-y-2">
-                <Button className="w-full bg-success hover:bg-success/90" size="lg" onClick={handleCheckout} disabled={processing || saldoPendiente > 0}>
-                  {processing ? 'Procesando...' : <><DoorClosed className="h-5 w-5 mr-2" /> Completar Check-out</>}
+                <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" onClick={handleCheckout} disabled={processing || saldoPendiente > 0}>
+                  {processing ? 'Procesando...' : <><DoorClosed className="h-5 w-5 mr-2" /> Check-out</>}
                 </Button>
-                {saldoPendiente > 0 && <p className="text-xs text-center text-destructive">* Debe liquidar el saldo pendiente</p>}
+                {saldoPendiente > 0 && <p className="text-xs text-center text-destructive">* Liquidar saldo pendiente</p>}
               </div>
             )}
 
             {r.estado === 'CheckOut' && (
               <Card className="bg-muted">
                 <CardContent className="p-4 text-center">
-                  <p className="text-sm text-muted-foreground">✓ Reserva finalizada</p>
+                  <p className="text-sm text-muted-foreground">✓ Finalizada</p>
                 </CardContent>
               </Card>
             )}
@@ -481,7 +817,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
             {r.estado === 'Cancelada' && (
               <Card className="bg-destructive/10 border-destructive">
                 <CardContent className="p-4 text-center">
-                  <p className="text-sm text-destructive font-medium">Reserva cancelada</p>
+                  <p className="text-sm text-destructive font-medium">Cancelada</p>
                 </CardContent>
               </Card>
             )}
