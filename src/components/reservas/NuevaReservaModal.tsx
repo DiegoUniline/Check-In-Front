@@ -72,7 +72,7 @@ interface FormData {
   };
   solicitudesEspeciales: string;
   notasInternas: string;
-  descuentoTipo: '' | 'Monto' | 'Porcentaje';
+descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
   descuentoValor: number;
   metodoPago: string;
   anticipo: number;
@@ -102,7 +102,7 @@ const initialFormData: FormData = {
   },
   solicitudesEspeciales: '',
   notasInternas: '',
-  descuentoTipo: '',
+descuentoTipo: 'none',
   descuentoValor: 0,
   metodoPago: 'Efectivo',
   anticipo: 0,
@@ -209,11 +209,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const subtotal = subtotalHospedaje + totalPersonaExtra;
   
   let descuentoMonto = 0;
-  if (formData.descuentoTipo === 'Monto') {
-    descuentoMonto = formData.descuentoValor;
-  } else if (formData.descuentoTipo === 'Porcentaje') {
-    descuentoMonto = subtotal * (formData.descuentoValor / 100);
-  }
+if (formData.descuentoTipo === 'Monto') {
+  descuentoMonto = formData.descuentoValor;
+} else if (formData.descuentoTipo === 'Porcentaje') {
+  descuentoMonto = subtotal * (formData.descuentoValor / 100);
+}
   
   const subtotalConDescuento = subtotal - descuentoMonto;
   const impuestos = subtotalConDescuento * 0.16;
@@ -269,7 +269,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         personas_extra: formData.personasExtra,
         cargo_persona_extra: formData.cargoPersonaExtra,
         tarifa_noche: tarifaNoche,
-        descuento_tipo: formData.descuentoTipo || null,
+  descuento_tipo: formData.descuentoTipo === 'none' ? null : formData.descuentoTipo,
         descuento_valor: formData.descuentoValor || 0,
         solicitudes_especiales: formData.solicitudesEspeciales,
         notas_internas: formData.notasInternas,
@@ -791,7 +791,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                       <SelectValue placeholder="Sin descuento" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin descuento</SelectItem>
+               <SelectItem value="none">Sin descuento</SelectItem>
                       <SelectItem value="Monto">Monto fijo</SelectItem>
                       <SelectItem value="Porcentaje">Porcentaje</SelectItem>
                     </SelectContent>
