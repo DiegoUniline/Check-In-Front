@@ -4,7 +4,7 @@ import { es } from 'date-fns/locale';
 import { 
   Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, 
   AlertCircle, Printer, RefreshCw, Package, Plus, Trash2, Receipt,
-  Users, Clock, Percent, Tag, Pencil, Save, X
+  Users, Clock, Percent, Tag, Pencil, Save, X, Check, AlertTriangle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,13 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const [entregables, setEntregables] = useState<any[]>([]);
   const [reservaEntregables, setReservaEntregables] = useState<any[]>([]);
   const [entregableSeleccionado, setEntregableSeleccionado] = useState('');
+  const [entregableCantidad, setEntregableCantidad] = useState('1');
+  
+  // Devolución de entregables
+  const [devolucionModal, setDevolucionModal] = useState<any>(null);
+  const [cantidadDevolver, setCantidadDevolver] = useState('');
+  const [costoUnitario, setCostoUnitario] = useState('');
+  const [crearCargoFaltante, setCrearCargoFaltante] = useState(true);
 
   useEffect(() => {
     if (open && reservaInicial?.id) {
@@ -81,6 +88,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       setFirmaDigital(false);
       setHabitacionInspeccionada(false);
       setLlaveDevuelta(false);
+      setDevolucionModal(null);
     }
   }, [open, reservaInicial?.id]);
 
@@ -261,10 +269,16 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       return;
     }
     
-    // Verificar entregables pendientes
-    const pendientes = reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto);
+    // Verificar entregables pendientes (que requieren devolución y no están devueltos completamente)
+    const pendientes = reservaEntregables.filter(e => 
+      e.requiere_devolucion && !e.devuelto && (e.faltantes > 0 || e.cantidad_devuelta === null)
+    );
     if (pendientes.length > 0) {
-      toast({ title: 'Entregables pendientes', description: `Faltan devolver: ${pendientes.map(p => p.nombre).join(', ')}`, variant: 'destructive' });
+      toast({ 
+        title: 'Entregables pendientes', 
+        description: `Procese la devolución de: ${pendientes.map(p => p.nombre).join(', ')}`, 
+        variant: 'destructive' 
+      });
       return;
     }
     
@@ -328,7 +342,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     
     setProcessing(true);
     try {
-      await api.createCargo?.({
+      await api.createCargo({
         reserva_id: r.id,
         concepto_id: cargoConcepto,
         concepto: concepto?.nombre || 'Cargo adicional',
@@ -357,11 +371,21 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const handleAsignarEntregable = async () => {
     if (!entregableSeleccionado) return;
     
+    const cantidad = safeNumber(entregableCantidad, 1);
+    if (cantidad < 1) {
+      toast({ title: 'Cantidad inválida', variant: 'destructive' });
+      return;
+    }
+    
     setProcessing(true);
     try {
-      await api.asignarEntregable?.(r.id, { entregable_id: entregableSeleccionado, cantidad: 1 });
-      toast({ title: '✅ Entregable asignado' });
+      await api.asignarEntregable?.(r.id, { 
+        entregable_id: entregableSeleccionado, 
+        cantidad 
+      });
+      toast({ title: '✅ Entregable asignado', description: `${cantidad} unidad(es)` });
       setEntregableSeleccionado('');
+      setEntregableCantidad('1');
       await cargarReserva();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -370,12 +394,46 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
-  const handleDevolverEntregable = async (entregableId: string) => {
+  const abrirModalDevolucion = (ent: any) => {
+    setDevolucionModal(ent);
+    setCantidadDevolver(String(ent.cantidad || 1));
+    setCostoUnitario(String(ent.costo_reposicion || 0));
+    setCrearCargoFaltante(true);
+  };
+
+  const handleDevolverEntregable = async () => {
+    if (!devolucionModal) return;
+    
+    const cantDevuelta = safeNumber(cantidadDevolver, 0);
+    const cantEntregada = devolucionModal.cantidad || 1;
+    const faltantes = cantEntregada - cantDevuelta;
+    const costo = safeNumber(costoUnitario, 0);
+    
+    if (cantDevuelta < 0 || cantDevuelta > cantEntregada) {
+      toast({ title: 'Cantidad inválida', description: `Debe ser entre 0 y ${cantEntregada}`, variant: 'destructive' });
+      return;
+    }
+    
     setProcessing(true);
     try {
-      await api.devolverEntregable?.(entregableId);
-      toast({ title: '✅ Entregable devuelto' });
+      const result = await api.devolverEntregable?.(devolucionModal.id, {
+        cantidad_devuelta: cantDevuelta,
+        costo_unitario: costo,
+        crear_cargo: crearCargoFaltante && faltantes > 0 && costo > 0
+      });
+      
+      if (result?.cargo) {
+        toast({ 
+          title: '✅ Devolución procesada', 
+          description: `Cargo por faltantes: $${result.cargo.total.toLocaleString()}` 
+        });
+      } else {
+        toast({ title: '✅ Devolución registrada' });
+      }
+      
+      setDevolucionModal(null);
       await cargarReserva();
+      onUpdate?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -414,8 +472,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
   };
 
-  // Habitación actual para mostrar
-  const habitacionActual = habitaciones.find(h => h.id === (habitacionId || r.habitacion_id));
+  // Calcular faltantes para devolución
+  const faltantesDevolucion = devolucionModal 
+    ? (devolucionModal.cantidad || 1) - safeNumber(cantidadDevolver, 0) 
+    : 0;
+  const totalCargoFaltantes = faltantesDevolucion * safeNumber(costoUnitario, 0) * 1.16;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -429,7 +490,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               {loading && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
             <div className="flex gap-2">
-              {/* Botón Editar / Guardar */}
               {!editMode && r.estado !== 'CheckOut' && r.estado !== 'Cancelada' && (
                 <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
                   <Pencil className="h-4 w-4 mr-1" /> Editar
@@ -454,7 +514,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
           <DialogDescription>Gestiona los detalles de la reserva, cargos y pagos</DialogDescription>
         </DialogHeader>
 
-        {/* Barra de progreso check-in */}
         {r.estado === 'Confirmada' && (
           <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
             <CardContent className="p-4">
@@ -476,11 +535,18 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 <TabsTrigger value="resumen">Resumen</TabsTrigger>
                 <TabsTrigger value="huesped">Huésped</TabsTrigger>
                 <TabsTrigger value="cargos">Cargos {r.cargos?.length > 0 && `(${r.cargos.length})`}</TabsTrigger>
-                <TabsTrigger value="entregables">Entregables</TabsTrigger>
+                <TabsTrigger value="entregables">
+                  Entregables
+                  {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length > 0 && (
+                    <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 text-xs">
+                      {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="pagos">Pagos {r.pagos?.length > 0 && `(${r.pagos.length})`}</TabsTrigger>
               </TabsList>
 
-              {/* ============ TAB RESUMEN ============ */}
+              {/* TAB RESUMEN */}
               <TabsContent value="resumen" className="space-y-4 mt-4">
                 <Card>
                   <CardHeader className="pb-2">
@@ -604,7 +670,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   </div>
                 )}
 
-                {/* Verificaciones Check-in */}
                 {r.estado === 'Confirmada' && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">✓ Verificaciones Check-in</CardTitle></CardHeader>
@@ -625,7 +690,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   </Card>
                 )}
 
-                {/* Verificaciones Check-out */}
                 {r.estado === 'CheckIn' && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">✓ Verificaciones Check-out</CardTitle></CardHeader>
@@ -640,12 +704,15 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                       </div>
                       {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length > 0 && (
                         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <p className="text-sm text-red-700 font-medium">⚠️ Entregables pendientes de devolución:</p>
+                          <p className="text-sm text-red-700 font-medium">⚠️ Entregables pendientes:</p>
                           <ul className="text-sm text-red-600 mt-1">
                             {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).map(e => (
-                              <li key={e.id}>• {e.nombre}</li>
+                              <li key={e.id}>• {e.nombre} ({e.cantidad} unidades)</li>
                             ))}
                           </ul>
+                          <Button variant="outline" size="sm" className="mt-2" onClick={() => setActiveTab('entregables')}>
+                            Ir a entregables
+                          </Button>
                         </div>
                       )}
                     </CardContent>
@@ -653,7 +720,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 )}
               </TabsContent>
 
-              {/* ============ TAB HUÉSPED ============ */}
+              {/* TAB HUÉSPED */}
               <TabsContent value="huesped" className="mt-4">
                 <Card>
                   <CardContent className="p-4">
@@ -683,7 +750,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Card>
               </TabsContent>
 
-              {/* ============ TAB CARGOS ============ */}
+              {/* TAB CARGOS */}
               <TabsContent value="cargos" className="mt-4 space-y-4">
                 {r.estado === 'CheckIn' && (
                   <Card>
@@ -705,26 +772,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                           </SelectContent>
                         </Select>
                         <div className="grid grid-cols-2 gap-2">
-                          <Input 
-                            type="number" 
-                            placeholder="Cantidad" 
-                            value={cargoCantidad} 
-                            onChange={(e) => setCargoCantidad(e.target.value)} 
-                          />
-                          <Input 
-                            type="number" 
-                            placeholder="Precio" 
-                            value={cargoMonto} 
-                            onChange={(e) => setCargoMonto(e.target.value)} 
-                          />
+                          <Input type="number" placeholder="Cantidad" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+                          <Input type="number" placeholder="Precio" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
                         </div>
                       </div>
-                      <Textarea 
-                        placeholder="Notas (opcional)" 
-                        rows={2}
-                        value={cargoNotas}
-                        onChange={(e) => setCargoNotas(e.target.value)}
-                      />
+                      <Textarea placeholder="Notas (opcional)" rows={2} value={cargoNotas} onChange={(e) => setCargoNotas(e.target.value)} />
                       <Button onClick={handleAgregarCargo} disabled={processing || !cargoConcepto}>
                         <Plus className="h-4 w-4 mr-1" /> Agregar cargo
                       </Button>
@@ -749,7 +801,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                             <div className="text-right">
                               <p className="font-medium">${safeNumber(cargo.total).toLocaleString()}</p>
                               <p className="text-xs text-muted-foreground">
-                                {cargo.fecha ? format(new Date(cargo.fecha), 'd MMM HH:mm', { locale: es }) : ''}
+                                {cargo.created_at ? format(new Date(cargo.created_at), 'd MMM HH:mm', { locale: es }) : ''}
                               </p>
                             </div>
                           </div>
@@ -766,7 +818,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Card>
               </TabsContent>
 
-              {/* ============ TAB ENTREGABLES ============ */}
+              {/* TAB ENTREGABLES */}
               <TabsContent value="entregables" className="mt-4 space-y-4">
                 {r.estado === 'CheckIn' && (
                   <Card>
@@ -778,11 +830,20 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                           <SelectContent>
                             {entregables.map(e => (
                               <SelectItem key={e.id} value={e.id}>
-                                {e.nombre} {e.requiere_devolucion && '(requiere devolución)'}
+                                {e.nombre} {e.requiere_devolucion ? '(devolver)' : ''} 
+                                {e.costo_reposicion > 0 && ` - $${e.costo_reposicion}/u`}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        <Input 
+                          type="number" 
+                          placeholder="Cant" 
+                          className="w-20"
+                          value={entregableCantidad}
+                          onChange={(e) => setEntregableCantidad(e.target.value)}
+                          min="1"
+                        />
                         <Button onClick={handleAsignarEntregable} disabled={processing || !entregableSeleccionado}>
                           <Plus className="h-4 w-4 mr-1" /> Asignar
                         </Button>
@@ -792,63 +853,175 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 )}
 
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" /> Entregados</CardTitle></CardHeader>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Package className="h-4 w-4" /> Entregados ({reservaEntregables.length})
+                    </CardTitle>
+                  </CardHeader>
                   <CardContent>
                     {reservaEntregables.length > 0 ? (
-                      <div className="space-y-2">
-                        {reservaEntregables.map((ent: any) => (
-                          <div key={ent.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                            <div className="flex items-center gap-3">
-                              <Package className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium">{ent.nombre}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Entregado: {ent.fecha_entrega ? format(new Date(ent.fecha_entrega), 'd MMM HH:mm', { locale: es }) : '-'}
-                                </p>
+                      <div className="space-y-3">
+                        {reservaEntregables.map((ent: any) => {
+                          const cantEntregada = ent.cantidad || 1;
+                          const cantDevuelta = ent.cantidad_devuelta || 0;
+                          const faltantes = ent.faltantes ?? (cantEntregada - cantDevuelta);
+                          const yaProcesado = ent.devuelto || ent.cantidad_devuelta !== null;
+                          
+                          return (
+                            <div key={ent.id} className="p-3 border rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <Package className="h-5 w-5 text-muted-foreground" />
+                                  <div>
+                                    <p className="font-medium">{ent.nombre}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Entregado: {ent.fecha_entrega ? format(new Date(ent.fecha_entrega), 'd MMM HH:mm', { locale: es }) : '-'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="text-lg">{cantEntregada} unid.</Badge>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
+                              
                               {ent.requiere_devolucion && (
-                                ent.devuelto ? (
-                                  <Badge variant="outline" className="text-green-600">✓ Devuelto</Badge>
-                                ) : (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => handleDevolverEntregable(ent.id)}
-                                    disabled={processing}
-                                  >
-                                    Marcar devuelto
-                                  </Button>
-                                )
+                                <div className="mt-3 pt-3 border-t">
+                                  {yaProcesado ? (
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-sm">
+                                        <span className="text-muted-foreground">Devueltos: </span>
+                                        <span className="font-medium text-green-600">{cantDevuelta}</span>
+                                        {faltantes > 0 && (
+                                          <>
+                                            <span className="text-muted-foreground"> • Faltantes: </span>
+                                            <span className="font-medium text-red-600">{faltantes}</span>
+                                            {ent.costo_unitario_cobrado > 0 && (
+                                              <span className="text-muted-foreground"> (${ent.costo_unitario_cobrado}/u)</span>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                      <Badge variant={faltantes === 0 ? 'outline' : 'destructive'} className={faltantes === 0 ? 'text-green-600' : ''}>
+                                        {faltantes === 0 ? '✓ Completo' : `${faltantes} no devueltos`}
+                                      </Badge>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2 text-amber-600">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span className="text-sm font-medium">Pendiente de devolución</span>
+                                      </div>
+                                      <Button variant="outline" size="sm" onClick={() => abrirModalDevolucion(ent)} disabled={processing}>
+                                        Procesar devolución
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
                               )}
+                              
                               {!ent.requiere_devolucion && (
-                                <Badge variant="secondary">No requiere devolución</Badge>
+                                <div className="mt-2">
+                                  <Badge variant="secondary">No requiere devolución</Badge>
+                                </div>
                               )}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-center text-muted-foreground py-4">Sin entregables asignados</p>
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Modal de devolución */}
+                {devolucionModal && (
+                  <Card className="border-2 border-primary">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Package className="h-4 w-4" /> Devolución: {devolucionModal.nombre}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Cantidad entregada</Label>
+                          <Input value={devolucionModal.cantidad || 1} disabled className="bg-muted" />
+                        </div>
+                        <div>
+                          <Label>Cantidad devuelta</Label>
+                          <Input 
+                            type="number" 
+                            value={cantidadDevolver}
+                            onChange={(e) => setCantidadDevolver(e.target.value)}
+                            min="0"
+                            max={devolucionModal.cantidad || 1}
+                          />
+                        </div>
+                      </div>
+                      
+                      {faltantesDevolucion > 0 && (
+                        <>
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-sm font-medium text-amber-800">
+                              ⚠️ Faltantes: {faltantesDevolucion} unidad(es)
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <Label>Costo por unidad faltante</Label>
+                            <Input 
+                              type="number" 
+                              value={costoUnitario}
+                              onChange={(e) => setCostoUnitario(e.target.value)}
+                              placeholder="0.00"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Costo catálogo: ${devolucionModal.costo_reposicion || 0}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="crearCargo" 
+                              checked={crearCargoFaltante}
+                              onCheckedChange={(c) => setCrearCargoFaltante(!!c)}
+                            />
+                            <label htmlFor="crearCargo" className="text-sm cursor-pointer">
+                              Crear cargo por faltantes
+                            </label>
+                          </div>
+                          
+                          {crearCargoFaltante && safeNumber(costoUnitario) > 0 && (
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <p className="text-sm text-red-800">
+                                <strong>Cargo a crear:</strong> {faltantesDevolucion} × ${safeNumber(costoUnitario).toLocaleString()} + IVA = 
+                                <strong> ${totalCargoFaltantes.toLocaleString()}</strong>
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setDevolucionModal(null)} className="flex-1">
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleDevolverEntregable} disabled={processing} className="flex-1">
+                          <Check className="h-4 w-4 mr-1" />
+                          {faltantesDevolucion > 0 ? 'Procesar con faltantes' : 'Confirmar devolución'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
-              {/* ============ TAB PAGOS ============ */}
+              {/* TAB PAGOS */}
               <TabsContent value="pagos" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-base">Registrar Pago</CardTitle></CardHeader>
                   <CardContent>
                     <div className="flex gap-2">
-                      <Input 
-                        type="number" 
-                        placeholder="Monto" 
-                        value={montoAbono} 
-                        onChange={(e) => setMontoAbono(e.target.value)} 
-                        className="flex-1" 
-                      />
+                      <Input type="number" placeholder="Monto" value={montoAbono} onChange={(e) => setMontoAbono(e.target.value)} className="flex-1" />
                       <Select value={metodoPago} onValueChange={setMetodoPago}>
                         <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -862,11 +1035,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                       </Button>
                     </div>
                     {saldoPendiente > 0 && (
-                      <Button 
-                        variant="outline" 
-                        className="w-full mt-2" 
-                        onClick={() => setMontoAbono(saldoPendiente.toFixed(2))}
-                      >
+                      <Button variant="outline" className="w-full mt-2" onClick={() => setMontoAbono(saldoPendiente.toFixed(2))}>
                         Liquidar total: ${saldoPendiente.toLocaleString()}
                       </Button>
                     )}
@@ -899,7 +1068,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
             </Tabs>
           </div>
 
-          {/* ============ SIDEBAR DERECHO ============ */}
+          {/* SIDEBAR DERECHO */}
           <div className="space-y-4">
             <Card className="bg-primary text-primary-foreground">
               <CardHeader className="pb-2">
@@ -956,7 +1125,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               </CardContent>
             </Card>
 
-            {/* ============ ACCIONES ============ */}
             {r.estado === 'Pendiente' && (
               <div className="space-y-2">
                 <Button className="w-full" size="lg" onClick={handleConfirmar} disabled={processing}>
@@ -991,6 +1159,9 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Button>
                 {saldoPendiente > 0.01 && (
                   <p className="text-xs text-center text-destructive">* Debe liquidar el saldo pendiente</p>
+                )}
+                {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length > 0 && (
+                  <p className="text-xs text-center text-amber-600">* Procesar devolución de entregables</p>
                 )}
               </div>
             )}
