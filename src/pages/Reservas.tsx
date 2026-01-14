@@ -298,13 +298,12 @@ export default function Reservas() {
           onSuccess={handleSuccess}
         />
 
-        <DetalleReservaModal
-          open={modalDetalle}
-          onOpenChange={setModalDetalle}
-          reserva={reservaSeleccionada}
-          habitaciones={habitaciones}
-          onSuccess={handleSuccess}
-        />
+    <ReservaDetalleModal
+  open={modalDetalle}
+  onOpenChange={setModalDetalle}
+  reserva={reservaSeleccionada}
+  onUpdate={handleSuccess}
+/>
       </div>
     </MainLayout>
   );
