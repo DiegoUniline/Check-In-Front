@@ -265,12 +265,10 @@ const handleGuardarCambios = async () => {
     const checkoutOriginal = format(new Date(reserva.fecha_checkout), 'yyyy-MM-dd');
     const checkoutNuevo = format(fechaCheckout, 'yyyy-MM-dd');
     
-    // Si cambió el checkout
     if (checkoutNuevo !== checkoutOriginal) {
       updates.fecha_checkout = checkoutNuevo;
     }
     
-    // Si cambió la habitación
     if (habitacionId && habitacionId !== reserva.habitacion_id) {
       updates.habitacion_id = habitacionId;
     }
@@ -278,10 +276,20 @@ const handleGuardarCambios = async () => {
     if (Object.keys(updates).length > 0) {
       await api.updateReserva(reserva.id, updates);
       toast({ title: '✅ Reserva actualizada' });
+      
+      // Recargar datos frescos del servidor
+      const reservaActualizada = await api.getReserva(reserva.id);
+      
+      // Actualizar estado local con datos nuevos
+      Object.assign(reserva, reservaActualizada);
+      setFechaCheckout(new Date(reservaActualizada.fecha_checkout));
+      setHabitacionId(reservaActualizada.habitacion_id || '');
+      
+      // Recargar cargos y pagos
+      await cargarDetalles();
+      
       setEditMode(false);
       onSuccess?.();
-      // Cerrar y reabrir para refrescar datos
-      onOpenChange(false);
     } else {
       toast({ title: 'Sin cambios' });
       setEditMode(false);
