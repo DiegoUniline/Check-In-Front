@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { UserPlus, CalendarPlus } from 'lucide-react';
 
 interface TimelineGridProps {
   habitaciones: any[];
@@ -81,24 +82,51 @@ export function TimelineGrid({
     });
   };
 
-  const getStatusColor = (estado: string) => {
-    switch (estado?.toLowerCase()) {
-      case 'confirmada':
-        return 'bg-primary text-primary-foreground';
-      case 'pendiente':
-        return 'bg-warning text-warning-foreground';
-      case 'checkin':
-      case 'hospedado':
-        return 'bg-success text-success-foreground';
-      case 'checkout':
-        return 'bg-info text-info-foreground';
-      case 'cancelada':
-        return 'bg-destructive text-destructive-foreground';
-      case 'noshow':
-        return 'bg-muted text-muted-foreground';
-      default:
-        return 'bg-secondary text-secondary-foreground';
+  // Color por ORIGEN y ESTADO
+  const getStatusColor = (reserva: any) => {
+    const estado = reserva.estado?.toLowerCase();
+    const esWalkin = reserva.origen === 'Recepcion';
+    
+    // Cancelada/NoShow
+    if (estado === 'cancelada' || estado === 'noshow') {
+      return 'bg-red-400 text-white';
     }
+    
+    // CheckOut (finalizada)
+    if (estado === 'checkout') {
+      return 'bg-slate-400 text-white';
+    }
+    
+    // CheckIn (en hotel)
+    if (estado === 'checkin' || estado === 'hospedado') {
+      return esWalkin 
+        ? 'bg-green-500 text-white' // Walk-in en hotel = verde fuerte
+        : 'bg-emerald-500 text-white'; // Reserva en hotel = esmeralda
+    }
+    
+    // Confirmada (por llegar)
+    if (estado === 'confirmada') {
+      return esWalkin
+        ? 'bg-amber-500 text-white' // Walk-in confirmada = ámbar (raro pero posible)
+        : 'bg-blue-500 text-white'; // Reserva confirmada = azul
+    }
+    
+    // Pendiente
+    if (estado === 'pendiente') {
+      return esWalkin
+        ? 'bg-amber-400 text-white'
+        : 'bg-yellow-400 text-yellow-900';
+    }
+    
+    return 'bg-gray-400 text-white';
+  };
+
+  // Badge de origen para tooltip
+  const getOrigenIcon = (origen: string) => {
+    if (origen === 'Recepcion') {
+      return <UserPlus className="h-3 w-3" />;
+    }
+    return <CalendarPlus className="h-3 w-3" />;
   };
 
   const handleMouseDown = (habitacionId: string, dayIndex: number, reserva: any) => {
@@ -107,7 +135,6 @@ export function TimelineGrid({
       return;
     }
     
-    // No permitir crear reservas en fechas pasadas
     const selectedDay = days[dayIndex];
     if (selectedDay < startOfDay(new Date())) return;
     
@@ -248,7 +275,7 @@ export function TimelineGrid({
                             <div
                               className={cn(
                                 "absolute inset-y-1 flex items-center text-[10px] font-medium overflow-hidden",
-                                getStatusColor(reserva.estado),
+                                getStatusColor(reserva),
                                 position === 'start' && "left-1 right-0 rounded-l-md pl-1.5",
                                 position === 'end' && "left-0 right-1 rounded-r-md justify-end pr-1.5",
                                 position === 'middle' && "left-0 right-0 justify-center"
@@ -256,11 +283,12 @@ export function TimelineGrid({
                             >
                               {position === 'start' && (
                                 <div className="flex flex-col leading-tight truncate">
-                                  <span className="font-semibold truncate text-[11px]">
-                                    {reserva.cliente_nombre || reserva.nombre || reserva.huesped_nombre || 'Huésped'}
+                                  <span className="font-semibold truncate text-[11px] flex items-center gap-1">
+                                    {reserva.origen === 'Recepcion' && <UserPlus className="h-3 w-3 flex-shrink-0" />}
+                                    {reserva.cliente_nombre || reserva.nombre || 'Huésped'}
                                   </span>
                                   <span className="opacity-80 text-[9px]">
-                                    {getReservationDays(reserva)} noches
+                                    {getReservationDays(reserva)}n · {reserva.estado}
                                   </span>
                                 </div>
                               )}
@@ -274,19 +302,30 @@ export function TimelineGrid({
                       {reserva && (
                         <TooltipContent side="top" className="max-w-xs">
                           <div className="text-sm space-y-1">
-                            <p className="font-semibold text-base">{reserva.cliente_nombre || 'Huésped'} {reserva.apellido_paterno || ''}</p>
-                            {reserva.cliente_email && (
-                              <p className="text-muted-foreground text-xs">{reserva.cliente_email}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-base">{reserva.cliente_nombre || 'Huésped'} {reserva.apellido_paterno || ''}</p>
+                              {reserva.origen === 'Recepcion' ? (
+                                <Badge variant="outline" className="text-[10px] border-green-500 text-green-700 bg-green-50">
+                                  <UserPlus className="h-3 w-3 mr-1" />Walk-in
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] border-blue-500 text-blue-700 bg-blue-50">
+                                  <CalendarPlus className="h-3 w-3 mr-1" />Reserva
+                                </Badge>
+                              )}
+                            </div>
+                            {reserva.cliente_telefono && (
+                              <p className="text-muted-foreground text-xs">📞 {reserva.cliente_telefono}</p>
                             )}
                             <p className="text-muted-foreground">
-                              {format(new Date(reserva.fecha_checkin), "d MMM yyyy", { locale: es })} → {format(new Date(reserva.fecha_checkout), "d MMM yyyy", { locale: es })}
+                              {format(new Date(reserva.fecha_checkin), "d MMM", { locale: es })} → {format(new Date(reserva.fecha_checkout), "d MMM", { locale: es })}
                             </p>
                             <p className="text-xs">{getReservationDays(reserva)} noches · {reserva.adultos || 1} adultos{reserva.ninos > 0 ? ` · ${reserva.ninos} niños` : ''}</p>
                             {reserva.total && (
                               <p className="font-medium text-primary">${Number(reserva.total).toLocaleString()}</p>
                             )}
                             <div className="flex gap-2 items-center">
-                              <Badge className={cn("mt-1", getStatusColor(reserva.estado))}>
+                              <Badge className={cn("mt-1", getStatusColor(reserva))}>
                                 {reserva.estado}
                               </Badge>
                               {parseFloat(reserva.saldo_pendiente) > 0 && (
@@ -314,9 +353,8 @@ export function TimelineGrid({
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
       
-      {/* Hint */}
       <div className="p-2 bg-muted/30 border-t text-center text-xs text-muted-foreground">
-        💡 Arrastra sobre las celdas vacías para crear una reserva rápida
+        💡 Arrastra sobre las celdas vacías para crear una nueva entrada
       </div>
     </div>
   );
