@@ -49,6 +49,9 @@ class ApiClient {
   getDashboardTareasCriticas = () => this.request<any>('/dashboard/tareas-criticas');
   getDashboardOcupacionTipo = () => this.request<any[]>('/dashboard/ocupacion-tipo');
   getDashboardIngresosMes = () => this.request<any>('/dashboard/ingresos-mes');
+  getEntregables: () => fetchApi('/entregables'),
+asignarEntregable: (reservaId: string, data: any) => fetchApi(`/entregables/reserva/${reservaId}`, { method: 'POST', body: JSON.stringify(data) }),
+getConceptosCargo: () => fetchApi('/conceptos-cargo'),
 
   // Habitaciones
   getHabitaciones = (params?: Record<string, string>) => {
