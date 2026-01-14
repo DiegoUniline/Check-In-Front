@@ -152,21 +152,25 @@ export function TimelineGrid({
     }
   };
 
-  const handleMouseUp = () => {
-    if (isDragging && dragStart && dragEnd !== null) {
-      const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
-      if (habitacion) {
-        const startIdx = Math.min(dragStart.dayIndex, dragEnd);
-        const endIdx = Math.max(dragStart.dayIndex, dragEnd);
-        const fechaCheckin = days[startIdx];
-        const fechaCheckout = addDays(days[endIdx], 1);
-        onCreateReservation(habitacion, fechaCheckin, fechaCheckout);
-      }
+const handleMouseUp = () => {
+  if (isDragging && dragStart && dragEnd !== null) {
+    const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
+    if (habitacion) {
+      const startIdx = Math.min(dragStart.dayIndex, dragEnd);
+      const endIdx = Math.max(dragStart.dayIndex, dragEnd);
+      const fechaCheckin = days[startIdx];
+      // Si es 1 sola celda = 1 noche mínimo
+      // Si son múltiples celdas, la última ES el checkout
+      const fechaCheckout = startIdx === endIdx 
+        ? addDays(days[endIdx], 1)  // 1 celda = sale al día siguiente
+        : days[endIdx];             // múltiples celdas = última es checkout
+      onCreateReservation(habitacion, fechaCheckin, fechaCheckout);
     }
-    setDragStart(null);
-    setDragEnd(null);
-    setIsDragging(false);
-  };
+  }
+  setDragStart(null);
+  setDragEnd(null);
+  setIsDragging(false);
+};
 
   const isDragSelected = (roomId: string, dayIndex: number) => {
     if (!isDragging || !dragStart || dragEnd === null) return false;
