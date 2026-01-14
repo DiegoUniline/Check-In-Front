@@ -818,202 +818,201 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Card>
               </TabsContent>
 
-              {/* TAB ENTREGABLES */}
-              <TabsContent value="entregables" className="mt-4 space-y-4">
-                {r.estado === 'CheckIn' && (
-                  <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-base">Asignar Entregable</CardTitle></CardHeader>
-                    <CardContent>
-                      <div className="flex gap-2">
-                        <Select value={entregableSeleccionado} onValueChange={setEntregableSeleccionado}>
-                          <SelectTrigger className="flex-1"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                          <SelectContent>
-                            {entregables.map(e => (
-                              <SelectItem key={e.id} value={e.id}>
-                                {e.nombre} {e.requiere_devolucion ? '(devolver)' : ''} 
-                                {e.costo_reposicion > 0 && ` - $${e.costo_reposicion}/u`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Input 
-                          type="number" 
-                          placeholder="Cant" 
-                          className="w-20"
-                          value={entregableCantidad}
-                          onChange={(e) => setEntregableCantidad(e.target.value)}
-                          min="1"
-                        />
-                        <Button onClick={handleAsignarEntregable} disabled={processing || !entregableSeleccionado}>
-                          <Plus className="h-4 w-4 mr-1" /> Asignar
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+            {/* TAB ENTREGABLES */}
+<TabsContent value="entregables" className="mt-4 space-y-4">
+  {r.estado === 'CheckIn' && (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-base">Asignar Entregable</CardTitle></CardHeader>
+      <CardContent>
+        <div className="flex gap-2">
+          <Select value={entregableSeleccionado} onValueChange={setEntregableSeleccionado}>
+            <SelectTrigger className="flex-1"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+            <SelectContent>
+              {entregables.map(e => (
+                <SelectItem key={e.id} value={e.id}>
+                  {e.nombre} {e.requiere_devolucion ? '(devolver)' : ''} 
+                  {e.costo_reposicion > 0 && ` - $${e.costo_reposicion}/u`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input 
+            type="number" 
+            placeholder="Cant" 
+            className="w-20"
+            value={entregableCantidad}
+            onChange={(e) => setEntregableCantidad(e.target.value)}
+            min="1"
+          />
+          <Button onClick={handleAsignarEntregable} disabled={processing || !entregableSeleccionado}>
+            <Plus className="h-4 w-4 mr-1" /> Asignar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )}
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Package className="h-4 w-4" /> Entregados ({reservaEntregables.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {reservaEntregables.length > 0 ? (
-                      <div className="space-y-3">
-                        {reservaEntregables.map((ent: any) => {
-                          const cantEntregada = ent.cantidad || 1;
-                          const cantDevuelta = ent.cantidad_devuelta || 0;
-                          const faltantes = ent.faltantes ?? (cantEntregada - cantDevuelta);
-                          const yaProcesado = ent.devuelto || ent.cantidad_devuelta !== null;
-                          
-                          return (
-                            <div key={ent.id} className="p-3 border rounded-lg">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <Package className="h-5 w-5 text-muted-foreground" />
-                                  <div>
-                                    <p className="font-medium">{ent.nombre}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      Entregado: {ent.fecha_entrega ? format(new Date(ent.fecha_entrega), 'd MMM HH:mm', { locale: es }) : '-'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <Badge variant="outline" className="text-lg">{cantEntregada} unid.</Badge>
-                              </div>
-                              
-                              {ent.requiere_devolucion && (
-                                <div className="mt-3 pt-3 border-t">
-                                  {yaProcesado ? (
-                                    <div className="flex items-center justify-between">
-                                      <div className="text-sm">
-                                        <span className="text-muted-foreground">Devueltos: </span>
-                                        <span className="font-medium text-green-600">{cantDevuelta}</span>
-                                        {faltantes > 0 && (
-                                          <>
-                                            <span className="text-muted-foreground"> • Faltantes: </span>
-                                            <span className="font-medium text-red-600">{faltantes}</span>
-                                            {ent.costo_unitario_cobrado > 0 && (
-                                              <span className="text-muted-foreground"> (${ent.costo_unitario_cobrado}/u)</span>
-                                            )}
-                                          </>
-                                        )}
-                                      </div>
-                                      <Badge variant={faltantes === 0 ? 'outline' : 'destructive'} className={faltantes === 0 ? 'text-green-600' : ''}>
-                                        {faltantes === 0 ? '✓ Completo' : `${faltantes} no devueltos`}
-                                      </Badge>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2 text-amber-600">
-                                        <AlertTriangle className="h-4 w-4" />
-                                        <span className="text-sm font-medium">Pendiente de devolución</span>
-                                      </div>
-                                      <Button variant="outline" size="sm" onClick={() => abrirModalDevolucion(ent)} disabled={processing}>
-                                        Procesar devolución
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="text-base flex items-center gap-2">
+        <Package className="h-4 w-4" /> Entregados ({reservaEntregables.length})
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      {reservaEntregables.length > 0 ? (
+        <div className="space-y-3">
+          {reservaEntregables.map((ent: any) => {
+            const cantEntregada = ent.cantidad || 1;
+            const cantDevuelta = ent.cantidad_devuelta ?? 0;
+            const faltantes = cantEntregada - cantDevuelta;
+            // Solo está procesado si devuelto = 1 (ya se hizo el proceso de devolución)
+            const yaProcesado = ent.devuelto === 1;
+            
+            return (
+              <div key={ent.id} className="p-3 border rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{ent.nombre}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Entregado: {ent.fecha_entrega ? format(new Date(ent.fecha_entrega), 'd MMM HH:mm', { locale: es }) : '-'}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-lg">{cantEntregada} unid.</Badge>
+                </div>
+                
+                {ent.requiere_devolucion ? (
+                  <div className="mt-3 pt-3 border-t">
+                    {yaProcesado ? (
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Devueltos: </span>
+                          <span className="font-medium text-green-600">{cantDevuelta}</span>
+                          {faltantes > 0 && (
+                            <>
+                              <span className="text-muted-foreground"> • Faltantes: </span>
+                              <span className="font-medium text-red-600">{faltantes}</span>
+                              {ent.costo_unitario_cobrado > 0 && (
+                                <span className="text-muted-foreground"> (${ent.costo_unitario_cobrado}/u)</span>
                               )}
-                              
-                              {!ent.requiere_devolucion && (
-                                <div className="mt-2">
-                                  <Badge variant="secondary">No requiere devolución</Badge>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                            </>
+                          )}
+                        </div>
+                        <Badge variant={faltantes === 0 ? 'outline' : 'destructive'} className={faltantes === 0 ? 'text-green-600' : ''}>
+                          {faltantes === 0 ? '✓ Completo' : `${faltantes} no devueltos`}
+                        </Badge>
                       </div>
                     ) : (
-                      <p className="text-center text-muted-foreground py-4">Sin entregables asignados</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-amber-600">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="text-sm font-medium">Pendiente de devolución</span>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => abrirModalDevolucion(ent)} disabled={processing}>
+                          Procesar devolución
+                        </Button>
+                      </div>
                     )}
-                  </CardContent>
-                </Card>
-
-                {/* Modal de devolución */}
-                {devolucionModal && (
-                  <Card className="border-2 border-primary">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Package className="h-4 w-4" /> Devolución: {devolucionModal.nombre}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Cantidad entregada</Label>
-                          <Input value={devolucionModal.cantidad || 1} disabled className="bg-muted" />
-                        </div>
-                        <div>
-                          <Label>Cantidad devuelta</Label>
-                          <Input 
-                            type="number" 
-                            value={cantidadDevolver}
-                            onChange={(e) => setCantidadDevolver(e.target.value)}
-                            min="0"
-                            max={devolucionModal.cantidad || 1}
-                          />
-                        </div>
-                      </div>
-                      
-                      {faltantesDevolucion > 0 && (
-                        <>
-                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p className="text-sm font-medium text-amber-800">
-                              ⚠️ Faltantes: {faltantesDevolucion} unidad(es)
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <Label>Costo por unidad faltante</Label>
-                            <Input 
-                              type="number" 
-                              value={costoUnitario}
-                              onChange={(e) => setCostoUnitario(e.target.value)}
-                              placeholder="0.00"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Costo catálogo: ${devolucionModal.costo_reposicion || 0}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <Checkbox 
-                              id="crearCargo" 
-                              checked={crearCargoFaltante}
-                              onCheckedChange={(c) => setCrearCargoFaltante(!!c)}
-                            />
-                            <label htmlFor="crearCargo" className="text-sm cursor-pointer">
-                              Crear cargo por faltantes
-                            </label>
-                          </div>
-                          
-                          {crearCargoFaltante && safeNumber(costoUnitario) > 0 && (
-                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                              <p className="text-sm text-red-800">
-                                <strong>Cargo a crear:</strong> {faltantesDevolucion} × ${safeNumber(costoUnitario).toLocaleString()} + IVA = 
-                                <strong> ${totalCargoFaltantes.toLocaleString()}</strong>
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      
-                      <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => setDevolucionModal(null)} className="flex-1">
-                          Cancelar
-                        </Button>
-                        <Button onClick={handleDevolverEntregable} disabled={processing} className="flex-1">
-                          <Check className="h-4 w-4 mr-1" />
-                          {faltantesDevolucion > 0 ? 'Procesar con faltantes' : 'Confirmar devolución'}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  </div>
+                ) : (
+                  <div className="mt-2">
+                    <Badge variant="secondary">No requiere devolución</Badge>
+                  </div>
                 )}
-              </TabsContent>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-center text-muted-foreground py-4">Sin entregables asignados</p>
+      )}
+    </CardContent>
+  </Card>
+
+  {/* Modal de devolución */}
+  {devolucionModal && (
+    <Card className="border-2 border-primary">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Package className="h-4 w-4" /> Devolución: {devolucionModal.nombre}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Cantidad entregada</Label>
+            <Input value={devolucionModal.cantidad || 1} disabled className="bg-muted" />
+          </div>
+          <div>
+            <Label>Cantidad devuelta</Label>
+            <Input 
+              type="number" 
+              value={cantidadDevolver}
+              onChange={(e) => setCantidadDevolver(e.target.value)}
+              min="0"
+              max={devolucionModal.cantidad || 1}
+            />
+          </div>
+        </div>
+        
+        {faltantesDevolucion > 0 && (
+          <>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950/30 dark:border-amber-800">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                ⚠️ Faltantes: {faltantesDevolucion} unidad(es)
+              </p>
+            </div>
+            
+            <div>
+              <Label>Costo por unidad faltante</Label>
+              <Input 
+                type="number" 
+                value={costoUnitario}
+                onChange={(e) => setCostoUnitario(e.target.value)}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Costo catálogo: ${devolucionModal.costo_reposicion || 0}
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="crearCargo" 
+                checked={crearCargoFaltante}
+                onCheckedChange={(c) => setCrearCargoFaltante(!!c)}
+              />
+              <label htmlFor="crearCargo" className="text-sm cursor-pointer">
+                Crear cargo por faltantes
+              </label>
+            </div>
+            
+            {crearCargoFaltante && safeNumber(costoUnitario) > 0 && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950/30 dark:border-red-800">
+                <p className="text-sm text-red-800 dark:text-red-200">
+                  <strong>Cargo a crear:</strong> {faltantesDevolucion} × ${safeNumber(costoUnitario).toLocaleString()} + IVA = 
+                  <strong> ${totalCargoFaltantes.toLocaleString()}</strong>
+                </p>
+              </div>
+            )}
+          </>
+        )}
+        
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setDevolucionModal(null)} className="flex-1">
+            Cancelar
+          </Button>
+          <Button onClick={handleDevolverEntregable} disabled={processing} className="flex-1">
+            <Check className="h-4 w-4 mr-1" />
+            {faltantesDevolucion > 0 ? 'Procesar con faltantes' : 'Confirmar devolución'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )}
+</TabsContent>
 
               {/* TAB PAGOS */}
               <TabsContent value="pagos" className="mt-4 space-y-4">
