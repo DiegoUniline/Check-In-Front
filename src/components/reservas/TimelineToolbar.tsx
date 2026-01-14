@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarDays, Download, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Download, Plus, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
@@ -55,9 +55,9 @@ export function TimelineToolbar({
     <div className="flex flex-col gap-4 mb-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Calendario de Reservas</h1>
+          <h1 className="text-2xl font-bold">Recepción</h1>
           <p className="text-sm text-muted-foreground">
-            Gestión de ocupación y disponibilidad en tiempo real
+            Gestión de check-ins, check-outs y ocupación
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -66,8 +66,8 @@ export function TimelineToolbar({
             Exportar
           </Button>
           <Button size="sm" onClick={onNewReservation}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Reserva
+            <UserPlus className="mr-2 h-4 w-4" />
+            Nueva Entrada
           </Button>
         </div>
       </div>
