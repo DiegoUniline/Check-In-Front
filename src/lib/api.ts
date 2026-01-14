@@ -214,6 +214,10 @@ getConceptosCargo: () => fetchApi('/conceptos-cargo'),
   getHotel = () => this.request<any>('/hotel');
   updateHotel = (data: any) => this.request<any>('/hotel', { method: 'POST', body: data });
 
+getEntregablesReserva: (reservaId: string) => fetchApi(`/entregables/reserva/${reservaId}`),
+devolverEntregable: (id: string) => fetchApi(`/entregables/devolver/${id}`, { method: 'PATCH' }),
+createCargo: (data: any) => fetchApi('/cargos', { method: 'POST', body: JSON.stringify(data) }),
+
   // Usuarios
   getUsuarios = (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
