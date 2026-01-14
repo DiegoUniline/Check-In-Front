@@ -21,7 +21,7 @@ import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
-import { DetalleReservaModal } from '@/components/reservas/DetalleReservaModal';
+import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
