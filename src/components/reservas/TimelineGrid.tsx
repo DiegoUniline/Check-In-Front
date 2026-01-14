@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { format, addDays, isSameDay, isWithinInterval, startOfDay } from 'date-fns';
+import { format, addDays, isSameDay, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -44,42 +44,50 @@ export function TimelineGrid({
     );
   };
 
-  const getReservationPosition = (reserva: any, dayIndex: number) => {
-    if (!reserva.fecha_checkin || !reserva.fecha_checkout) return null;
-    
-    const checkin = startOfDay(new Date(reserva.fecha_checkin));
-    const checkout = startOfDay(new Date(reserva.fecha_checkout));
-    
-    if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) return null;
-    
-    const currentDay = startOfDay(days[dayIndex]);
-
-    if (isSameDay(currentDay, checkin)) {
-      return 'start';
-    }
-    if (isSameDay(addDays(currentDay, 1), checkout)) {
-      return 'end';
-    }
-    if (isWithinInterval(currentDay, { start: checkin, end: addDays(checkout, -1) })) {
-      return 'middle';
-    }
-    return null;
-  };
-
+  // FIX: Usar strings de fecha para evitar problemas de zona horaria
   const getReservationForCell = (habitacionId: string, dayIndex: number) => {
     const roomReservas = getReservasForRoom(habitacionId);
-    const currentDay = startOfDay(days[dayIndex]);
+    const currentDay = days[dayIndex];
+    const currentDateStr = format(currentDay, 'yyyy-MM-dd');
 
     return roomReservas.find(r => {
       if (!r.fecha_checkin || !r.fecha_checkout) return false;
       
-      const checkin = startOfDay(new Date(r.fecha_checkin));
-      const checkout = startOfDay(new Date(r.fecha_checkout));
+      // Extraer solo la parte de fecha (YYYY-MM-DD)
+      const checkinStr = r.fecha_checkin.substring(0, 10);
+      const checkoutStr = r.fecha_checkout.substring(0, 10);
       
-      if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) return false;
-      
-      return isWithinInterval(currentDay, { start: checkin, end: addDays(checkout, -1) });
+      // currentDay debe ser >= checkin Y < checkout
+      return currentDateStr >= checkinStr && currentDateStr < checkoutStr;
     });
+  };
+
+  // FIX: Usar strings de fecha para posición
+  const getReservationPosition = (reserva: any, dayIndex: number) => {
+    if (!reserva.fecha_checkin || !reserva.fecha_checkout) return null;
+    
+    const currentDateStr = format(days[dayIndex], 'yyyy-MM-dd');
+    const checkinStr = reserva.fecha_checkin.substring(0, 10);
+    const checkoutStr = reserva.fecha_checkout.substring(0, 10);
+    
+    // Primer día de la reserva
+    if (currentDateStr === checkinStr) {
+      return 'start';
+    }
+    
+    // Último día (día anterior al checkout)
+    const checkoutDate = new Date(checkoutStr + 'T00:00:00');
+    const dayBeforeCheckout = format(addDays(checkoutDate, -1), 'yyyy-MM-dd');
+    if (currentDateStr === dayBeforeCheckout && currentDateStr !== checkinStr) {
+      return 'end';
+    }
+    
+    // Días intermedios
+    if (currentDateStr > checkinStr && currentDateStr < checkoutStr) {
+      return 'middle';
+    }
+    
+    return null;
   };
 
   // Color por ORIGEN y ESTADO
@@ -87,31 +95,26 @@ export function TimelineGrid({
     const estado = reserva.estado?.toLowerCase();
     const esWalkin = reserva.origen === 'Recepcion';
     
-    // Cancelada/NoShow
     if (estado === 'cancelada' || estado === 'noshow') {
       return 'bg-red-400 text-white';
     }
     
-    // CheckOut (finalizada)
     if (estado === 'checkout') {
       return 'bg-slate-400 text-white';
     }
     
-    // CheckIn (en hotel)
     if (estado === 'checkin' || estado === 'hospedado') {
       return esWalkin 
-        ? 'bg-green-500 text-white' // Walk-in en hotel = verde fuerte
-        : 'bg-emerald-500 text-white'; // Reserva en hotel = esmeralda
+        ? 'bg-green-500 text-white'
+        : 'bg-emerald-500 text-white';
     }
     
-    // Confirmada (por llegar)
     if (estado === 'confirmada') {
       return esWalkin
-        ? 'bg-amber-500 text-white' // Walk-in confirmada = ámbar (raro pero posible)
-        : 'bg-blue-500 text-white'; // Reserva confirmada = azul
+        ? 'bg-amber-500 text-white'
+        : 'bg-blue-500 text-white';
     }
     
-    // Pendiente
     if (estado === 'pendiente') {
       return esWalkin
         ? 'bg-amber-400 text-white'
@@ -119,14 +122,6 @@ export function TimelineGrid({
     }
     
     return 'bg-gray-400 text-white';
-  };
-
-  // Badge de origen para tooltip
-  const getOrigenIcon = (origen: string) => {
-    if (origen === 'Recepcion') {
-      return <UserPlus className="h-3 w-3" />;
-    }
-    return <CalendarPlus className="h-3 w-3" />;
   };
 
   const handleMouseDown = (habitacionId: string, dayIndex: number, reserva: any) => {
@@ -178,9 +173,10 @@ export function TimelineGrid({
 
   const getReservationDays = (reserva: any) => {
     if (!reserva.fecha_checkin || !reserva.fecha_checkout) return 0;
-    const checkin = startOfDay(new Date(reserva.fecha_checkin));
-    const checkout = startOfDay(new Date(reserva.fecha_checkout));
-    if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) return 0;
+    const checkinStr = reserva.fecha_checkin.substring(0, 10);
+    const checkoutStr = reserva.fecha_checkout.substring(0, 10);
+    const checkin = new Date(checkinStr + 'T00:00:00');
+    const checkout = new Date(checkoutStr + 'T00:00:00');
     const diffTime = checkout.getTime() - checkin.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
