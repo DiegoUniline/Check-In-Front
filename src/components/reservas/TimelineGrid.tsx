@@ -99,38 +99,59 @@ export function TimelineGrid({
   };
 
   // Color por ORIGEN y ESTADO
-  const getStatusColor = (reserva: any) => {
-    const estado = reserva.estado?.toLowerCase();
-    const esWalkin = reserva.origen === 'Recepcion';
-    
-    if (estado === 'cancelada' || estado === 'noshow') {
-      return 'bg-red-400 text-white';
-    }
-    
-    if (estado === 'checkout') {
-      return 'bg-slate-400 text-white';
-    }
-    
+ // Color por ORIGEN y ESTADO
+const getStatusColor = (reserva: any, position?: string) => {
+  const estado = reserva.estado?.toLowerCase();
+  const esWalkin = reserva.origen === 'Recepcion';
+  
+  // El día de checkout es más claro (medio día)
+  if (position === 'end') {
     if (estado === 'checkin' || estado === 'hospedado') {
-      return esWalkin 
-        ? 'bg-green-500 text-white'
-        : 'bg-emerald-500 text-white';
+      return 'bg-orange-300 text-orange-900';
     }
-    
     if (estado === 'confirmada') {
       return esWalkin
-        ? 'bg-amber-500 text-white'
-        : 'bg-blue-500 text-white';
+        ? 'bg-amber-300 text-amber-800'
+        : 'bg-blue-300 text-blue-800';
     }
-    
     if (estado === 'pendiente') {
-      return esWalkin
-        ? 'bg-amber-400 text-white'
-        : 'bg-yellow-400 text-yellow-900';
+      return 'bg-yellow-200 text-yellow-800';
     }
-    
-    return 'bg-gray-400 text-white';
-  };
+  }
+  
+  // Cancelada / NoShow
+  if (estado === 'cancelada' || estado === 'noshow') {
+    return 'bg-red-400 text-white';
+  }
+  
+  // CheckOut completado
+  if (estado === 'checkout') {
+    return 'bg-slate-400 text-white';
+  }
+  
+  // OCUPADA - CheckIn / Hospedado (naranja fuerte)
+  if (estado === 'checkin' || estado === 'hospedado') {
+    return esWalkin 
+      ? 'bg-orange-500 text-white'    // Walk-in ocupado
+      : 'bg-orange-600 text-white';   // Reserva ocupada
+  }
+  
+  // CONFIRMADA - Llegará pronto
+  if (estado === 'confirmada') {
+    return esWalkin
+      ? 'bg-amber-500 text-white'     // Walk-in confirmado (raro pero posible)
+      : 'bg-blue-500 text-white';     // Reserva confirmada
+  }
+  
+  // PENDIENTE - Sin confirmar
+  if (estado === 'pendiente') {
+    return esWalkin
+      ? 'bg-yellow-500 text-yellow-900'  // Walk-in pendiente
+      : 'bg-yellow-400 text-yellow-900'; // Reserva pendiente
+  }
+  
+  return 'bg-gray-400 text-white';
+};
 
   const handleMouseDown = (habitacionId: string, dayIndex: number, reserva: any) => {
     if (reserva) {
