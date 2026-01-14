@@ -45,12 +45,25 @@ export function TimelineGrid({
   };
 
   // FIX: Usar strings de fecha para evitar problemas de zona horaria
-  const getReservationForCell = (habitacionId: string, dayIndex: number) => {
-    const roomReservas = getReservasForRoom(habitacionId);
-    const currentDay = days[dayIndex];
-    const currentDateStr = format(currentDay, 'yyyy-MM-dd');
+const getReservationForCell = (habitacionId: string, dayIndex: number) => {
+  const roomReservas = getReservasForRoom(habitacionId);
+  const currentDay = days[dayIndex];
+  const currentDateStr = format(currentDay, 'yyyy-MM-dd');
 
-    return roomReservas.find(r => {
+  // DEBUG
+  if (dayIndex === 0) {
+    console.log('=== DEBUG getReservationForCell ===');
+    console.log('currentDateStr:', currentDateStr);
+    console.log('roomReservas:', roomReservas.length);
+    roomReservas.forEach(r => {
+      const checkinStr = r.fecha_checkin.substring(0, 10);
+      const checkoutStr = r.fecha_checkout.substring(0, 10);
+      const match = currentDateStr >= checkinStr && currentDateStr < checkoutStr;
+      console.log(`  Reserva: checkin=${checkinStr}, checkout=${checkoutStr}, match=${match}`);
+    });
+  }
+
+  return roomReservas.find(r => {
       if (!r.fecha_checkin || !r.fecha_checkout) return false;
       
       // Extraer solo la parte de fecha (YYYY-MM-DD)
