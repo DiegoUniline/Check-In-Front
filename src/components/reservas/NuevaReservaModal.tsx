@@ -226,7 +226,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   };
 
   // Cálculos
-  const noches = differenceInDays(formData.fechaCheckout, formData.fechaCheckin);
+const noches = differenceInDays(
+  new Date(format(formData.fechaCheckout, 'yyyy-MM-dd')),
+  new Date(format(formData.fechaCheckin, 'yyyy-MM-dd'))
+) || 1;
   const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId) || 
     (preload?.habitacion?.id === formData.habitacionId ? preload.habitacion : null);
   const selectedTipo = tiposHabitacion.find(t => t.id === formData.tipoHabitacion) || 
