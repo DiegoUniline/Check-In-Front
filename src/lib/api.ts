@@ -19,13 +19,13 @@ class ApiClient {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = this.getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
-
+    
     const response = await fetch(`${API_URL}${endpoint}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
-
+    
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Error de conexión' }));
       throw new Error(error.error || 'Error en la solicitud');
@@ -206,15 +206,15 @@ class ApiClient {
   updateEstadoCompra = (id: string, estado: string) => this.request<any>(`/compras/${id}/estado`, { method: 'PATCH', body: { estado } });
   deleteCompra = (id: string) => this.request<any>(`/compras/${id}`, { method: 'DELETE' });
 
-  // Ventas / Transacciones
+  // Ventas
   getVentas = (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return this.request<any[]>(`/ventas${query}`);
   };
   getVenta = (id: string) => this.request<any>(`/ventas/${id}`);
   createVenta = (data: any) => this.request<any>('/ventas', { method: 'POST', body: data });
-  
-  // Transacciones (Historial)
+
+  // Transacciones
   getTransacciones = (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return this.request<any[]>(`/transacciones${query}`);
