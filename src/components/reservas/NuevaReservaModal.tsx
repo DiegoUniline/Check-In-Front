@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarDays, Users, Search, BedDouble, CreditCard, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { CalendarDays, Users, Search, BedDouble, CreditCard, Check, ChevronRight, ChevronLeft, CalendarPlus, UserPlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -96,6 +96,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const [searchCliente, setSearchCliente] = useState('');
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [origen, setOrigen] = useState<'Reserva' | 'Recepcion'>('Reserva');
   const { toast } = useToast();
 
   // Data from API
@@ -140,7 +141,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
       setHabitacionesDisponibles(data);
     } catch (error) {
       console.error('Error buscando habitaciones:', error);
-      // Fallback: buscar todas las disponibles
       try {
         const data = await api.getHabitaciones({ estado_habitacion: 'Disponible' });
         setHabitacionesDisponibles(data.filter((h: any) => 
@@ -183,6 +183,17 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const impuestos = subtotal * 0.16;
   const total = subtotal + impuestos;
 
+  const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
+    setOrigen(nuevoOrigen);
+    if (nuevoOrigen === 'Recepcion') {
+      setFormData({ 
+        ...formData, 
+        fechaCheckin: new Date(), 
+        fechaCheckout: addDays(new Date(), 1) 
+      });
+    }
+  };
+
   const handleNext = async () => {
     if (step === 1) {
       await buscarHabitaciones();
@@ -199,7 +210,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     try {
       let clienteId = formData.clienteId;
 
-      // Crear cliente si es nuevo
       if (!clienteId && formData.nuevoCliente.nombre) {
         const nuevoCliente = await api.createCliente(formData.nuevoCliente);
         clienteId = nuevoCliente.id;
@@ -211,7 +221,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         return;
       }
 
-      // Crear reserva
       const reservaData = {
         cliente_id: clienteId,
         habitacion_id: formData.habitacionId || null,
@@ -222,29 +231,30 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         ninos: formData.ninos,
         solicitudes_especiales: formData.solicitudesEspeciales,
         tarifa_noche: tarifaNoche,
+        origen,
       };
 
       const reserva = await api.createReserva(reservaData);
 
-      // Registrar anticipo si hay
       if (formData.anticipo > 0) {
         await api.createPago({
           reserva_id: reserva.id,
           monto: formData.anticipo,
           metodo_pago: formData.metodoPago,
-          concepto: 'Anticipo de reserva',
+          concepto: origen === 'Recepcion' ? 'Pago en recepción' : 'Anticipo de reserva',
         });
       }
 
       toast({
-        title: '¡Reserva creada!',
-        description: `Reserva #${reserva.numero_reserva || reserva.id.slice(0, 8)} confirmada`,
+        title: origen === 'Recepcion' ? '¡Check-in listo!' : '¡Reserva creada!',
+        description: `${origen === 'Recepcion' ? 'Entrada' : 'Reserva'} #${reserva.numero_reserva || reserva.id.slice(0, 8)} confirmada`,
       });
 
       onOpenChange(false);
       setStep(1);
       setFormData(initialFormData);
       setCrearNuevoCliente(false);
+      setOrigen('Reserva');
       onSuccess?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'No se pudo crear la reserva', variant: 'destructive' });
@@ -259,6 +269,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     setFormData(initialFormData);
     setCrearNuevoCliente(false);
     setSearchCliente('');
+    setOrigen('Reserva');
   };
 
   const progressValue = (step / 4) * 100;
@@ -268,7 +279,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isQuickCreate ? '🚀 Reserva Rápida' : 'Nueva Reserva'}</DialogTitle>
+          <DialogTitle>
+            {isQuickCreate ? '🚀 Reserva Rápida' : origen === 'Recepcion' ? '🚶 Entrada Directa' : '📅 Nueva Reserva'}
+          </DialogTitle>
           <DialogDescription>
             {isQuickCreate ? (
               <>Habitación {selectedHabitacion?.numero} • {format(formData.fechaCheckin, 'd MMM', { locale: es })} - {format(formData.fechaCheckout, 'd MMM', { locale: es })} ({noches} noche{noches !== 1 ? 's' : ''})</>
@@ -303,12 +316,42 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         {/* Step 1: Search */}
         {step === 1 && (
           <div className="space-y-4">
+            {/* Toggle Origen */}
+            <div className="flex gap-2 p-1 bg-muted rounded-lg">
+              <Button
+                type="button"
+                variant={origen === 'Reserva' ? 'default' : 'ghost'}
+                className="flex-1"
+                onClick={() => handleOrigenChange('Reserva')}
+              >
+                <CalendarPlus className="h-4 w-4 mr-2" />
+                Reserva
+              </Button>
+              <Button
+                type="button"
+                variant={origen === 'Recepcion' ? 'default' : 'ghost'}
+                className="flex-1"
+                onClick={() => handleOrigenChange('Recepcion')}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Recepción
+              </Button>
+            </div>
+
+            {origen === 'Recepcion' && (
+              <Card className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                <CardContent className="p-3 text-sm text-amber-800 dark:text-amber-200">
+                  🚶 El huésped está presente y entrará hoy
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fecha Check-in</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full justify-start" disabled={origen === 'Recepcion'}>
                       <CalendarDays className="mr-2 h-4 w-4" />
                       {format(formData.fechaCheckin, 'd MMM yyyy', { locale: es })}
                     </Button>
@@ -396,6 +439,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Huéspedes:</span>
                   <span className="font-medium">{formData.adultos} adultos, {formData.ninos} niños</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Tipo:</span>
+                  <Badge variant={origen === 'Recepcion' ? 'default' : 'secondary'}>{origen}</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -509,7 +556,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Email *</Label>
+                    <Label>Email {origen === 'Reserva' && '*'}</Label>
                     <Input
                       type="email"
                       value={formData.nuevoCliente.email}
@@ -557,14 +604,17 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
           <div className="space-y-4">
             <Card>
               <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <BedDouble className="h-6 w-6 text-primary" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                      <BedDouble className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Habitación {selectedHabitacion?.numero}</p>
+                      <p className="text-sm text-muted-foreground">{selectedTipo?.nombre}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold">Habitación {selectedHabitacion?.numero}</p>
-                    <p className="text-sm text-muted-foreground">{selectedTipo?.nombre}</p>
-                  </div>
+                  <Badge variant={origen === 'Recepcion' ? 'default' : 'secondary'}>{origen}</Badge>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -636,7 +686,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Anticipo</Label>
+                    <Label>{origen === 'Recepcion' ? 'Pago' : 'Anticipo'}</Label>
                     <Input
                       type="number"
                       value={formData.anticipo}
@@ -663,7 +713,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
             </Button>
           ) : (
             <Button onClick={handleConfirm} disabled={loading}>
-              {loading ? 'Guardando...' : <><Check className="mr-2 h-4 w-4" /> Confirmar Reserva</>}
+              {loading ? 'Guardando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Registrar Entrada' : 'Confirmar Reserva'}</>}
             </Button>
           )}
         </div>
