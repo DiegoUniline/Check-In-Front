@@ -1,188 +1,308 @@
-import { useState, useMemo, useEffect } from 'react';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { TimelineToolbar } from '@/components/reservas/TimelineToolbar';
-import { TimelineGrid } from '@/components/reservas/TimelineGrid';
-import { TimelineLegend } from '@/components/reservas/TimelineLegend';
-import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
-import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
+import { useState, useEffect } from 'react';
+import { format, addDays, subDays, startOfWeek, startOfMonth } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { 
+  Calendar, ChevronLeft, ChevronRight, Plus, Search, Filter,
+  LayoutGrid, List, CalendarDays, BedDouble, Users, RefreshCw
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { TimelineGrid } from '@/components/reservas/TimelineGrid';
+import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
+import { DetalleReservaModal } from '@/components/reservas/DetalleReservaModal';
+
+type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
 export default function Reservas() {
-  const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<'dia' | 'semana' | 'mes'>('semana');
-  const [startDate, setStartDate] = useState(new Date());
-  const [tipoFilter, setTipoFilter] = useState('all');
-  const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
-  const [reservationPreload, setReservationPreload] = useState<ReservationPreload | undefined>();
-  const [selectedReserva, setSelectedReserva] = useState<any>(null);
-  const [isDetalleOpen, setIsDetalleOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [reservas, setReservas] = useState<any[]>([]);
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Estado del timeline
+  const [startDate, setStartDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>('Semana');
+  const [filtroTipo, setFiltroTipo] = useState<string>('all');
+  const [busqueda, setBusqueda] = useState('');
+
+  // Modales
+  const [modalNuevaReserva, setModalNuevaReserva] = useState(false);
+  const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
+  const [modalDetalle, setModalDetalle] = useState(false);
+  const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
+
+  // Días a mostrar según vista
+  const daysToShow = viewMode === 'Dia' ? 1 : viewMode === 'Semana' ? 14 : 31;
 
   useEffect(() => {
     cargarDatos();
   }, []);
 
   const cargarDatos = async () => {
+    setLoading(true);
     try {
-      console.log('=== INICIANDO CARGA DE DATOS ===');
-      
       const [habData, resData, tiposData] = await Promise.all([
         api.getHabitaciones(),
         api.getReservas(),
         api.getTiposHabitacion()
       ]);
       
-      console.log('=== DATOS CARGADOS ===');
-      console.log('Fecha actual del sistema:', new Date().toISOString());
-      console.log('StartDate del timeline:', startDate.toISOString());
-      
-      console.log('--- HABITACIONES ---');
-      console.log('Total habitaciones:', habData.length);
-      habData.forEach((h: any) => {
-        console.log(`  Hab ${h.numero}: id=${h.id}, tipo=${h.tipo_id}`);
-      });
-      
-      console.log('--- RESERVAS ---');
-      console.log('Total reservas:', resData.length);
-      resData.forEach((r: any) => {
-        console.log(`  ${r.numero_reserva}:`, {
-          habitacion_id: r.habitacion_id,
-          checkin: r.fecha_checkin,
-          checkout: r.fecha_checkout,
-          estado: r.estado,
-          origen: r.origen,
-          cliente: r.cliente_nombre
-        });
-      });
-      
-      console.log('--- TIPOS HABITACION ---');
-      console.log('Total tipos:', tiposData.length);
-      
       setHabitaciones(habData);
       setReservas(resData);
       setTiposHabitacion(tiposData);
-      
-      console.log('=== DATOS GUARDADOS EN STATE ===');
-      
     } catch (error) {
-      console.error('=== ERROR CARGANDO DATOS ===', error);
-      toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
+      console.error('Error cargando datos:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'No se pudieron cargar los datos', 
+        variant: 'destructive' 
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const daysToShow = useMemo(() => {
-    switch (viewMode) {
-      case 'dia': return 7;
-      case 'semana': return 14;
-      case 'mes': return 30;
-      default: return 14;
+  // Navegación del timeline
+  const navegarFecha = (direccion: 'prev' | 'next' | 'today') => {
+    if (direccion === 'today') {
+      setStartDate(new Date());
+      return;
     }
-  }, [viewMode]);
-
-  const filteredHabitaciones = useMemo(() => {
-    if (tipoFilter === 'all') return habitaciones;
-    return habitaciones.filter(h => h.tipo_id === tipoFilter);
-  }, [habitaciones, tipoFilter]);
-
-  // Log cuando cambian las reservas o habitaciones
-  useEffect(() => {
-    console.log('=== STATE ACTUALIZADO ===');
-    console.log('Habitaciones en state:', habitaciones.length);
-    console.log('Reservas en state:', reservas.length);
-    console.log('StartDate actual:', startDate.toISOString());
     
-    if (reservas.length > 0 && habitaciones.length > 0) {
-      console.log('--- VERIFICACIÓN DE MATCH ---');
-      reservas.forEach(r => {
-        const habMatch = habitaciones.find(h => h.id === r.habitacion_id);
-        console.log(`Reserva ${r.numero_reserva} -> Habitación ${habMatch?.numero || 'NO ENCONTRADA'} (${r.habitacion_id})`);
-      });
+    const dias = viewMode === 'Dia' ? 1 : viewMode === 'Semana' ? 7 : 30;
+    setStartDate(prev => 
+      direccion === 'next' ? addDays(prev, dias) : subDays(prev, dias)
+    );
+  };
+
+  // Filtrar habitaciones
+  const habitacionesFiltradas = habitaciones.filter(h => {
+    if (filtroTipo !== 'all' && h.tipo_id !== filtroTipo) return false;
+    if (busqueda) {
+      const search = busqueda.toLowerCase();
+      return h.numero?.toLowerCase().includes(search) || 
+             h.tipo_nombre?.toLowerCase().includes(search);
     }
-  }, [habitaciones, reservas, startDate]);
+    return true;
+  });
+
+  // Handlers de modales
+  const handleCreateReservation = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
+    setPreloadReserva({
+      habitacion,
+      fechaCheckin,
+      fechaCheckout
+    });
+    setModalNuevaReserva(true);
+  };
 
   const handleReservationClick = (reserva: any) => {
-    console.log('Click en reserva:', reserva);
-    setSelectedReserva(reserva);
-    setIsDetalleOpen(true);
-  };
-
-  const handleNewReservation = () => {
-    setReservationPreload(undefined);
-    setIsNewReservationOpen(true);
-  };
-
-  const handleCreateFromDrag = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
-    console.log('Crear desde drag:', { habitacion, fechaCheckin, fechaCheckout });
-    setReservationPreload({ habitacion, fechaCheckin, fechaCheckout });
-    setIsNewReservationOpen(true);
-  };
-
-  const handleCloseModal = (open: boolean) => {
-    setIsNewReservationOpen(open);
-    if (!open) setReservationPreload(undefined);
+    setReservaSeleccionada(reserva);
+    setModalDetalle(true);
   };
 
   const handleSuccess = () => {
-    console.log('=== RECARGANDO DATOS DESPUÉS DE ÉXITO ===');
     cargarDatos();
   };
 
-  if (loading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </MainLayout>
-    );
-  }
+  // Stats rápidos
+  const totalHabitaciones = habitaciones.length;
+  const habitacionesOcupadas = reservas.filter(r => 
+    ['CheckIn', 'Hospedado'].includes(r.estado)
+  ).length;
+  const llegadasHoy = reservas.filter(r => {
+    const checkin = r.fecha_checkin?.substring(0, 10);
+    const hoy = format(new Date(), 'yyyy-MM-dd');
+    return checkin === hoy && ['Pendiente', 'Confirmada'].includes(r.estado);
+  }).length;
+  const salidasHoy = reservas.filter(r => {
+    const checkout = r.fecha_checkout?.substring(0, 10);
+    const hoy = format(new Date(), 'yyyy-MM-dd');
+    return checkout === hoy && ['CheckIn', 'Hospedado'].includes(r.estado);
+  }).length;
 
   return (
-    <MainLayout>
-      <TimelineToolbar
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        startDate={startDate}
-        onDateChange={(date) => {
-          console.log('Cambio de fecha:', date.toISOString());
-          setStartDate(date);
-        }}
-        tipoFilter={tipoFilter}
-        onTipoFilterChange={setTipoFilter}
-        onNewReservation={handleNewReservation}
-        tiposHabitacion={tiposHabitacion}
-      />
-      <TimelineGrid
-        habitaciones={filteredHabitaciones}
-        reservas={reservas}
-        startDate={startDate}
-        daysToShow={daysToShow}
-        onReservationClick={handleReservationClick}
-        onCreateReservation={handleCreateFromDrag}
-      />
-      <TimelineLegend
-        totalRooms={habitaciones.length}
-        visibleRooms={filteredHabitaciones.length}
-        lastUpdate={new Date()}
-      />
+    <div className="container mx-auto p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <CalendarDays className="h-6 w-6" />
+            Recepción
+          </h1>
+          <p className="text-muted-foreground">Gestión de reservas y check-in/out</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={cargarDatos} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+          <Button onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Reserva
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <BedDouble className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{habitacionesOcupadas}/{totalHabitaciones}</p>
+              <p className="text-xs text-muted-foreground">Ocupadas</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <Users className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-600">{llegadasHoy}</p>
+              <p className="text-xs text-muted-foreground">Llegadas hoy</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+              <Users className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-orange-600">{salidasHoy}</p>
+              <p className="text-xs text-muted-foreground">Salidas hoy</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-600">
+                {totalHabitaciones > 0 ? Math.round((habitacionesOcupadas / totalHabitaciones) * 100) : 0}%
+              </p>
+              <p className="text-xs text-muted-foreground">Ocupación</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Controles del Timeline */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Navegación de fechas */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={() => navegarFecha('prev')}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" onClick={() => navegarFecha('today')}>
+                Hoy
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => navegarFecha('next')}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <span className="ml-2 font-medium">
+                {format(startDate, "d 'de' MMMM, yyyy", { locale: es })}
+              </span>
+            </div>
+
+            {/* Vista */}
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 bg-muted p-1 rounded-lg">
+                {(['Dia', 'Semana', 'Mes'] as ViewMode[]).map(mode => (
+                  <Button
+                    key={mode}
+                    variant={viewMode === mode ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode(mode)}
+                  >
+                    {mode}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filtros */}
+            <div className="flex items-center gap-2">
+              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Todas las hab." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las hab.</SelectItem>
+                  {tiposHabitacion.map(tipo => (
+                    <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Buscar..." 
+                  className="pl-9 w-40"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Timeline Grid */}
+      {loading ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+            <p className="mt-2 text-muted-foreground">Cargando...</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <TimelineGrid
+          habitaciones={habitacionesFiltradas}
+          reservas={reservas}
+          startDate={startDate}
+          daysToShow={daysToShow}
+          onReservationClick={handleReservationClick}
+          onCreateReservation={handleCreateReservation}
+        />
+      )}
+
+      {/* Modales */}
       <NuevaReservaModal
-        open={isNewReservationOpen}
-        onOpenChange={handleCloseModal}
-        preload={reservationPreload}
+        open={modalNuevaReserva}
+        onOpenChange={setModalNuevaReserva}
+        preload={preloadReserva}
         onSuccess={handleSuccess}
       />
-      <ReservaDetalleModal
-        open={isDetalleOpen}
-        onOpenChange={setIsDetalleOpen}
-        reserva={selectedReserva}
-        onUpdate={cargarDatos}
+
+      <DetalleReservaModal
+        open={modalDetalle}
+        onOpenChange={setModalDetalle}
+        reserva={reservaSeleccionada}
+        habitaciones={habitaciones}
+        onSuccess={handleSuccess}
       />
-    </MainLayout>
+    </div>
   );
 }
