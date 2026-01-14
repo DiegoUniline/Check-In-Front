@@ -257,49 +257,41 @@ export function DetalleReservaModal({
     }
   };
 
-  const handleGuardarCambios = async () => {
-    setLoading(true);
-    try {
-      const updates: any = {};
-      
-      const checkoutOriginal = format(new Date(reserva.fecha_checkout), 'yyyy-MM-dd');
-      const checkoutNuevo = format(fechaCheckout, 'yyyy-MM-dd');
-      
-      // Si cambió el checkout
-      if (checkoutNuevo !== checkoutOriginal) {
-        updates.fecha_checkout = checkoutNuevo;
-        updates.noches = nochesNuevas;
-        updates.subtotal_hospedaje = subtotalHospedaje;
-        updates.total_impuestos = impuestos;
-        updates.total = totalGeneral;
-        updates.saldo_pendiente = saldoPendiente;
-      }
-      
-      // Si cambió la habitación
-      if (habitacionId && habitacionId !== reserva.habitacion_id) {
-        updates.habitacion_id = habitacionId;
-        // Buscar número de habitación
-        const hab = habitaciones.find(h => h.id === habitacionId);
-        if (hab) {
-          updates.habitacion_numero = hab.numero;
-        }
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await api.updateReserva(reserva.id, updates);
-        toast({ title: '✅ Reserva actualizada' });
-        setEditMode(false);
-        onSuccess?.();
-      } else {
-        toast({ title: 'Sin cambios' });
-        setEditMode(false);
-      }
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setLoading(false);
+const handleGuardarCambios = async () => {
+  setLoading(true);
+  try {
+    const updates: any = {};
+    
+    const checkoutOriginal = format(new Date(reserva.fecha_checkout), 'yyyy-MM-dd');
+    const checkoutNuevo = format(fechaCheckout, 'yyyy-MM-dd');
+    
+    // Si cambió el checkout
+    if (checkoutNuevo !== checkoutOriginal) {
+      updates.fecha_checkout = checkoutNuevo;
     }
-  };
+    
+    // Si cambió la habitación
+    if (habitacionId && habitacionId !== reserva.habitacion_id) {
+      updates.habitacion_id = habitacionId;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await api.updateReserva(reserva.id, updates);
+      toast({ title: '✅ Reserva actualizada' });
+      setEditMode(false);
+      onSuccess?.();
+      // Cerrar y reabrir para refrescar datos
+      onOpenChange(false);
+    } else {
+      toast({ title: 'Sin cambios' });
+      setEditMode(false);
+    }
+  } catch (error: any) {
+    toast({ title: 'Error', description: error.message, variant: 'destructive' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCheckIn = async () => {
     setLoading(true);
