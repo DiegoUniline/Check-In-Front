@@ -228,7 +228,7 @@ class ApiClient {
   getHotel = () => this.request<any>('/hotel');
   updateHotel = (data: any) => this.request<any>('/hotel', { method: 'POST', body: data });
   
-  // --- SECCIÓN SAAS (MASTER CONTROL DIEGO LEÓN) ---
+  // --- SECCIÓN SAAS (MASTER CONTROL) ---
   getCuentas = () => this.request<any[]>('/saas/cuentas');
   createCuenta = (data: any) => this.request<any>('/saas/cuentas', { method: 'POST', body: data });
   updateCuenta = (id: string, data: any) => this.request<any>(`/saas/cuentas/${id}`, { method: 'PUT', body: data });
@@ -240,7 +240,7 @@ class ApiClient {
 
   getSuscripcionesGlobales = () => this.request<any[]>('/saas/suscripciones');
   createSuscripcion = (data: any) => this.request<any>('/saas/suscripciones', { method: 'POST', body: data });
-  extenderSuscripcion = (id: string, dias: number) => this.request<any>(`/saas/suscripciones/${id}/extender`, { method: 'PATCH', body: { dias } });
+  extenderSuscripcion = (id: string, dias: number = 30) => this.request<any>(`/saas/suscripciones/${id}/extender`, { method: 'POST', body: { dias } });
   eliminarSuscripcion = (id: string) => this.request<any>(`/saas/suscripciones/${id}`, { method: 'DELETE' });
 
   registrarHotelFull = (data: any) => this.request<any>('/saas/registrar-hotel', { method: 'POST', body: data });
