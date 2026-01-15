@@ -1,224 +1,226 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  Plus, CreditCard, Hotel, 
-  ShieldCheck, Package, Save, Loader2,
-  CheckCircle2, Globe, AlertTriangle
+  Plus, CreditCard, Hotel, ShieldCheck, Package, Save, Loader2,
+  CheckCircle2, Globe, AlertTriangle, Search, Filter, Trash2, 
+  CalendarPlus, Edit3, X, TrendingUp, Users
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api'; // Asegúrate de que api.ts tenga los métodos actualizados
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 export default function PanelControlDiego() {
   const queryClient = useQueryClient();
   
+  // --- ESTADOS DE FILTRO ---
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroPlan, setFiltroPlan] = useState('todos');
+
   // --- CARGA DE DATOS ---
-  const { data: cuentas, isLoading: loadingCuentas } = useQuery({
-    queryKey: ['saas-cuentas'],
-    queryFn: () => api.getCuentas()
-  });
+  const { data: cuentas } = useQuery({ queryKey: ['saas-cuentas'], queryFn: api.getCuentas });
+  const { data: planes } = useQuery({ queryKey: ['saas-planes'], queryFn: api.getPlanes });
+  const { data: suscripciones } = useQuery({ queryKey: ['saas-suscripciones'], queryFn: api.getSuscripcionesGlobales });
 
-  const { data: planes, isLoading: loadingPlanes } = useQuery({
-    queryKey: ['saas-planes'],
-    queryFn: () => api.getPlanes()
-  });
+  // --- LÓGICA DE FILTRADO (SUSCRIPCIONES) ---
+  const suscripcionesFiltradas = useMemo(() => {
+    return suscripciones?.filter((s: any) => {
+      const matchBusqueda = s.hotel_nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
+                            s.razon_social?.toLowerCase().includes(busqueda.toLowerCase());
+      const matchEstado = filtroEstado === 'todos' || s.estado === filtroEstado;
+      const matchPlan = filtroPlan === 'todos' || s.plan_nombre === filtroPlan;
+      return matchBusqueda && matchEstado && matchPlan;
+    });
+  }, [suscripciones, busqueda, filtroEstado, filtroPlan]);
 
-  const { data: suscripciones } = useQuery({
-    queryKey: ['saas-suscripciones'],
-    queryFn: () => api.getSuscripcionesGlobales()
-  });
-
-  // --- MUTACIÓN PARA REGISTRAR HOTEL (Transacción Maestra) ---
-  const registrarHotelMutation = useMutation({
-    mutationFn: (data: any) => api.registrarHotelFull(data), // Usa el endpoint POST /registrar-hotel
+  // --- MUTACIONES ---
+  const extenderMutation = useMutation({
+    mutationFn: ({ id, dias }: { id: string, dias: number }) => api.extenderSuscripcion(id, dias),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['saas-cuentas'] });
       queryClient.invalidateQueries({ queryKey: ['saas-suscripciones'] });
-      toast.success("Hotel y Cuenta creados exitosamente");
-    },
-    onError: (error: any) => {
-      toast.error("Error al registrar: " + error.message);
+      toast.success("Tiempo de acceso extendido");
     }
   });
 
-  const handleRegistroHotel = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const data = {
-      razon_social: formData.get('razon_social'),
-      administrador: formData.get('administrador'),
-      email: formData.get('email'),
-      hotel_nombre: formData.get('hotel_nombre'),
-      plan_id: formData.get('plan_id')
-    };
-
-    registrarHotelMutation.mutate(data);
-    e.currentTarget.reset();
-  };
-
   return (
-    <div className="p-6 space-y-6 bg-slate-50 min-h-screen font-sans">
-      <div className="flex justify-between items-center">
+    <div className="p-6 space-y-8 bg-slate-50 min-h-screen font-sans">
+      
+      {/* HEADER & STATS */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Panel Maestro: Diego León</h1>
-          <p className="text-slate-500">Gestión de infraestructura SaaS Uniline</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <div className="bg-blue-600 p-2 rounded-xl text-white shadow-lg shadow-blue-200">
+                <ShieldCheck className="w-8 h-8" />
+            </div>
+            SaaS Master Control <span className="text-blue-600">Diego León</span>
+          </h1>
+          <p className="text-slate-500 mt-1 font-medium">Infraestructura Uniline • Estatus del Sistema: <span className="text-green-600">Online</span></p>
         </div>
-        <div className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold shadow-lg">
-          <ShieldCheck className="w-5 h-5" /> MODO SUPERUSER
+
+        <div className="grid grid-cols-2 md:flex gap-4 w-full md:w-auto">
+            <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-center gap-4">
+                <div className="bg-blue-50 p-3 rounded-full text-blue-600"><Hotel className="w-5 h-5"/></div>
+                <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Hoteles</p>
+                    <p className="text-xl font-black">{suscripciones?.length || 0}</p>
+                </div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-center gap-4">
+                <div className="bg-green-50 p-3 rounded-full text-green-600"><TrendingUp className="w-5 h-5"/></div>
+                <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Activos</p>
+                    <p className="text-xl font-black">{suscripciones?.filter((s:any) => s.estado === 'activa').length || 0}</p>
+                </div>
+            </div>
         </div>
       </div>
 
-      <Tabs defaultValue="cuentas" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8 bg-white border">
-          <TabsTrigger value="cuentas"><Hotel className="w-4 h-4 mr-2" /> Cuentas y Hoteles</TabsTrigger>
-          <TabsTrigger value="suscripciones"><CreditCard className="w-4 h-4 mr-2" /> Suscripciones</TabsTrigger>
-          <TabsTrigger value="planes"><Package className="w-4 h-4 mr-2" /> Planes Comerciales</TabsTrigger>
+      <Tabs defaultValue="suscripciones" className="w-full">
+        <TabsList className="bg-transparent border-b rounded-none w-full justify-start gap-8 mb-6 h-auto p-0">
+          <TabsTrigger value="suscripciones" className="data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 border-b-2 border-transparent rounded-none pb-4 font-bold">Monitor de Accesos</TabsTrigger>
+          <TabsTrigger value="cuentas" className="data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 border-b-2 border-transparent rounded-none pb-4 font-bold">Base de Clientes</TabsTrigger>
+          <TabsTrigger value="planes" className="data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 border-b-2 border-transparent rounded-none pb-4 font-bold">Configuración de Planes</TabsTrigger>
         </TabsList>
 
-        {/* --- PESTAÑA CUENTAS Y REGISTRO --- */}
-        <TabsContent value="cuentas" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="md:col-span-1 border-blue-100 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-blue-700">Alta de Nuevo Cliente</CardTitle>
-                <CardDescription>Crea cuenta, hotel y suscripción en un paso</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleRegistroHotel} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Razón Social (Dueño)</Label>
-                    <Input name="razon_social" required placeholder="Ej: Inversiones Hoteleras S.A." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Nombre del Hotel</Label>
-                    <Input name="hotel_nombre" required placeholder="Ej: Hotel Paraíso" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email Admin</Label>
-                    <Input name="email" type="email" required placeholder="admin@hotel.com" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Seleccionar Plan</Label>
-                    <select name="plan_id" className="w-full border rounded-md p-2 text-sm bg-white" required>
-                      <option value="">Seleccione un plan...</option>
-                      {planes?.map((p: any) => (
-                        <option key={p.id} value={p.id}>{p.nombre} - ${p.costo_mensual}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={registrarHotelMutation.isPending}>
-                    {registrarHotelMutation.isPending ? <Loader2 className="animate-spin" /> : "Activar Acceso Full"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="md:col-span-2 shadow-sm">
-              <CardHeader>
-                <CardTitle>Cuentas Registradas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border rounded-md">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
-                      <tr>
-                        <th className="text-left p-3">Cliente / Razón Social</th>
-                        <th className="text-left p-3">Administrador</th>
-                        <th className="text-left p-3">Email</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {cuentas?.map((c: any) => (
-                        <tr key={c.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-semibold">{c.razon_social}</td>
-                          <td className="p-3">{c.nombre_administrador}</td>
-                          <td className="p-3 text-slate-500">{c.email}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+        {/* --- PESTAÑA PRINCIPAL: MONITOR --- */}
+        <TabsContent value="suscripciones" className="space-y-6">
+          
+          {/* BARRA DE HERRAMIENTAS / FILTROS */}
+          <Card className="border-none shadow-sm overflow-visible">
+            <CardContent className="p-4 flex flex-wrap gap-4 items-center justify-between">
+              <div className="flex flex-1 gap-4 items-center min-w-[300px]">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <Input 
+                        placeholder="Buscar por hotel o razón social..." 
+                        className="pl-10 h-11 bg-slate-50 border-none ring-1 ring-slate-200"
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                    />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* --- PESTAÑA PLANES (Con nombres de columnas reales) --- */}
-        <TabsContent value="planes">
-          <Card className="shadow-sm">
-            <CardHeader className="bg-slate-900 text-white rounded-t-lg">
-              <CardTitle>Configuración de Productos</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {planes?.map((p: any) => (
-                  <div key={p.id} className="relative border-2 border-slate-100 p-5 rounded-2xl bg-white hover:border-blue-500 transition-all shadow-sm">
-                    {p.activo ? <div className="absolute top-3 right-3 bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold">ACTIVO</div> : null}
-                    <h3 className="font-bold text-xl text-slate-800">{p.nombre}</h3>
-                    <div className="my-4">
-                      <span className="text-3xl font-black text-blue-600">${p.costo_mensual}</span>
-                      <span className="text-slate-400 text-sm ml-1">/mes</span>
-                    </div>
-                    <ul className="space-y-2 text-sm text-slate-600 mb-6">
-                      <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> Máx. {p.limite_hoteles} Hotel(es)</li>
-                      <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> {p.limite_habitaciones_por_hotel} Habitaciones</li>
-                    </ul>
-                    <Button variant="outline" className="w-full border-slate-200">Editar Beneficios</Button>
-                  </div>
-                ))}
+                <select 
+                    className="h-11 border-none ring-1 ring-slate-200 rounded-md px-3 text-sm font-medium bg-white"
+                    onChange={(e) => setFiltroEstado(e.target.value)}
+                >
+                    <option value="todos">Todos los Estados</option>
+                    <option value="activa">Solo Activos</option>
+                    <option value="vencida">Solo Vencidos</option>
+                </select>
+                <select 
+                    className="h-11 border-none ring-1 ring-slate-200 rounded-md px-3 text-sm font-medium bg-white"
+                    onChange={(e) => setFiltroPlan(e.target.value)}
+                >
+                    <option value="todos">Todos los Planes</option>
+                    {planes?.map((p:any) => <option key={p.id} value={p.nombre}>{p.nombre}</option>)}
+                </select>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* --- PESTAÑA SUSCRIPCIONES (Lógica de alertas) --- */}
-        <TabsContent value="suscripciones">
-          <Card className="shadow-md border-green-100">
-            <CardHeader className="border-b bg-green-50/50">
-              <CardTitle className="text-green-800 flex items-center gap-2">Monitor de Accesos</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                {suscripciones?.map((s: any) => {
-                  const dias = s.dias_restantes;
-                  const esCritico = dias <= 7;
+          {/* TABLA MAESTRA */}
+          <Card className="border-none shadow-xl rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-white">
+                <tr>
+                  <th className="text-left p-5 font-bold uppercase text-[10px] tracking-widest">Información del Hotel</th>
+                  <th className="text-left p-5 font-bold uppercase text-[10px] tracking-widest">Plan</th>
+                  <th className="text-left p-5 font-bold uppercase text-[10px] tracking-widest">Vencimiento</th>
+                  <th className="text-center p-5 font-bold uppercase text-[10px] tracking-widest">Estatus</th>
+                  <th className="text-right p-5 font-bold uppercase text-[10px] tracking-widest">Gestión Directa</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y bg-white">
+                {suscripcionesFiltradas?.map((s: any) => {
+                  const esCritico = s.dias_restantes <= 7;
                   return (
-                    <div key={s.id} className={`flex items-center justify-between p-4 border rounded-xl ${esCritico ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-                      <div className="flex gap-4 items-center">
-                        <div className={`p-2 rounded-full ${esCritico ? 'bg-red-100' : 'bg-green-100'}`}>
-                          {esCritico ? <AlertTriangle className="text-red-600 w-5 h-5" /> : <CheckCircle2 className="text-green-600 w-5 h-5" />}
+                    <tr key={s.id} className="hover:bg-slate-50/80 transition-colors group">
+                      <td className="p-5">
+                        <p className="font-black text-slate-800 text-base">{s.hotel_nombre}</p>
+                        <p className="text-xs text-slate-400 font-medium">ID: {s.hotel_id} • {s.razon_social}</p>
+                      </td>
+                      <td className="p-5">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-bold uppercase text-[10px]">
+                            {s.plan_nombre}
+                        </Badge>
+                      </td>
+                      <td className="p-5">
+                        <div className="flex flex-col">
+                            <span className={`font-mono font-bold ${esCritico ? 'text-red-600' : 'text-slate-700'}`}>
+                                {new Date(s.fecha_vencimiento).toLocaleDateString()}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400">{s.dias_restantes} días restantes</span>
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900">{s.hotel_nombre || 'Hotel sin nombre'}</p>
-                          <p className="text-xs text-slate-500">Titular: {s.razon_social}</p>
+                      </td>
+                      <td className="p-5 text-center">
+                        <div className={`mx-auto w-fit px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-2 ${s.estado === 'activa' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${s.estado === 'activa' ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                            {s.estado}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-8">
-                        <div className="text-center">
-                          <p className="text-[10px] uppercase text-slate-400 font-bold tracking-widest">Plan</p>
-                          <p className="text-sm font-semibold">{s.plan_nombre}</p>
+                      </td>
+                      <td className="p-5">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white font-bold h-9"
+                                onClick={() => extenderMutation.mutate({ id: s.id, dias: 30 })}
+                            >
+                                <CalendarPlus className="w-4 h-4 mr-2" /> +30 DÍAS
+                            </Button>
+                            <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600 h-9">
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
                         </div>
-                        <div className="text-center">
-                          <p className="text-[10px] uppercase text-slate-400 font-bold tracking-widest">Vence</p>
-                          <p className={`text-sm font-bold ${esCritico ? 'text-red-600' : 'text-slate-700'}`}>
-                            {new Date(s.fecha_vencimiento).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className={`px-4 py-1 rounded-full text-xs font-black ${esCritico ? 'bg-red-600 text-white' : 'bg-green-100 text-green-700'}`}>
-                          {esCritico ? `${dias} DÍAS RESTANTES` : 'ACTIVO'}
-                        </div>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
-            </CardContent>
+              </tbody>
+            </table>
           </Card>
+        </TabsContent>
+
+        {/* --- PESTAÑA: PLANES (DISEÑO CARDS) --- */}
+        <TabsContent value="planes">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {planes?.map((p: any) => (
+              <Card key={p.id} className="relative overflow-hidden border-2 hover:border-blue-500 transition-all shadow-lg group">
+                <div className="bg-slate-900 p-6 text-white">
+                    <div className="flex justify-between items-start">
+                        <Package className="w-10 h-10 opacity-50" />
+                        <Badge className="bg-blue-600">ID: {p.id}</Badge>
+                    </div>
+                    <h3 className="text-2xl font-black mt-4">{p.nombre}</h3>
+                </div>
+                <CardContent className="p-6 space-y-6">
+                    <div className="space-y-4">
+                        <div>
+                            <Label className="text-[10px] font-black uppercase text-slate-400">Costo Mensual ($)</Label>
+                            <Input defaultValue={p.costo_mensual} type="number" className="text-xl font-bold" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-[10px] font-black uppercase text-slate-400">Límite Hoteles</Label>
+                                <Input defaultValue={p.limite_hoteles} type="number" />
+                            </div>
+                            <div>
+                                <Label className="text-[10px] font-black uppercase text-slate-400">Límite Hab.</Label>
+                                <Input defaultValue={p.limite_habitaciones_por_hotel} type="number" />
+                            </div>
+                        </div>
+                    </div>
+                    <Button className="w-full bg-slate-100 text-slate-900 hover:bg-blue-600 hover:text-white transition-colors">
+                        <Save className="w-4 h-4 mr-2" /> Guardar Cambios
+                    </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
