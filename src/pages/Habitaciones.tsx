@@ -57,7 +57,8 @@ import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
 export default function Habitaciones() {
   const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // CAMBIO: Ahora inicia en 'list' (Tabla)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPiso, setFilterPiso] = useState('all');
   const [filterTipo, setFilterTipo] = useState('all');
@@ -236,13 +237,13 @@ export default function Habitaciones() {
       title="Gestión de Habitaciones" 
       subtitle="Administración y estado de habitaciones"
     >
-      {/* Toolbar */}
+      {/* Toolbar - Responsivo */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-        <div className="flex flex-1 items-center gap-4 flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <div className="flex flex-1 items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[180px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Buscar por número..."
+              placeholder="Habitación..."
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -250,11 +251,11 @@ export default function Habitaciones() {
           </div>
           
           <Select value={filterPiso} onValueChange={setFilterPiso}>
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[110px]">
               <SelectValue placeholder="Piso" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los pisos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {pisos.map(p => (
                 <SelectItem key={p} value={p.toString()}>Piso {p}</SelectItem>
               ))}
@@ -262,7 +263,7 @@ export default function Habitaciones() {
           </Select>
 
           <Select value={filterTipo} onValueChange={setFilterTipo}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
@@ -274,7 +275,7 @@ export default function Habitaciones() {
           </Select>
 
           <Select value={filterEstado} onValueChange={setFilterEstado}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -287,24 +288,25 @@ export default function Habitaciones() {
           </Select>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-between sm:justify-end">
           <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'grid' | 'list')}>
-            <ToggleGroupItem value="grid" aria-label="Vista grid">
-              <Grid3X3 className="h-4 w-4" />
-            </ToggleGroupItem>
             <ToggleGroupItem value="list" aria-label="Vista lista">
               <List className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="grid" aria-label="Vista grid">
+              <Grid3X3 className="h-4 w-4" />
             </ToggleGroupItem>
           </ToggleGroup>
 
           <Button onClick={openNewModal}>
             <Plus className="mr-2 h-4 w-4" />
-            Nueva Habitación
+            <span className="hidden sm:inline">Nueva Habitación</span>
+            <span className="sm:hidden">Nuevo</span>
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats - Grid responsivo corregido */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {[
           { label: 'Disponibles', count: habitaciones.filter(h => h.estado_habitacion === 'Disponible' && h.estado_limpieza === 'Limpia').length, color: 'text-success' },
@@ -316,13 +318,84 @@ export default function Habitaciones() {
           <Card key={stat.label}>
             <CardContent className="p-4 text-center">
               <p className={cn("text-2xl font-bold", stat.color)}>{stat.count}</p>
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <p className="text-[10px] uppercase font-semibold text-muted-foreground">{stat.label}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Grid View */}
+      {/* VISTA TABLA (Por defecto) con FIX de desbordamiento */}
+      {viewMode === 'list' && (
+        <Card className="overflow-hidden">
+          <div className="relative w-full overflow-x-auto">
+            <Table className="min-w-[800px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Habitación</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Piso</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Limpieza</TableHead>
+                  <TableHead>Mantenimiento</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredHabitaciones.map(hab => (
+                  <TableRow key={hab.id}>
+                    <TableCell className="font-bold text-lg">{hab.numero}</TableCell>
+                    <TableCell>
+                        <div className="flex flex-col">
+                            <span className="font-medium">{hab.tipo_nombre}</span>
+                            <span className="text-xs text-muted-foreground">{hab.tipo_codigo}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell>{hab.piso}</TableCell>
+                    <TableCell>{getStatusBadge(hab)}</TableCell>
+                    <TableCell>
+                      <Badge variant={hab.estado_limpieza === 'Limpia' ? 'secondary' : 'outline'}>
+                        {hab.estado_limpieza}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={hab.estado_mantenimiento === 'OK' ? 'secondary' : 'destructive'}>
+                        {hab.estado_mantenimiento}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditModal(hab)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Disponible')}>
+                            <DoorOpen className="mr-2 h-4 w-4" /> Disponible
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Bloqueada')}>
+                            <DoorClosed className="mr-2 h-4 w-4" /> Bloquear
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => confirmDelete(hab)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
+
+      {/* VISTA GRID (Opcional) */}
       {viewMode === 'grid' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filteredHabitaciones.map(hab => (
@@ -346,13 +419,6 @@ export default function Habitaciones() {
                         <Pencil className="mr-2 h-4 w-4" /> Editar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Disponible')}>
-                        <DoorOpen className="mr-2 h-4 w-4" /> Disponible
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Bloqueada')}>
-                        <DoorClosed className="mr-2 h-4 w-4" /> Bloquear
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Limpieza')}>
                         <Sparkles className="mr-2 h-4 w-4" /> Enviar a limpieza
                       </DropdownMenuItem>
@@ -367,7 +433,7 @@ export default function Habitaciones() {
                   </DropdownMenu>
                 </div>
                 
-                <p className="text-sm text-muted-foreground mb-2">{hab.tipo_nombre}</p>
+                <p className="text-sm text-muted-foreground mb-2 truncate">{hab.tipo_nombre}</p>
                 {getStatusBadge(hab)}
               </CardContent>
             </Card>
@@ -375,66 +441,13 @@ export default function Habitaciones() {
         </div>
       )}
 
-      {/* List View */}
-      {viewMode === 'list' && (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Habitación</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Piso</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Limpieza</TableHead>
-                <TableHead>Mantenimiento</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredHabitaciones.map(hab => (
-                <TableRow key={hab.id}>
-                  <TableCell className="font-medium">{hab.numero}</TableCell>
-                  <TableCell>{hab.tipo_nombre}</TableCell>
-                  <TableCell>{hab.piso}</TableCell>
-                  <TableCell>{getStatusBadge(hab)}</TableCell>
-                  <TableCell>
-                    <Badge variant={hab.estado_limpieza === 'Limpia' ? 'secondary' : 'outline'}>
-                      {hab.estado_limpieza}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={hab.estado_mantenimiento === 'OK' ? 'secondary' : 'destructive'}>
-                      {hab.estado_mantenimiento}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">Acciones</Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditModal(hab)}>
-                          <Pencil className="mr-2 h-4 w-4" /> Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => confirmDelete(hab)} className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-
       <p className="text-sm text-muted-foreground mt-4 text-center">
         Mostrando {filteredHabitaciones.length} de {habitaciones.length} habitaciones
       </p>
 
+      {/* Modal Nueva/Editar CORREGIDO */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>{editingHab ? 'Editar Habitación' : 'Nueva Habitación'}</DialogTitle>
             <DialogDescription>
@@ -495,16 +508,16 @@ export default function Habitaciones() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave}>{editingHab ? 'Guardar' : 'Crear'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Confirmar Eliminar */}
+      {/* AlertDialog para eliminar */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[95vw] max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar habitación?</AlertDialogTitle>
             <AlertDialogDescription>
