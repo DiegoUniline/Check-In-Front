@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext"; // Importamos useAuth para el candado de Diego
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
@@ -30,7 +30,22 @@ import NotFound from "./pages/NotFound";
 import Catalogos from "./pages/Catalogos";
 import Usuarios from "./pages/Usuarios";
 
+// --- Nueva Página para Diego ---
+import AdminPlataforma from "./pages/AdminPlataforma"; 
+
 const queryClient = new QueryClient();
+
+// Componente auxiliar para restringir la ruta solo a Diego
+const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  
+  // Si el usuario no es Diego, lo mandamos al dashboard normal
+  if (user?.email !== 'diego.leon@uniline.mx') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -46,6 +61,19 @@ const App = () => (
               
               {/* Protected routes */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              
+              {/* --- RUTA MAESTRA PARA DIEGO LEON --- */}
+              <Route
+                path="/admin-plataforma"
+                element={
+                  <ProtectedRoute>
+                    <SuperAdminRoute>
+                      <AdminPlataforma />
+                    </SuperAdminRoute>
+                  </ProtectedRoute>
+                }
+              />
+
               <Route
                 path="/dashboard"
                 element={
