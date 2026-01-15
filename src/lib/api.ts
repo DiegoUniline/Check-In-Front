@@ -2,6 +2,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://checkinapi-5cc3a2116a1c
 
 class ApiClient {
   private token: string | null = null;
+  private hotelId: string | null = null;
 
   setToken(token: string | null) {
     this.token = token;
@@ -14,11 +15,24 @@ class ApiClient {
     return this.token;
   }
 
+  setHotelId(hotelId: string | null) {
+    this.hotelId = hotelId;
+    if (hotelId) localStorage.setItem('hotel_id', hotelId);
+    else localStorage.removeItem('hotel_id');
+  }
+
+  getHotelId(): string | null {
+    if (!this.hotelId) this.hotelId = localStorage.getItem('hotel_id');
+    return this.hotelId;
+  }
+
   private async request<T>(endpoint: string, options: { method?: string; body?: any } = {}): Promise<T> {
     const { method = 'GET', body } = options;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = this.getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    const hotelId = this.getHotelId();
+    if (hotelId) headers['x-hotel-id'] = hotelId;
     
     const response = await fetch(`${API_URL}${endpoint}`, {
       method,
@@ -37,9 +51,13 @@ class ApiClient {
   async login(email: string, password: string) {
     const data = await this.request<{ token: string; user: any }>('/auth/login', { method: 'POST', body: { email, password } });
     this.setToken(data.token);
+    if (data.user?.hotel_id) this.setHotelId(data.user.hotel_id);
     return data;
   }
-  logout() { this.setToken(null); }
+  logout() { 
+    this.setToken(null); 
+    this.setHotelId(null);
+  }
 
   // Dashboard
   getDashboardStats = () => this.request<any>('/dashboard/stats');
