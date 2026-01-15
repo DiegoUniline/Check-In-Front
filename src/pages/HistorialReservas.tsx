@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  Search, Filter, Calendar, Eye, Download, RefreshCw, 
-  Users, BedDouble, CreditCard, Clock, MapPin, Phone, Mail,
-  FileText, Package, DollarSign, X, ChevronLeft, ChevronRight,
+  Search, Calendar, Eye, Download, RefreshCw, 
+  BedDouble, CreditCard, Clock, MapPin, Phone, Mail,
+  FileText, DollarSign, X, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, AlertCircle, LogIn, LogOut
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -49,7 +49,6 @@ export default function HistorialReservas() {
   const { toast } = useToast();
   const [reservas, setReservas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalReservas, setTotalReservas] = useState(0);
   
   // Filtros
   const [busqueda, setBusqueda] = useState('');
@@ -84,7 +83,6 @@ export default function HistorialReservas() {
       
       const data = await api.getReservas(params);
       setReservas(data);
-      setTotalReservas(data.length);
     } catch (error) {
       toast({ title: 'Error', description: 'No se pudieron cargar las reservas', variant: 'destructive' });
     } finally {
@@ -157,7 +155,7 @@ export default function HistorialReservas() {
   const getOrigenBadge = (origen: string) => {
     return origen === 'Recepcion' 
       ? <Badge variant="outline" className="border-green-500 text-green-600">Walk-in</Badge>
-      : <Badge variant="outline">Reserva Online</Badge>;
+      : <Badge variant="outline">Online</Badge>;
   };
 
   const safeNumber = (val: any, def: number = 0): number => {
@@ -176,8 +174,8 @@ export default function HistorialReservas() {
 
   return (
     <MainLayout title="Historial de Reservas" subtitle="Consulta todas las reservas del sistema">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      {/* Stats Cards - Responsive */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -235,16 +233,16 @@ export default function HistorialReservas() {
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros - Responsive */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex-1 min-w-[200px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3 items-end">
+            <div className="sm:col-span-2">
               <Label className="text-xs text-muted-foreground">Buscar</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="# reserva, cliente, teléfono, habitación..."
+                  placeholder="# reserva, cliente..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                   className="pl-9"
@@ -252,7 +250,7 @@ export default function HistorialReservas() {
               </div>
             </div>
             
-            <div className="w-[150px]">
+            <div>
               <Label className="text-xs text-muted-foreground">Estado</Label>
               <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
                 <SelectTrigger>
@@ -270,7 +268,7 @@ export default function HistorialReservas() {
               </Select>
             </div>
             
-            <div className="w-[150px]">
+            <div>
               <Label className="text-xs text-muted-foreground">Origen</Label>
               <Select value={origenFiltro} onValueChange={setOrigenFiltro}>
                 <SelectTrigger>
@@ -284,13 +282,13 @@ export default function HistorialReservas() {
               </Select>
             </div>
             
-            <div className="w-[150px]">
+            <div>
               <Label className="text-xs text-muted-foreground">Desde</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <Button variant="outline" className="w-full justify-start text-left font-normal h-10">
                     <Calendar className="mr-2 h-4 w-4" />
-                    {fechaDesde ? format(fechaDesde, 'd MMM yy', { locale: es }) : 'Desde'}
+                    {fechaDesde ? format(fechaDesde, 'd MMM', { locale: es }) : 'Desde'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -304,13 +302,13 @@ export default function HistorialReservas() {
               </Popover>
             </div>
             
-            <div className="w-[150px]">
+            <div>
               <Label className="text-xs text-muted-foreground">Hasta</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <Button variant="outline" className="w-full justify-start text-left font-normal h-10">
                     <Calendar className="mr-2 h-4 w-4" />
-                    {fechaHasta ? format(fechaHasta, 'd MMM yy', { locale: es }) : 'Hasta'}
+                    {fechaHasta ? format(fechaHasta, 'd MMM', { locale: es }) : 'Hasta'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -324,13 +322,14 @@ export default function HistorialReservas() {
               </Popover>
             </div>
             
-            <Button variant="outline" onClick={limpiarFiltros}>
-              <X className="h-4 w-4 mr-1" /> Limpiar
-            </Button>
-            
-            <Button variant="outline" onClick={cargarReservas} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} /> Actualizar
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="icon" onClick={limpiarFiltros} className="h-10 w-10">
+                <X className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={cargarReservas} disabled={loading} className="h-10 w-10">
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -352,91 +351,88 @@ export default function HistorialReservas() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead># Reserva</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Habitación</TableHead>
-                    <TableHead>Check-in</TableHead>
-                    <TableHead>Check-out</TableHead>
-                    <TableHead>Noches</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Origen</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reservasPaginadas.map(reserva => (
-                    <TableRow 
-                      key={reserva.id} 
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => abrirDetalle(reserva)}
-                    >
-                      <TableCell>
-                        <span className="font-mono font-medium text-primary">
-                          #{reserva.numero_reserva || reserva.id?.slice(0, 8)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{reserva.cliente_nombre} {reserva.apellido_paterno}</p>
-                          <p className="text-xs text-muted-foreground">{reserva.cliente_email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {reserva.habitacion_numero ? (
-                          <Badge variant="outline" className="text-lg">{reserva.habitacion_numero}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p>{format(new Date(reserva.fecha_checkin), 'd MMM yy', { locale: es })}</p>
-                          {reserva.hora_llegada && (
-                            <p className="text-xs text-muted-foreground">{reserva.hora_llegada}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(reserva.fecha_checkout), 'd MMM yy', { locale: es })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{reserva.noches || '-'}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">${safeNumber(reserva.total).toLocaleString()}</span>
-                      </TableCell>
-                      <TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
-                      <TableCell>{getOrigenBadge(reserva.origen)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); abrirDetalle(reserva); }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {reservasPaginadas.length === 0 && (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
-                        No se encontraron reservas con los filtros seleccionados
-                      </TableCell>
+                      <TableHead className="whitespace-nowrap"># Reserva</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Hab.</TableHead>
+                      <TableHead className="whitespace-nowrap">Check-in</TableHead>
+                      <TableHead className="whitespace-nowrap">Check-out</TableHead>
+                      <TableHead>Noches</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Origen</TableHead>
+                      <TableHead className="text-right">Ver</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {reservasPaginadas.map(reserva => (
+                      <TableRow 
+                        key={reserva.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => abrirDetalle(reserva)}
+                      >
+                        <TableCell>
+                          <span className="font-mono font-medium text-primary text-sm">
+                            #{reserva.numero_reserva || reserva.id?.slice(0, 6)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-[150px]">
+                            <p className="font-medium truncate">{reserva.cliente_nombre} {reserva.apellido_paterno}</p>
+                            <p className="text-xs text-muted-foreground truncate">{reserva.cliente_email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {reserva.habitacion_numero ? (
+                            <Badge variant="outline">{reserva.habitacion_numero}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {format(new Date(reserva.fecha_checkin), 'd MMM yy', { locale: es })}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {format(new Date(reserva.fecha_checkout), 'd MMM yy', { locale: es })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{reserva.noches || '-'}</Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <span className="font-medium">${safeNumber(reserva.total).toLocaleString()}</span>
+                        </TableCell>
+                        <TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
+                        <TableCell>{getOrigenBadge(reserva.origen)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); abrirDetalle(reserva); }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {reservasPaginadas.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
+                          No se encontraron reservas
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
               {/* Paginación */}
               {totalPaginas > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
                   <p className="text-sm text-muted-foreground">
-                    Mostrando {((pagina - 1) * porPagina) + 1} - {Math.min(pagina * porPagina, reservasFiltradas.length)} de {reservasFiltradas.length}
+                    {((pagina - 1) * porPagina) + 1} - {Math.min(pagina * porPagina, reservasFiltradas.length)} de {reservasFiltradas.length}
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -488,13 +484,13 @@ export default function HistorialReservas() {
         </CardContent>
       </Card>
 
-      {/* Modal Detalle Completo */}
+      {/* Modal Detalle */}
       <Dialog open={modalDetalleOpen} onOpenChange={setModalDetalleOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="text-xl">
-                Reserva #{detalleCompleto?.numero_reserva || reservaSeleccionada?.numero_reserva || reservaSeleccionada?.id?.slice(0, 8)}
+                #{detalleCompleto?.numero_reserva || reservaSeleccionada?.id?.slice(0, 8)}
               </DialogTitle>
               {detalleCompleto && getEstadoBadge(detalleCompleto.estado)}
               {detalleCompleto && getOrigenBadge(detalleCompleto.origen)}
@@ -517,7 +513,7 @@ export default function HistorialReservas() {
 
               {/* Tab General */}
               <TabsContent value="general" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base flex items-center gap-2">
@@ -528,28 +524,23 @@ export default function HistorialReservas() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label className="text-xs text-muted-foreground">Check-in</Label>
-                          <p className="font-medium">
-                            {format(new Date(detalleCompleto.fecha_checkin), "EEEE d MMMM yyyy", { locale: es })}
+                          <p className="font-medium text-sm">
+                            {format(new Date(detalleCompleto.fecha_checkin), "EEE d MMM yyyy", { locale: es })}
                           </p>
-                          {detalleCompleto.hora_llegada && (
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> {detalleCompleto.hora_llegada}
-                            </p>
-                          )}
                           {detalleCompleto.checkin_real && (
                             <p className="text-xs text-green-600">
-                              ✓ Realizado: {format(new Date(detalleCompleto.checkin_real), "d MMM HH:mm", { locale: es })}
+                              ✓ {format(new Date(detalleCompleto.checkin_real), "d MMM HH:mm", { locale: es })}
                             </p>
                           )}
                         </div>
                         <div>
                           <Label className="text-xs text-muted-foreground">Check-out</Label>
-                          <p className="font-medium">
-                            {format(new Date(detalleCompleto.fecha_checkout), "EEEE d MMMM yyyy", { locale: es })}
+                          <p className="font-medium text-sm">
+                            {format(new Date(detalleCompleto.fecha_checkout), "EEE d MMM yyyy", { locale: es })}
                           </p>
                           {detalleCompleto.checkout_real && (
                             <p className="text-xs text-green-600">
-                              ✓ Realizado: {format(new Date(detalleCompleto.checkout_real), "d MMM HH:mm", { locale: es })}
+                              ✓ {format(new Date(detalleCompleto.checkout_real), "d MMM HH:mm", { locale: es })}
                             </p>
                           )}
                         </div>
@@ -587,7 +578,7 @@ export default function HistorialReservas() {
                           </p>
                         </div>
                         {detalleCompleto.habitacion_numero ? (
-                          <Badge variant="outline" className="text-3xl px-4 py-2">
+                          <Badge variant="outline" className="text-2xl px-3 py-1">
                             {detalleCompleto.habitacion_numero}
                           </Badge>
                         ) : (
@@ -596,7 +587,7 @@ export default function HistorialReservas() {
                       </div>
                       {detalleCompleto.personas_extra > 0 && (
                         <div className="p-2 bg-muted rounded text-sm">
-                          <span className="text-muted-foreground">Personas extra:</span>{' '}
+                          <span className="text-muted-foreground">Extra:</span>{' '}
                           <span className="font-medium">{detalleCompleto.personas_extra}</span>
                           <span className="text-muted-foreground"> × ${safeNumber(detalleCompleto.cargo_persona_extra).toLocaleString()}</span>
                         </div>
@@ -605,7 +596,7 @@ export default function HistorialReservas() {
                   </Card>
                 </div>
 
-                {/* Resumen Financiero */}
+                {/* Resumen Financiero - Responsive */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -613,13 +604,13 @@ export default function HistorialReservas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-5 gap-4 text-center">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-center">
                       <div className="p-3 bg-muted rounded-lg">
                         <p className="text-xs text-muted-foreground">Subtotal</p>
                         <p className="text-lg font-bold">${safeNumber(detalleCompleto.subtotal_hospedaje).toLocaleString()}</p>
                       </div>
                       <div className="p-3 bg-muted rounded-lg">
-                        <p className="text-xs text-muted-foreground">Cargos Extra</p>
+                        <p className="text-xs text-muted-foreground">Cargos</p>
                         <p className="text-lg font-bold">
                           ${(detalleCompleto.cargos?.reduce((s: number, c: any) => s + safeNumber(c.total), 0) || 0).toLocaleString()}
                         </p>
@@ -634,13 +625,13 @@ export default function HistorialReservas() {
                         <p className="text-xs text-muted-foreground">IVA</p>
                         <p className="text-lg font-bold">${safeNumber(detalleCompleto.total_impuestos).toLocaleString()}</p>
                       </div>
-                      <div className="p-3 bg-primary text-primary-foreground rounded-lg">
+                      <div className="p-3 bg-primary text-primary-foreground rounded-lg col-span-2 sm:col-span-1">
                         <p className="text-xs opacity-80">Total</p>
                         <p className="text-xl font-bold">${safeNumber(detalleCompleto.total).toLocaleString()}</p>
                       </div>
                     </div>
                     <Separator className="my-4" />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
                         <p className="text-sm text-green-700 dark:text-green-300">Total Pagado</p>
                         <p className="text-2xl font-bold text-green-600">${safeNumber(detalleCompleto.total_pagado).toLocaleString()}</p>
@@ -669,11 +660,11 @@ export default function HistorialReservas() {
 
                 {/* Notas */}
                 {(detalleCompleto.solicitudes_especiales || detalleCompleto.notas_internas) && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {detalleCompleto.solicitudes_especiales && (
                       <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
                         <CardContent className="p-4">
-                          <p className="font-medium text-sm mb-1">Solicitudes Especiales</p>
+                          <p className="font-medium text-sm mb-1">Solicitudes</p>
                           <p className="text-sm text-muted-foreground">{detalleCompleto.solicitudes_especiales}</p>
                         </CardContent>
                       </Card>
@@ -692,15 +683,12 @@ export default function HistorialReservas() {
                 {/* Timestamps */}
                 <Card>
                   <CardContent className="p-4">
-                    <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                       {detalleCompleto.created_at && (
                         <span>Creada: {format(new Date(detalleCompleto.created_at), "d MMM yyyy HH:mm", { locale: es })}</span>
                       )}
-                      {detalleCompleto.updated_at && (
-                        <span>Actualizada: {format(new Date(detalleCompleto.updated_at), "d MMM yyyy HH:mm", { locale: es })}</span>
-                      )}
                       {detalleCompleto.created_by_name && (
-                        <span>Creada por: {detalleCompleto.created_by_name}</span>
+                        <span>Por: {detalleCompleto.created_by_name}</span>
                       )}
                     </div>
                   </CardContent>
@@ -711,39 +699,39 @@ export default function HistorialReservas() {
               <TabsContent value="cliente" className="mt-4">
                 <Card>
                   <CardContent className="p-6">
-                    <div className="flex items-start gap-6">
-                      <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
+                    <div className="flex flex-col sm:flex-row items-start gap-6">
+                      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold shrink-0">
                         {detalleCompleto.cliente_nombre?.charAt(0)}{detalleCompleto.apellido_paterno?.charAt(0)}
                       </div>
                       <div className="flex-1">
                         <h3 className="text-xl font-semibold">
                           {detalleCompleto.cliente_nombre} {detalleCompleto.apellido_paterno} {detalleCompleto.apellido_materno}
                         </h3>
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 mt-2">
                           {detalleCompleto.es_vip && <Badge className="bg-yellow-500">VIP</Badge>}
                           {detalleCompleto.total_estancias > 0 && (
-                            <Badge variant="outline">{detalleCompleto.total_estancias} estancias previas</Badge>
+                            <Badge variant="outline">{detalleCompleto.total_estancias} estancias</Badge>
                           )}
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4 mt-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
                           <div className="flex items-center gap-3">
-                            <Mail className="h-5 w-5 text-muted-foreground" />
-                            <div>
+                            <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
+                            <div className="min-w-0">
                               <p className="text-xs text-muted-foreground">Email</p>
-                              <p className="font-medium">{detalleCompleto.cliente_email || 'No registrado'}</p>
+                              <p className="font-medium truncate">{detalleCompleto.cliente_email || 'No registrado'}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <Phone className="h-5 w-5 text-muted-foreground" />
+                            <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
                             <div>
                               <p className="text-xs text-muted-foreground">Teléfono</p>
                               <p className="font-medium">{detalleCompleto.cliente_telefono || 'No registrado'}</p>
                             </div>
                           </div>
                           {detalleCompleto.cliente_direccion && (
-                            <div className="flex items-center gap-3 col-span-2">
-                              <MapPin className="h-5 w-5 text-muted-foreground" />
+                            <div className="flex items-center gap-3 sm:col-span-2">
+                              <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
                               <div>
                                 <p className="text-xs text-muted-foreground">Dirección</p>
                                 <p className="font-medium">{detalleCompleto.cliente_direccion}</p>
@@ -762,46 +750,43 @@ export default function HistorialReservas() {
                 <Card>
                   <CardContent className="p-4">
                     {detalleCompleto.cargos && detalleCompleto.cargos.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Concepto</TableHead>
-                            <TableHead>Cantidad</TableHead>
-                            <TableHead>Precio Unit.</TableHead>
-                            <TableHead>Subtotal</TableHead>
-                            <TableHead>IVA</TableHead>
-                            <TableHead>Total</TableHead>
-                            <TableHead>Fecha</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {detalleCompleto.cargos.map((cargo: any, idx: number) => (
-                            <TableRow key={cargo.id || idx}>
-                              <TableCell>
-                                <p className="font-medium">{cargo.concepto || cargo.producto_nombre}</p>
-                                {cargo.notas && <p className="text-xs text-muted-foreground">{cargo.notas}</p>}
-                              </TableCell>
-                              <TableCell>{cargo.cantidad}</TableCell>
-                              <TableCell>${safeNumber(cargo.precio_unitario).toLocaleString()}</TableCell>
-                              <TableCell>${safeNumber(cargo.subtotal).toLocaleString()}</TableCell>
-                              <TableCell>${safeNumber(cargo.impuesto).toLocaleString()}</TableCell>
-                              <TableCell className="font-bold">${safeNumber(cargo.total).toLocaleString()}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {cargo.created_at ? format(new Date(cargo.created_at), 'd MMM HH:mm', { locale: es }) : '-'}
-                              </TableCell>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Concepto</TableHead>
+                              <TableHead>Cant.</TableHead>
+                              <TableHead>P. Unit.</TableHead>
+                              <TableHead>Total</TableHead>
+                              <TableHead>Fecha</TableHead>
                             </TableRow>
-                          ))}
-                          <TableRow className="bg-muted/50">
-                            <TableCell colSpan={5} className="text-right font-bold">Total Cargos:</TableCell>
-                            <TableCell className="font-bold text-lg">
-                              ${detalleCompleto.cargos.reduce((s: number, c: any) => s + safeNumber(c.total), 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {detalleCompleto.cargos.map((cargo: any, idx: number) => (
+                              <TableRow key={cargo.id || idx}>
+                                <TableCell>
+                                  <p className="font-medium">{cargo.concepto || cargo.producto_nombre}</p>
+                                </TableCell>
+                                <TableCell>{cargo.cantidad}</TableCell>
+                                <TableCell>${safeNumber(cargo.precio_unitario).toLocaleString()}</TableCell>
+                                <TableCell className="font-bold">${safeNumber(cargo.total).toLocaleString()}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                  {cargo.created_at ? format(new Date(cargo.created_at), 'd MMM HH:mm', { locale: es }) : '-'}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow className="bg-muted/50">
+                              <TableCell colSpan={3} className="text-right font-bold">Total:</TableCell>
+                              <TableCell className="font-bold text-lg">
+                                ${detalleCompleto.cargos.reduce((s: number, c: any) => s + safeNumber(c.total), 0).toLocaleString()}
+                              </TableCell>
+                              <TableCell></TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
                     ) : (
-                      <p className="text-center text-muted-foreground py-8">Sin cargos adicionales registrados</p>
+                      <p className="text-center text-muted-foreground py-8">Sin cargos</p>
                     )}
                   </CardContent>
                 </Card>
@@ -812,49 +797,43 @@ export default function HistorialReservas() {
                 <Card>
                   <CardContent className="p-4">
                     {detalleCompleto.pagos && detalleCompleto.pagos.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Concepto</TableHead>
-                            <TableHead>Método</TableHead>
-                            <TableHead>Monto</TableHead>
-                            <TableHead>Referencia</TableHead>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Registrado por</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {detalleCompleto.pagos.map((pago: any, idx: number) => (
-                            <TableRow key={pago.id || idx}>
-                              <TableCell className="font-medium">{pago.concepto || 'Pago'}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{pago.metodo_pago}</Badge>
-                              </TableCell>
-                              <TableCell className="font-bold text-green-600">
-                                ${safeNumber(pago.monto).toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {pago.referencia || '-'}
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {pago.created_at ? format(new Date(pago.created_at), 'd MMM yyyy HH:mm', { locale: es }) : '-'}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {pago.created_by_name || '-'}
-                              </TableCell>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Concepto</TableHead>
+                              <TableHead>Método</TableHead>
+                              <TableHead>Monto</TableHead>
+                              <TableHead>Fecha</TableHead>
                             </TableRow>
-                          ))}
-                          <TableRow className="bg-muted/50">
-                            <TableCell colSpan={2} className="text-right font-bold">Total Pagado:</TableCell>
-                            <TableCell className="font-bold text-lg text-green-600">
-                              ${detalleCompleto.pagos.reduce((s: number, p: any) => s + safeNumber(p.monto), 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell colSpan={3}></TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {detalleCompleto.pagos.map((pago: any, idx: number) => (
+                              <TableRow key={pago.id || idx}>
+                                <TableCell className="font-medium">{pago.concepto || 'Pago'}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{pago.metodo_pago}</Badge>
+                                </TableCell>
+                                <TableCell className="font-bold text-green-600">
+                                  ${safeNumber(pago.monto).toLocaleString()}
+                                </TableCell>
+                                <TableCell className="text-sm whitespace-nowrap">
+                                  {pago.created_at ? format(new Date(pago.created_at), 'd MMM HH:mm', { locale: es }) : '-'}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow className="bg-muted/50">
+                              <TableCell colSpan={2} className="text-right font-bold">Total:</TableCell>
+                              <TableCell className="font-bold text-lg text-green-600">
+                                ${detalleCompleto.pagos.reduce((s: number, p: any) => s + safeNumber(p.monto), 0).toLocaleString()}
+                              </TableCell>
+                              <TableCell></TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
                     ) : (
-                      <p className="text-center text-muted-foreground py-8">Sin pagos registrados</p>
+                      <p className="text-center text-muted-foreground py-8">Sin pagos</p>
                     )}
                   </CardContent>
                 </Card>
