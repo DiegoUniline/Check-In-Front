@@ -160,28 +160,49 @@ export default function AdminPlataforma() {
         </TabsContent>
 
         {/* CONTENIDO PLANES (CORREGIDO) */}
-        <TabsContent value="planes">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {planes.map((p: any) => (
-              <Card key={p.id} className="p-6 border-2 border-blue-50 shadow-md hover:shadow-lg transition-shadow bg-white rounded-2xl">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <Package className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <Badge className="bg-green-100 text-green-700 border-none">{p.estado}</Badge>
-                </div>
-                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">{p.nombre}</h3>
-                <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-slate-900">${p.precio}</span>
-                  <span className="text-slate-500 text-sm">/mes</span>
-                </div>
-                <Button className="w-full mt-6 bg-slate-900 hover:bg-blue-600 font-bold py-5">
-                  GESTIONAR PLAN
-                </Button>
-              </Card>
-            ))}
+   <TabsContent value="planes">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {planes.map((p: any) => (
+      <Card key={p.id} className="p-6 border-2 border-blue-50 shadow-md hover:shadow-lg transition-shadow bg-white rounded-2xl relative overflow-hidden">
+        {/* Indicador de plan activo */}
+        <div className="absolute top-0 right-0 p-2">
+          <Badge className={p.activo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+            {p.activo ? 'ACTIVO' : 'INACTIVO'}
+          </Badge>
+        </div>
+
+        <div className="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center mb-4 shadow-blue-200 shadow-lg">
+          <Package className="text-white w-6 h-6" />
+        </div>
+
+        <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">
+          {p.nombre}
+        </h3>
+
+        <div className="mt-4 flex items-baseline gap-1">
+          {/* CAMBIO CLAVE: p.costo_mensual en lugar de p.precio */}
+          <span className="text-4xl font-black text-slate-900">${p.costo_mensual}</span>
+          <span className="text-slate-500 text-sm font-medium">/ mes</span>
+        </div>
+
+        <div className="mt-6 space-y-3 border-t pt-4">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <Hotel className="w-4 h-4 text-blue-500" />
+            <strong>{p.limite_hoteles}</strong> {p.limite_hoteles === 1 ? 'Hotel' : 'Hoteles'}
           </div>
-        </TabsContent>
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <ShieldCheck className="w-4 h-4 text-green-500" />
+            Hasta <strong>{p.limite_habitaciones_por_hotel}</strong> habitaciones
+          </div>
+        </div>
+
+        <Button className="w-full mt-6 bg-slate-900 hover:bg-blue-700 text-white font-bold h-12 rounded-xl transition-all">
+          CONFIGURAR LÍMITES
+        </Button>
+      </Card>
+    ))}
+  </div>
+</TabsContent>
         
         <TabsContent value="suscripciones">
            <Card className="p-10 text-center text-slate-400 border-dashed border-2">
