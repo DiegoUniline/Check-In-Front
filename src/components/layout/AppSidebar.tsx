@@ -1,5 +1,5 @@
 import { 
- LayoutDashboard, 
+  LayoutDashboard, 
   CalendarDays, 
   BedDouble, 
   Users, 
@@ -16,7 +16,8 @@ import {
   History,
   BookOpen,
   UserCog,
-  FileText
+  FileText,
+  ShieldCheck // Icono para Diego
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -34,6 +35,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { useAuth } from "@/contexts/AuthContext"; // Importante para detectar a Diego
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -64,12 +66,17 @@ const configNavItems = [
   { title: 'Configuración', url: '/configuracion', icon: Settings },
 ];
 
+// Item especial para Diego
+const adminSaaSItem = [
+  { title: 'Administrar SaaS', url: '/admin-plataforma', icon: ShieldCheck },
+];
+
 export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
+  const { user } = useAuth(); // Detectamos al usuario actual
   const collapsed = state === 'collapsed';
   
-  // Mock occupancy data
   const occupancyPercent = 84;
 
   const renderNavItems = (items: typeof mainNavItems) => (
@@ -87,10 +94,12 @@ export function AppSidebar() {
                   "flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
                   isActive 
                     ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50",
+                  // Estilo azul si es el botón de SaaS
+                  item.url === '/admin-plataforma' && "text-blue-600 font-bold"
                 )}
               >
-                <item.icon className="h-5 w-5 shrink-0" />
+                <item.icon className={cn("h-5 w-5 shrink-0", item.url === '/admin-plataforma' && "text-blue-600")} />
                 {!collapsed && <span>{item.title}</span>}
               </NavLink>
             </SidebarMenuButton>
@@ -102,7 +111,6 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r">
-      {/* Header with logo */}
       <SidebarHeader className="border-b px-4 py-4">
         <NavLink to="/dashboard" className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -118,7 +126,16 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
-        {/* Main navigation */}
+        {/* SECCIÓN PARA DIEGO - Solo aparece si el correo coincide */}
+        {user?.email === 'diego.leon@uniline.mx' && (
+          <SidebarGroup>
+            {!collapsed && <SidebarGroupLabel className="text-blue-600 font-bold">Administración Maestro</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              {renderNavItems(adminSaaSItem)}
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Principal</SidebarGroupLabel>}
           <SidebarGroupContent>
@@ -126,7 +143,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Operations */}
         <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Operaciones</SidebarGroupLabel>}
           <SidebarGroupContent>
@@ -134,7 +150,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Sales & Reports */}
         <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Ventas</SidebarGroupLabel>}
           <SidebarGroupContent>
@@ -142,7 +157,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Configuration */}
         <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Sistema</SidebarGroupLabel>}
           <SidebarGroupContent>
@@ -151,7 +165,6 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with occupancy indicator */}
       <SidebarFooter className="border-t p-4">
         {!collapsed ? (
           <div className="rounded-lg bg-sidebar-accent p-3">
