@@ -138,12 +138,17 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border box-border;
+  }
+
+  html {
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Manrope', system-ui, sans-serif;
+    overflow-x: hidden;
   }
   
   /* Custom scrollbar */
@@ -162,6 +167,49 @@
   
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/50;
+  }
+}
+
+@layer components {
+  /* Main content container */
+  .main-content {
+    @apply w-full max-w-full overflow-x-hidden;
+  }
+
+  /* Table responsive container */
+  .table-container {
+    @apply w-full overflow-x-auto rounded-lg;
+  }
+
+  .table-container table {
+    @apply min-w-[800px] w-full;
+  }
+
+  /* Stats cards grid */
+  .stats-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  /* Filters responsive */
+  .filters-container {
+    @apply flex flex-wrap gap-3 w-full;
+  }
+
+  .filters-container > * {
+    @apply min-w-0 flex-1;
+    min-width: 120px;
+    max-width: 200px;
+  }
+
+  /* Page container */
+  .page-container {
+    @apply w-full max-w-full p-4 md:p-6 space-y-6 overflow-hidden;
+  }
+
+  /* Card responsive */
+  .card-responsive {
+    @apply w-full overflow-hidden;
   }
 }
 
@@ -189,6 +237,16 @@
   
   .status-dot-reserved {
     background-color: hsl(var(--status-reserved));
+  }
+
+  /* Prevent overflow */
+  .no-overflow {
+    @apply overflow-hidden max-w-full;
+  }
+
+  /* Text truncate */
+  .truncate-cell {
+    @apply truncate max-w-[150px];
   }
 }
 
