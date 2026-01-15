@@ -1,5 +1,5 @@
 import { 
-  LayoutDashboard, 
+ LayoutDashboard, 
   CalendarDays, 
   BedDouble, 
   Users, 
@@ -15,7 +15,8 @@ import {
   ShoppingBag,
   History,
   BookOpen,
-  UserCog
+  UserCog,
+  FileText
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -51,7 +52,8 @@ const salesNavItems = [
   { title: 'Inventario', url: '/inventario', icon: Package },
   { title: 'Compras', url: '/compras', icon: ShoppingBag },
   { title: 'Gastos', url: '/gastos', icon: Receipt },
-  { title: 'Historial', url: '/historial', icon: History },
+  { title: 'Historial Ventas', url: '/historial', icon: History },
+  { title: 'Historial Reservas', url: '/historial-reservas', icon: FileText },
   { title: 'Reportes', url: '/reportes', icon: BarChart3 },
 ];
 
