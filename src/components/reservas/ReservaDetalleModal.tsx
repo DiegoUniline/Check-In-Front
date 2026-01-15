@@ -465,7 +465,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     const cantEntregada = ent.cantidad || 1;
     const cantDevuelta = ent.cantidad_devuelta ?? 0;
     const faltantesYaProcesados = cantEntregada - cantDevuelta;
-    const yaProcesado = ent.devuelto === 1;
+   const yaProcesado = !!ent.devuelto;
     const estaExpandido = devolucionExpandidaId === ent.id;
     
     // Cálculos para el form inline
