@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Package, Search, Trash2, X, ChevronDown, ChevronRight, Hotel, Calendar
+  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Calendar
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -30,7 +30,7 @@ export default function AdminPlataforma() {
 
   const { data: hoteles = [] } = useQuery({ 
     queryKey: ['saas-hoteles'], 
-    queryFn: () => api.request<any[]>('/saas/hoteles', 'GET')
+    queryFn: api.getHotelesSaas
   });
 
   const { data: suscripciones = [] } = useQuery({ 
@@ -45,7 +45,7 @@ export default function AdminPlataforma() {
 
   // --- MUTACIONES ---
   const crearCliente = useMutation({
-    mutationFn: (data: typeof formCliente) => api.request('/saas/cuentas', 'POST', data),
+    mutationFn: (data: typeof formCliente) => api.createCuenta(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-cuentas'] });
       toast.success("Cliente creado");
@@ -56,7 +56,7 @@ export default function AdminPlataforma() {
   });
 
   const crearHotel = useMutation({
-    mutationFn: (data: any) => api.request('/saas/hoteles', 'POST', data),
+    mutationFn: (data: any) => api.createHotelSaas(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-hoteles'] });
       toast.success("Hotel creado");
@@ -67,37 +67,41 @@ export default function AdminPlataforma() {
   });
 
   const crearSuscripcion = useMutation({
-    mutationFn: (data: any) => api.request('/saas/suscripciones', 'POST', data),
+    mutationFn: (data: any) => api.createSuscripcion(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-suscripciones'] });
       toast.success("Suscripción creada");
       setModalSuscripcion({ open: false, hotel: null });
+      setFormSuscripcion({ plan_id: '', dias: '30' });
     },
     onError: (e: any) => toast.error(e.message)
   });
 
   const extenderSuscripcion = useMutation({
-    mutationFn: (id: string) => api.request(`/saas/suscripciones/${id}/extender`, 'POST', { dias: 30 }),
+    mutationFn: (id: string) => api.extenderSuscripcion(id, 30),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-suscripciones'] });
       toast.success("Suscripción extendida +30 días");
-    }
+    },
+    onError: (e: any) => toast.error(e.message)
   });
 
   const eliminarCliente = useMutation({
-    mutationFn: (id: string) => api.request(`/saas/cuentas/${id}`, 'DELETE'),
+    mutationFn: (id: string) => api.deleteCuenta(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-cuentas'] });
       toast.success("Cliente eliminado");
-    }
+    },
+    onError: (e: any) => toast.error(e.message)
   });
 
   const eliminarSuscripcion = useMutation({
-    mutationFn: (id: string) => api.request(`/saas/suscripciones/${id}`, 'DELETE'),
+    mutationFn: (id: string) => api.eliminarSuscripcion(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-suscripciones'] });
       toast.success("Suscripción eliminada");
-    }
+    },
+    onError: (e: any) => toast.error(e.message)
   });
 
   const cuentasFiltradas = useMemo(() => {
