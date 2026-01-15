@@ -117,14 +117,13 @@ class ApiClient {
   createConceptoCargo = (data: any) => this.request<any>('/conceptos-cargo', { method: 'POST', body: data });
 
   // Entregables
-// Entregables
-getEntregables = () => this.request<any[]>('/entregables');
-createEntregable = (data: any) => this.request<any>('/entregables', { method: 'POST', body: data });
-updateEntregable = (id: string, data: any) => this.request<any>(`/entregables/${id}`, { method: 'PUT', body: data });
-deleteEntregable = (id: string) => this.request<any>(`/entregables/${id}`, { method: 'DELETE' });
-getEntregablesReserva = (reservaId: string) => this.request<any[]>(`/entregables/reserva/${reservaId}`);
-asignarEntregable = (reservaId: string, data: any) => this.request<any>(`/entregables/reserva/${reservaId}`, { method: 'POST', body: data });
-devolverEntregable = (id: string, data?: any) => this.request<any>(`/entregables/devolver/${id}`, { method: 'PATCH', body: data });
+  getEntregables = () => this.request<any[]>('/entregables');
+  createEntregable = (data: any) => this.request<any>('/entregables', { method: 'POST', body: data });
+  updateEntregable = (id: string, data: any) => this.request<any>(`/entregables/${id}`, { method: 'PUT', body: data });
+  deleteEntregable = (id: string) => this.request<any>(`/entregables/${id}`, { method: 'DELETE' });
+  getEntregablesReserva = (reservaId: string) => this.request<any[]>(`/entregables/reserva/${reservaId}`);
+  asignarEntregable = (reservaId: string, data: any) => this.request<any>(`/entregables/reserva/${reservaId}`, { method: 'POST', body: data });
+  devolverEntregable = (id: string, data?: any) => this.request<any>(`/entregables/devolver/${id}`, { method: 'PATCH', body: data });
 
   // Limpieza
   getTareasLimpieza = (params?: Record<string, string>) => {
@@ -228,6 +227,16 @@ devolverEntregable = (id: string, data?: any) => this.request<any>(`/entregables
   // Hotel
   getHotel = () => this.request<any>('/hotel');
   updateHotel = (data: any) => this.request<any>('/hotel', { method: 'POST', body: data });
+  
+  // --- SECCIÓN SAAS (PARA DIEGO LEÓN) ---
+  getCuentas = () => this.request<any[]>('/saas/cuentas');
+  createCuenta = (data: any) => this.request<any>('/saas/cuentas', { method: 'POST', body: data });
+  getPlanes = () => this.request<any[]>('/saas/planes');
+  createPlan = (data: any) => this.request<any>('/saas/planes', { method: 'POST', body: data });
+  getSuscripcionesGlobales = () => this.request<any[]>('/saas/suscripciones');
+  createSuscripcion = (data: any) => this.request<any>('/saas/suscripciones', { method: 'POST', body: data });
+  asignarHotelACuenta = (data: { cuenta_id: string, hotel_id: string }) => 
+    this.request<any>('/saas/asignar-hotel', { method: 'POST', body: data });
 
   // Usuarios
   getUsuarios = (params?: Record<string, string>) => {
