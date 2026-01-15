@@ -47,6 +47,27 @@ class ApiClient {
     return response.json();
   }
 
+  // Método público para componentes que necesitan llamadas directas
+  publicRequest = async <T>(endpoint: string, method: string = 'GET', body?: any): Promise<T> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = this.getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const hotelId = this.getHotelId();
+    if (hotelId) headers['x-hotel-id'] = hotelId;
+    
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Error de conexión' }));
+      throw new Error(error.error || 'Error en la solicitud');
+    }
+    return response.json();
+  };
+
   // Auth
   async login(email: string, password: string) {
     const data = await this.request<{ token: string; user: any }>('/auth/login', { method: 'POST', body: { email, password } });
@@ -261,38 +282,19 @@ class ApiClient {
   extenderSuscripcion = (id: string, dias: number = 30) => this.request<any>(`/saas/suscripciones/${id}/extender`, { method: 'POST', body: { dias } });
   eliminarSuscripcion = (id: string) => this.request<any>(`/saas/suscripciones/${id}`, { method: 'DELETE' });
 
+  // SaaS Hoteles
+  getHotelesSaas = () => this.request<any[]>('/saas/hoteles');
+  createHotelSaas = (data: any) => this.request<any>('/saas/hoteles', { method: 'POST', body: data });
+
   registrarHotelFull = (data: any) => this.request<any>('/saas/registrar-hotel', { method: 'POST', body: data });
   asignarHotelACuenta = (data: { cuenta_id: string, hotel_id: string }) => 
     this.request<any>('/saas/asignar-hotel', { method: 'POST', body: data });
 
-// SaaS - métodos públicos
-request = async <T>(endpoint: string, method: string = 'GET', body?: any): Promise<T> => {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const token = this.getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const hotelId = this.getHotelId();
-  if (hotelId) headers['x-hotel-id'] = hotelId;
-  
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Error de conexión' }));
-    throw new Error(error.error || 'Error en la solicitud');
-  }
-  return response.json();
-};
-
-  
   // Usuarios
   getUsuarios = (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return this.request<any[]>(`/usuarios${query}`);
   };
-  
   getUsuario = (id: string) => this.request<any>(`/usuarios/${id}`);
   createUsuario = (data: any) => this.request<any>('/usuarios', { method: 'POST', body: data });
   updateUsuario = (id: string, data: any) => this.request<any>(`/usuarios/${id}`, { method: 'PUT', body: data });
