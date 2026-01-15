@@ -25,6 +25,7 @@ import Turnos from "./pages/Turnos";
 import Gastos from "./pages/Gastos";
 import Compras from "./pages/Compras";
 import Historial from "./pages/Historial";
+import HistorialReservas from "./pages/HistorialReservas";
 import NotFound from "./pages/NotFound";
 import Catalogos from "./pages/Catalogos";
 import Usuarios from "./pages/Usuarios";
@@ -38,7 +39,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-    <BrowserRouter basename="/Check-In-Front">
+          <BrowserRouter basename="/Check-In-Front">
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
@@ -125,7 +126,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-<Route
+              <Route
                 path="/catalogos"
                 element={
                   <ProtectedRoute>
@@ -133,9 +134,6 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-
-
-              
               <Route
                 path="/checkin/:id"
                 element={
@@ -181,6 +179,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Historial />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/historial-reservas"
+                element={
+                  <ProtectedRoute>
+                    <HistorialReservas />
                   </ProtectedRoute>
                 }
               />
