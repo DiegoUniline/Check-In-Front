@@ -117,9 +117,13 @@ class ApiClient {
   createConceptoCargo = (data: any) => this.request<any>('/conceptos-cargo', { method: 'POST', body: data });
 
   // Entregables
-  getEntregables = () => this.request<any[]>('/entregables');
-  getEntregablesReserva = (reservaId: string) => this.request<any[]>(`/entregables/reserva/${reservaId}`);
-  asignarEntregable = (reservaId: string, data: any) => this.request<any>(`/entregables/reserva/${reservaId}`, { method: 'POST', body: data });
+// Entregables
+getEntregables = () => this.request<any[]>('/entregables');
+createEntregable = (data: any) => this.request<any>('/entregables', { method: 'POST', body: data });
+updateEntregable = (id: string, data: any) => this.request<any>(`/entregables/${id}`, { method: 'PUT', body: data });
+deleteEntregable = (id: string) => this.request<any>(`/entregables/${id}`, { method: 'DELETE' });
+getEntregablesReserva = (reservaId: string) => this.request<any[]>(`/entregables/reserva/${reservaId}`);
+asignarEntregable = (reservaId: string, data: any) => this.request<any>(`/entregables/reserva/${reservaId}`, { method: 'POST', body: data });
 devolverEntregable = (id: string, data?: any) => this.request<any>(`/entregables/devolver/${id}`, { method: 'PATCH', body: data });
 
   // Limpieza
