@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Hotel Management System - Design System
-   All colors are in HSL format for consistency with Tailwind
-*/
+/* Hotel Management System - Design System */
 
 @layer base {
   :root {
@@ -138,85 +136,176 @@
 
 @layer base {
   * {
-    @apply border-border box-border;
+    @apply border-border;
+    box-sizing: border-box;
   }
 
   html {
     overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Manrope', system-ui, sans-serif;
     overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+    min-height: 100vh;
+  }
+
+  /* Prevent horizontal scroll on all containers */
+  #root {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
   
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   
   ::-webkit-scrollbar-track {
-    @apply bg-muted/50;
+    @apply bg-transparent;
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full;
+    @apply bg-muted-foreground/20 rounded-full;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    @apply bg-muted-foreground/40;
   }
 }
 
 @layer components {
-  /* Main content container */
+  /* Main layout */
+  .main-layout {
+    @apply flex min-h-screen w-full max-w-full overflow-hidden;
+  }
+
+  /* Main content area */
   .main-content {
-    @apply w-full max-w-full overflow-x-hidden;
-  }
-
-  /* Table responsive container */
-  .table-container {
-    @apply w-full overflow-x-auto rounded-lg;
-  }
-
-  .table-container table {
-    @apply min-w-[800px] w-full;
-  }
-
-  /* Stats cards grid */
-  .stats-grid {
-    @apply grid gap-4;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  }
-
-  /* Filters responsive */
-  .filters-container {
-    @apply flex flex-wrap gap-3 w-full;
-  }
-
-  .filters-container > * {
-    @apply min-w-0 flex-1;
-    min-width: 120px;
-    max-width: 200px;
+    @apply flex-1 w-full max-w-full overflow-x-hidden;
   }
 
   /* Page container */
   .page-container {
-    @apply w-full max-w-full p-4 md:p-6 space-y-6 overflow-hidden;
+    @apply w-full max-w-full p-3 md:p-4 lg:p-6 space-y-4 md:space-y-6 overflow-hidden;
+  }
+
+  /* Stats cards grid - auto responsive */
+  .stats-grid {
+    @apply grid gap-3 md:gap-4;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    .stats-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .stats-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+
+  /* Table responsive container */
+  .table-container {
+    @apply w-full overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0;
+  }
+
+  .table-container table {
+    @apply w-full;
+    min-width: 700px;
+  }
+
+  /* Compact table for small screens */
+  @media (max-width: 768px) {
+    .table-container table {
+      @apply text-sm;
+    }
+    
+    .table-container th,
+    .table-container td {
+      @apply px-2 py-2;
+    }
+  }
+
+  /* Filters container */
+  .filters-grid {
+    @apply grid gap-3;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 640px) {
+    .filters-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .filters-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .filters-grid {
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+    }
   }
 
   /* Card responsive */
   .card-responsive {
     @apply w-full overflow-hidden;
   }
+
+  /* Modal/Dialog responsive */
+  .dialog-responsive {
+    @apply w-full max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto;
+  }
+
+  /* Form grid */
+  .form-grid {
+    @apply grid gap-4;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 640px) {
+    .form-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Buttons group responsive */
+  .btn-group {
+    @apply flex flex-wrap gap-2;
+  }
+
+  /* Badge compact on mobile */
+  @media (max-width: 640px) {
+    .badge-responsive {
+      @apply text-xs px-1.5 py-0.5;
+    }
+  }
 }
 
 @layer utilities {
+  /* Prevent any overflow */
+  .no-overflow {
+    @apply overflow-hidden;
+    max-width: 100%;
+  }
+
   /* Status indicator dots */
   .status-dot {
-    @apply w-2.5 h-2.5 rounded-full;
+    @apply w-2.5 h-2.5 rounded-full shrink-0;
   }
   
   .status-dot-available {
@@ -239,14 +328,117 @@
     background-color: hsl(var(--status-reserved));
   }
 
-  /* Prevent overflow */
-  .no-overflow {
-    @apply overflow-hidden max-w-full;
+  /* Text truncate utilities */
+  .truncate-sm {
+    @apply truncate;
+    max-width: 100px;
   }
 
-  /* Text truncate */
-  .truncate-cell {
-    @apply truncate max-w-[150px];
+  .truncate-md {
+    @apply truncate;
+    max-width: 150px;
+  }
+
+  .truncate-lg {
+    @apply truncate;
+    max-width: 200px;
+  }
+
+  /* Hide on specific breakpoints */
+  .hide-mobile {
+    @apply hidden sm:block;
+  }
+
+  .hide-tablet {
+    @apply hidden lg:block;
+  }
+
+  /* Show only on specific breakpoints */
+  .show-mobile-only {
+    @apply block sm:hidden;
+  }
+
+  /* Safe area padding for mobile */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Full width on mobile, auto on desktop */
+  .w-full-mobile {
+    @apply w-full sm:w-auto;
+  }
+
+  /* Responsive text sizes */
+  .text-responsive-xl {
+    @apply text-lg md:text-xl;
+  }
+
+  .text-responsive-2xl {
+    @apply text-xl md:text-2xl;
+  }
+
+  /* Grid responsive gaps */
+  .gap-responsive {
+    @apply gap-3 md:gap-4 lg:gap-6;
+  }
+
+  /* Padding responsive */
+  .p-responsive {
+    @apply p-3 md:p-4 lg:p-6;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Specific component fixes */
+
+/* Dialog/Modal - prevent overflow */
+[role="dialog"] {
+  max-width: calc(100vw - 2rem);
+}
+
+/* Select dropdown - ensure visible */
+[data-radix-popper-content-wrapper] {
+  z-index: 50 !important;
+}
+
+/* Calendar popover positioning */
+[data-radix-popper-content-wrapper] > div {
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+/* Table header sticky */
+.table-sticky thead {
+  @apply sticky top-0 bg-background z-10;
+}
+
+/* Input/Select consistent height */
+input, 
+select,
+[data-slot="control"] {
+  @apply h-10;
+}
+
+/* Button minimum touch target on mobile */
+@media (max-width: 640px) {
+  button, 
+  [role="button"] {
+    min-height: 40px;
   }
 }
 
@@ -260,4 +452,21 @@
     background: white !important;
     color: black !important;
   }
+  
+  .page-container {
+    padding: 0 !important;
+  }
+}
+
+/* Fix for sidebar + content layout */
+.sidebar-layout {
+  @apply flex w-full max-w-full overflow-hidden;
+}
+
+.sidebar-layout > aside {
+  @apply shrink-0;
+}
+
+.sidebar-layout > main {
+  @apply flex-1 min-w-0 overflow-x-hidden;
 }
