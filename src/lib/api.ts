@@ -146,6 +146,9 @@ class ApiClient {
   createPago = (data: any) => this.request<any>('/pagos', { method: 'POST', body: data });
   deletePago = (id: string) => this.request<any>(`/pagos/${id}`, { method: 'DELETE' });
 
+// Mi suscripción
+getMiSuscripcion = () => this.request<any>(`/saas/mi-suscripcion/${this.getHotelId()}`);
+  
   // Cargos
   getCargosReserva = (reservaId: string) => this.request<any[]>(`/cargos/reserva/${reservaId}`);
   createCargo = (data: any) => this.request<any>('/cargos', { method: 'POST', body: data });
