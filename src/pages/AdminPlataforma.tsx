@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Calendar
+  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Calendar, User
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -18,8 +18,24 @@ export default function AdminPlataforma() {
   const [modalHotel, setModalHotel] = useState<{ open: boolean; cuenta_id: string | null }>({ open: false, cuenta_id: null });
   const [modalSuscripcion, setModalSuscripcion] = useState<{ open: boolean; hotel: any | null }>({ open: false, hotel: null });
   const [expandedCuenta, setExpandedCuenta] = useState<string | null>(null);
-  const [formCliente, setFormCliente] = useState({ razon_social: '', email_acceso: '', password: '', nombre_administrador: '', telefono: '' });
-  const [formHotel, setFormHotel] = useState({ nombre: '', ciudad: '', telefono: '' });
+  
+  const [formCliente, setFormCliente] = useState({ 
+    razon_social: '', 
+    email_acceso: '', 
+    password: '', 
+    nombre_administrador: '', 
+    telefono: '' 
+  });
+  
+  const [formHotel, setFormHotel] = useState({ 
+    nombre: '', 
+    ciudad: '', 
+    telefono: '',
+    admin_nombre: '',
+    admin_email: '',
+    admin_password: ''
+  });
+  
   const [formSuscripcion, setFormSuscripcion] = useState({ 
     plan_id: '', 
     fecha_inicio: new Date().toISOString().split('T')[0],
@@ -60,12 +76,32 @@ export default function AdminPlataforma() {
   });
 
   const crearHotel = useMutation({
-    mutationFn: (data: any) => api.createHotelSaas(data),
+    mutationFn: async (data: any) => {
+      // 1. Crear el hotel
+      const hotel = await api.createHotelSaas({
+        cuenta_id: data.cuenta_id,
+        nombre: data.nombre,
+        ciudad: data.ciudad,
+        telefono: data.telefono
+      });
+      
+      // 2. Crear el usuario admin para ese hotel
+      await api.createUsuario({
+        nombre: data.admin_nombre,
+        email: data.admin_email,
+        password: data.admin_password,
+        rol: 'admin',
+        hotel_id: hotel.id,
+        activo: true
+      });
+      
+      return hotel;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-hoteles'] });
-      toast.success("Hotel creado");
+      toast.success("Hotel y administrador creados");
       setModalHotel({ open: false, cuenta_id: null });
-      setFormHotel({ nombre: '', ciudad: '', telefono: '' });
+      setFormHotel({ nombre: '', ciudad: '', telefono: '', admin_nombre: '', admin_email: '', admin_password: '' });
     },
     onError: (e: any) => toast.error(e.message)
   });
@@ -335,26 +371,87 @@ export default function AdminPlataforma() {
       {/* Modal Nuevo Hotel */}
       {modalHotel.open && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="p-4 border-b flex justify-between items-center">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
               <h2 className="font-bold">Nuevo Hotel</h2>
               <button onClick={() => setModalHotel({ open: false, cuenta_id: null })}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
-              <div>
-                <label className="text-xs font-bold text-slate-500">Nombre *</label>
-                <Input value={formHotel.nombre} onChange={e => setFormHotel({...formHotel, nombre: e.target.value})} />
+              {/* Datos del Hotel */}
+              <div className="border-b pb-4">
+                <h3 className="text-xs font-bold text-blue-600 mb-3 flex items-center gap-2">
+                  <Hotel className="w-4 h-4" /> DATOS DEL HOTEL
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Nombre del Hotel *</label>
+                    <Input 
+                      value={formHotel.nombre} 
+                      onChange={e => setFormHotel({...formHotel, nombre: e.target.value})} 
+                      placeholder="Ej: Hotel Paradise"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Ciudad</label>
+                    <Input 
+                      value={formHotel.ciudad} 
+                      onChange={e => setFormHotel({...formHotel, ciudad: e.target.value})} 
+                      placeholder="Ej: Guadalajara"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Teléfono</label>
+                    <Input 
+                      value={formHotel.telefono} 
+                      onChange={e => setFormHotel({...formHotel, telefono: e.target.value})} 
+                      placeholder="Ej: 33 1234 5678"
+                    />
+                  </div>
+                </div>
               </div>
+
+              {/* Datos del Administrador */}
               <div>
-                <label className="text-xs font-bold text-slate-500">Ciudad</label>
-                <Input value={formHotel.ciudad} onChange={e => setFormHotel({...formHotel, ciudad: e.target.value})} />
+                <h3 className="text-xs font-bold text-green-600 mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4" /> USUARIO ADMINISTRADOR
+                </h3>
+                <p className="text-xs text-slate-400 mb-3">Este usuario podrá gestionar el hotel</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Nombre completo *</label>
+                    <Input 
+                      value={formHotel.admin_nombre} 
+                      onChange={e => setFormHotel({...formHotel, admin_nombre: e.target.value})} 
+                      placeholder="Ej: Juan Pérez"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Email de acceso *</label>
+                    <Input 
+                      type="email" 
+                      value={formHotel.admin_email} 
+                      onChange={e => setFormHotel({...formHotel, admin_email: e.target.value})} 
+                      placeholder="Ej: admin@hotel.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Contraseña *</label>
+                    <Input 
+                      type="password" 
+                      value={formHotel.admin_password} 
+                      onChange={e => setFormHotel({...formHotel, admin_password: e.target.value})} 
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-bold text-slate-500">Teléfono</label>
-                <Input value={formHotel.telefono} onChange={e => setFormHotel({...formHotel, telefono: e.target.value})} />
-              </div>
-              <Button className="w-full" onClick={() => crearHotel.mutate({ ...formHotel, cuenta_id: modalHotel.cuenta_id })} disabled={crearHotel.isPending}>
-                {crearHotel.isPending ? 'Guardando...' : 'Crear Hotel'}
+
+              <Button 
+                className="w-full" 
+                onClick={() => crearHotel.mutate({ ...formHotel, cuenta_id: modalHotel.cuenta_id })} 
+                disabled={crearHotel.isPending || !formHotel.nombre || !formHotel.admin_nombre || !formHotel.admin_email || !formHotel.admin_password}
+              >
+                {crearHotel.isPending ? 'Creando...' : 'Crear Hotel y Administrador'}
               </Button>
             </div>
           </div>
