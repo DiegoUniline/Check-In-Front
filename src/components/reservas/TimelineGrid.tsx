@@ -33,7 +33,6 @@ export function TimelineGrid({
     return Array.from({ length: daysToShow }, (_, i) => addDays(startDate, i));
   }, [startDate, daysToShow]);
 
-  // --- LÓGICA DE FILTRADO Y BÚSQUEDA (Toda tu lógica original) ---
   const getReservasForRoom = (habitacionId: string) => {
     return reservas.filter(r => 
       r.habitacion_id === habitacionId &&
@@ -77,6 +76,7 @@ export function TimelineGrid({
     const currentDateStr = format(days[dayIndex], 'yyyy-MM-dd');
     const checkinStr = reserva.fecha_checkin.substring(0, 10);
     const checkoutStr = reserva.fecha_checkout.substring(0, 10);
+
     if (currentDateStr === checkoutStr) return 'end';
     if (currentDateStr === checkinStr) return 'start';
     if (currentDateStr > checkinStr && currentDateStr < checkoutStr) return 'middle';
@@ -111,18 +111,20 @@ export function TimelineGrid({
     return 'bg-gray-400 text-white';
   };
 
-  // --- MANEJADORES DE EVENTOS ---
   const handleMouseDown = (habitacionId: string, dayIndex: number, reserva: any, position: string | null) => {
     if (reserva && position !== 'end') {
       onReservationClick(reserva);
       return;
     }
+
     const selectedDay = days[dayIndex];
     if (selectedDay < startOfDay(new Date())) return;
+
     if (!isCellAvailableForNewReservation(habitacionId, dayIndex)) {
       if (reserva) onReservationClick(reserva);
       return;
     }
+
     setDragStart({ roomId: habitacionId, dayIndex });
     setDragEnd(dayIndex);
     setIsDragging(true);
@@ -166,12 +168,12 @@ export function TimelineGrid({
 
   return (
     <div 
-      className="border rounded-lg overflow-hidden bg-card w-full max-w-full flex flex-col"
+      className="border rounded-lg overflow-hidden bg-card flex flex-col w-full"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <ScrollArea className="w-full whitespace-nowrap">
-        <div className="inline-block min-w-full" ref={gridRef}>
+      <ScrollArea className="w-full">
+        <div className="min-w-max" ref={gridRef}>
           {/* Header */}
           <div className="flex border-b bg-muted/30 sticky top-0 z-20">
             <div 
@@ -227,7 +229,6 @@ export function TimelineGrid({
                 const reserva = getReservationForCell(habitacion.id, dayIndex);
                 const position = reserva ? getReservationPosition(reserva, dayIndex) : null;
                 const isSelected = isDragSelected(habitacion.id, dayIndex);
-
                 return (
                   <TooltipProvider key={dayIndex}>
                     <Tooltip>
@@ -321,8 +322,8 @@ export function TimelineGrid({
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
       
-      {/* Footer / Leyenda completa */}
-      <div className="p-2 bg-muted/30 border-t flex items-center justify-between text-xs text-muted-foreground">
+      {/* Footer */}
+      <div className="p-2 bg-muted/30 border-t flex items-center justify-between text-xs text-muted-foreground flex-shrink-0">
         <div className="flex gap-4">
           <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-orange-500"></div> Ocupada</span>
           <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500"></div> Confirmada</span>
