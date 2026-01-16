@@ -20,7 +20,11 @@ export default function AdminPlataforma() {
   const [expandedCuenta, setExpandedCuenta] = useState<string | null>(null);
   const [formCliente, setFormCliente] = useState({ razon_social: '', email_acceso: '', password: '', nombre_administrador: '', telefono: '' });
   const [formHotel, setFormHotel] = useState({ nombre: '', ciudad: '', telefono: '' });
-  const [formSuscripcion, setFormSuscripcion] = useState({ plan_id: '', dias: '30' });
+  const [formSuscripcion, setFormSuscripcion] = useState({ 
+    plan_id: '', 
+    fecha_inicio: new Date().toISOString().split('T')[0],
+    fecha_fin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
 
   // --- QUERIES ---
   const { data: cuentas = [], isLoading: loadingCuentas } = useQuery({ 
@@ -72,7 +76,11 @@ export default function AdminPlataforma() {
       queryClient.invalidateQueries({ queryKey: ['saas-suscripciones'] });
       toast.success("Suscripción creada");
       setModalSuscripcion({ open: false, hotel: null });
-      setFormSuscripcion({ plan_id: '', dias: '30' });
+      setFormSuscripcion({ 
+        plan_id: '', 
+        fecha_inicio: new Date().toISOString().split('T')[0],
+        fecha_fin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      });
     },
     onError: (e: any) => toast.error(e.message)
   });
@@ -113,10 +121,8 @@ export default function AdminPlataforma() {
   }, [cuentas, busqueda]);
 
   const getHotelesCuenta = (cuenta_id: string) => hoteles.filter((h: any) => h.cuenta_id === cuenta_id);
-  
   const getSuscripcionHotel = (hotel_id: string) => suscripciones.find((s: any) => s.hotel_id === hotel_id);
 
-  // --- COMPONENTE FILA CLIENTE ---
   const RenderFilaCliente = ({ cliente }: { cliente: any }) => {
     const isExpanded = expandedCuenta === cliente.id;
     const hotelesCliente = getHotelesCuenta(cliente.id);
@@ -182,13 +188,17 @@ export default function AdminPlataforma() {
                               <span className="font-bold">{suscripcion.plan_nombre}</span>
                             </div>
                             <div className="flex justify-between text-xs">
+                              <span className="text-slate-500">Inicio:</span>
+                              <span className="font-bold">{new Date(suscripcion.fecha_inicio).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
                               <span className="text-slate-500">Vence:</span>
                               <span className="font-bold">{new Date(suscripcion.fecha_fin).toLocaleDateString()}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                               <span className="text-slate-500">Estado:</span>
                               <span className={`font-bold ${suscripcion.dias_restantes < 5 ? 'text-red-500' : 'text-green-500'}`}>
-                                {suscripcion.dias_restantes} días
+                                {suscripcion.dias_restantes > 0 ? `${suscripcion.dias_restantes} días` : 'Vencida'}
                               </span>
                             </div>
                             <div className="flex gap-2 mt-3">
@@ -372,15 +382,20 @@ export default function AdminPlataforma() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500">Días iniciales</label>
-                <Input type="number" value={formSuscripcion.dias} onChange={e => setFormSuscripcion({...formSuscripcion, dias: e.target.value})} />
+                <label className="text-xs font-bold text-slate-500">Fecha Inicio *</label>
+                <Input type="date" value={formSuscripcion.fecha_inicio} onChange={e => setFormSuscripcion({...formSuscripcion, fecha_inicio: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500">Fecha Fin *</label>
+                <Input type="date" value={formSuscripcion.fecha_fin} onChange={e => setFormSuscripcion({...formSuscripcion, fecha_fin: e.target.value})} />
               </div>
               <Button className="w-full" disabled={crearSuscripcion.isPending || !formSuscripcion.plan_id}
                 onClick={() => crearSuscripcion.mutate({ 
                   cuenta_id: modalSuscripcion.hotel.cuenta_id,
                   hotel_id: modalSuscripcion.hotel.id, 
                   plan_id: formSuscripcion.plan_id,
-                  dias: parseInt(formSuscripcion.dias)
+                  fecha_inicio: formSuscripcion.fecha_inicio,
+                  fecha_fin: formSuscripcion.fecha_fin
                 })}>
                 {crearSuscripcion.isPending ? 'Guardando...' : 'Asignar Plan'}
               </Button>
