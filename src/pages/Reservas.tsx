@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { format, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  Calendar, ChevronLeft, ChevronRight, Plus, Search, 
-  CalendarDays, BedDouble, Users, RefreshCw 
+  ChevronLeft, ChevronRight, Plus, Search, 
+  CalendarDays, BedDouble, Users, RefreshCw, Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,11 +60,7 @@ export default function Reservas() {
       setTiposHabitacion(tiposData);
     } catch (error) {
       console.error('Error cargando datos:', error);
-      toast({ 
-        title: 'Error', 
-        description: 'No se pudieron cargar los datos', 
-        variant: 'destructive' 
-      });
+      toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -76,17 +72,14 @@ export default function Reservas() {
       return;
     }
     const dias = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 7 : 30;
-    setStartDate(prev => 
-      direccion === 'next' ? addDays(prev, dias) : subDays(prev, dias)
-    );
+    setStartDate(prev => direccion === 'next' ? addDays(prev, dias) : subDays(prev, dias));
   };
 
   const habitacionesFiltradas = habitaciones.filter(h => {
     if (filtroTipo !== 'all' && h.tipo_id !== filtroTipo) return false;
     if (busqueda) {
       const search = busqueda.toLowerCase();
-      return h.numero?.toLowerCase().includes(search) || 
-             h.tipo_nombre?.toLowerCase().includes(search);
+      return h.numero?.toLowerCase().includes(search) || h.tipo_nombre?.toLowerCase().includes(search);
     }
     return true;
   });
@@ -100,8 +93,6 @@ export default function Reservas() {
     setReservaSeleccionada(reserva);
     setModalDetalle(true);
   };
-
-  const handleSuccess = () => cargarDatos();
 
   const totalHabitaciones = habitaciones.length;
   const habitacionesOcupadas = reservas.filter(r => ['CheckIn', 'Hospedado'].includes(r.estado)).length;
@@ -117,22 +108,22 @@ export default function Reservas() {
   }).length;
 
   return (
-    <MainLayout title="Recepción" subtitle="Gestión de reservas y check-in/out">
-      <div className="flex flex-col h-[calc(100vh-100px)] gap-4">
+    <MainLayout title="Recepción" subtitle="Gestión de reservas">
+      {/* Layout principal con altura fija */}
+      <div className="h-[calc(100vh-80px)] flex flex-col gap-3 overflow-hidden">
         
-        {/* Header - Fijo */}
-        <div className="flex-shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
-              Recepción
-            </h1>
-            <p className="text-sm text-muted-foreground">Gestión de reservas</p>
+        {/* Header - NO crece */}
+        <div className="shrink-0 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            <div>
+              <h1 className="text-lg font-bold leading-tight">Recepción</h1>
+              <p className="text-xs text-muted-foreground">Gestión de reservas</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={cargarDatos} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Actualizar</span>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
             <Button size="sm" onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}>
               <Plus className="h-4 w-4 mr-1" />
@@ -141,83 +132,75 @@ export default function Reservas() {
           </div>
         </div>
 
-        {/* Stats - Fijo */}
-        <div className="flex-shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Card>
-            <CardContent className="p-3 flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <BedDouble className="h-4 w-4 text-primary" />
-              </div>
+        {/* Stats - NO crece */}
+        <div className="shrink-0 grid grid-cols-4 gap-2">
+          <Card className="p-2">
+            <div className="flex items-center gap-2">
+              <BedDouble className="h-4 w-4 text-primary" />
               <div>
-                <p className="text-lg font-bold">{habitacionesOcupadas}/{totalHabitaciones}</p>
+                <p className="text-sm font-bold">{habitacionesOcupadas}/{totalHabitaciones}</p>
                 <p className="text-[10px] text-muted-foreground">Ocupadas</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
-          <Card>
-            <CardContent className="p-3 flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <Users className="h-4 w-4 text-green-600" />
-              </div>
+          <Card className="p-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-green-600" />
               <div>
-                <p className="text-lg font-bold text-green-600">{llegadasHoy}</p>
-                <p className="text-[10px] text-muted-foreground">Llegadas hoy</p>
+                <p className="text-sm font-bold text-green-600">{llegadasHoy}</p>
+                <p className="text-[10px] text-muted-foreground">Llegadas</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
-          <Card>
-            <CardContent className="p-3 flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                <Users className="h-4 w-4 text-orange-600" />
-              </div>
+          <Card className="p-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-orange-600" />
               <div>
-                <p className="text-lg font-bold text-orange-600">{salidasHoy}</p>
-                <p className="text-[10px] text-muted-foreground">Salidas hoy</p>
+                <p className="text-sm font-bold text-orange-600">{salidasHoy}</p>
+                <p className="text-[10px] text-muted-foreground">Salidas</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
-          <Card>
-            <CardContent className="p-3 flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-blue-600" />
-              </div>
+          <Card className="p-2">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-blue-600" />
               <div>
-                <p className="text-lg font-bold text-blue-600">
+                <p className="text-sm font-bold text-blue-600">
                   {totalHabitaciones > 0 ? Math.round((habitacionesOcupadas / totalHabitaciones) * 100) : 0}%
                 </p>
                 <p className="text-[10px] text-muted-foreground">Ocupación</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
 
-        {/* Controles del Timeline - Fijo */}
-        <Card className="flex-shrink-0">
-          <CardContent className="p-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('prev')}>
+        {/* Controles - NO crece */}
+        <Card className="shrink-0">
+          <CardContent className="p-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => navegarFecha('prev')}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-8" onClick={() => navegarFecha('today')}>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => navegarFecha('today')}>
                   Hoy
                 </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('next')}>
+                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => navegarFecha('next')}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-                <span className="text-sm font-medium capitalize hidden sm:inline">
-                  {format(startDate, "d 'de' MMMM", { locale: es })}
+                <span className="text-xs font-medium ml-1 hidden sm:inline">
+                  {format(startDate, "d MMM yyyy", { locale: es })}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex gap-0.5 bg-muted p-0.5 rounded-md">
+              <div className="flex items-center gap-2">
+                <div className="flex bg-muted p-0.5 rounded">
                   {(['Dia', 'Semana', 'Mes'] as ViewMode[]).map(mode => (
                     <Button
                       key={mode}
                       variant={viewMode === mode ? 'default' : 'ghost'}
                       size="sm"
-                      className="h-7 px-2 text-xs"
+                      className="h-6 px-2 text-xs"
                       onClick={() => setViewMode(mode)}
                     >
                       {mode}
@@ -226,7 +209,7 @@ export default function Reservas() {
                 </div>
                 
                 <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                  <SelectTrigger className="w-[90px] h-7 text-xs">
                     <SelectValue placeholder="Tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -241,7 +224,7 @@ export default function Reservas() {
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                   <Input 
                     placeholder="Buscar..." 
-                    className="pl-7 h-8 w-[100px] text-xs"
+                    className="pl-6 h-7 w-[80px] text-xs"
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                   />
@@ -251,14 +234,11 @@ export default function Reservas() {
           </CardContent>
         </Card>
 
-        {/* Timeline Grid - Flexible, ocupa el resto */}
-        <div className="flex-1 min-h-0">
+        {/* Timeline - CRECE y contiene scroll interno */}
+        <div className="flex-1 min-h-0 overflow-hidden">
           {loading ? (
             <Card className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">Cargando...</p>
-              </div>
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
             </Card>
           ) : (
             <TimelineGrid
@@ -271,21 +251,21 @@ export default function Reservas() {
             />
           )}
         </div>
-
-        {/* Modales */}
-        <NuevaReservaModal
-          open={modalNuevaReserva}
-          onOpenChange={setModalNuevaReserva}
-          preload={preloadReserva}
-          onSuccess={handleSuccess}
-        />
-        <ReservaDetalleModal
-          open={modalDetalle}
-          onOpenChange={setModalDetalle}
-          reserva={reservaSeleccionada}
-          onUpdate={handleSuccess}
-        />
       </div>
+
+      {/* Modales */}
+      <NuevaReservaModal
+        open={modalNuevaReserva}
+        onOpenChange={setModalNuevaReserva}
+        preload={preloadReserva}
+        onSuccess={cargarDatos}
+      />
+      <ReservaDetalleModal
+        open={modalDetalle}
+        onOpenChange={setModalDetalle}
+        reserva={reservaSeleccionada}
+        onUpdate={cargarDatos}
+      />
     </MainLayout>
   );
 }
