@@ -84,19 +84,16 @@ export function TimelineGrid({
 
   const getStatusColor = (reserva: any, position?: string) => {
     const estado = reserva.estado?.toLowerCase();
-    const esWalkin = reserva.origen === 'Recepcion';
-    
     if (position === 'end') {
-      if (estado === 'checkin' || estado === 'hospedado') return 'bg-orange-300 text-orange-900';
-      if (estado === 'confirmada') return esWalkin ? 'bg-amber-300 text-amber-800' : 'bg-blue-300 text-blue-800';
-      if (estado === 'pendiente') return 'bg-yellow-200 text-yellow-800';
+      if (estado === 'checkin' || estado === 'hospedado') return 'bg-orange-300';
+      if (estado === 'confirmada') return 'bg-blue-300';
+      if (estado === 'pendiente') return 'bg-yellow-200';
     }
-    
     if (estado === 'cancelada' || estado === 'noshow') return 'bg-red-400 text-white';
     if (estado === 'checkout') return 'bg-slate-400 text-white';
     if (estado === 'checkin' || estado === 'hospedado') return 'bg-orange-500 text-white';
     if (estado === 'confirmada') return 'bg-blue-500 text-white';
-    if (estado === 'pendiente') return 'bg-yellow-400 text-yellow-900';
+    if (estado === 'pendiente') return 'bg-yellow-400';
     return 'bg-gray-400 text-white';
   };
 
@@ -142,10 +139,9 @@ export function TimelineGrid({
     return dayIndex >= minIdx && dayIndex <= maxIdx;
   };
 
-  const cellWidth = daysToShow <= 7 ? 85 : daysToShow <= 14 ? 65 : 42;
-  const roomColWidth = 85;
+  const cellW = daysToShow <= 7 ? 80 : daysToShow <= 14 ? 60 : 40;
+  const roomW = 80;
   const isCompact = daysToShow > 14;
-  const tableWidth = roomColWidth + (cellWidth * daysToShow);
 
   const getReservationDays = (reserva: any) => {
     if (!reserva.fecha_checkin || !reserva.fecha_checkout) return 0;
@@ -156,131 +152,121 @@ export function TimelineGrid({
 
   return (
     <div 
-      className="border rounded-lg bg-card flex flex-col h-full overflow-hidden"
+      className="absolute inset-0 border rounded-lg bg-card flex flex-col"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
       {/* Scroll container */}
       <div ref={scrollRef} className="flex-1 overflow-auto">
-        <div style={{ width: tableWidth }}>
-          {/* Header sticky */}
-          <div className="flex sticky top-0 z-20 bg-muted border-b">
-            <div 
-              className="shrink-0 px-2 py-1.5 text-xs font-medium border-r bg-muted sticky left-0 z-30"
-              style={{ width: roomColWidth }}
-            >
-              Hab.
-            </div>
-            {days.map((day, i) => {
-              const isToday = isSameDay(day, new Date());
-              const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    "shrink-0 py-1 text-center border-r",
-                    isToday && "bg-primary/20",
-                    isWeekend && !isToday && "bg-muted/60",
-                    day < startOfDay(new Date()) && "opacity-50"
-                  )}
-                  style={{ width: cellWidth }}
-                >
-                  <div className={cn("font-medium", isToday && "text-primary", isCompact ? "text-[8px]" : "text-[10px]")}>
-                    {format(day, isCompact ? 'EEEEE' : 'EEE', { locale: es })}
-                  </div>
-                  <div className={cn(isToday && "text-primary font-bold", isCompact ? "text-[9px]" : "text-[10px]")}>
-                    {format(day, 'd', { locale: es })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Rows */}
-          {habitaciones.map((hab) => (
-            <div key={hab.id} className="flex border-b hover:bg-muted/5">
-              <div 
-                className="shrink-0 px-2 py-1 border-r bg-muted/40 sticky left-0 z-10"
-                style={{ width: roomColWidth }}
+        <table className="border-collapse" style={{ width: roomW + (cellW * daysToShow) }}>
+          <thead className="sticky top-0 z-20">
+            <tr className="bg-muted">
+              <th 
+                className="sticky left-0 z-30 bg-muted border-r border-b p-1 text-[10px] font-medium text-left"
+                style={{ width: roomW, minWidth: roomW }}
               >
-                <div className="text-xs font-medium truncate">{hab.numero}</div>
-                <div className="text-[9px] text-muted-foreground truncate">
-                  {hab.tipo_codigo || hab.tipo_nombre?.slice(0, 5)}
-                </div>
-              </div>
-              
-              {days.map((day, dayIndex) => {
-                const reserva = getReservationForCell(hab.id, dayIndex);
-                const position = reserva ? getReservationPosition(reserva, dayIndex) : null;
-                const isSelected = isDragSelected(hab.id, dayIndex);
+                Hab.
+              </th>
+              {days.map((day, i) => {
                 const isToday = isSameDay(day, new Date());
-                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                
                 return (
-                  <TooltipProvider key={dayIndex}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div
-                          className={cn(
-                            "shrink-0 border-r relative",
-                            isCompact ? "h-7" : "h-9",
-                            isToday && "bg-primary/5",
-                            isWeekend && "bg-muted/10",
-                            !reserva && !isSelected && "hover:bg-primary/10 cursor-crosshair",
-                            isSelected && "bg-primary/25",
-                            reserva && position !== 'end' && "cursor-pointer"
-                          )}
-                          style={{ width: cellWidth }}
-                          onMouseDown={() => handleMouseDown(hab.id, dayIndex, reserva, position)}
-                          onMouseEnter={() => handleMouseEnter(dayIndex)}
-                        >
-                          {reserva && position && (
-                            <div
-                              className={cn(
-                                "absolute inset-y-0.5 flex items-center font-medium overflow-hidden",
-                                getStatusColor(reserva, position),
-                                position === 'start' && "left-0.5 right-0 rounded-l pl-0.5",
-                                position === 'end' && "left-0 right-0.5 rounded-r opacity-50",
-                                position === 'middle' && "left-0 right-0",
-                                isCompact ? "text-[7px]" : "text-[9px]"
-                              )}
-                            >
-                              {position === 'start' && (
-                                <span className="truncate flex items-center gap-0.5">
-                                  {reserva.origen === 'Recepcion' && <UserPlus className="h-2 w-2 shrink-0" />}
-                                  {isCompact ? reserva.cliente_nombre?.slice(0, 3) || 'H' : reserva.cliente_nombre?.slice(0, 7) || 'Huésped'}
-                                </span>
-                              )}
-                              {position === 'end' && <span className="w-full text-center">→</span>}
-                            </div>
-                          )}
-                        </div>
-                      </TooltipTrigger>
-                      {reserva && (
-                        <TooltipContent side="top" className="p-2 text-xs z-50">
-                          <p className="font-semibold">{reserva.cliente_nombre}</p>
-                          <p>{format(new Date(reserva.fecha_checkin), "d MMM", { locale: es })} → {format(new Date(reserva.fecha_checkout), "d MMM", { locale: es })}</p>
-                          <p>{getReservationDays(reserva)}n · ${Number(reserva.total || 0).toLocaleString()}</p>
-                          <Badge className={cn("text-[9px] mt-1", getStatusColor(reserva))}>{reserva.estado}</Badge>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+                  <th
+                    key={i}
+                    className={cn(
+                      "border-r border-b p-0.5 text-center",
+                      isToday && "bg-primary/20",
+                      (day.getDay() === 0 || day.getDay() === 6) && !isToday && "bg-muted/70"
+                    )}
+                    style={{ width: cellW, minWidth: cellW }}
+                  >
+                    <div className={cn("font-medium", isToday && "text-primary", isCompact ? "text-[7px]" : "text-[9px]")}>
+                      {format(day, isCompact ? 'EEEEE' : 'EEE', { locale: es })}
+                    </div>
+                    <div className={cn(isToday && "text-primary font-bold", isCompact ? "text-[8px]" : "text-[9px]")}>
+                      {format(day, 'd')}
+                    </div>
+                  </th>
                 );
               })}
-            </div>
-          ))}
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {habitaciones.map((hab) => (
+              <tr key={hab.id} className="hover:bg-muted/10">
+                <td 
+                  className="sticky left-0 z-10 bg-muted/50 border-r border-b p-1"
+                  style={{ width: roomW, minWidth: roomW }}
+                >
+                  <div className="text-[10px] font-medium truncate">{hab.numero}</div>
+                  <div className="text-[8px] text-muted-foreground truncate">{hab.tipo_codigo || hab.tipo_nombre?.slice(0,4)}</div>
+                </td>
+                {days.map((day, dayIndex) => {
+                  const reserva = getReservationForCell(hab.id, dayIndex);
+                  const position = reserva ? getReservationPosition(reserva, dayIndex) : null;
+                  const isSelected = isDragSelected(hab.id, dayIndex);
+                  const isToday = isSameDay(day, new Date());
+                  
+                  return (
+                    <TooltipProvider key={dayIndex}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <td
+                            className={cn(
+                              "border-r border-b p-0 relative",
+                              isToday && "bg-primary/5",
+                              (day.getDay() === 0 || day.getDay() === 6) && "bg-muted/10",
+                              !reserva && !isSelected && "hover:bg-primary/10 cursor-crosshair",
+                              isSelected && "bg-primary/25",
+                              reserva && position !== 'end' && "cursor-pointer"
+                            )}
+                            style={{ width: cellW, minWidth: cellW, height: isCompact ? 28 : 34 }}
+                            onMouseDown={() => handleMouseDown(hab.id, dayIndex, reserva, position)}
+                            onMouseEnter={() => handleMouseEnter(dayIndex)}
+                          >
+                            {reserva && position && (
+                              <div
+                                className={cn(
+                                  "absolute inset-y-0.5 flex items-center text-[8px] font-medium overflow-hidden",
+                                  getStatusColor(reserva, position),
+                                  position === 'start' && "left-0.5 right-0 rounded-l pl-0.5",
+                                  position === 'end' && "left-0 right-0.5 rounded-r opacity-50",
+                                  position === 'middle' && "left-0 right-0"
+                                )}
+                              >
+                                {position === 'start' && (
+                                  <span className="truncate">{reserva.cliente_nombre?.slice(0, isCompact ? 3 : 6) || 'H'}</span>
+                                )}
+                                {position === 'end' && <span className="w-full text-center text-[7px]">→</span>}
+                              </div>
+                            )}
+                          </td>
+                        </TooltipTrigger>
+                        {reserva && (
+                          <TooltipContent side="top" className="p-2 text-xs z-50">
+                            <p className="font-semibold">{reserva.cliente_nombre}</p>
+                            <p>{format(new Date(reserva.fecha_checkin), "d MMM", { locale: es })} → {format(new Date(reserva.fecha_checkout), "d MMM", { locale: es })}</p>
+                            <p>{getReservationDays(reserva)}n · ${Number(reserva.total || 0).toLocaleString()}</p>
+                            <Badge className={cn("text-[8px] mt-1", getStatusColor(reserva))}>{reserva.estado}</Badge>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       
-      {/* Footer fijo */}
-      <div className="shrink-0 px-2 py-1 bg-muted/50 border-t flex items-center justify-between text-[9px] text-muted-foreground">
+      {/* Footer */}
+      <div className="shrink-0 px-2 py-1 bg-muted/50 border-t flex items-center justify-between text-[8px] text-muted-foreground">
         <div className="flex gap-2">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-orange-500"></span>Ocupada</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-blue-500"></span>Confirmada</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-yellow-400"></span>Pendiente</span>
+          <span className="flex items-center gap-0.5"><span className="w-2 h-2 rounded bg-orange-500"></span>Ocupada</span>
+          <span className="flex items-center gap-0.5"><span className="w-2 h-2 rounded bg-blue-500"></span>Confirmada</span>
+          <span className="flex items-center gap-0.5"><span className="w-2 h-2 rounded bg-yellow-400"></span>Pendiente</span>
         </div>
-        <span className="hidden sm:inline">Arrastra para reservar</span>
+        <span>Arrastra para reservar</span>
       </div>
     </div>
   );
