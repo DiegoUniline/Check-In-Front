@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Phone } from 'lucide-react';
+import { AlertTriangle, Phone, Lock } from 'lucide-react';
 import api from '@/lib/api';
 
 const WHATSAPP_NUMERO = '5213171035768';
@@ -24,6 +24,11 @@ export function AlertaSuscripcion() {
             setShowModal(true);
             localStorage.setItem(MODAL_KEY, today);
           }
+        }
+        
+        // Si ya venció, siempre mostrar modal
+        if (data && data.dias_restantes < 0 && data.dias_restantes > -999) {
+          setShowModal(true);
         }
       } catch (e) {
         console.error('Error cargando suscripción:', e);
@@ -51,6 +56,7 @@ export function AlertaSuscripcion() {
   if (loading || !suscripcion || suscripcion.dias_restantes === -999) return null;
   
   const dias = suscripcion.dias_restantes;
+  const vencida = dias < 0;
 
   const ModalSuscripcion = () => {
     if (!showModal || dias > 7) return null;
@@ -64,38 +70,39 @@ export function AlertaSuscripcion() {
     };
 
     const getEmoji = () => {
-      if (dias < 0) return '😟';
+      if (dias < 0) return '🔒';
       if (dias <= 1) return '⚠️';
       if (dias <= 3) return '🔔';
       return '📅';
     };
 
     const getMensaje = () => {
-      if (dias < 0) return 'Para seguir disfrutando de todas las funciones del sistema, es necesario renovar tu suscripción. Contáctanos ahora y te ayudamos en minutos.';
-      if (dias === 0) return 'Hoy es el último día de tu suscripción. Renueva ahora para no perder acceso al sistema y mantener tu operación sin interrupciones.';
-      if (dias === 1) return 'Mañana vence tu suscripción. Te recomendamos renovar hoy para asegurar la continuidad de tu servicio sin contratiempos.';
-      if (dias <= 3) return `Solo te quedan ${dias} días de suscripción. Aprovecha para renovar ahora y evita interrupciones en tu operación diaria.`;
-      return `Tu suscripción vence en ${dias} días. Te recordamos renovar con anticipación para mantener tu sistema siempre activo.`;
+      if (dias < 0) return 'El acceso al sistema está bloqueado. Para continuar usando todas las funciones, es necesario renovar tu suscripción ahora.';
+      if (dias === 0) return 'Hoy es el último día de tu suscripción. Renueva ahora para no perder acceso al sistema.';
+      if (dias === 1) return 'Mañana vence tu suscripción. Te recomendamos renovar hoy para asegurar la continuidad.';
+      if (dias <= 3) return `Solo te quedan ${dias} días. Aprovecha para renovar ahora.`;
+      return `Tu suscripción vence en ${dias} días. Renueva con anticipación.`;
     };
 
     const getColorBg = () => {
-      if (dias < 0) return 'from-red-500 to-red-700';
+      if (dias < 0) return 'from-red-600 to-red-800';
       if (dias <= 1) return 'from-orange-500 to-red-600';
       if (dias <= 3) return 'from-yellow-500 to-orange-500';
       return 'from-blue-500 to-blue-700';
     };
 
     const getDiasLabel = () => {
-      if (dias < 0) return 'Vencida';
+      if (dias < 0) return 'ACCESO BLOQUEADO';
       if (dias === 0) return 'Último día';
       if (dias === 1) return 'Vence mañana';
       return `${dias} días restantes`;
     };
 
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
           <div className={`bg-gradient-to-r ${getColorBg()} p-6 text-white text-center`}>
+            {vencida && <Lock className="w-12 h-12 mx-auto mb-2" />}
             <div className="text-5xl mb-3">{getEmoji()}</div>
             <h2 className="text-xl font-black">{getTitulo()}</h2>
             <div className="mt-3 bg-white/20 rounded-full px-4 py-1.5 inline-block">
@@ -117,16 +124,18 @@ export function AlertaSuscripcion() {
                 Renovar por WhatsApp
               </button>
               
-              <button
-                onClick={() => setShowModal(false)}
-                className="w-full text-slate-500 py-2 text-sm hover:text-slate-700 transition-colors"
-              >
-                Recordarme después
-              </button>
+              {!vencida && (
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-full text-slate-500 py-2 text-sm hover:text-slate-700 transition-colors"
+                >
+                  Recordarme después
+                </button>
+              )}
             </div>
             
             <p className="text-center text-xs text-slate-400 mt-4">
-              Soporte disponible Lun-Sab 9am-7pm
+              Soporte: {WHATSAPP_NUMERO} | Lun-Sab 9am-7pm
             </p>
           </div>
         </div>
@@ -140,9 +149,9 @@ export function AlertaSuscripcion() {
     return (
       <div className={`${dias < 0 ? 'bg-red-600' : 'bg-orange-500'} text-white px-4 py-3 flex items-center justify-between gap-4`}>
         <div className="flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 animate-pulse" />
+          {dias < 0 ? <Lock className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5 animate-pulse" />}
           <span className="font-bold text-sm">
-            {dias < 0 ? '⚠️ Tu suscripción ha vencido - Renueva para continuar' : '⚠️ ¡Tu suscripción vence HOY!'}
+            {dias < 0 ? '🔒 Acceso bloqueado - Suscripción vencida' : '⚠️ ¡Tu suscripción vence HOY!'}
           </span>
         </div>
         <button
