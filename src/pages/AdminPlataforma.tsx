@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone
+  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone, UserPlus
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -16,6 +16,7 @@ export default function AdminPlataforma() {
   const [busqueda, setBusqueda] = useState('');
   const [modalCliente, setModalCliente] = useState(false);
   const [modalEditarCliente, setModalEditarCliente] = useState<{ open: boolean; cliente: any | null }>({ open: false, cliente: null });
+  const [modalCrearUsuario, setModalCrearUsuario] = useState<{ open: boolean; cliente: any | null }>({ open: false, cliente: null });
   const [modalHotel, setModalHotel] = useState<{ open: boolean; cuenta_id: string | null }>({ open: false, cuenta_id: null });
   const [modalSuscripcion, setModalSuscripcion] = useState<{ open: boolean; hotel: any | null }>({ open: false, hotel: null });
   const [expandedCuenta, setExpandedCuenta] = useState<string | null>(null);
@@ -35,6 +36,12 @@ export default function AdminPlataforma() {
     telefono: '',
     password: '',
     activo: true
+  });
+
+  const [formCrearUsuario, setFormCrearUsuario] = useState({
+    nombre: '',
+    email: '',
+    password: ''
   });
   
   const [formHotel, setFormHotel] = useState({ 
@@ -99,6 +106,28 @@ export default function AdminPlataforma() {
       toast.success("Cliente y usuario administrador creados");
       setModalCliente(false);
       setFormCliente({ razon_social: '', nombre_administrador: '', email_acceso: '', telefono: '', password: '' });
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  // Crear usuario para cuenta existente
+  const crearUsuarioCuenta = useMutation({
+    mutationFn: async (data: { cuenta_id: string; nombre: string; email: string; password: string }) => {
+      return await api.createUsuario({
+        nombre: data.nombre,
+        email: data.email,
+        password: data.password,
+        rol: 'admin',
+        cuenta_id: data.cuenta_id,
+        hotel_id: null,
+        activo: true
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-cuentas'] });
+      toast.success("Usuario administrador creado correctamente");
+      setModalCrearUsuario({ open: false, cliente: null });
+      setFormCrearUsuario({ nombre: '', email: '', password: '' });
     },
     onError: (e: any) => toast.error(e.message)
   });
@@ -198,6 +227,15 @@ export default function AdminPlataforma() {
     setModalEditarCliente({ open: true, cliente });
   };
 
+  const abrirCrearUsuario = (cliente: any) => {
+    setFormCrearUsuario({
+      nombre: cliente.nombre_administrador || '',
+      email: cliente.email_acceso || '',
+      password: ''
+    });
+    setModalCrearUsuario({ open: true, cliente });
+  };
+
   const RenderFilaCliente = ({ cliente }: { cliente: any }) => {
     const isExpanded = expandedCuenta === cliente.id;
     const hotelesCliente = getHotelesCuenta(cliente.id);
@@ -239,11 +277,15 @@ export default function AdminPlataforma() {
           </td>
           <td className="p-4 text-right">
             <div className="flex justify-end gap-1">
-              <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-600"
+              <Button variant="ghost" size="sm" className="text-green-500 hover:text-green-700" title="Crear Usuario Admin"
+                onClick={(e) => { e.stopPropagation(); abrirCrearUsuario(cliente); }}>
+                <UserPlus className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-600" title="Editar"
                 onClick={(e) => { e.stopPropagation(); abrirEditarCliente(cliente); }}>
                 <Edit className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600"
+              <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600" title="Eliminar"
                 onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar cliente y todos sus datos?')) eliminarCliente.mutate(cliente.id); }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -470,6 +512,64 @@ export default function AdminPlataforma() {
         </div>
       )}
 
+      {/* Modal Crear Usuario para Cuenta Existente */}
+      {modalCrearUsuario.open && modalCrearUsuario.cliente && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="font-bold">Crear Usuario Admin</h2>
+              <button onClick={() => setModalCrearUsuario({ open: false, cliente: null })}><X size={20} /></button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-xs text-blue-600 font-bold">Cuenta: {modalCrearUsuario.cliente.razon_social}</p>
+                <p className="text-xs text-slate-500">Este usuario podrá entrar al sistema y gestionar esta cuenta</p>
+              </div>
+              
+              <div>
+                <label className="text-xs font-bold text-slate-500">Nombre completo *</label>
+                <Input 
+                  value={formCrearUsuario.nombre} 
+                  onChange={e => setFormCrearUsuario({...formCrearUsuario, nombre: e.target.value})} 
+                  placeholder="Ej: Juan Pérez"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500">Email de acceso *</label>
+                <Input 
+                  type="email" 
+                  value={formCrearUsuario.email} 
+                  onChange={e => setFormCrearUsuario({...formCrearUsuario, email: e.target.value})} 
+                  placeholder="Ej: admin@empresa.com"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500">Contraseña *</label>
+                <Input 
+                  type="password" 
+                  value={formCrearUsuario.password} 
+                  onChange={e => setFormCrearUsuario({...formCrearUsuario, password: e.target.value})} 
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+
+              <Button 
+                className="w-full" 
+                onClick={() => crearUsuarioCuenta.mutate({ 
+                  cuenta_id: modalCrearUsuario.cliente.id,
+                  nombre: formCrearUsuario.nombre,
+                  email: formCrearUsuario.email,
+                  password: formCrearUsuario.password
+                })} 
+                disabled={crearUsuarioCuenta.isPending || !formCrearUsuario.nombre || !formCrearUsuario.email || !formCrearUsuario.password}
+              >
+                {crearUsuarioCuenta.isPending ? 'Creando...' : 'Crear Usuario'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Editar Cliente */}
       {modalEditarCliente.open && modalEditarCliente.cliente && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -506,15 +606,6 @@ export default function AdminPlataforma() {
                 <Input 
                   value={formEditarCliente.telefono} 
                   onChange={e => setFormEditarCliente({...formEditarCliente, telefono: e.target.value})} 
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-500">Nueva Contraseña (dejar vacío para no cambiar)</label>
-                <Input 
-                  type="password" 
-                  value={formEditarCliente.password} 
-                  onChange={e => setFormEditarCliente({...formEditarCliente, password: e.target.value})} 
-                  placeholder="••••••••"
                 />
               </div>
               <div className="flex items-center gap-2">
