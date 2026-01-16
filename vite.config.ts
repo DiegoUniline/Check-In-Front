@@ -1,10 +1,7 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
+// vite.config.ts - Para dominio custom usa:
 
 export default defineConfig(({ mode }) => ({
-  base: "/Check-In-Front/",
+  base: '/',  // <- DOMINIO CUSTOM = '/'
   server: {
     host: "::",
     port: 8080,
