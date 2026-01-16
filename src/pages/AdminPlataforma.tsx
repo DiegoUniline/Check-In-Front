@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Calendar, User
+  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -15,25 +15,32 @@ export default function AdminPlataforma() {
   
   const [busqueda, setBusqueda] = useState('');
   const [modalCliente, setModalCliente] = useState(false);
+  const [modalEditarCliente, setModalEditarCliente] = useState<{ open: boolean; cliente: any | null }>({ open: false, cliente: null });
   const [modalHotel, setModalHotel] = useState<{ open: boolean; cuenta_id: string | null }>({ open: false, cuenta_id: null });
   const [modalSuscripcion, setModalSuscripcion] = useState<{ open: boolean; hotel: any | null }>({ open: false, hotel: null });
   const [expandedCuenta, setExpandedCuenta] = useState<string | null>(null);
   
   const [formCliente, setFormCliente] = useState({ 
     razon_social: '', 
-    email_acceso: '', 
-    password: '', 
     nombre_administrador: '', 
-    telefono: '' 
+    email_acceso: '', 
+    telefono: '',
+    password: ''
+  });
+
+  const [formEditarCliente, setFormEditarCliente] = useState({ 
+    razon_social: '', 
+    nombre_administrador: '', 
+    email_acceso: '', 
+    telefono: '',
+    password: '',
+    activo: true
   });
   
   const [formHotel, setFormHotel] = useState({ 
     nombre: '', 
     ciudad: '', 
-    telefono: '',
-    admin_nombre: '',
-    admin_email: '',
-    admin_password: ''
+    telefono: ''
   });
   
   const [formSuscripcion, setFormSuscripcion] = useState({ 
@@ -65,43 +72,63 @@ export default function AdminPlataforma() {
 
   // --- MUTACIONES ---
   const crearCliente = useMutation({
-    mutationFn: (data: typeof formCliente) => api.createCuenta(data),
+    mutationFn: async (data: typeof formCliente) => {
+      // 1. Crear la cuenta
+      const cuenta = await api.createCuenta({
+        razon_social: data.razon_social,
+        nombre_administrador: data.nombre_administrador,
+        email_acceso: data.email_acceso,
+        telefono: data.telefono
+      });
+      
+      // 2. Crear el usuario admin de la cuenta (sin hotel)
+      await api.createUsuario({
+        nombre: data.nombre_administrador,
+        email: data.email_acceso,
+        password: data.password,
+        rol: 'admin',
+        cuenta_id: cuenta.id,
+        hotel_id: null,
+        activo: true
+      });
+      
+      return cuenta;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-cuentas'] });
-      toast.success("Cliente creado");
+      toast.success("Cliente y usuario administrador creados");
       setModalCliente(false);
-      setFormCliente({ razon_social: '', email_acceso: '', password: '', nombre_administrador: '', telefono: '' });
+      setFormCliente({ razon_social: '', nombre_administrador: '', email_acceso: '', telefono: '', password: '' });
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const editarCliente = useMutation({
+    mutationFn: async (data: { id: string; form: typeof formEditarCliente }) => {
+      await api.updateCuenta(data.id, {
+        razon_social: data.form.razon_social,
+        nombre_administrador: data.form.nombre_administrador,
+        email_acceso: data.form.email_acceso,
+        telefono: data.form.telefono,
+        activo: data.form.activo
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-cuentas'] });
+      toast.success("Cliente actualizado");
+      setModalEditarCliente({ open: false, cliente: null });
     },
     onError: (e: any) => toast.error(e.message)
   });
 
   const crearHotel = useMutation({
-    mutationFn: async (data: any) => {
-      // 1. Crear el hotel
-      const hotel = await api.createHotelSaas({
-        cuenta_id: data.cuenta_id,
-        nombre: data.nombre,
-        ciudad: data.ciudad,
-        telefono: data.telefono
-      });
-      
-      // 2. Crear el usuario admin para ese hotel
-      await api.createUsuario({
-        nombre: data.admin_nombre,
-        email: data.admin_email,
-        password: data.admin_password,
-        rol: 'admin',
-        hotel_id: hotel.id,
-        activo: true
-      });
-      
-      return hotel;
-    },
+    mutationFn: (data: any) => api.createHotelSaas(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saas-hoteles'] });
-      toast.success("Hotel y administrador creados");
+      toast.success("Hotel creado");
       setModalHotel({ open: false, cuenta_id: null });
-      setFormHotel({ nombre: '', ciudad: '', telefono: '', admin_nombre: '', admin_email: '', admin_password: '' });
+      setFormHotel({ nombre: '', ciudad: '', telefono: '' });
     },
     onError: (e: any) => toast.error(e.message)
   });
@@ -159,6 +186,18 @@ export default function AdminPlataforma() {
   const getHotelesCuenta = (cuenta_id: string) => hoteles.filter((h: any) => h.cuenta_id === cuenta_id);
   const getSuscripcionHotel = (hotel_id: string) => suscripciones.find((s: any) => s.hotel_id === hotel_id);
 
+  const abrirEditarCliente = (cliente: any) => {
+    setFormEditarCliente({
+      razon_social: cliente.razon_social || '',
+      nombre_administrador: cliente.nombre_administrador || '',
+      email_acceso: cliente.email_acceso || '',
+      telefono: cliente.telefono || '',
+      password: '',
+      activo: cliente.activo !== false
+    });
+    setModalEditarCliente({ open: true, cliente });
+  };
+
   const RenderFilaCliente = ({ cliente }: { cliente: any }) => {
     const isExpanded = expandedCuenta === cliente.id;
     const hotelesCliente = getHotelesCuenta(cliente.id);
@@ -170,25 +209,45 @@ export default function AdminPlataforma() {
           <td className="p-4">
             <div className="flex items-center gap-2">
               {isExpanded ? <ChevronDown size={16} className="text-blue-600" /> : <ChevronRight size={16} />}
-              <span className="font-bold">{cliente.razon_social}</span>
+              <div>
+                <span className="font-bold block">{cliente.razon_social}</span>
+                <span className="text-xs text-slate-400">{cliente.nombre_administrador}</span>
+              </div>
             </div>
           </td>
-          <td className="p-4 text-slate-600 text-xs">{cliente.email_acceso}</td>
+          <td className="p-4">
+            <div className="flex items-center gap-1 text-slate-600 text-xs">
+              <Mail className="w-3 h-3" />
+              {cliente.email_acceso}
+            </div>
+            {cliente.telefono && (
+              <div className="flex items-center gap-1 text-slate-400 text-xs mt-1">
+                <Phone className="w-3 h-3" />
+                {cliente.telefono}
+              </div>
+            )}
+          </td>
           <td className="p-4 text-center">
             <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">
               {hotelesCliente.length} Hoteles
             </span>
           </td>
           <td className="p-4 text-center">
-            <span className={`px-2 py-0.5 rounded text-xs font-bold ${cliente.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-              {cliente.activo ? 'Activo' : 'Inactivo'}
+            <span className={`px-2 py-0.5 rounded text-xs font-bold ${cliente.activo !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {cliente.activo !== false ? 'Activo' : 'Inactivo'}
             </span>
           </td>
           <td className="p-4 text-right">
-            <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600"
-              onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar cliente?')) eliminarCliente.mutate(cliente.id); }}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <div className="flex justify-end gap-1">
+              <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-600"
+                onClick={(e) => { e.stopPropagation(); abrirEditarCliente(cliente); }}>
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600"
+                onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar cliente y todos sus datos?')) eliminarCliente.mutate(cliente.id); }}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
           </td>
         </tr>
 
@@ -294,8 +353,8 @@ export default function AdminPlataforma() {
             <table className="w-full text-sm">
               <thead className="bg-slate-900 text-white text-xs">
                 <tr>
-                  <th className="text-left p-4">Razón Social</th>
-                  <th className="text-left p-4">Email</th>
+                  <th className="text-left p-4">Cliente / Administrador</th>
+                  <th className="text-left p-4">Contacto</th>
                   <th className="text-center p-4">Hoteles</th>
                   <th className="text-center p-4">Estado</th>
                   <th className="text-right p-4">Acciones</th>
@@ -334,34 +393,147 @@ export default function AdminPlataforma() {
       {/* Modal Nuevo Cliente */}
       {modalCliente && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="p-4 border-b flex justify-between items-center">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
               <h2 className="font-bold">Nuevo Cliente</h2>
               <button onClick={() => setModalCliente(false)}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
+              <div className="border-b pb-4">
+                <h3 className="text-xs font-bold text-blue-600 mb-3 flex items-center gap-2">
+                  <Package className="w-4 h-4" /> DATOS DE LA CUENTA
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Razón Social / Empresa *</label>
+                    <Input 
+                      value={formCliente.razon_social} 
+                      onChange={e => setFormCliente({...formCliente, razon_social: e.target.value})} 
+                      placeholder="Ej: Hoteles del Pacífico SA"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Teléfono</label>
+                    <Input 
+                      value={formCliente.telefono} 
+                      onChange={e => setFormCliente({...formCliente, telefono: e.target.value})} 
+                      placeholder="Ej: 33 1234 5678"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
-                <label className="text-xs font-bold text-slate-500">Razón Social *</label>
-                <Input value={formCliente.razon_social} onChange={e => setFormCliente({...formCliente, razon_social: e.target.value})} />
+                <h3 className="text-xs font-bold text-green-600 mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4" /> ADMINISTRADOR DE LA CUENTA
+                </h3>
+                <p className="text-xs text-slate-400 mb-3">Este usuario podrá gestionar hoteles y crear usuarios</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Nombre completo *</label>
+                    <Input 
+                      value={formCliente.nombre_administrador} 
+                      onChange={e => setFormCliente({...formCliente, nombre_administrador: e.target.value})} 
+                      placeholder="Ej: Juan Pérez"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Email de acceso *</label>
+                    <Input 
+                      type="email" 
+                      value={formCliente.email_acceso} 
+                      onChange={e => setFormCliente({...formCliente, email_acceso: e.target.value})} 
+                      placeholder="Ej: admin@empresa.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Contraseña *</label>
+                    <Input 
+                      type="password" 
+                      value={formCliente.password} 
+                      onChange={e => setFormCliente({...formCliente, password: e.target.value})} 
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                className="w-full" 
+                onClick={() => crearCliente.mutate(formCliente)} 
+                disabled={crearCliente.isPending || !formCliente.razon_social || !formCliente.nombre_administrador || !formCliente.email_acceso || !formCliente.password}
+              >
+                {crearCliente.isPending ? 'Creando...' : 'Crear Cliente y Administrador'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Cliente */}
+      {modalEditarCliente.open && modalEditarCliente.cliente && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+              <h2 className="font-bold">Editar Cliente</h2>
+              <button onClick={() => setModalEditarCliente({ open: false, cliente: null })}><X size={20} /></button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-500">Razón Social / Empresa *</label>
+                <Input 
+                  value={formEditarCliente.razon_social} 
+                  onChange={e => setFormEditarCliente({...formEditarCliente, razon_social: e.target.value})} 
+                />
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500">Nombre Administrador</label>
-                <Input value={formCliente.nombre_administrador} onChange={e => setFormCliente({...formCliente, nombre_administrador: e.target.value})} />
+                <label className="text-xs font-bold text-slate-500">Nombre Administrador *</label>
+                <Input 
+                  value={formEditarCliente.nombre_administrador} 
+                  onChange={e => setFormEditarCliente({...formEditarCliente, nombre_administrador: e.target.value})} 
+                />
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-500">Email *</label>
-                <Input value={formCliente.email_acceso} onChange={e => setFormCliente({...formCliente, email_acceso: e.target.value})} />
+                <Input 
+                  type="email" 
+                  value={formEditarCliente.email_acceso} 
+                  onChange={e => setFormEditarCliente({...formEditarCliente, email_acceso: e.target.value})} 
+                />
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-500">Teléfono</label>
-                <Input value={formCliente.telefono} onChange={e => setFormCliente({...formCliente, telefono: e.target.value})} />
+                <Input 
+                  value={formEditarCliente.telefono} 
+                  onChange={e => setFormEditarCliente({...formEditarCliente, telefono: e.target.value})} 
+                />
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500">Contraseña *</label>
-                <Input type="password" value={formCliente.password} onChange={e => setFormCliente({...formCliente, password: e.target.value})} />
+                <label className="text-xs font-bold text-slate-500">Nueva Contraseña (dejar vacío para no cambiar)</label>
+                <Input 
+                  type="password" 
+                  value={formEditarCliente.password} 
+                  onChange={e => setFormEditarCliente({...formEditarCliente, password: e.target.value})} 
+                  placeholder="••••••••"
+                />
               </div>
-              <Button className="w-full" onClick={() => crearCliente.mutate(formCliente)} disabled={crearCliente.isPending}>
-                {crearCliente.isPending ? 'Guardando...' : 'Crear Cliente'}
+              <div className="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="activo" 
+                  checked={formEditarCliente.activo} 
+                  onChange={e => setFormEditarCliente({...formEditarCliente, activo: e.target.checked})}
+                  className="rounded"
+                />
+                <label htmlFor="activo" className="text-sm">Cliente activo</label>
+              </div>
+
+              <Button 
+                className="w-full" 
+                onClick={() => editarCliente.mutate({ id: modalEditarCliente.cliente.id, form: formEditarCliente })} 
+                disabled={editarCliente.isPending || !formEditarCliente.razon_social || !formEditarCliente.email_acceso}
+              >
+                {editarCliente.isPending ? 'Guardando...' : 'Guardar Cambios'}
               </Button>
             </div>
           </div>
@@ -371,87 +543,42 @@ export default function AdminPlataforma() {
       {/* Modal Nuevo Hotel */}
       {modalHotel.open && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-4 border-b flex justify-between items-center">
               <h2 className="font-bold">Nuevo Hotel</h2>
               <button onClick={() => setModalHotel({ open: false, cuenta_id: null })}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
-              {/* Datos del Hotel */}
-              <div className="border-b pb-4">
-                <h3 className="text-xs font-bold text-blue-600 mb-3 flex items-center gap-2">
-                  <Hotel className="w-4 h-4" /> DATOS DEL HOTEL
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500">Nombre del Hotel *</label>
-                    <Input 
-                      value={formHotel.nombre} 
-                      onChange={e => setFormHotel({...formHotel, nombre: e.target.value})} 
-                      placeholder="Ej: Hotel Paradise"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500">Ciudad</label>
-                    <Input 
-                      value={formHotel.ciudad} 
-                      onChange={e => setFormHotel({...formHotel, ciudad: e.target.value})} 
-                      placeholder="Ej: Guadalajara"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500">Teléfono</label>
-                    <Input 
-                      value={formHotel.telefono} 
-                      onChange={e => setFormHotel({...formHotel, telefono: e.target.value})} 
-                      placeholder="Ej: 33 1234 5678"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Datos del Administrador */}
               <div>
-                <h3 className="text-xs font-bold text-green-600 mb-3 flex items-center gap-2">
-                  <User className="w-4 h-4" /> USUARIO ADMINISTRADOR
-                </h3>
-                <p className="text-xs text-slate-400 mb-3">Este usuario podrá gestionar el hotel</p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500">Nombre completo *</label>
-                    <Input 
-                      value={formHotel.admin_nombre} 
-                      onChange={e => setFormHotel({...formHotel, admin_nombre: e.target.value})} 
-                      placeholder="Ej: Juan Pérez"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500">Email de acceso *</label>
-                    <Input 
-                      type="email" 
-                      value={formHotel.admin_email} 
-                      onChange={e => setFormHotel({...formHotel, admin_email: e.target.value})} 
-                      placeholder="Ej: admin@hotel.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500">Contraseña *</label>
-                    <Input 
-                      type="password" 
-                      value={formHotel.admin_password} 
-                      onChange={e => setFormHotel({...formHotel, admin_password: e.target.value})} 
-                      placeholder="Mínimo 6 caracteres"
-                    />
-                  </div>
-                </div>
+                <label className="text-xs font-bold text-slate-500">Nombre del Hotel *</label>
+                <Input 
+                  value={formHotel.nombre} 
+                  onChange={e => setFormHotel({...formHotel, nombre: e.target.value})} 
+                  placeholder="Ej: Hotel Paradise"
+                />
               </div>
-
+              <div>
+                <label className="text-xs font-bold text-slate-500">Ciudad</label>
+                <Input 
+                  value={formHotel.ciudad} 
+                  onChange={e => setFormHotel({...formHotel, ciudad: e.target.value})} 
+                  placeholder="Ej: Guadalajara"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500">Teléfono</label>
+                <Input 
+                  value={formHotel.telefono} 
+                  onChange={e => setFormHotel({...formHotel, telefono: e.target.value})} 
+                  placeholder="Ej: 33 1234 5678"
+                />
+              </div>
               <Button 
                 className="w-full" 
                 onClick={() => crearHotel.mutate({ ...formHotel, cuenta_id: modalHotel.cuenta_id })} 
-                disabled={crearHotel.isPending || !formHotel.nombre || !formHotel.admin_nombre || !formHotel.admin_email || !formHotel.admin_password}
+                disabled={crearHotel.isPending || !formHotel.nombre}
               >
-                {crearHotel.isPending ? 'Creando...' : 'Crear Hotel y Administrador'}
+                {crearHotel.isPending ? 'Creando...' : 'Crear Hotel'}
               </Button>
             </div>
           </div>
