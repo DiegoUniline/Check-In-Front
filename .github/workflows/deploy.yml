@@ -1,5 +1,4 @@
-# .github/workflows/deploy.yml - REEMPLAZA TODO:
-
+# .github/workflows/deploy.yml
 name: Deploy
 on:
   push:
@@ -16,8 +15,10 @@ jobs:
           node-version: '20'
       - run: npm install
       - run: npm run build
-      - run: echo "www.checksin.app" > dist/CNAME
+        env:
+          VITE_API_URL: https://checkinapi-5cc3a2116a1c.herokuapp.com/api
       - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+          force_orphan: true
