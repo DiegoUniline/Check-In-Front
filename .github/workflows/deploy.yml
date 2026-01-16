@@ -1,5 +1,3 @@
-# .github/workflows/deploy.yml - ACTUALIZA ESTO:
-
 name: Deploy to GitHub Pages
 on:
   push:
@@ -9,7 +7,6 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v4
       
@@ -18,17 +15,19 @@ jobs:
         with:
           node-version: '20'
           
-      - name: Install dependencies
+      - name: Install
         run: npm install
         
-      - name: Build
-        run: npm run build
+      - name: Build with correct base
+        run: |
+          export NODE_ENV=production
+          npm run build
         env:
           VITE_API_URL: https://checkinapi-5cc3a2116a1c.herokuapp.com/api
         
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          cname: www.checksin.app  # <- AGREGA ESTA LÍNEA
+          cname: www.checksin.app
