@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Users, Search, Plus, Star, Mail, Phone, 
-  MoreVertical, Eye, Edit, History, Award
+  MoreVertical, Eye, Edit, History, Award, X
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { format } from 'date-fns';
@@ -56,11 +58,30 @@ interface Cliente {
   created_at?: string;
 }
 
+const clienteInicial = {
+  tipo_cliente: 'Persona',
+  nombre: '',
+  apellido_paterno: '',
+  apellido_materno: '',
+  email: '',
+  telefono: '',
+  tipo_documento: 'INE',
+  numero_documento: '',
+  nacionalidad: 'Mexicana',
+  direccion: '',
+  es_vip: false,
+  notas: ''
+};
+
 export default function Clientes() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState(clienteInicial);
+  const [saving, setSaving] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -78,6 +99,56 @@ export default function Clientes() {
       toast({ title: 'Error', description: 'No se pudieron cargar los clientes', variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNuevoCliente = () => {
+    setFormData(clienteInicial);
+    setIsEditing(false);
+    setIsFormOpen(true);
+  };
+
+  const handleEditarCliente = (cliente: Cliente) => {
+    setFormData({
+      tipo_cliente: cliente.tipo_cliente || 'Persona',
+      nombre: cliente.nombre || '',
+      apellido_paterno: cliente.apellido_paterno || '',
+      apellido_materno: cliente.apellido_materno || '',
+      email: cliente.email || '',
+      telefono: cliente.telefono || '',
+      tipo_documento: cliente.tipo_documento || 'INE',
+      numero_documento: cliente.numero_documento || '',
+      nacionalidad: cliente.nacionalidad || 'Mexicana',
+      direccion: '',
+      es_vip: cliente.es_vip || false,
+      notas: cliente.notas || ''
+    });
+    setSelectedCliente(cliente);
+    setIsEditing(true);
+    setIsFormOpen(true);
+  };
+
+  const handleGuardar = async () => {
+    if (!formData.nombre || !formData.apellido_paterno) {
+      toast({ title: 'Error', description: 'Nombre y apellido son requeridos', variant: 'destructive' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (isEditing && selectedCliente) {
+        await api.updateCliente(selectedCliente.id, formData);
+        toast({ title: 'Éxito', description: 'Cliente actualizado' });
+      } else {
+        await api.createCliente(formData);
+        toast({ title: 'Éxito', description: 'Cliente creado' });
+      }
+      setIsFormOpen(false);
+      cargarClientes();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -104,7 +175,6 @@ export default function Clientes() {
     setIsDetailOpen(true);
   };
 
-  // Stats
   const stats = {
     total: clientes.length,
     vip: clientes.filter(c => c.es_vip).length,
@@ -186,7 +256,7 @@ export default function Clientes() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button>
+        <Button onClick={handleNuevoCliente}>
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Cliente
         </Button>
@@ -257,7 +327,7 @@ export default function Clientes() {
                         <DropdownMenuItem onClick={() => handleViewCliente(cliente)}>
                           <Eye className="mr-2 h-4 w-4" /> Ver detalle
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditarCliente(cliente)}>
                           <Edit className="mr-2 h-4 w-4" /> Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem>
@@ -277,6 +347,7 @@ export default function Clientes() {
         Mostrando {Math.min(20, filteredClientes.length)} de {filteredClientes.length} clientes
       </p>
 
+      {/* Modal Detalle */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -358,6 +429,156 @@ export default function Clientes() {
               </div>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Crear/Editar Cliente */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
+            <DialogDescription>
+              {isEditing ? 'Modifica los datos del cliente' : 'Ingresa los datos del nuevo cliente'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Tipo de cliente */}
+            <div>
+              <Label>Tipo de Cliente</Label>
+              <Select 
+                value={formData.tipo_cliente} 
+                onValueChange={(v) => setFormData({...formData, tipo_cliente: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Persona">Persona</SelectItem>
+                  <SelectItem value="Empresa">Empresa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Nombre */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Nombre *</Label>
+                <Input 
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                  placeholder="Nombre"
+                />
+              </div>
+              <div>
+                <Label>Apellido Paterno *</Label>
+                <Input 
+                  value={formData.apellido_paterno}
+                  onChange={(e) => setFormData({...formData, apellido_paterno: e.target.value})}
+                  placeholder="Apellido paterno"
+                />
+              </div>
+              <div>
+                <Label>Apellido Materno</Label>
+                <Input 
+                  value={formData.apellido_materno}
+                  onChange={(e) => setFormData({...formData, apellido_materno: e.target.value})}
+                  placeholder="Apellido materno"
+                />
+              </div>
+            </div>
+
+            {/* Contacto */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Email</Label>
+                <Input 
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  placeholder="correo@ejemplo.com"
+                />
+              </div>
+              <div>
+                <Label>Teléfono</Label>
+                <Input 
+                  value={formData.telefono}
+                  onChange={(e) => setFormData({...formData, telefono: e.target.value})}
+                  placeholder="33 1234 5678"
+                />
+              </div>
+            </div>
+
+            {/* Documento */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Tipo Documento</Label>
+                <Select 
+                  value={formData.tipo_documento} 
+                  onValueChange={(v) => setFormData({...formData, tipo_documento: v})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="INE">INE</SelectItem>
+                    <SelectItem value="Pasaporte">Pasaporte</SelectItem>
+                    <SelectItem value="Licencia">Licencia</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Número Documento</Label>
+                <Input 
+                  value={formData.numero_documento}
+                  onChange={(e) => setFormData({...formData, numero_documento: e.target.value})}
+                  placeholder="Número de identificación"
+                />
+              </div>
+              <div>
+                <Label>Nacionalidad</Label>
+                <Input 
+                  value={formData.nacionalidad}
+                  onChange={(e) => setFormData({...formData, nacionalidad: e.target.value})}
+                  placeholder="Mexicana"
+                />
+              </div>
+            </div>
+
+            {/* VIP */}
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox"
+                id="es_vip"
+                checked={formData.es_vip}
+                onChange={(e) => setFormData({...formData, es_vip: e.target.checked})}
+                className="rounded"
+              />
+              <Label htmlFor="es_vip" className="cursor-pointer">Cliente VIP</Label>
+            </div>
+
+            {/* Notas */}
+            <div>
+              <Label>Notas / Preferencias</Label>
+              <Textarea 
+                value={formData.notas}
+                onChange={(e) => setFormData({...formData, notas: e.target.value})}
+                placeholder="Preferencias del cliente, alergias, solicitudes especiales..."
+                rows={3}
+              />
+            </div>
+
+            {/* Botones */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setIsFormOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleGuardar} disabled={saving}>
+                {saving ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Crear Cliente')}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </MainLayout>
