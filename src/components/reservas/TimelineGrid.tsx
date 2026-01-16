@@ -1,269 +1,293 @@
-import { useState, useEffect } from 'react';
-import { format, addDays, subDays } from 'date-fns';
+import { useState, useMemo, useRef } from 'react';
+import { format, addDays, isSameDay, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  ChevronLeft, ChevronRight, Plus, Search, 
-  CalendarDays, BedDouble, Users, RefreshCw, Calendar
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
-import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import { UserPlus } from 'lucide-react';
 
-type ViewMode = 'Dia' | 'Semana' | 'Mes';
+interface TimelineGridProps {
+  habitaciones: any[];
+  reservas: any[];
+  startDate: Date;
+  daysToShow: number;
+  onReservationClick: (reserva: any) => void;
+  onCreateReservation: (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => void;
+}
 
-export default function Reservas() {
-  const [loading, setLoading] = useState(true);
-  const [habitaciones, setHabitaciones] = useState<any[]>([]);
-  const [reservas, setReservas] = useState<any[]>([]);
-  const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
-  const { toast } = useToast();
+export function TimelineGrid({
+  habitaciones,
+  reservas,
+  startDate,
+  daysToShow,
+  onReservationClick,
+  onCreateReservation,
+}: TimelineGridProps) {
+  const [dragStart, setDragStart] = useState<{ roomId: string; dayIndex: number } | null>(null);
+  const [dragEnd, setDragEnd] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const [startDate, setStartDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('Semana');
-  const [filtroTipo, setFiltroTipo] = useState<string>('all');
-  const [busqueda, setBusqueda] = useState('');
+  const days = useMemo(() => {
+    return Array.from({ length: daysToShow }, (_, i) => addDays(startDate, i));
+  }, [startDate, daysToShow]);
 
-  const [modalNuevaReserva, setModalNuevaReserva] = useState(false);
-  const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
-  const [modalDetalle, setModalDetalle] = useState(false);
-  const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
+  const getReservasForRoom = (habitacionId: string) => {
+    return reservas.filter(r => 
+      r.habitacion_id === habitacionId &&
+      r.estado !== 'CheckOut' &&
+      r.estado !== 'Cancelada' &&
+      r.estado !== 'NoShow' &&
+      r.fecha_checkin && r.fecha_checkout
+    );
+  };
 
-  const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
+  const getReservationForCell = (habitacionId: string, dayIndex: number) => {
+    const roomReservas = getReservasForRoom(habitacionId);
+    const currentDay = days[dayIndex];
+    const currentDateStr = format(currentDay, 'yyyy-MM-dd');
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+    return roomReservas.find(r => {
+      if (!r.fecha_checkin || !r.fecha_checkout) return false;
+      const checkinStr = r.fecha_checkin.substring(0, 10);
+      const checkoutStr = r.fecha_checkout.substring(0, 10);
+      return currentDateStr >= checkinStr && currentDateStr <= checkoutStr;
+    });
+  };
 
-  const cargarDatos = async () => {
-    setLoading(true);
-    try {
-      const [habData, resData, tiposData] = await Promise.all([
-        api.getHabitaciones(),
-        api.getReservas(),
-        api.getTiposHabitacion()
-      ]);
-      setHabitaciones(habData);
-      setReservas(resData);
-      setTiposHabitacion(tiposData);
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-      toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
-    } finally {
-      setLoading(false);
+  const getReservationPosition = (reserva: any, dayIndex: number) => {
+    if (!reserva.fecha_checkin || !reserva.fecha_checkout) return null;
+    
+    const currentDateStr = format(days[dayIndex], 'yyyy-MM-dd');
+    const checkinStr = reserva.fecha_checkin.substring(0, 10);
+    const checkoutStr = reserva.fecha_checkout.substring(0, 10);
+    
+    const checkinDate = new Date(checkinStr + 'T00:00:00');
+    const checkoutDate = new Date(checkoutStr + 'T00:00:00');
+    const noches = Math.ceil((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (currentDateStr === checkinStr) return noches === 1 ? 'start' : 'start';
+    if (currentDateStr === checkoutStr) return 'end';
+    return 'middle';
+  };
+
+  const getStatusColor = (reserva: any) => {
+    switch (reserva.estado) {
+      case 'CheckIn': return 'bg-orange-500 hover:bg-orange-600';
+      case 'Confirmada': return 'bg-blue-500 hover:bg-blue-600';
+      case 'Pendiente': return 'bg-yellow-400 hover:bg-yellow-500';
+      case 'CheckOut': return 'bg-gray-400';
+      default: return 'bg-gray-500';
     }
   };
 
-  const navegarFecha = (direccion: 'prev' | 'next' | 'today') => {
-    if (direccion === 'today') {
-      setStartDate(new Date());
+  const handleMouseDown = (habitacionId: string, dayIndex: number) => {
+    if (getReservationForCell(habitacionId, dayIndex)) return;
+    setDragStart({ roomId: habitacionId, dayIndex });
+    setDragEnd(dayIndex);
+    setIsDragging(true);
+  };
+
+  const handleMouseEnter = (habitacionId: string, dayIndex: number) => {
+    if (!isDragging || !dragStart || dragStart.roomId !== habitacionId) return;
+    if (getReservationForCell(habitacionId, dayIndex)) return;
+    setDragEnd(dayIndex);
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging || !dragStart || dragEnd === null) {
+      setIsDragging(false);
+      setDragStart(null);
+      setDragEnd(null);
       return;
     }
-    const dias = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 7 : 30;
-    setStartDate(prev => direccion === 'next' ? addDays(prev, dias) : subDays(prev, dias));
-  };
 
-  const habitacionesFiltradas = habitaciones.filter(h => {
-    if (filtroTipo !== 'all' && h.tipo_id !== filtroTipo) return false;
-    if (busqueda) {
-      const search = busqueda.toLowerCase();
-      return h.numero?.toLowerCase().includes(search) || h.tipo_nombre?.toLowerCase().includes(search);
+    const startIdx = Math.min(dragStart.dayIndex, dragEnd);
+    const endIdx = Math.max(dragStart.dayIndex, dragEnd);
+    
+    let hasConflict = false;
+    for (let i = startIdx; i <= endIdx; i++) {
+      if (getReservationForCell(dragStart.roomId, i)) {
+        hasConflict = true;
+        break;
+      }
     }
-    return true;
-  });
 
-  const handleCreateReservation = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
-    setPreloadReserva({ habitacion, fechaCheckin, fechaCheckout });
-    setModalNuevaReserva(true);
+    if (!hasConflict) {
+      const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
+      const fechaCheckin = days[startIdx];
+      const fechaCheckout = addDays(days[endIdx], 1);
+      onCreateReservation?.(habitacion, fechaCheckin, fechaCheckout);
+    }
+
+    setIsDragging(false);
+    setDragStart(null);
+    setDragEnd(null);
   };
 
-  const handleReservationClick = (reserva: any) => {
-    setReservaSeleccionada(reserva);
-    setModalDetalle(true);
+  const isCellInDragSelection = (habitacionId: string, dayIndex: number) => {
+    if (!isDragging || !dragStart || dragEnd === null || dragStart.roomId !== habitacionId) {
+      return false;
+    }
+    const start = Math.min(dragStart.dayIndex, dragEnd);
+    const end = Math.max(dragStart.dayIndex, dragEnd);
+    return dayIndex >= start && dayIndex <= end;
   };
 
-  const totalHabitaciones = habitaciones.length;
-  const habitacionesOcupadas = reservas.filter(r => ['CheckIn', 'Hospedado'].includes(r.estado)).length;
-  const llegadasHoy = reservas.filter(r => {
-    const checkin = r.fecha_checkin?.substring(0, 10);
-    const hoy = format(new Date(), 'yyyy-MM-dd');
-    return checkin === hoy && ['Pendiente', 'Confirmada'].includes(r.estado);
-  }).length;
-  const salidasHoy = reservas.filter(r => {
-    const checkout = r.fecha_checkout?.substring(0, 10);
-    const hoy = format(new Date(), 'yyyy-MM-dd');
-    return checkout === hoy && ['CheckIn', 'Hospedado'].includes(r.estado);
-  }).length;
+  const today = startOfDay(new Date());
+  const isCompact = daysToShow > 14;
+  const cellWidth = isCompact ? 'w-10' : daysToShow > 7 ? 'w-16' : 'w-20';
+  const cellHeight = isCompact ? 'h-7' : 'h-9';
 
   return (
-    <MainLayout title="Recepción" subtitle="Gestión de reservas">
-      <div className="space-y-3">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 text-primary" />
-            <div>
-              <h1 className="text-lg font-bold leading-tight">Recepción</h1>
-              <p className="text-xs text-muted-foreground">Gestión de reservas</p>
+    <div className="absolute inset-0 flex flex-col border rounded-lg bg-card overflow-hidden">
+      {/* Header fijo */}
+      <div className="flex-shrink-0 border-b bg-muted/30 sticky top-0 z-20">
+        <div className="flex">
+          <div className="w-24 flex-shrink-0 p-2 border-r bg-muted/50 flex items-center justify-center">
+            <span className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
+              Habitación
+            </span>
+          </div>
+          <div className="flex-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border" ref={scrollRef}>
+            <div className="flex min-w-max">
+              {days.map((day, idx) => (
+                <div key={idx} className={cn("border-r text-center py-1.5 px-1 flex-shrink-0", cellWidth)}>
+                  <div className={cn("font-medium", isCompact ? "text-[7px]" : "text-[9px]")}>
+                    {format(day, 'EEE', { locale: es })}
+                  </div>
+                  <div className={cn("font-bold", isCompact ? "text-[9px]" : "text-xs", isSameDay(day, today) && "text-primary")}>
+                    {format(day, 'd')}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={cargarDatos} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button size="sm" onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}>
-              <Plus className="h-4 w-4 mr-1" />
-              Nueva Reserva
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-2">
-          <Card className="p-2">
-            <div className="flex items-center gap-2">
-              <BedDouble className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-sm font-bold">{habitacionesOcupadas}/{totalHabitaciones}</p>
-                <p className="text-[10px] text-muted-foreground">Ocupadas</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-2">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm font-bold text-green-600">{llegadasHoy}</p>
-                <p className="text-[10px] text-muted-foreground">Llegadas</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-2">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-orange-600" />
-              <div>
-                <p className="text-sm font-bold text-orange-600">{salidasHoy}</p>
-                <p className="text-[10px] text-muted-foreground">Salidas</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-2">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm font-bold text-blue-600">
-                  {totalHabitaciones > 0 ? Math.round((habitacionesOcupadas / totalHabitaciones) * 100) : 0}%
-                </p>
-                <p className="text-[10px] text-muted-foreground">Ocupación</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Controles */}
-        <Card>
-          <CardContent className="p-2">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => navegarFecha('prev')}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => navegarFecha('today')}>
-                  Hoy
-                </Button>
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => navegarFecha('next')}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <span className="text-xs font-medium ml-1 hidden sm:inline">
-                  {format(startDate, "d MMM yyyy", { locale: es })}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex bg-muted p-0.5 rounded">
-                  {(['Dia', 'Semana', 'Mes'] as ViewMode[]).map(mode => (
-                    <Button
-                      key={mode}
-                      variant={viewMode === mode ? 'default' : 'ghost'}
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setViewMode(mode)}
-                    >
-                      {mode}
-                    </Button>
-                  ))}
-                </div>
-                
-                <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                  <SelectTrigger className="w-[90px] h-7 text-xs">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {tiposHabitacion.map(tipo => (
-                      <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                  <Input 
-                    placeholder="Buscar..." 
-                    className="pl-6 h-7 w-[80px] text-xs"
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Timeline Container - CLAVE: position relative con altura fija */}
-        <div className="relative" style={{ height: 'calc(100vh - 320px)', minHeight: '300px' }}>
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center border rounded-lg bg-card">
-              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <TimelineGrid
-              habitaciones={habitacionesFiltradas}
-              reservas={reservas}
-              startDate={startDate}
-              daysToShow={daysToShow}
-              onReservationClick={handleReservationClick}
-              onCreateReservation={handleCreateReservation}
-            />
-          )}
         </div>
       </div>
 
-      {/* Modales */}
-      <NuevaReservaModal
-        open={modalNuevaReserva}
-        onOpenChange={setModalNuevaReserva}
-        preload={preloadReserva}
-        onSuccess={cargarDatos}
-      />
-      <ReservaDetalleModal
-        open={modalDetalle}
-        onOpenChange={setModalDetalle}
-        reserva={reservaSeleccionada}
-        onUpdate={cargarDatos}
-      />
-    </MainLayout>
+      {/* Grid scrollable */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
+        <div className="flex">
+          {/* Columna de habitaciones */}
+          <div className="w-24 flex-shrink-0 border-r bg-muted/30">
+            {habitaciones.map((hab) => (
+              <div 
+                key={hab.id}
+                className={cn("border-b px-2 py-1 flex flex-col justify-center", cellHeight)}
+              >
+                <div className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
+                  {hab.numero}
+                </div>
+                <div className={cn("text-muted-foreground truncate", isCompact ? "text-[8px]" : "text-[10px]")}>
+                  {hab.tipo_nombre}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Celdas de timeline */}
+          <div className="flex-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
+            <div className="min-w-max">
+              {habitaciones.map((hab) => (
+                <div key={hab.id} className="flex">
+                  {days.map((day, dayIndex) => {
+                    const reserva = getReservationForCell(hab.id, dayIndex);
+                    const position = reserva ? getReservationPosition(reserva, dayIndex) : null;
+                    const isSelecting = isCellInDragSelection(hab.id, dayIndex);
+                    const isToday = isSameDay(day, today);
+
+                    if (reserva && position) {
+                      return (
+                        <TooltipProvider key={dayIndex}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={cn(
+                                  "border-r border-b cursor-pointer transition-all flex-shrink-0",
+                                  cellWidth,
+                                  cellHeight,
+                                  getStatusColor(reserva),
+                                  position === 'start' && 'rounded-l',
+                                  position === 'end' && 'rounded-r',
+                                  isToday && "ring-2 ring-primary ring-inset"
+                                )}
+                                onClick={() => onReservationClick(reserva)}
+                              >
+                                {position === 'start' && (
+                                  <div className="h-full flex items-center px-1 overflow-hidden">
+                                    <span className={cn("text-white font-medium truncate", isCompact ? "text-[8px]" : "text-[10px]")}>
+                                      {reserva.cliente_nombre} {reserva.apellido_paterno?.charAt(0)}.
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            {position === 'start' && (
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-1">
+                                  <p className="font-semibold text-sm">{reserva.cliente_nombre} {reserva.apellido_paterno}</p>
+                                  <p className="text-xs">
+                                    {format(new Date(reserva.fecha_checkin), 'd MMM', { locale: es })} → {format(new Date(reserva.fecha_checkout), 'd MMM', { locale: es })}
+                                  </p>
+                                  <p className="text-xs">
+                                    {reserva.adultos} adultos{reserva.ninos > 0 ? ` · ${reserva.ninos} niños` : ''}
+                                  </p>
+                                  {reserva.total && (
+                                    <p className="font-medium text-primary">
+                                      ${Number(reserva.total).toLocaleString()}
+                                    </p>
+                                  )}
+                                  <div className="flex gap-2 items-center">
+                                    <Badge className={cn("mt-1", getStatusColor(reserva))}>
+                                      {reserva.estado}
+                                    </Badge>
+                                    {parseFloat(reserva.saldo_pendiente) > 0 && (
+                                      <span className="text-xs text-destructive font-bold">
+                                        Debe: ${Number(reserva.saldo_pendiente).toLocaleString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={dayIndex}
+                        className={cn(
+                          "border-r border-b cursor-crosshair hover:bg-accent/50 transition-colors flex-shrink-0",
+                          cellWidth,
+                          cellHeight,
+                          isSelecting && "bg-primary/20",
+                          isToday && "bg-blue-50 dark:bg-blue-950/20"
+                        )}
+                        onMouseDown={() => handleMouseDown(hab.id, dayIndex)}
+                        onMouseEnter={() => handleMouseEnter(hab.id, dayIndex)}
+                        onMouseUp={handleMouseUp}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer fijo */}
+      <div className="flex-shrink-0 p-2 bg-muted/30 border-t flex items-center justify-between text-[10px] text-muted-foreground">
+        <div className="flex gap-2 flex-wrap">
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-orange-500"></div> Ocupada</span>
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-blue-500"></div> Confirmada</span>
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-yellow-400"></div> Pendiente</span>
+        </div>
+        <span className="hidden sm:inline">Arrastra para crear reserva</span>
+      </div>
+    </div>
   );
 }
