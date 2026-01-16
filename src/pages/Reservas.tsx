@@ -109,11 +109,10 @@ export default function Reservas() {
 
   return (
     <MainLayout title="Recepción" subtitle="Gestión de reservas">
-      {/* Layout principal con altura fija */}
-      <div className="h-[calc(100vh-80px)] flex flex-col gap-3 overflow-hidden">
+      <div className="space-y-3">
         
-        {/* Header - NO crece */}
-        <div className="shrink-0 flex items-center justify-between gap-3 flex-wrap">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
             <div>
@@ -132,8 +131,8 @@ export default function Reservas() {
           </div>
         </div>
 
-        {/* Stats - NO crece */}
-        <div className="shrink-0 grid grid-cols-4 gap-2">
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-2">
           <Card className="p-2">
             <div className="flex items-center gap-2">
               <BedDouble className="h-4 w-4 text-primary" />
@@ -174,8 +173,8 @@ export default function Reservas() {
           </Card>
         </div>
 
-        {/* Controles - NO crece */}
-        <Card className="shrink-0">
+        {/* Controles */}
+        <Card>
           <CardContent className="p-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1">
@@ -234,12 +233,12 @@ export default function Reservas() {
           </CardContent>
         </Card>
 
-        {/* Timeline - CRECE y contiene scroll interno */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        {/* Timeline Container - CLAVE: position relative con altura fija */}
+        <div className="relative" style={{ height: 'calc(100vh - 320px)', minHeight: '300px' }}>
           {loading ? (
-            <Card className="h-full flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center border rounded-lg bg-card">
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-            </Card>
+            </div>
           ) : (
             <TimelineGrid
               habitaciones={habitacionesFiltradas}
