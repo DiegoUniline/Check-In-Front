@@ -18,7 +18,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 
