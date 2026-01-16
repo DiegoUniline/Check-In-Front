@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Check-In</title>
+    <script>
+      var path = window.location.pathname;
+      var repo = '/Check-In-Front';
+      if (path.startsWith(repo)) {
+        var route = path.slice(repo.length);
+        sessionStorage.setItem('redirect', route);
+        window.location.replace(repo + '/');
+      }
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
