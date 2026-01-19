@@ -136,50 +136,46 @@ export default function Compras() {
     setOrderItems([...orderItems, { producto_id: '', producto_nombre: '', cantidad: '', precio: '' }]);
   };
 
-  const handleCreateOrder = async () => {
-    if (!selectedProveedor) {
-      toast({ title: 'Seleccione un proveedor', variant: 'destructive' });
-      return;
-    }
+ const handleCreateOrder = async () => {
+  if (!selectedProveedor) {
+    toast({ title: 'Seleccione un proveedor', variant: 'destructive' });
+    return;
+  }
 
-    const validItems = orderItems.filter(i => i.producto_nombre && i.cantidad && i.precio);
-    if (validItems.length === 0) {
-      toast({ title: 'Agregue al menos un producto', variant: 'destructive' });
-      return;
-    }
+  const validItems = orderItems.filter(i => i.producto_nombre && i.cantidad && i.precio);
+  if (validItems.length === 0) {
+    toast({ title: 'Agregue al menos un producto', variant: 'destructive' });
+    return;
+  }
 
-    try {
-      const items = validItems.map(i => ({
-        producto_id: i.producto_id || null,
-        producto: i.producto_nombre,
-        cantidad: parseFloat(i.cantidad),
-        precio_unitario: parseFloat(i.precio),
-        total: parseFloat(i.cantidad) * parseFloat(i.precio)
-      }));
-      const subtotal = items.reduce((s, i) => s + i.total, 0);
-      const iva = subtotal * 0.16;
+  try {
+    const detalle = validItems.map(i => ({
+      producto_id: i.producto_id || null,
+      cantidad: parseFloat(i.cantidad),
+      precio_unitario: parseFloat(i.precio)
+    }));
+    const subtotal = detalle.reduce((s, i) => s + (i.cantidad * i.precio_unitario), 0);
+    const impuestos = subtotal * 0.16;
 
-      await api.createCompra({
-        proveedor_id: selectedProveedor,
-        items,
-        subtotal,
-        iva,
-        total: subtotal + iva,
-        notas: notas || null,
-        estado: 'Borrador'
-      });
+    await api.createCompra({
+      proveedor_id: selectedProveedor,
+      detalle,
+      subtotal,
+      impuestos,
+      total: subtotal + impuestos,
+      notas: notas || null
+    });
 
-      toast({ title: 'Orden creada', description: 'La orden de compra ha sido creada exitosamente' });
-      setIsNewOrderOpen(false);
-      setSelectedProveedor('');
-      setOrderItems([{ producto_id: '', producto_nombre: '', cantidad: '', precio: '' }]);
-      setNotas('');
-      cargarDatos();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  };
-
+    toast({ title: 'Orden creada', description: 'La orden de compra ha sido creada exitosamente' });
+    setIsNewOrderOpen(false);
+    setSelectedProveedor('');
+    setOrderItems([{ producto_id: '', producto_nombre: '', cantidad: '', precio: '' }]);
+    setNotas('');
+    cargarDatos();
+  } catch (error: any) {
+    toast({ title: 'Error', description: error.message, variant: 'destructive' });
+  }
+};
   const handleUpdateEstado = async (ordenId: string, nuevoEstado: string) => {
     try {
       await api.updateEstadoCompra(ordenId, nuevoEstado);
