@@ -647,7 +647,7 @@ export default function Compras() {
                       <TableCell>{item.producto_nombre || item.producto || item.nombre}</TableCell>
                           <TableCell>{item.cantidad}</TableCell>
                           <TableCell>${Number(item.precio_unitario || item.precioUnitario || 0).toLocaleString()}</TableCell>
-                          <TableCell className="text-right">${Number(item.total || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">${Number(item.subtotal || (item.cantidad * item.precio_unitario) || 0).toLocaleString()}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
