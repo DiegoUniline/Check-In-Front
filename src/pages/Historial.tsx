@@ -102,10 +102,18 @@ export default function Historial() {
       try {
         data = await api.getTransacciones(params);
       } catch {
-        // Fallback: load pagos and gastos separately
-        const [pagos, gastos] = await Promise.all([
+        /*
+          Fallback: no existe `/transacciones` en el backend actual.
+          Por eso consolidamos desde endpoints existentes.
+          Relacionado con:
+          - `check-in-back/src/routes/pagos.js` -> `GET /api/pagos`
+          - `check-in-back/src/routes/gastos.js` -> `GET /api/gastos`
+          - `check-in-back/src/routes/compras.js` -> `GET /api/compras` (para que el módulo Compras también aparezca en Historial)
+        */
+        const [pagos, gastos, compras] = await Promise.all([
           api.getPagos(params).catch(() => []),
-          api.getGastos(params).catch(() => [])
+          api.getGastos(params).catch(() => []),
+          api.getCompras(params).catch(() => [])
         ]);
 
         const pagosTransformed = (pagos || []).map((p: any) => ({
@@ -133,7 +141,21 @@ export default function Historial() {
           usuario: g.usuario_nombre || 'Admin',
         }));
 
-        data = [...pagosTransformed, ...gastosTransformed].sort((a, b) => 
+        const comprasTransformed = (compras || []).map((c: any) => ({
+          id: c.id,
+          fecha: c.fecha || c.created_at,
+          tipo: 'Egreso' as const,
+          categoria: 'Compra',
+          concepto: c.proveedor_nombre ? `Compra - ${c.proveedor_nombre}` : 'Compra',
+          referencia: c.folio_factura ? `FAC-${c.folio_factura}` : (c.numero ? `OC-${c.numero}` : undefined),
+          // Importante: para compras, el "monto" debe reflejar el total real (incluyendo impuestos si aplican).
+          monto: Number(c.total) || 0,
+          // Si el backend no guarda método de pago en compras, usamos un default para no romper filtros.
+          metodoPago: c.metodo_pago || 'Efectivo',
+          usuario: c.usuario_nombre || 'Sistema',
+        }));
+
+        data = [...pagosTransformed, ...gastosTransformed, ...comprasTransformed].sort((a, b) => 
           new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
         );
       }

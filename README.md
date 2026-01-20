@@ -1,73 +1,65 @@
-# Welcome to your Lovable project
+# Check-In Front (React + Vite)
 
-## Project info
+Frontend del sistema **Check-In**.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## URL (producción)
 
-## How can I edit this code?
+- GitHub Pages: `https://diegouniline.github.io/Check-In-Front/`
 
-There are several ways of editing your application.
+## Correr en local (sin afectar producción)
 
-**Use Lovable**
+### Requisitos
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- Node.js 18+
+- Backend corriendo (local o remoto)
 
-Changes made via Lovable will be committed automatically to this repo.
+### 1) Configurar variables de entorno (local)
 
-**Use your preferred IDE**
+Este repo trae una plantilla en `Check-In-Front/env.example`.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Pasos:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Copia `Check-In-Front/env.example` a `Check-In-Front/.env.local`
+- Ajusta `VITE_API_URL` según dónde tengas el backend:
+  - Backend local: `http://localhost:3000/api`
+  - Backend remoto (Heroku): `https://checkinapi-5cc3a2116a1c.herokuapp.com/api`
 
-Follow these steps:
+> Nota: `.env.local` NO se commitea. Esto evita tocar el entorno productivo.
+
+### 0) Nota importante sobre el login en local
+
+Si apuntas a **backend local** (`http://localhost:3000/api`) pero tu backend local está usando credenciales de una **DB remota** (por ejemplo las de Heroku), puede fallar con:
+
+- `ER_ACCESS_DENIED_ERROR` / “Access denied …”
+
+Soluciones típicas:
+
+- **Rápida (para desarrollar solo Front):** usa `VITE_API_URL=https://checkinapi-5cc3a2116a1c.herokuapp.com/api` y NO levantes el backend local.
+- **Correcta (para no tocar datos de producción):** levanta el backend local con una **DB local**, creando el schema desde `check-in-back/database/schema.sql` y configurando `check-in-back/.env` con tus credenciales locales.
+
+### 2) Instalar dependencias y levantar el Front
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+cd Check-In-Front
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Publicar cambios a GitHub Pages
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+El Front se publica desde este repositorio. Flujo recomendado:
 
-**Use GitHub Codespaces**
+- Haces cambios en local
+- Commit + push a tu rama principal (por ejemplo `main`)
+- GitHub Pages se actualiza según la configuración del repo (branch/folder o Actions)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Si actualmente no se actualiza automáticamente con un push, hay que agregar un workflow de GitHub Actions para construir `Check-In-Front` y desplegarlo en Pages (te lo puedo dejar listo, pero primero te pido confirmación porque impacta deploy/producción).
 
-## What technologies are used for this project?
+## Tecnologías
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- React 18 + TypeScript
+- Vite (plugin `react-swc`)
+- TailwindCSS + shadcn/ui (Radix UI)
+- React Router
+- TanStack Query
+- Zod + React Hook Form

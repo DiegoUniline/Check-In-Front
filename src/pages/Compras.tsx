@@ -110,14 +110,20 @@ export default function Compras() {
 
   const getEstadoColor = (estado: string) => {
     const colors: Record<string, string> = {
+      /*
+        Importante: `Badge` por defecto trae `text-primary-foreground` (blanco).
+        Si un estado no define explícitamente `text-*`, puede quedar ilegible en modo día.
+        Relacionado con `Check-In-Front/src/components/ui/badge.tsx`.
+      */
       'Borrador': 'bg-muted text-muted-foreground',
-      'Enviada': 'bg-info',
-      'Confirmada': 'bg-primary',
+      'Pendiente': 'bg-warning text-warning-foreground',
+      'Enviada': 'bg-info text-info-foreground',
+      'Confirmada': 'bg-primary text-primary-foreground',
       'EnTransito': 'bg-warning text-warning-foreground',
-      'Recibida': 'bg-success',
-      'Cancelada': 'bg-destructive',
+      'Recibida': 'bg-success text-success-foreground',
+      'Cancelada': 'bg-destructive text-destructive-foreground',
     };
-    return colors[estado] || 'bg-muted';
+    return colors[estado] || 'bg-muted text-muted-foreground';
   };
 
   const getEstadoIcon = (estado: string) => {
@@ -195,6 +201,38 @@ export default function Compras() {
     }
   };
 
+  const handleCrearProveedor = async () => {
+    /*
+      Crear proveedor desde Compras (modal).
+      Relacionado con backend `check-in-back/src/routes/proveedores.js` (POST `/api/proveedores`).
+      Nota: el backend normaliza opcionales a null, pero aquí enviamos strings vacíos como null para mantener DB limpia.
+    */
+    const nombre = (newProveedor.nombre || '').trim();
+    if (!nombre) {
+      toast({ title: 'Nombre requerido', description: 'Ingrese el nombre del proveedor', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const payload = {
+        nombre,
+        rfc: newProveedor.rfc?.trim() || null,
+        contacto: newProveedor.contacto?.trim() || null,
+        telefono: newProveedor.telefono?.trim() || null,
+        email: newProveedor.email?.trim() || null,
+      };
+
+      const creado = await api.createProveedor(payload);
+      setProveedores(prev => [...prev, creado].sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''))));
+      toast({ title: 'Proveedor creado', description: nombre });
+      setIsNewProveedorOpen(false);
+      setNewProveedor({ nombre: '', rfc: '', contacto: '', telefono: '', email: '' });
+      // No forzamos recarga total para mantener UX rápida; igual queda consistente con el estado local.
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout title="Órdenes de Compra" subtitle="Cargando...">
@@ -211,70 +249,86 @@ export default function Compras() {
       subtitle="Gestión de compras a proveedores"
     >
       <Tabs defaultValue="ordenes">
-        <TabsList className="mb-6">
-          <TabsTrigger value="ordenes">Órdenes de Compra</TabsTrigger>
-          <TabsTrigger value="proveedores">Proveedores</TabsTrigger>
-        </TabsList>
+        {/*
+          Tabs responsivas: evitamos overflow horizontal global (en este caso son solo 2 pestañas).
+          Relacionado con `Check-In-Front/src/index.css` que fuerza `overflow-x: hidden` y puede "cortar" elementos que desbordan.
+          Relacionado con `Check-In-Front/src/pages/Compras.tsx` (vista principal de Compras).
+        */}
+        <div className="w-full pb-2 mb-4">
+          <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-max">
+            <TabsTrigger value="ordenes">Órdenes de Compra</TabsTrigger>
+            <TabsTrigger value="proveedores">Proveedores</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="ordenes">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {/*
+            En tablets (ej. iPad ~820px) 4 columnas recortan el contenido.
+            Usamos 2 columnas hasta `lg` para evitar cortes.
+          */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <ShoppingBag className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-2xl font-bold">{ordenes.length}</p>
-                    <p className="text-sm text-muted-foreground">Total Órdenes</p>
+                    <p className="text-sm text-muted-foreground truncate">Total Órdenes</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-warning/10">
                     <Clock className="h-5 w-5 text-warning" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-2xl font-bold">{ordenesActivas}</p>
-                    <p className="text-sm text-muted-foreground">En Proceso</p>
+                    <p className="text-sm text-muted-foreground truncate">En Proceso</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-info/10">
                     <Truck className="h-5 w-5 text-info" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-2xl font-bold">{ordenes.filter(o => o.estado === 'EnTransito').length}</p>
-                    <p className="text-sm text-muted-foreground">En Tránsito</p>
+                    <p className="text-sm text-muted-foreground truncate">En Tránsito</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-destructive/10">
                     <DollarSign className="h-5 w-5 text-destructive" />
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold">${totalPendiente.toLocaleString()}</p>
-                    <p className="text-sm text-muted-foreground">Por Pagar</p>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold truncate">${totalPendiente.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground truncate">Por Pagar</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex flex-1 items-center gap-4">
-              <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            {/*
+              Toolbar responsiva:
+              - Móvil + Tablet (<lg): stack para que nada se corte
+              - Desktop (lg+): una fila
+            */}
+            <div className="flex flex-1 flex-col lg:flex-row lg:items-center gap-3">
+              <div className="relative flex-1 lg:max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Buscar por número o proveedor..."
@@ -283,129 +337,196 @@ export default function Compras() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Select value={filterEstado} onValueChange={setFilterEstado}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="Borrador">Borrador</SelectItem>
-                  <SelectItem value="Enviada">Enviada</SelectItem>
-                  <SelectItem value="Confirmada">Confirmada</SelectItem>
-                  <SelectItem value="EnTransito">En Tránsito</SelectItem>
-                  <SelectItem value="Recibida">Recibida</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="icon" onClick={cargarDatos}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+              {/* En móvil: Estado + Refrescar en la misma fila para ahorrar espacio */}
+              <div className="flex items-center gap-2 w-full lg:w-auto">
+                <Select value={filterEstado} onValueChange={setFilterEstado}>
+                  <SelectTrigger className="flex-1 lg:w-[160px]">
+                    <SelectValue placeholder="Estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Borrador">Borrador</SelectItem>
+                    <SelectItem value="Enviada">Enviada</SelectItem>
+                    <SelectItem value="Confirmada">Confirmada</SelectItem>
+                    <SelectItem value="EnTransito">En Tránsito</SelectItem>
+                    <SelectItem value="Recibida">Recibida</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={cargarDatos} className="shrink-0">
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <Button onClick={() => setIsNewOrderOpen(true)}>
+            <Button onClick={() => setIsNewOrderOpen(true)} className="w-full sm:w-auto justify-center">
               <Plus className="mr-2 h-4 w-4" />
               Nueva Orden
             </Button>
           </div>
 
           <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Orden</TableHead>
-                  <TableHead>Proveedor</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrdenes.map(orden => {
+            {/*
+              En móvil, una tabla con scroll se siente incómoda: mostramos cards.
+              En tablets (iPad) también preferimos cards: la tabla suele recortarse por ancho.
+              Tabla solo en `lg+` (mejor densidad y caben todas las columnas).
+            */}
+            <div className="block lg:hidden">
+              <div className="divide-y">
+                {filteredOrdenes.map((orden) => {
                   const numero = orden.numero || orden.codigo || `OC-${orden.id}`;
                   const provNombre = orden.proveedor?.nombre || orden.proveedor_nombre || '-';
-                  const provContacto = orden.proveedor?.contacto || orden.proveedor_contacto || '';
                   const fecha = orden.fecha || orden.created_at;
                   const itemsCount = orden.items?.length || orden.items_count || 0;
                   return (
-                    <TableRow key={orden.id}>
-                      <TableCell className="font-medium">{numero}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{provNombre}</p>
-                          {provContacto && <p className="text-xs text-muted-foreground">{provContacto}</p>}
+                    <div key={orden.id} className="p-4">
+                      {/*
+                        Header responsivo: `flex-wrap` para que el badge no se "corte" a la derecha.
+                        Relacionado con `Check-In-Front/src/index.css` (overflow-x hidden a nivel global).
+                      */}
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">{numero}</p>
+                          <p className="text-sm text-muted-foreground truncate">{provNombre}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p>{fecha ? format(new Date(fecha), "d MMM yyyy", { locale: es }) : '-'}</p>
-                          {orden.fecha_entrega && (
-                            <p className="text-xs text-muted-foreground">
-                              Entrega: {format(new Date(orden.fecha_entrega), "d MMM", { locale: es })}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {itemsCount} productos
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn("flex items-center gap-1 w-fit", getEstadoColor(orden.estado))}>
+                        <Badge className={cn("flex items-center gap-1 shrink-0 max-w-full", getEstadoColor(orden.estado))}>
                           {getEstadoIcon(orden.estado)}
                           {orden.estado === 'EnTransito' ? 'En Tránsito' : orden.estado}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        ${Number(orden.total || 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleVerDetalle(orden)}>
-                              <Eye className="mr-2 h-4 w-4" /> Ver detalle
-                            </DropdownMenuItem>
-                            {orden.estado === 'Borrador' && (
-                              <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Enviada')}>
-                                <Clock className="mr-2 h-4 w-4" /> Enviar orden
-                              </DropdownMenuItem>
-                            )}
-                            {orden.estado === 'Enviada' && (
-                              <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Confirmada')}>
-                                <CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar
-                              </DropdownMenuItem>
-                            )}
-                            {orden.estado === 'Confirmada' && (
-                              <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'EnTransito')}>
-                                <Truck className="mr-2 h-4 w-4" /> Marcar en tránsito
-                              </DropdownMenuItem>
-                            )}
-                            {orden.estado === 'EnTransito' && (
-                              <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Recibida')}>
-                                <Package className="mr-2 h-4 w-4" /> Marcar recibida
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem>
-                              <FileText className="mr-2 h-4 w-4" /> Generar PDF
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                      {/*
+                        En móvil: evitamos que el botón compita en una grilla 2-cols (se recortaba).
+                        Mostramos info en grilla y el CTA en fila completa.
+                      */}
+                      <div className="mt-3 space-y-3 text-sm">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Fecha</p>
+                            <p className="font-medium">{fecha ? format(new Date(fecha), "d MMM yyyy", { locale: es }) : '-'}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Total</p>
+                            <p className="font-bold">${Number(orden.total || 0).toLocaleString()}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-xs text-muted-foreground">Items</p>
+                            <p className="font-medium">{itemsCount} productos</p>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => handleVerDetalle(orden)} className="w-full justify-center">
+                          <Eye className="mr-2 h-4 w-4" /> Ver detalle
+                        </Button>
+                      </div>
+                    </div>
                   );
                 })}
                 {filteredOrdenes.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No hay órdenes de compra
-                    </TableCell>
-                  </TableRow>
+                  <div className="p-8 text-center text-muted-foreground">
+                    No hay órdenes de compra
+                  </div>
                 )}
-              </TableBody>
-            </Table>
+              </div>
+            </div>
+
+            <div className="hidden lg:block relative w-full overflow-x-auto touch-pan-x overscroll-x-contain">
+              <Table className="min-w-[900px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Orden</TableHead>
+                    <TableHead>Proveedor</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrdenes.map(orden => {
+                    const numero = orden.numero || orden.codigo || `OC-${orden.id}`;
+                    const provNombre = orden.proveedor?.nombre || orden.proveedor_nombre || '-';
+                    const provContacto = orden.proveedor?.contacto || orden.proveedor_contacto || '';
+                    const fecha = orden.fecha || orden.created_at;
+                    const itemsCount = orden.items?.length || orden.items_count || 0;
+                    return (
+                      <TableRow key={orden.id}>
+                        <TableCell className="font-medium">{numero}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{provNombre}</p>
+                            {provContacto && <p className="text-xs text-muted-foreground">{provContacto}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p>{fecha ? format(new Date(fecha), "d MMM yyyy", { locale: es }) : '-'}</p>
+                            {orden.fecha_entrega && (
+                              <p className="text-xs text-muted-foreground">
+                                Entrega: {format(new Date(orden.fecha_entrega), "d MMM", { locale: es })}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {itemsCount} productos
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={cn("flex items-center gap-1 w-fit", getEstadoColor(orden.estado))}>
+                            {getEstadoIcon(orden.estado)}
+                            {orden.estado === 'EnTransito' ? 'En Tránsito' : orden.estado}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-bold">
+                          ${Number(orden.total || 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleVerDetalle(orden)}>
+                                <Eye className="mr-2 h-4 w-4" /> Ver detalle
+                              </DropdownMenuItem>
+                              {orden.estado === 'Borrador' && (
+                                <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Enviada')}>
+                                  <Clock className="mr-2 h-4 w-4" /> Enviar orden
+                                </DropdownMenuItem>
+                              )}
+                              {orden.estado === 'Enviada' && (
+                                <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Confirmada')}>
+                                  <CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar
+                                </DropdownMenuItem>
+                              )}
+                              {orden.estado === 'Confirmada' && (
+                                <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'EnTransito')}>
+                                  <Truck className="mr-2 h-4 w-4" /> Marcar en tránsito
+                                </DropdownMenuItem>
+                              )}
+                              {orden.estado === 'EnTransito' && (
+                                <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Recibida')}>
+                                  <Package className="mr-2 h-4 w-4" /> Marcar recibida
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem>
+                                <FileText className="mr-2 h-4 w-4" /> Generar PDF
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {filteredOrdenes.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No hay órdenes de compra
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         </TabsContent>
 
@@ -415,7 +536,7 @@ export default function Compras() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar proveedor..." className="pl-9" />
             </div>
-            <Button>
+            <Button onClick={() => setIsNewProveedorOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Proveedor
             </Button>
@@ -454,7 +575,8 @@ export default function Compras() {
 
       {/* New Order Dialog */}
       <Dialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen}>
-        <DialogContent className="max-w-2xl">
+        {/* Modal responsive (móvil): ancho casi completo + scroll vertical */}
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" />
@@ -492,7 +614,7 @@ export default function Compras() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Productos</Label>
-                <Button variant="outline" size="sm" onClick={handleAddItem}>
+                <Button variant="outline" size="sm" onClick={handleAddItem} className="shrink-0">
                   <Plus className="h-4 w-4 mr-1" /> Agregar
                 </Button>
               </div>
@@ -505,8 +627,15 @@ export default function Compras() {
                   }));
 
                   return (
-                    <div key={idx} className="grid grid-cols-12 gap-2">
-                      <div className="col-span-6">
+                    /*
+                      Layout responsivo para cada renglón:
+                      - Móvil: apilado (Producto / Cantidad+Precio / eliminar)
+                      - >= sm: grilla 12 columnas (como antes, pero con anchos seguros)
+                      Relacionado con `Check-In-Front/src/pages/Compras.tsx` (Modal "Nueva Orden de Compra").
+                    */
+                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                      <div className="sm:col-span-6 min-w-0">
+                        <p className="sm:hidden text-xs text-muted-foreground mb-1">Producto</p>
                         <ComboboxCreatable
                           options={productoOptions}
                           value={item.producto_id}
@@ -535,34 +664,47 @@ export default function Compras() {
                           createLabel="Crear producto"
                         />
                       </div>
-                      <Input 
-                        placeholder="Cant." 
-                        type="number"
-                        className="col-span-2"
-                        value={item.cantidad}
-                        onChange={(e) => {
-                          const newItems = [...orderItems];
-                          newItems[idx].cantidad = e.target.value;
-                          setOrderItems(newItems);
-                        }}
-                      />
-                      <Input 
-                        placeholder="Precio" 
-                        type="number"
-                        className="col-span-3"
-                        value={item.precio}
-                        onChange={(e) => {
-                          const newItems = [...orderItems];
-                          newItems[idx].precio = e.target.value;
-                          setOrderItems(newItems);
-                        }}
-                      />
+
+                      <div className="grid grid-cols-2 gap-2 sm:contents">
+                        <div className="sm:col-span-2">
+                          <p className="sm:hidden text-xs text-muted-foreground mb-1">Cantidad</p>
+                          <Input 
+                            placeholder="Cant." 
+                            type="number"
+                            inputMode="decimal"
+                            className="w-full sm:col-span-2"
+                            value={item.cantidad}
+                            onChange={(e) => {
+                              const newItems = [...orderItems];
+                              newItems[idx].cantidad = e.target.value;
+                              setOrderItems(newItems);
+                            }}
+                          />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <p className="sm:hidden text-xs text-muted-foreground mb-1">Precio</p>
+                          <Input 
+                            placeholder="Precio" 
+                            type="number"
+                            inputMode="decimal"
+                            className="w-full sm:col-span-3"
+                            value={item.precio}
+                            onChange={(e) => {
+                              const newItems = [...orderItems];
+                              newItems[idx].precio = e.target.value;
+                              setOrderItems(newItems);
+                            }}
+                          />
+                        </div>
+                      </div>
+
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        className="col-span-1"
+                        className="sm:col-span-1 justify-self-end"
                         onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
                         disabled={orderItems.length === 1}
+                        aria-label="Eliminar producto"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -582,19 +724,23 @@ export default function Compras() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewOrderOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateOrder}>
-              Crear Orden
-            </Button>
+            {/* Footer responsivo: botones full-width en móvil */}
+            <div className="flex flex-col-reverse sm:flex-row gap-2 w-full">
+              <Button variant="outline" onClick={() => setIsNewOrderOpen(false)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateOrder} className="w-full sm:w-auto">
+                Crear Orden
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Detalle Modal */}
       <Dialog open={detalleModal.open} onOpenChange={(open) => setDetalleModal({ open, orden: open ? detalleModal.orden : null })}>
-        <DialogContent className="max-w-2xl">
+        {/* Modal responsive (móvil): ancho casi completo + scroll vertical */}
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -624,7 +770,15 @@ export default function Compras() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
+                  {/*
+                    Desglose financiero para evitar confusión "dos totales" (ej. subtotal de items vs total con impuestos).
+                    Relacionado con `check-in-back/src/routes/compras.js` (campos: subtotal, impuestos, total) y consumido por `GET /api/compras/:id`.
+                  */}
+                  <p className="text-sm text-muted-foreground">Subtotal</p>
+                  <p className="font-medium">${Number(detalleModal.orden.subtotal || 0).toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground mt-2">Impuestos</p>
+                  <p className="font-medium">${Number(detalleModal.orden.impuestos || 0).toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground mt-2">Total</p>
                   <p className="font-bold text-lg">${Number(detalleModal.orden.total || 0).toLocaleString()}</p>
                 </div>
               </div>
@@ -638,7 +792,8 @@ export default function Compras() {
                         <TableHead>Producto</TableHead>
                         <TableHead>Cantidad</TableHead>
                         <TableHead>P. Unitario</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        {/* El subtotal del renglón NO incluye impuestos (los impuestos se muestran en el encabezado del modal). */}
+                        <TableHead className="text-right">Subtotal</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -667,6 +822,80 @@ export default function Compras() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Nuevo Proveedor Dialog */}
+      <Dialog open={isNewProveedorOpen} onOpenChange={setIsNewProveedorOpen}>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Nuevo Proveedor
+            </DialogTitle>
+            <DialogDescription>
+              Registre un proveedor para usarlo en Órdenes de Compra
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nombre *</Label>
+              <Input
+                value={newProveedor.nombre}
+                onChange={(e) => setNewProveedor(prev => ({ ...prev, nombre: e.target.value }))}
+                placeholder="Ej. Alimentos del Pacífico"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>RFC</Label>
+                <Input
+                  value={newProveedor.rfc}
+                  onChange={(e) => setNewProveedor(prev => ({ ...prev, rfc: e.target.value }))}
+                  placeholder="Opcional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Contacto</Label>
+                <Input
+                  value={newProveedor.contacto}
+                  onChange={(e) => setNewProveedor(prev => ({ ...prev, contacto: e.target.value }))}
+                  placeholder="Opcional"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Teléfono</Label>
+                <Input
+                  value={newProveedor.telefono}
+                  onChange={(e) => setNewProveedor(prev => ({ ...prev, telefono: e.target.value }))}
+                  placeholder="Opcional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  value={newProveedor.email}
+                  onChange={(e) => setNewProveedor(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Opcional"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewProveedorOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCrearProveedor}>
+              <Plus className="mr-2 h-4 w-4" />
+              Crear Proveedor
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>

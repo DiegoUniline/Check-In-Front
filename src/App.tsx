@@ -32,6 +32,18 @@ import AdminPlataforma from "./pages/AdminPlataforma";
 
 const queryClient = new QueryClient();
 
+/**
+ * Qué hace:
+ * - Normaliza el `basename` del Router según el `base` de Vite.
+ * Por qué:
+ * - En desarrollo: `import.meta.env.BASE_URL` suele ser `/` (queremos basename vacío).
+ * - En producción (GitHub Pages): `import.meta.env.BASE_URL` será `/Check-In-Front/` (queremos `/Check-In-Front`).
+ * Relacionado con:
+ * - `Check-In-Front/vite.config.ts` (propiedad `base`)
+ */
+const ROUTER_BASENAME =
+  (import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "";
+
 const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   if (user?.email !== "diego.leon@uniline.mx") {
@@ -213,7 +225,7 @@ const AppRoutes = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <BrowserRouter basename="/Check-In-Front">
+      <BrowserRouter basename={ROUTER_BASENAME}>
         <AuthProvider>
           <TooltipProvider>
             <Toaster />
