@@ -631,7 +631,7 @@ export default function Compras() {
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Productos</p>
-                {detalleModal.orden.items && detalleModal.orden.items.length > 0 ? (
+               {detalleModal.orden.detalle && detalleModal.orden.detalle.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -642,9 +642,9 @@ export default function Compras() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {detalleModal.orden.items.map((item: any, idx: number) => (
+            {detalleModal.orden.detalle.map((item: any, idx: number) => (
                         <TableRow key={idx}>
-                          <TableCell>{item.producto || item.nombre}</TableCell>
+                      <TableCell>{item.producto_nombre || item.producto || item.nombre}</TableCell>
                           <TableCell>{item.cantidad}</TableCell>
                           <TableCell>${Number(item.precio_unitario || item.precioUnitario || 0).toLocaleString()}</TableCell>
                           <TableCell className="text-right">${Number(item.total || 0).toLocaleString()}</TableCell>
