@@ -77,6 +77,11 @@ export default function Gastos() {
   const [proveedores, setProveedores] = useState<any[]>([]);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; gasto: any | null }>({ open: false, gasto: null });
   const [detalleModal, setDetalleModal] = useState<{ open: boolean; gasto: any | null }>({ open: false, gasto: null });
+  const [comprobanteModal, setComprobanteModal] = useState<{ open: boolean; gasto: any | null; url?: string | null }>({
+    open: false,
+    gasto: null,
+    url: null,
+  });
   
   const [formData, setFormData] = useState({
     categoria: '',
@@ -85,6 +90,9 @@ export default function Gastos() {
     metodo_pago: 'Efectivo',
     proveedor: '',
     proveedor_id: '',
+    // `factura` se usa como "comprobante": puede ser folio o URL (PDF/imagen) para visualizarlo.
+    // Relacionado con `check-in-back/src/routes/gastos.js` y la columna `gastos.factura`.
+    factura: '',
     notas: '',
   });
 
@@ -150,6 +158,8 @@ export default function Gastos() {
         descripcion,
         metodo_pago: formData.metodo_pago,
         proveedor: formData.proveedor || null,
+        // `factura` funciona como "comprobante" (folio o URL). Si viene vacío, guardamos null.
+        factura: formData.factura?.trim() ? formData.factura.trim() : null,
         notas: formData.notas || null,
         fecha: new Date().toISOString().split('T')[0],
       });
@@ -160,7 +170,7 @@ export default function Gastos() {
       });
       
       setIsNewGastoOpen(false);
-      setFormData({ categoria: '', monto: '', descripcion: '', metodo_pago: 'Efectivo', proveedor: '', proveedor_id: '', notas: '' });
+      setFormData({ categoria: '', monto: '', descripcion: '', metodo_pago: 'Efectivo', proveedor: '', proveedor_id: '', factura: '', notas: '' });
       cargarGastos();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -185,6 +195,50 @@ export default function Gastos() {
       setDetalleModal({ open: true, gasto: detalles });
     } catch {
       setDetalleModal({ open: true, gasto });
+    }
+  };
+
+  const getComprobanteUrl = (factura?: string | null): string | null => {
+    /*
+      Convierte el campo `factura` a URL si aplica.
+      - Si es URL absoluta (http/https), la usamos tal cual.
+      - Si es un path (ej. /uploads/xxx.pdf), construimos URL basada en VITE_API_URL.
+      Si no parece URL/path, lo tratamos como folio (sin URL).
+      Relacionado con `gastos.factura`.
+    */
+    const raw = (factura || '').trim();
+    if (!raw) return null;
+
+    if (/^https?:\/\//i.test(raw)) return raw;
+
+    if (raw.startsWith('/')) {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const base = apiUrl.replace(/\/api\/?$/i, '');
+      return `${base}${raw}`;
+    }
+
+    return null;
+  };
+
+  const handleVerComprobante = async (gasto: any) => {
+    /*
+      Acción del menú "Ver comprobante".
+      - Si hay `factura` como URL/path: abre un modal con preview y enlace.
+      - Si hay `factura` como folio: muestra modal con el folio.
+      - Si no hay: toast informativo.
+    */
+    try {
+      const detalles = await api.getGasto(gasto.id).catch(() => gasto);
+      const factura = (detalles?.factura || detalles?.comprobante || '').trim();
+      if (!factura) {
+        toast({ title: 'Sin comprobante', description: 'Este gasto no tiene comprobante/factura registrada.' });
+        return;
+      }
+
+      const url = getComprobanteUrl(factura);
+      setComprobanteModal({ open: true, gasto: detalles, url });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -367,7 +421,10 @@ export default function Gastos() {
                         <DropdownMenuItem onClick={() => handleVerDetalle(gasto)}>
                           <Eye className="mr-2 h-4 w-4" /> Ver detalle
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleVerComprobante(gasto)}
+                          disabled={!String(gasto.factura || '').trim()}
+                        >
                           <FileText className="mr-2 h-4 w-4" /> Ver comprobante
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={() => setDeleteDialog({ open: true, gasto })}>
@@ -494,6 +551,18 @@ export default function Gastos() {
             </div>
 
             <div className="space-y-2">
+              <Label>Comprobante / Factura</Label>
+              <Input
+                placeholder="Folio o URL (PDF/imagen)"
+                value={formData.factura}
+                onChange={(e) => setFormData({ ...formData, factura: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Puede ser un folio (ej. F-123) o un enlace a un PDF/imagen (ej. `https://...`).
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label>Notas</Label>
               <Textarea
                 placeholder="Notas adicionales..."
@@ -565,6 +634,12 @@ export default function Gastos() {
                   <p className="font-medium">{detalleModal.gasto.proveedor}</p>
                 </div>
               )}
+              {detalleModal.gasto.factura && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Comprobante / Factura</p>
+                  <p className="font-medium break-words">{detalleModal.gasto.factura}</p>
+                </div>
+              )}
               {detalleModal.gasto.notas && (
                 <div>
                   <p className="text-sm text-muted-foreground">Notas</p>
@@ -573,6 +648,56 @@ export default function Gastos() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Comprobante Modal */}
+      <Dialog
+        open={comprobanteModal.open}
+        onOpenChange={(open) =>
+          setComprobanteModal({ open, gasto: open ? comprobanteModal.gasto : null, url: open ? comprobanteModal.url : null })
+        }
+      >
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Comprobante
+            </DialogTitle>
+            <DialogDescription>
+              {comprobanteModal.gasto?.descripcion || 'Comprobante del gasto'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Factura / Folio</p>
+              <p className="font-medium break-words">{comprobanteModal.gasto?.factura}</p>
+            </div>
+
+            {comprobanteModal.url ? (
+              <div className="space-y-2">
+                <Button asChild variant="outline" className="w-full justify-center">
+                  <a href={comprobanteModal.url} target="_blank" rel="noreferrer">
+                    Abrir en nueva pestaña
+                  </a>
+                </Button>
+
+                {/* Preview simple: iframe para PDF o embed genérico */}
+                <div className="w-full h-[60vh] rounded-lg overflow-hidden border bg-background">
+                  <iframe
+                    title="Comprobante"
+                    src={comprobanteModal.url}
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Este comprobante está guardado como folio (no como archivo/URL). Si necesitas adjuntar un archivo, pega aquí el enlace del PDF/imagen.
+              </p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
