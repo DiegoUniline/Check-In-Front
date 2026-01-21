@@ -229,15 +229,40 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     setEditMode(false);
   };
 
-  const handleCheckin = async () => {
-    if (!documentoVerificado || !tarjetaRegistrada || !firmaDigital) {
-      toast({ title: 'Faltan requisitos', description: 'Complete todos los campos obligatorios', variant: 'destructive' });
+  const handleCheckin = async (opts?: { force?: boolean }) => {
+    /*
+      Check-in desde la reservación:
+      - El backend `POST /api/reservas/:id/checkin` requiere `habitacion_id` (o que ya exista en la reserva).
+      - Antes, el front bloqueaba check-in por "requisitos" (3 checks). Eso impedía operar.
+      - Ahora: si faltan verificaciones, permitimos continuar con confirmación (force=true).
+      Relacionado con `check-in-back/src/routes/reservas.js`.
+    */
+
+    const habId = habitacionId || r.habitacion_id;
+    if (!habId) {
+      toast({
+        title: 'Debe asignar una habitación',
+        description: 'Asigne una habitación en “Editar” antes de hacer Check-in.',
+        variant: 'destructive',
+      });
+      setActiveTab('resumen');
+      setEditMode(true);
       return;
     }
-    
+
+    const faltanVerificaciones = !documentoVerificado || !tarjetaRegistrada || !firmaDigital;
+    if (r.estado === 'Confirmada' && faltanVerificaciones && !opts?.force) {
+      toast({
+        title: 'Verificaciones incompletas',
+        description: 'Marca las 3 verificaciones o vuelve a intentar para forzar el check-in.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setProcessing(true);
     try {
-      await api.checkin(r.id, habitacionId || r.habitacion_id);
+      await api.checkin(r.id, habId);
       toast({ title: '✓ Check-in completado', description: `Habitación ${r.habitacion_numero} asignada` });
       await cargarReserva();
       onUpdate?.();
@@ -1163,11 +1188,29 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               </div>
             )}
 
-            {r.estado === 'Confirmada' && (
+            {['Pendiente', 'Confirmada'].includes(r.estado) && (
               <div className="space-y-2">
-                <Button className="w-full bg-green-600 hover:bg-green-700" size="lg" onClick={handleCheckin} disabled={processing}>
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  size="lg"
+                  onClick={() => handleCheckin()}
+                  disabled={processing}
+                >
                   {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Hacer Check-in</>}
                 </Button>
+
+                {/* Si está confirmada y faltan verificaciones, damos salida explícita para forzar sin bloquear operación */}
+                {r.estado === 'Confirmada' && (!documentoVerificado || !tarjetaRegistrada || !firmaDigital) && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    size="sm"
+                    onClick={() => handleCheckin({ force: true })}
+                    disabled={processing}
+                  >
+                    Forzar Check-in (sin verificaciones)
+                  </Button>
+                )}
                 <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
                   Cancelar Reserva
                 </Button>
