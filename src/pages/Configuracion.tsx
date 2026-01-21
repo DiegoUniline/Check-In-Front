@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Settings, Hotel, Users, CreditCard, Bell, 
@@ -23,18 +23,103 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/contexts/ThemeContext';
 import { mockHotel } from '@/data/mockData';
+import api from '@/lib/api';
 
 export default function Configuracion() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [hotelData, setHotelData] = useState(mockHotel);
+  const [loadingHotel, setLoadingHotel] = useState(true);
+  const [savingHotel, setSavingHotel] = useState(false);
 
-  const handleSave = () => {
-    toast({
-      title: 'Configuración guardada',
-      description: 'Los cambios han sido aplicados correctamente.',
-    });
+  const mapBackendToUi = (h: any) => {
+    /*
+      Mapeo backend -> UI.
+      Backend: `check-in-back/src/routes/hotel.js` devuelve columnas snake_case.
+      UI (este archivo) usa camelCase (mockHotel).
+      Relacionado con `POST /api/hotel` (updateHotel) en `Check-In-Front/src/lib/api.ts`.
+    */
+    if (!h) return mockHotel;
+    return {
+      ...hotelData,
+      nombre: h.nombre ?? hotelData.nombre,
+      razonSocial: h.razon_social ?? hotelData.razonSocial,
+      rfc: h.rfc ?? hotelData.rfc,
+      direccion: h.direccion ?? hotelData.direccion,
+      ciudad: h.ciudad ?? hotelData.ciudad,
+      estado: h.estado ?? hotelData.estado,
+      pais: h.pais ?? (hotelData as any).pais ?? 'México',
+      telefono: h.telefono ?? hotelData.telefono,
+      email: h.email ?? hotelData.email,
+      horaCheckin: h.hora_checkin ?? hotelData.horaCheckin,
+      horaCheckout: h.hora_checkout ?? hotelData.horaCheckout,
+      estrellas: Number(h.estrellas ?? hotelData.estrellas ?? 3),
+    };
+  };
+
+  const mapUiToBackend = (ui: any) => {
+    /*
+      Mapeo UI -> backend (snake_case).
+      Consumido por `check-in-back/src/routes/hotel.js` (POST `/api/hotel`).
+    */
+    return {
+      nombre: ui.nombre,
+      razon_social: ui.razonSocial,
+      rfc: ui.rfc,
+      direccion: ui.direccion,
+      ciudad: ui.ciudad,
+      estado: ui.estado,
+      pais: ui.pais || 'México',
+      telefono: ui.telefono,
+      email: ui.email,
+      hora_checkin: ui.horaCheckin,
+      hora_checkout: ui.horaCheckout,
+      estrellas: Number(ui.estrellas) || 3,
+    };
+  };
+
+  const cargarHotel = async () => {
+    setLoadingHotel(true);
+    try {
+      const h = await api.getHotel();
+      setHotelData(mapBackendToUi(h));
+    } catch (error: any) {
+      // Si falla (ej. falta x-hotel-id o no hay token), dejamos mock pero avisamos.
+      toast({
+        title: 'No se pudo cargar el hotel',
+        description: error.message || 'Revisa tu sesión y el hotel seleccionado.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingHotel(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarHotel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSave = async () => {
+    setSavingHotel(true);
+    try {
+      const payload = mapUiToBackend(hotelData);
+      await api.updateHotel(payload);
+      toast({
+        title: 'Configuración guardada',
+        description: 'Los cambios del hotel se guardaron correctamente.',
+      });
+      await cargarHotel();
+    } catch (error: any) {
+      toast({
+        title: 'Error al guardar',
+        description: error.message || 'No se pudieron guardar los cambios.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingHotel(false);
+    }
   };
 
   return (
@@ -63,6 +148,13 @@ export default function Configuracion() {
 
         {/* Hotel Settings */}
         <TabsContent value="hotel">
+          {loadingHotel && (
+            <Card>
+              <CardContent className="p-4 text-sm text-muted-foreground">
+                Cargando información del hotel...
+              </CardContent>
+            </Card>
+          )}
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -323,9 +415,9 @@ export default function Configuracion() {
 
       {/* Save button */}
       <div className="flex justify-end mt-6">
-        <Button onClick={handleSave} size="lg">
+        <Button onClick={handleSave} size="lg" disabled={savingHotel || loadingHotel}>
           <Save className="mr-2 h-4 w-4" />
-          Guardar Cambios
+          {savingHotel ? 'Guardando...' : 'Guardar Cambios'}
         </Button>
       </div>
     </MainLayout>
