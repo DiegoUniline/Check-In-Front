@@ -27,14 +27,50 @@ export default function Dashboard() {
           api.getDashboardCheckinsHoy(),
           api.getDashboardCheckoutsHoy(),
           api.getDashboardVentasHoy().catch(() => null),
-          api.getDashboardTareasCriticas().catch(() => ({ limpieza: [], mantenimiento: [] }))
+          api.getDashboardTareasCriticas().catch(() => ({ limpieza: [], mantenimiento: [] })),
+          // Fallback front-only: calcular limpieza/mantenimiento desde habitaciones (sin tocar backend)
+          api.getHabitaciones().catch(() => [])
         ]);
 
-        const [statsResult, checkinsResult, checkoutsResult, ventasResult, tareasResult] = results;
+        const [statsResult, checkinsResult, checkoutsResult, ventasResult, tareasResult, habitacionesResult] = results;
+
+        const habitaciones = (habitacionesResult.status === 'fulfilled' && Array.isArray(habitacionesResult.value))
+          ? habitacionesResult.value
+          : [];
+
+        /*
+          Importante:
+          - El backend de dashboard cuenta "Limpieza/Mantenimiento" en `estado_habitacion`, pero en el schema real
+            esas banderas viven en `estado_limpieza` y `estado_mantenimiento`.
+          - Para no tocar backend (pedido explícito), calculamos aquí los totales.
+          Relacionado con `check-in-back/database/schema.sql` (tabla `habitaciones`).
+        */
+        const pendientesLimpiezaCalculado = habitaciones.filter((h: any) => {
+          const estado = String(h.estado_limpieza ?? h.estadoLimpieza ?? '').trim();
+          return estado !== '' && estado !== 'Limpia';
+        }).length;
+
+        const pendientesMantenimientoCalculado = habitaciones.filter((h: any) => {
+          const estado = String(h.estado_mantenimiento ?? h.estadoMantenimiento ?? '').trim();
+          return estado !== '' && estado !== 'OK';
+        }).length;
         
         // Stats
         if (statsResult.status === 'fulfilled' && statsResult.value) {
-          setStats(statsResult.value);
+          setStats({
+            ...statsResult.value,
+            // Sobrescribimos sólo estos dos campos para reflejar el dato real sin backend changes.
+            pendientes_limpieza: pendientesLimpiezaCalculado,
+            pendientes_mantenimiento: pendientesMantenimientoCalculado,
+          });
+        } else {
+          // Si falla /dashboard/stats, al menos mostramos los totales calculados.
+          setStats((prev: any) => ({
+            ...prev,
+            pendientes_limpieza: pendientesLimpiezaCalculado,
+            pendientes_mantenimiento: pendientesMantenimientoCalculado,
+            total_habitaciones: prev.total_habitaciones || habitaciones.length || 0,
+          }));
         }
         
         // Checkins
