@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -15,6 +16,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -25,11 +32,35 @@ import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
 export default function Reservas() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [reservas, setReservas] = useState<any[]>([]);
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
+
+  // Relacionado con `check-in-back/src/routes/reservas.js` (GET `/reservas/checkins-hoy`):
+  // Este arreglo contiene las "llegadas de hoy" ya filtradas por backend (fecha + estado).
+  // Se usa para poder "visualizar" las llegadas (no solo contarlas).
+  const [llegadasHoyData, setLlegadasHoyData] = useState<any[]>([]);
+  const [modalLlegadas, setModalLlegadas] = useState(false);
+
+  // Relacionado con `check-in-back/src/routes/reservas.js` (GET `/reservas/checkouts-hoy`):
+  // Este arreglo contiene las "salidas de hoy" ya filtradas por backend (fecha + estado).
+  // Se usa para poder "visualizar" las salidas (no solo contarlas).
+  const [salidasHoyData, setSalidasHoyData] = useState<any[]>([]);
+  const [modalSalidas, setModalSalidas] = useState(false);
   const { toast } = useToast();
+
+  const handleCardKeyDown = (
+    e: React.KeyboardEvent,
+    onOpen: () => void
+  ) => {
+    // Accesibilidad: permitir abrir el modal con Enter o Espacio.
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onOpen();
+    }
+  };
 
   const [startDate, setStartDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('Semana');
@@ -50,14 +81,20 @@ export default function Reservas() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [habData, resData, tiposData] = await Promise.all([
+      const [habData, resData, tiposData, llegadasData, salidasData] = await Promise.all([
         api.getHabitaciones(),
         api.getReservas(),
-        api.getTiposHabitacion()
+        api.getTiposHabitacion(),
+        // Consumido por este archivo para mostrar el listado de llegadas.
+        api.getCheckinsHoy().catch(() => []),
+        // Consumido por este archivo para mostrar el listado de salidas.
+        api.getCheckoutsHoy().catch(() => [])
       ]);
       setHabitaciones(habData);
       setReservas(resData);
       setTiposHabitacion(tiposData);
+      setLlegadasHoyData(Array.isArray(llegadasData) ? llegadasData : []);
+      setSalidasHoyData(Array.isArray(salidasData) ? salidasData : []);
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
@@ -96,16 +133,12 @@ export default function Reservas() {
 
   const totalHabitaciones = habitaciones.length;
   const habitacionesOcupadas = reservas.filter(r => ['CheckIn', 'Hospedado'].includes(r.estado)).length;
-  const llegadasHoy = reservas.filter(r => {
-    const checkin = r.fecha_checkin?.substring(0, 10);
-    const hoy = format(new Date(), 'yyyy-MM-dd');
-    return checkin === hoy && ['Pendiente', 'Confirmada'].includes(r.estado);
-  }).length;
-  const salidasHoy = reservas.filter(r => {
-    const checkout = r.fecha_checkout?.substring(0, 10);
-    const hoy = format(new Date(), 'yyyy-MM-dd');
-    return checkout === hoy && ['CheckIn', 'Hospedado'].includes(r.estado);
-  }).length;
+  // Las "llegadas" se obtienen desde backend (más confiable y permite listarlas).
+  // Relacionado con `check-in-back/src/routes/reservas.js` (GET `/reservas/checkins-hoy`).
+  const llegadasHoy = llegadasHoyData.length;
+  // Las "salidas" se obtienen desde backend (más confiable y permite listarlas).
+  // Relacionado con `check-in-back/src/routes/reservas.js` (GET `/reservas/checkouts-hoy`).
+  const salidasHoy = salidasHoyData.length;
 
   return (
     <MainLayout title="Recepción" subtitle="Gestión de reservas">
@@ -142,7 +175,16 @@ export default function Reservas() {
               </div>
             </div>
           </Card>
-          <Card className="p-2">
+          <Card
+            className="p-2 cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            role="button"
+            tabIndex={0}
+            aria-label="Ver llegadas de hoy"
+            // Relacionado con `check-in-back/src/routes/reservas.js`:
+            // Abre el listado de llegadas de hoy para "visualizarlas".
+            onClick={() => setModalLlegadas(true)}
+            onKeyDown={(e) => handleCardKeyDown(e, () => setModalLlegadas(true))}
+          >
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-green-600" />
               <div>
@@ -151,7 +193,16 @@ export default function Reservas() {
               </div>
             </div>
           </Card>
-          <Card className="p-2">
+          <Card
+            className="p-2 cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            role="button"
+            tabIndex={0}
+            aria-label="Ver salidas de hoy"
+            // Relacionado con `check-in-back/src/routes/reservas.js`:
+            // Abre el listado de salidas de hoy para "visualizarlas".
+            onClick={() => setModalSalidas(true)}
+            onKeyDown={(e) => handleCardKeyDown(e, () => setModalSalidas(true))}
+          >
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-orange-600" />
               <div>
@@ -265,6 +316,80 @@ export default function Reservas() {
         reserva={reservaSeleccionada}
         onUpdate={cargarDatos}
       />
+
+      {/* Modal: Llegadas de hoy */}
+      <Dialog open={modalLlegadas} onOpenChange={setModalLlegadas}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Llegadas de hoy</DialogTitle>
+          </DialogHeader>
+
+          {llegadasHoyData.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay llegadas pendientes para hoy.</p>
+          ) : (
+            <div className="space-y-2">
+              {llegadasHoyData.map((r: any) => (
+                <div key={r.id} className="flex items-center justify-between rounded border p-3">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">
+                      {r.cliente_nombre || r.nombre} {r.apellido_paterno || ''}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.habitacion_numero ? `Hab. ${r.habitacion_numero}` : 'Hab. por asignar'} · {r.hora_llegada || '—'} · {r.numero_reserva || r.id?.slice(0, 8)}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    // Relacionado con `Check-In-Front/src/pages/CheckIn.tsx`:
+                    // Navega al flujo de check-in de la reserva seleccionada.
+                    onClick={() => navigate(`/checkin/${r.id}`)}
+                  >
+                    Ir a Check-in
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Salidas de hoy */}
+      <Dialog open={modalSalidas} onOpenChange={setModalSalidas}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Salidas de hoy</DialogTitle>
+          </DialogHeader>
+
+          {salidasHoyData.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay salidas programadas para hoy.</p>
+          ) : (
+            <div className="space-y-2">
+              {salidasHoyData.map((r: any) => (
+                <div key={r.id} className="flex items-center justify-between rounded border p-3">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">
+                      {r.cliente_nombre || r.nombre} {r.apellido_paterno || ''}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.habitacion_numero ? `Hab. ${r.habitacion_numero}` : 'Hab. —'} · {r.numero_reserva || r.id?.slice(0, 8)}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    // Relacionado con `Check-In-Front/src/pages/CheckOut.tsx`:
+                    // Navega al flujo de check-out de la reserva seleccionada.
+                    onClick={() => navigate(`/checkout/${r.id}`)}
+                  >
+                    Ir a Check-out
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
