@@ -81,8 +81,10 @@ export default function Mantenimiento() {
   const stats = {
     abiertos: tickets.filter(t => t.estado === 'Abierto' || t.estado === 'Pendiente').length,
     enProceso: tickets.filter(t => t.estado === 'EnProceso' || t.estado === 'En Proceso').length,
-    resueltos: tickets.filter(t => t.estado === 'Resuelto' || t.estado === 'Completado' || t.estado === 'Cerrado').length,
-    criticos: tickets.filter(t => (t.prioridad === 'Crítica' || t.prioridad === 'Urgente') && t.estado !== 'Cerrado' && t.estado !== 'Completado').length,
+    // Nota: soportamos valores "viejos" (`Completado`) por compatibilidad con datos ya guardados.
+    // El backend/schema usan `Completada` (ver `check-in-back/src/routes/mantenimiento.js`).
+    resueltos: tickets.filter(t => t.estado === 'Resuelto' || t.estado === 'Completada' || t.estado === 'Completado' || t.estado === 'Cerrado').length,
+    criticos: tickets.filter(t => (t.prioridad === 'Crítica' || t.prioridad === 'Urgente') && t.estado !== 'Cerrado' && t.estado !== 'Completada' && t.estado !== 'Completado').length,
   };
 
   const getPrioridadColor = (p?: string) => {
@@ -102,6 +104,7 @@ export default function Mantenimiento() {
       case 'EnProceso':
       case 'En Proceso': return 'border-info bg-info/5';
       case 'Resuelto':
+      case 'Completada':
       case 'Completado': return 'border-success bg-success/5';
       case 'Cerrado': return 'border-muted bg-muted/5';
       default: return '';
@@ -230,7 +233,7 @@ export default function Mantenimiento() {
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="Pendiente">Pendiente</SelectItem>
               <SelectItem value="EnProceso">En Proceso</SelectItem>
-              <SelectItem value="Completado">Completado</SelectItem>
+              <SelectItem value="Completada">Completado</SelectItem>
               <SelectItem value="Cerrado">Cerrado</SelectItem>
             </SelectContent>
           </Select>
@@ -409,7 +412,14 @@ export default function Mantenimiento() {
                       </Button>
                     )}
                     {(ticket.estado === 'EnProceso' || ticket.estado === 'En Proceso') && (
-                      <Button variant="outline" size="sm" onClick={() => handleCambiarEstado(ticket, 'Completado')}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        // Relacionado con `check-in-back/src/routes/mantenimiento.js` (PATCH `/mantenimiento/:id/estado`):
+                        // El estado correcto en backend/schema es `Completada`.
+                        // Esto permite que se actualice la habitación a `OK` cuando ya no hay tareas pendientes.
+                        onClick={() => handleCambiarEstado(ticket, 'Completada')}
+                      >
                         Resolver
                       </Button>
                     )}
