@@ -108,7 +108,10 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => ({
   adultos: 2,
   ninos: 0,
   personasExtra: 0,
-  cargoPersonaExtra: 250,
+  // Relacionado con `check-in-back/src/routes/tiposHabitacion.js`:
+  // El costo por persona extra debe venir de `tipos_habitacion.precio_persona_extra`,
+  // no debe estar hardcodeado. Se autocompleta cuando el usuario selecciona el tipo.
+  cargoPersonaExtra: 0,
   tipoHabitacion: preload?.habitacion?.tipo_id || '',
   habitacionId: preload?.habitacion?.id || '',
   clienteId: '',
@@ -163,6 +166,26 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
       setFormData(createInitialFormData(preload));
     }
   }, [open, preload]);
+
+  useEffect(() => {
+    // Relacionado con `check-in-back/src/routes/tiposHabitacion.js` (GET `/tipos-habitacion`):
+    // Cuando cambia el tipo de habitación, autocompletamos el cargo por persona extra usando
+    // `precio_persona_extra` del tipo. Esto corrige el bug donde se ponía $250 fijo.
+    // Nota UX: el input sigue siendo editable; solo se “resetea” automáticamente al cambiar tipo.
+    if (!open) return;
+    const tipoId = formData.tipoHabitacion;
+    if (!tipoId) return;
+
+    const tipo = tiposHabitacion.find((t) => t.id === tipoId);
+    if (!tipo) return;
+
+    const precioPersonaExtra = Number(tipo.precio_persona_extra) || 0;
+    setFormData((prev) => {
+      if (prev.tipoHabitacion !== tipoId) return prev;
+      if (prev.cargoPersonaExtra === precioPersonaExtra) return prev;
+      return { ...prev, cargoPersonaExtra: precioPersonaExtra };
+    });
+  }, [open, formData.tipoHabitacion, tiposHabitacion]);
 
   const cargarDatos = async () => {
     try {
