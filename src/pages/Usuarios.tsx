@@ -54,14 +54,48 @@ import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
+/*
+  Roles del sistema (UI) alineados con el backend.
+  - Relacionado con `check-in-back/database/schema.sql` (ENUM `usuarios.rol`).
+  - Relacionado con `check-in-back/src/routes/usuarios.js` (CRUD de usuarios).
+  - Importante: si enviamos un rol inválido (ej: "limpieza"), MySQL puede guardarlo como '' (vacío),
+    y luego en el listado aparece sin etiqueta (bug reportado).
+*/
 const rolesConfig = [
-  { id: 'admin', nombre: 'Administrador', color: 'bg-red-500', description: 'Acceso total al sistema' },
-  { id: 'gerente', nombre: 'Gerente', color: 'bg-blue-500', description: 'Gestión operativa completa' },
-  { id: 'recepcion', nombre: 'Recepción', color: 'bg-green-500', description: 'Check-in/out y reservas' },
-  { id: 'limpieza', nombre: 'Limpieza', color: 'bg-yellow-500', description: 'Gestión de habitaciones' },
-  { id: 'mantenimiento', nombre: 'Mantenimiento', color: 'bg-orange-500', description: 'Tareas de mantenimiento' },
-  { id: 'pos', nombre: 'POS/Ventas', color: 'bg-purple-500', description: 'Punto de venta' },
+  { id: 'Admin', nombre: 'Administrador', color: 'bg-red-500', description: 'Acceso total al sistema' },
+  { id: 'Gerente', nombre: 'Gerente', color: 'bg-blue-500', description: 'Gestión operativa completa' },
+  { id: 'Recepcion', nombre: 'Recepción', color: 'bg-green-500', description: 'Check-in/out y reservas' },
+  { id: 'Housekeeping', nombre: 'Limpieza', color: 'bg-yellow-500', description: 'Gestión de habitaciones' },
+  { id: 'Mantenimiento', nombre: 'Mantenimiento', color: 'bg-orange-500', description: 'Tareas de mantenimiento' },
 ];
+
+/*
+  Normaliza roles legacy del frontend a los valores reales del backend.
+  - Relacionado con `check-in-back/database/schema.sql` (ENUM `usuarios.rol`).
+  - Consumido por `handleSave()` para evitar que se guarden roles vacíos/incorrectos.
+*/
+const normalizarRol = (rol: unknown): string => {
+  const raw = String(rol ?? '').trim();
+  if (!raw) return '';
+
+  // Si ya viene en formato backend, lo dejamos igual.
+  const allowed = new Set(rolesConfig.map((r) => r.id));
+  if (allowed.has(raw)) return raw;
+
+  // Mapeo defensivo para valores antiguos/minúsculas.
+  const key = raw.toLowerCase();
+  const map: Record<string, string> = {
+    admin: 'Admin',
+    gerente: 'Gerente',
+    recepcion: 'Recepcion',
+    recepción: 'Recepcion',
+    limpieza: 'Housekeeping',
+    housekeeping: 'Housekeeping',
+    mantenimiento: 'Mantenimiento',
+  };
+
+  return map[key] || raw; // Si viene algo inesperado, lo devolvemos para que falle/sea visible.
+};
 
 export default function Usuarios() {
   const { toast } = useToast();
@@ -83,7 +117,8 @@ export default function Usuarios() {
     apellidoPaterno: '',
     apellidoMaterno: '',
     telefono: '',
-    rol: 'recepcion',
+    // Debe coincidir con el ENUM del backend (ver `schema.sql`).
+    rol: 'Recepcion',
     activo: true,
   });
 
@@ -119,6 +154,14 @@ export default function Usuarios() {
   });
 
   const getRolInfo = (rolId: string) => {
+    /*
+      Fallback defensivo:
+      - Si el rol viene vacío (''), mostramos "Sin rol" para no renderizar una etiqueta en blanco.
+      - Si viene un rol desconocido, lo mostramos tal cual para no ocultar datos.
+    */
+    if (!rolId || !String(rolId).trim()) {
+      return { id: '', nombre: 'Sin rol', color: 'bg-gray-500', description: '' };
+    }
     return rolesConfig.find(r => r.id === rolId) || { id: rolId, nombre: rolId, color: 'bg-gray-500', description: '' };
   };
 
@@ -131,7 +174,7 @@ export default function Usuarios() {
       apellidoPaterno: '',
       apellidoMaterno: '',
       telefono: '',
-      rol: 'recepcion',
+      rol: 'Recepcion',
       activo: true,
     });
     setShowPassword(false);
@@ -147,7 +190,13 @@ export default function Usuarios() {
       apellidoPaterno: usuario.apellidoPaterno || usuario.apellido_paterno || '',
       apellidoMaterno: usuario.apellidoMaterno || usuario.apellido_materno || '',
       telefono: usuario.telefono || '',
-      rol: usuario.rol || 'recepcion',
+      /*
+        Importante:
+        - Si el backend devolvió rol vacío (''), NO lo maquillamos como "Recepcion" en la UI.
+          Eso genera confusión (se ve "Recepción" en el modal pero el listado dice "Sin rol").
+        - Mostramos el valor real (normalizado si viene legacy) y si está vacío dejamos el select sin valor.
+      */
+      rol: normalizarRol(usuario.rol),
       activo: usuario.activo !== false,
     });
     setShowPassword(false);
@@ -166,13 +215,25 @@ export default function Usuarios() {
     }
 
     try {
+      // Rol final a persistir (alineado con ENUM del backend).
+      const rolNormalizado = normalizarRol(formData.rol);
+      const allowed = new Set(rolesConfig.map((r) => r.id));
+      if (!allowed.has(rolNormalizado)) {
+        toast({
+          title: 'Rol inválido',
+          description: 'Selecciona un rol válido (Recepción, Limpieza, Mantenimiento, Gerente o Administrador).',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const data: any = {
         email: formData.email,
         nombre: formData.nombre,
         apellido_paterno: formData.apellidoPaterno,
         apellido_materno: formData.apellidoMaterno,
         telefono: formData.telefono,
-        rol: formData.rol,
+        rol: rolNormalizado,
         activo: formData.activo,
       };
       
@@ -253,7 +314,7 @@ export default function Usuarios() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Administradores</p>
-            <p className="text-2xl font-bold text-red-600">{usuarios.filter(u => u.rol === 'admin').length}</p>
+            <p className="text-2xl font-bold text-red-600">{usuarios.filter(u => u.rol === 'Admin').length}</p>
           </CardContent>
         </Card>
         <Card>

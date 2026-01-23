@@ -351,19 +351,8 @@ export default function Limpieza() {
                 options={empleados.map(e => ({ value: e.id, label: `${e.nombre}${e.puesto ? ` (${e.puesto})` : ''}` }))}
                 value={selectedEmpleado}
                 onValueChange={setSelectedEmpleado}
-                onCreate={async (nombre) => {
-                  try {
-                    const newEmp = await api.createEmpleado({ nombre, puesto: 'Limpieza' });
-                    setEmpleados([...empleados, newEmp]);
-                    toast({ title: 'Empleado creado' });
-                    return { value: newEmp.id, label: newEmp.nombre };
-                  } catch (e: any) {
-                    toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                  }
-                }}
                 placeholder="Seleccionar empleado..."
-                searchPlaceholder="Buscar o crear empleado..."
-                createLabel="Crear empleado"
+                searchPlaceholder="Buscar empleado..."
               />
             </div>
             <Button className="w-full" onClick={handleAsignar} disabled={!selectedEmpleado}>

@@ -192,14 +192,55 @@ getMiSuscripcion = () => this.request<any>(`/saas/mi-suscripcion/${this.getHotel
   deleteTareaMantenimiento = (id: string) => this.request<any>(`/mantenimiento/${id}`, { method: 'DELETE' });
 
   // Empleados
-  getEmpleados = (params?: Record<string, string>) => {
-    const query = params ? '?' + new URLSearchParams(params).toString() : '';
-    return this.request<any[]>(`/empleados${query}`);
+  getEmpleados = async (params?: Record<string, string>) => {
+    /*
+      Compatibilidad "empleados" -> "usuarios"
+      - Relacionado con `Check-In-Front/src/pages/Mantenimiento.tsx` y `Check-In-Front/src/pages/Limpieza.tsx`.
+      - Esos módulos muestran un selector "Asignar a" que espera una lista de empleados con { id, nombre, puesto }.
+      - En el backend de este repo existe `/api/usuarios` (multi-hotel via `x-hotel-id`), pero no existe `/api/empleados`.
+      - Para no romper la UX actual, adaptamos usuarios activos a la forma esperada por los combos.
+
+      Nota:
+      - Si a futuro se implementa una entidad `empleados` real en backend, este método puede volver a apuntar a `/empleados`.
+    */
+    const usuarios = await this.request<any[]>('/usuarios');
+    const list = Array.isArray(usuarios) ? usuarios : [];
+
+    // Adaptamos shape esperado por los módulos operativos.
+    let empleados = list.map((u) => ({
+      ...u,
+      id: u.id,
+      nombre: u.nombre,
+      // "puesto" se usa solo para mostrar (ej: "Juan (Mantenimiento)")
+      // y lo mapeamos desde `rol` cuando está disponible.
+      puesto: u.puesto || u.rol || '',
+    }));
+
+    // Filtro opcional (por ejemplo `rol=Mantenimiento`) sin depender del backend.
+    const filtroRol = params?.rol || params?.puesto;
+    if (typeof filtroRol === 'string' && filtroRol.trim()) {
+      const needle = filtroRol.trim().toLowerCase();
+      empleados = empleados.filter((e) => String(e.puesto || '').toLowerCase() === needle);
+    }
+
+    return empleados;
   };
-  getEmpleado = (id: string) => this.request<any>(`/empleados/${id}`);
-  createEmpleado = (data: any) => this.request<any>('/empleados', { method: 'POST', body: data });
-  updateEmpleado = (id: string, data: any) => this.request<any>(`/empleados/${id}`, { method: 'PUT', body: data });
-  deleteEmpleado = (id: string) => this.request<any>(`/empleados/${id}`, { method: 'DELETE' });
+
+  // En este repo no existe CRUD de "empleados" como entidad persistente separada.
+  // Si se intenta "crear empleado" desde los combos, mostramos un error claro para guiar al usuario.
+  // Consumido por `ComboboxCreatable` en Limpieza/Mantenimiento.
+  getEmpleado = async (_id: string) => {
+    throw new Error('No existe endpoint /empleados en este backend. Use "Usuarios" para gestionar personal.');
+  };
+  createEmpleado = async (_data: any) => {
+    throw new Error('Para crear personal, use el módulo "Usuarios" (Gestión de Usuarios).');
+  };
+  updateEmpleado = async (_id: string, _data: any) => {
+    throw new Error('No existe endpoint /empleados en este backend. Use "Usuarios" para gestionar personal.');
+  };
+  deleteEmpleado = async (_id: string) => {
+    throw new Error('No existe endpoint /empleados en este backend. Use "Usuarios" para gestionar personal.');
+  };
 
   // Productos
   getCategorias = () => this.request<any[]>('/productos/categorias');
