@@ -4,6 +4,73 @@ class ApiClient {
   private token: string | null = null;
   private hotelId: string | null = null;
 
+  // Sanitización específica para el bug de "apellido con 0" en clientes no VIP.
+  // - Qué hace: evita enviar/guardar `apellido_paterno` / `apellido_materno` con sufijo "0" cuando `es_vip` es falso.
+  // - Por qué: hubo una concatenación/guardado incorrecto en algún punto (front o back remoto) y esto lo blinda del lado cliente.
+  // - Relación: Consumido por `/api/clientes` y usado desde `Check-In-Front/src/pages/Clientes.tsx` y `Check-In-Front/src/components/reservas/NuevaReservaModal.tsx`.
+  private sanitizeClientePayload(data: any) {
+    if (!data || typeof data !== 'object') return data;
+
+    const esVipRaw = (data as any).es_vip;
+    const esVip =
+      esVipRaw === true ||
+      esVipRaw === 1 ||
+      esVipRaw === '1' ||
+      (typeof esVipRaw === 'string' && esVipRaw.trim().toLowerCase() === 'true');
+
+    // Solo saneamos NO VIP para evitar tocar casos legítimos donde el apellido podría terminar en "0".
+    if (esVip) return data;
+
+    const sanitizeApellido = (value: any) => {
+      // Caso defensivo: si llegó un 0 numérico, lo convertimos a vacío.
+      if (value === 0) return '';
+      if (typeof value !== 'string') return value;
+      // Nota: usamos regex para cubrir casos donde el backend devuelve caracteres invisibles al final.
+      // Ejemplos: "García0 ", "García0\u200B"
+      return value.replace(/0[\s\u200B\uFEFF]*$/u, '').trim();
+    };
+
+    return {
+      ...data,
+      apellido_paterno: sanitizeApellido((data as any).apellido_paterno),
+      apellido_materno: sanitizeApellido((data as any).apellido_materno),
+      // Si es_vip viene undefined, lo dejamos como estaba; el backend tiene default.
+    };
+  }
+
+  // Sanitización de RESPUESTA para clientes (lo que viene del backend).
+  // - Qué hace: “replica” el comportamiento que observas en VIP: cuando NO VIP, no mostramos apellidos con sufijo "0".
+  // - Por qué: si el backend remoto está guardando/devolviendo "Apellido0", el front debe limpiarlo para no afectar UX.
+  // - Relación: Usado por `getClientes/getCliente` y consumido por pantallas como `Check-In-Front/src/pages/Clientes.tsx`.
+  private sanitizeClienteResponse(cliente: any) {
+    if (!cliente || typeof cliente !== 'object') return cliente;
+
+    const esVipRaw = (cliente as any).es_vip;
+    const esVip =
+      esVipRaw === true ||
+      esVipRaw === 1 ||
+      esVipRaw === '1' ||
+      (typeof esVipRaw === 'string' && esVipRaw.trim().toLowerCase() === 'true');
+
+    // Solo saneamos NO VIP.
+    if (esVip) return cliente;
+
+    const sanitizeApellido = (value: any) => {
+      if (value === 0) return '';
+      if (typeof value !== 'string') return value;
+      // Igual que en payload: eliminamos "0" final incluso si viene con espacios o chars invisibles.
+      return value.replace(/0[\s\u200B\uFEFF]*$/u, '').trim();
+    };
+
+    return {
+      ...cliente,
+      // Normalizamos a boolean real para evitar el bug visual `0 && <Icon/>` en React.
+      es_vip: esVip,
+      apellido_paterno: sanitizeApellido((cliente as any).apellido_paterno),
+      apellido_materno: sanitizeApellido((cliente as any).apellido_materno),
+    };
+  }
+
   setToken(token: string | null) {
     this.token = token;
     if (token) localStorage.setItem('token', token);
@@ -114,12 +181,14 @@ class ApiClient {
   // Clientes
   getClientes = (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
-    return this.request<any[]>(`/clientes${query}`);
+    return this.request<any[]>(`/clientes${query}`).then((rows) =>
+      Array.isArray(rows) ? rows.map((c) => this.sanitizeClienteResponse(c)) : rows
+    );
   };
-  getCliente = (id: string) => this.request<any>(`/clientes/${id}`);
+  getCliente = (id: string) => this.request<any>(`/clientes/${id}`).then((c) => this.sanitizeClienteResponse(c));
   getClienteReservas = (id: string) => this.request<any[]>(`/clientes/${id}/reservas`);
-  createCliente = (data: any) => this.request<any>('/clientes', { method: 'POST', body: data });
-  updateCliente = (id: string, data: any) => this.request<any>(`/clientes/${id}`, { method: 'PUT', body: data });
+  createCliente = (data: any) => this.request<any>('/clientes', { method: 'POST', body: this.sanitizeClientePayload(data) });
+  updateCliente = (id: string, data: any) => this.request<any>(`/clientes/${id}`, { method: 'PUT', body: this.sanitizeClientePayload(data) });
   deleteCliente = (id: string) => this.request<any>(`/clientes/${id}`, { method: 'DELETE' });
 
   // Reservas

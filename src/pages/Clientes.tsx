@@ -85,6 +85,34 @@ export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Normalización de VIP para evitar que React renderice "0".
+  // - Qué hace: convierte valores típicos de MySQL (0/1, "0"/"1") a boolean real.
+  // - Por qué: en JSX, `0 && <Icon/>` retorna `0` y React lo pinta como texto ("Apellido0").
+  // - Relación: Consumido por el render de estrella VIP en esta pantalla.
+  const isVipValue = (value: unknown) => value === true || value === 1 || value === '1' || value === 'true';
+
+  // Sanitización UI para el bug "apellido con 0" en clientes NO VIP.
+  // - Qué hace: cuando `es_vip` es falso, elimina un sufijo "0" de apellidos (ej: "García0" -> "García").
+  // - Por qué: hay registros ya afectados; al editar queremos que el usuario vea y guarde el valor limpio.
+  // - Relación: Complementa la sanitización del API client en `Check-In-Front/src/lib/api.ts`.
+  const sanitizeApellidoParaNoVip = (apellido: unknown, esVip: boolean) => {
+    if (esVip) return typeof apellido === 'string' ? apellido : (apellido as any);
+    if (apellido === 0) return '';
+    if (typeof apellido !== 'string') return apellido as any;
+    // Regex para cubrir casos con espacios / caracteres invisibles al final.
+    return apellido.replace(/0[\s\u200B\uFEFF]*$/u, '').trim();
+  };
+
+  // Sanitización también para nombre (defensivo).
+  // - Qué hace: si por el bug el "0" terminó en `nombre`, lo limpiamos igual para NO VIP.
+  // - Por qué: el usuario reporta que en la lista el "0" se ve pegado al apellido; si está en `nombre` o en `apellido_*`, lo eliminamos.
+  const sanitizeTextoParaNoVip = (texto: unknown, esVip: boolean) => {
+    if (esVip) return typeof texto === 'string' ? texto : (texto as any);
+    if (texto === 0) return '';
+    if (typeof texto !== 'string') return texto as any;
+    return texto.replace(/0[\s\u200B\uFEFF]*$/u, '').trim();
+  };
+
   useEffect(() => {
     cargarClientes();
   }, []);
@@ -93,7 +121,20 @@ export default function Clientes() {
     try {
       setLoading(true);
       const data = await api.getClientes();
-      setClientes(data);
+      // Blindaje adicional a nivel de pantalla: dejamos el estado ya limpio para que toda la UI (tabla, filtros, modal) sea consistente.
+      const list = Array.isArray(data) ? data : [];
+      const sanitized = list.map((c: Cliente) => {
+        const esVip = isVipValue((c as any).es_vip);
+        return {
+          ...c,
+          // Importante: normalizamos `es_vip` a boolean real para que NO se renderice "0" en el JSX.
+          es_vip: esVip,
+          nombre: sanitizeTextoParaNoVip(c.nombre, esVip),
+          apellido_paterno: sanitizeApellidoParaNoVip(c.apellido_paterno, esVip),
+          apellido_materno: sanitizeApellidoParaNoVip(c.apellido_materno, esVip),
+        };
+      });
+      setClientes(sanitized);
     } catch (error) {
       console.error('Error cargando clientes:', error);
       toast({ title: 'Error', description: 'No se pudieron cargar los clientes', variant: 'destructive' });
@@ -109,18 +150,20 @@ export default function Clientes() {
   };
 
   const handleEditarCliente = (cliente: Cliente) => {
+    const esVip = isVipValue((cliente as any).es_vip);
     setFormData({
       tipo_cliente: cliente.tipo_cliente || 'Persona',
       nombre: cliente.nombre || '',
-      apellido_paterno: cliente.apellido_paterno || '',
-      apellido_materno: cliente.apellido_materno || '',
+      // Limpieza visual y para guardar: si NO VIP y venía "Apellido0", mostramos sin el 0.
+      apellido_paterno: sanitizeApellidoParaNoVip(cliente.apellido_paterno || '', esVip),
+      apellido_materno: sanitizeApellidoParaNoVip(cliente.apellido_materno || '', esVip),
       email: cliente.email || '',
       telefono: cliente.telefono || '',
       tipo_documento: cliente.tipo_documento || 'INE',
       numero_documento: cliente.numero_documento || '',
       nacionalidad: cliente.nacionalidad || 'Mexicana',
       direccion: '',
-      es_vip: cliente.es_vip || false,
+      es_vip: esVip,
       notas: cliente.notas || ''
     });
     setSelectedCliente(cliente);
@@ -136,11 +179,17 @@ export default function Clientes() {
 
     setSaving(true);
     try {
+      // Saneamos antes de enviar: evita que se guarde "Apellido0" en clientes NO VIP.
+      const payload = {
+        ...formData,
+        apellido_paterno: sanitizeApellidoParaNoVip(formData.apellido_paterno, Boolean(formData.es_vip)),
+        apellido_materno: sanitizeApellidoParaNoVip(formData.apellido_materno, Boolean(formData.es_vip)),
+      };
       if (isEditing && selectedCliente) {
-        await api.updateCliente(selectedCliente.id, formData);
+        await api.updateCliente(selectedCliente.id, payload);
         toast({ title: 'Éxito', description: 'Cliente actualizado' });
       } else {
-        await api.createCliente(formData);
+        await api.createCliente(payload);
         toast({ title: 'Éxito', description: 'Cliente creado' });
       }
       setIsFormOpen(false);
@@ -153,7 +202,9 @@ export default function Clientes() {
   };
 
   const filteredClientes = clientes.filter(c => {
-    const fullName = `${c.nombre} ${c.apellido_paterno} ${c.apellido_materno || ''}`.toLowerCase();
+    // Para búsquedas, usamos también valores ya saneados (por si el backend devolvió datos con el bug).
+    const esVip = isVipValue((c as any).es_vip);
+    const fullName = `${sanitizeTextoParaNoVip(c.nombre, esVip)} ${sanitizeApellidoParaNoVip(c.apellido_paterno, esVip)} ${sanitizeApellidoParaNoVip(c.apellido_materno || '', esVip)}`.toLowerCase();
     const query = searchQuery.toLowerCase();
     return fullName.includes(query) || 
            c.email?.toLowerCase().includes(query) || 
@@ -283,13 +334,15 @@ export default function Clientes() {
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarFallback className="bg-primary/10 text-primary">
-                          {cliente.nombre?.charAt(0)}{cliente.apellido_paterno?.charAt(0)}
+                          {sanitizeTextoParaNoVip(cliente.nombre, Boolean(cliente.es_vip))?.charAt?.(0)}
+                          {sanitizeApellidoParaNoVip(cliente.apellido_paterno, Boolean(cliente.es_vip))?.charAt?.(0)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium flex items-center gap-2">
-                          {cliente.nombre} {cliente.apellido_paterno}
-                          {cliente.es_vip && <Star className="h-4 w-4 text-warning fill-warning" />}
+                          {sanitizeTextoParaNoVip(cliente.nombre, Boolean(cliente.es_vip))}{' '}
+                          {sanitizeApellidoParaNoVip(cliente.apellido_paterno, Boolean(cliente.es_vip))}
+                          {isVipValue((cliente as any).es_vip) ? <Star className="h-4 w-4 text-warning fill-warning" /> : null}
                         </p>
                         <p className="text-sm text-muted-foreground">{cliente.tipo_cliente || 'Individual'}</p>
                       </div>
@@ -354,13 +407,15 @@ export default function Clientes() {
             <DialogTitle className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {selectedCliente?.nombre?.charAt(0)}{selectedCliente?.apellido_paterno?.charAt(0)}
+                  {sanitizeTextoParaNoVip(selectedCliente?.nombre, Boolean(selectedCliente?.es_vip))?.charAt?.(0)}
+                  {sanitizeApellidoParaNoVip(selectedCliente?.apellido_paterno, Boolean(selectedCliente?.es_vip))?.charAt?.(0)}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="flex items-center gap-2">
-                  {selectedCliente?.nombre} {selectedCliente?.apellido_paterno}
-                  {selectedCliente?.es_vip && <Star className="h-5 w-5 text-warning fill-warning" />}
+                  {sanitizeTextoParaNoVip(selectedCliente?.nombre, Boolean(selectedCliente?.es_vip))}{' '}
+                  {sanitizeApellidoParaNoVip(selectedCliente?.apellido_paterno, Boolean(selectedCliente?.es_vip))}
+                  {isVipValue((selectedCliente as any)?.es_vip) ? <Star className="h-5 w-5 text-warning fill-warning" /> : null}
                 </p>
                 <p className="text-sm font-normal text-muted-foreground">{selectedCliente?.email}</p>
               </div>
