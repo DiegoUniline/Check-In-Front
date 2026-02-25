@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      clientes: {
+        Row: {
+          apellido_materno: string | null
+          apellido_paterno: string | null
+          created_at: string | null
+          email: string | null
+          es_vip: boolean | null
+          hotel_id: string
+          id: string
+          nacionalidad: string | null
+          nivel_lealtad: string | null
+          nombre: string
+          notas: string | null
+          numero_documento: string | null
+          telefono: string | null
+          tipo_cliente: string | null
+          tipo_documento: string | null
+          total_estancias: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          apellido_materno?: string | null
+          apellido_paterno?: string | null
+          created_at?: string | null
+          email?: string | null
+          es_vip?: boolean | null
+          hotel_id: string
+          id?: string
+          nacionalidad?: string | null
+          nivel_lealtad?: string | null
+          nombre: string
+          notas?: string | null
+          numero_documento?: string | null
+          telefono?: string | null
+          tipo_cliente?: string | null
+          tipo_documento?: string | null
+          total_estancias?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          apellido_materno?: string | null
+          apellido_paterno?: string | null
+          created_at?: string | null
+          email?: string | null
+          es_vip?: boolean | null
+          hotel_id?: string
+          id?: string
+          nacionalidad?: string | null
+          nivel_lealtad?: string | null
+          nombre?: string
+          notas?: string | null
+          numero_documento?: string | null
+          telefono?: string | null
+          tipo_cliente?: string | null
+          tipo_documento?: string | null
+          total_estancias?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       habitaciones: {
         Row: {
           created_at: string | null
@@ -128,6 +196,63 @@ export type Database = {
         }
         Relationships: []
       }
+      pagos: {
+        Row: {
+          created_at: string | null
+          fecha: string | null
+          hotel_id: string
+          id: string
+          metodo_pago: string | null
+          monto: number
+          notas: string | null
+          numero_pago: string | null
+          referencia: string | null
+          reserva_id: string | null
+          tipo: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fecha?: string | null
+          hotel_id: string
+          id?: string
+          metodo_pago?: string | null
+          monto: number
+          notas?: string | null
+          numero_pago?: string | null
+          referencia?: string | null
+          reserva_id?: string | null
+          tipo?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fecha?: string | null
+          hotel_id?: string
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          notas?: string | null
+          numero_pago?: string | null
+          referencia?: string | null
+          reserva_id?: string | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           activo: boolean | null
@@ -174,6 +299,125 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas: {
+        Row: {
+          adultos: number | null
+          checkin_realizado: boolean | null
+          checkout_realizado: boolean | null
+          cliente_id: string | null
+          created_at: string | null
+          descuento: number | null
+          estado: string | null
+          fecha_checkin: string
+          fecha_checkout: string
+          habitacion_id: string | null
+          hora_llegada: string | null
+          hotel_id: string
+          id: string
+          ninos: number | null
+          noches: number | null
+          notas: string | null
+          numero_reserva: string | null
+          origen: string | null
+          saldo_pendiente: number | null
+          solicitudes_especiales: string | null
+          subtotal_hospedaje: number | null
+          tarifa_noche: number | null
+          tipo_habitacion_id: string | null
+          total: number | null
+          total_impuestos: number | null
+          total_pagado: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          adultos?: number | null
+          checkin_realizado?: boolean | null
+          checkout_realizado?: boolean | null
+          cliente_id?: string | null
+          created_at?: string | null
+          descuento?: number | null
+          estado?: string | null
+          fecha_checkin: string
+          fecha_checkout: string
+          habitacion_id?: string | null
+          hora_llegada?: string | null
+          hotel_id: string
+          id?: string
+          ninos?: number | null
+          noches?: number | null
+          notas?: string | null
+          numero_reserva?: string | null
+          origen?: string | null
+          saldo_pendiente?: number | null
+          solicitudes_especiales?: string | null
+          subtotal_hospedaje?: number | null
+          tarifa_noche?: number | null
+          tipo_habitacion_id?: string | null
+          total?: number | null
+          total_impuestos?: number | null
+          total_pagado?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          adultos?: number | null
+          checkin_realizado?: boolean | null
+          checkout_realizado?: boolean | null
+          cliente_id?: string | null
+          created_at?: string | null
+          descuento?: number | null
+          estado?: string | null
+          fecha_checkin?: string
+          fecha_checkout?: string
+          habitacion_id?: string | null
+          hora_llegada?: string | null
+          hotel_id?: string
+          id?: string
+          ninos?: number | null
+          noches?: number | null
+          notas?: string | null
+          numero_reserva?: string | null
+          origen?: string | null
+          saldo_pendiente?: number | null
+          solicitudes_especiales?: string | null
+          subtotal_hospedaje?: number | null
+          tarifa_noche?: number | null
+          tipo_habitacion_id?: string | null
+          total?: number | null
+          total_impuestos?: number | null
+          total_pagado?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_habitacion_id_fkey"
+            columns: ["habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "habitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_tipo_habitacion_id_fkey"
+            columns: ["tipo_habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_habitacion"
             referencedColumns: ["id"]
           },
         ]
