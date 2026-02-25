@@ -28,7 +28,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    if (token && storedUser) {
+    const isDemoMode = localStorage.getItem('demoMode') === 'true';
+    if (isDemoMode && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+        api.setDemoMode(true);
+      } catch (e) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('demoMode');
+      }
+    } else if (token && storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (e) {
@@ -59,8 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           rol: 'Admin',
           hotelNombre: 'Hotel Vista Mar',
         };
+        api.setDemoMode(true);
         setUser(demoUser);
         localStorage.setItem('user', JSON.stringify(demoUser));
+        localStorage.setItem('demoMode', 'true');
         setIsLoading(false);
         return true;
       }
@@ -72,7 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     api.logout();
+    api.setDemoMode(false);
     localStorage.removeItem('user');
+    localStorage.removeItem('demoMode');
   };
 
   return (
