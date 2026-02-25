@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      cargos: {
+        Row: {
+          cantidad: number | null
+          concepto: string
+          concepto_cargo_id: string | null
+          created_at: string | null
+          fecha: string | null
+          habitacion_id: string | null
+          hotel_id: string
+          id: string
+          notas: string | null
+          precio_unitario: number | null
+          reserva_id: string | null
+          total: number | null
+        }
+        Insert: {
+          cantidad?: number | null
+          concepto: string
+          concepto_cargo_id?: string | null
+          created_at?: string | null
+          fecha?: string | null
+          habitacion_id?: string | null
+          hotel_id: string
+          id?: string
+          notas?: string | null
+          precio_unitario?: number | null
+          reserva_id?: string | null
+          total?: number | null
+        }
+        Update: {
+          cantidad?: number | null
+          concepto?: string
+          concepto_cargo_id?: string | null
+          created_at?: string | null
+          fecha?: string | null
+          habitacion_id?: string | null
+          hotel_id?: string
+          id?: string
+          notas?: string | null
+          precio_unitario?: number | null
+          reserva_id?: string | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargos_concepto_cargo_id_fkey"
+            columns: ["concepto_cargo_id"]
+            isOneToOne: false
+            referencedRelation: "conceptos_cargo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_habitacion_id_fkey"
+            columns: ["habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "habitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           apellido_materno: string | null
@@ -78,6 +152,133 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conceptos_cargo: {
+        Row: {
+          created_at: string | null
+          descripcion: string | null
+          hotel_id: string
+          id: string
+          nombre: string
+          precio: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id: string
+          id?: string
+          nombre: string
+          precio?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          precio?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conceptos_cargo_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entregables: {
+        Row: {
+          costo_reposicion: number | null
+          created_at: string | null
+          descripcion: string | null
+          hotel_id: string
+          id: string
+          nombre: string
+          stock: number | null
+        }
+        Insert: {
+          costo_reposicion?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id: string
+          id?: string
+          nombre: string
+          stock?: number | null
+        }
+        Update: {
+          costo_reposicion?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          stock?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregables_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entregables_reserva: {
+        Row: {
+          cantidad: number | null
+          cantidad_devuelta: number | null
+          costo_faltante: number | null
+          devuelto: boolean | null
+          entregable_id: string | null
+          fecha_devolucion: string | null
+          fecha_entrega: string | null
+          id: string
+          notas: string | null
+          reserva_id: string
+        }
+        Insert: {
+          cantidad?: number | null
+          cantidad_devuelta?: number | null
+          costo_faltante?: number | null
+          devuelto?: boolean | null
+          entregable_id?: string | null
+          fecha_devolucion?: string | null
+          fecha_entrega?: string | null
+          id?: string
+          notas?: string | null
+          reserva_id: string
+        }
+        Update: {
+          cantidad?: number | null
+          cantidad_devuelta?: number | null
+          costo_faltante?: number | null
+          devuelto?: boolean | null
+          entregable_id?: string | null
+          fecha_devolucion?: string | null
+          fecha_entrega?: string | null
+          id?: string
+          notas?: string | null
+          reserva_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregables_reserva_entregable_id_fkey"
+            columns: ["entregable_id"]
+            isOneToOne: false
+            referencedRelation: "entregables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregables_reserva_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
             referencedColumns: ["id"]
           },
         ]
@@ -418,6 +619,144 @@ export type Database = {
             columns: ["tipo_habitacion_id"]
             isOneToOne: false
             referencedRelation: "tipos_habitacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tareas_limpieza: {
+        Row: {
+          asignado_a: string | null
+          asignado_nombre: string | null
+          created_at: string | null
+          estado: string | null
+          fecha: string | null
+          habitacion_id: string | null
+          hora_fin: string | null
+          hora_inicio: string | null
+          hotel_id: string
+          id: string
+          notas: string | null
+          prioridad: string | null
+          tipo: string | null
+        }
+        Insert: {
+          asignado_a?: string | null
+          asignado_nombre?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fecha?: string | null
+          habitacion_id?: string | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          hotel_id: string
+          id?: string
+          notas?: string | null
+          prioridad?: string | null
+          tipo?: string | null
+        }
+        Update: {
+          asignado_a?: string | null
+          asignado_nombre?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fecha?: string | null
+          habitacion_id?: string | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          hotel_id?: string
+          id?: string
+          notas?: string | null
+          prioridad?: string | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tareas_limpieza_habitacion_id_fkey"
+            columns: ["habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "habitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tareas_limpieza_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tareas_mantenimiento: {
+        Row: {
+          asignado_a: string | null
+          asignado_nombre: string | null
+          costo_estimado: number | null
+          costo_real: number | null
+          created_at: string | null
+          descripcion: string | null
+          estado: string | null
+          fecha_completado: string | null
+          fecha_estimada: string | null
+          fecha_reporte: string | null
+          habitacion_id: string | null
+          hotel_id: string
+          id: string
+          notas: string | null
+          prioridad: string | null
+          tipo: string | null
+          titulo: string
+        }
+        Insert: {
+          asignado_a?: string | null
+          asignado_nombre?: string | null
+          costo_estimado?: number | null
+          costo_real?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string | null
+          fecha_completado?: string | null
+          fecha_estimada?: string | null
+          fecha_reporte?: string | null
+          habitacion_id?: string | null
+          hotel_id: string
+          id?: string
+          notas?: string | null
+          prioridad?: string | null
+          tipo?: string | null
+          titulo: string
+        }
+        Update: {
+          asignado_a?: string | null
+          asignado_nombre?: string | null
+          costo_estimado?: number | null
+          costo_real?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string | null
+          fecha_completado?: string | null
+          fecha_estimada?: string | null
+          fecha_reporte?: string | null
+          habitacion_id?: string | null
+          hotel_id?: string
+          id?: string
+          notas?: string | null
+          prioridad?: string | null
+          tipo?: string | null
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tareas_mantenimiento_habitacion_id_fkey"
+            columns: ["habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "habitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tareas_mantenimiento_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
         ]
