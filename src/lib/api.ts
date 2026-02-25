@@ -1,8 +1,14 @@
+import { getDemoResponse } from '@/lib/demoData';
+
 const API_URL = import.meta.env.VITE_API_URL || 'https://checkinapi-5cc3a2116a1c.herokuapp.com/api';
 
 class ApiClient {
   private token: string | null = null;
   private hotelId: string | null = null;
+  private _demoMode = false;
+
+  get isDemoMode() { return this._demoMode; }
+  setDemoMode(v: boolean) { this._demoMode = v; }
 
   // Sanitización específica para el bug de "apellido con 0" en clientes no VIP.
   // - Qué hace: evita enviar/guardar `apellido_paterno` / `apellido_materno` con sufijo "0" cuando `es_vip` es falso.
@@ -94,6 +100,12 @@ class ApiClient {
   }
 
   private async request<T>(endpoint: string, options: { method?: string; body?: any } = {}): Promise<T> {
+    // In demo mode, return mock data for GET requests immediately
+    if (this._demoMode && (!options.method || options.method === 'GET')) {
+      const demoData = getDemoResponse(endpoint);
+      if (demoData !== null) return demoData as T;
+    }
+
     const { method = 'GET', body } = options;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = this.getToken();
@@ -101,17 +113,26 @@ class ApiClient {
     const hotelId = this.getHotelId();
     if (hotelId) headers['x-hotel-id'] = hotelId;
     
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Error de conexión' }));
-      throw new Error(error.error || 'Error en la solicitud');
+    try {
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Error de conexión' }));
+        throw new Error(error.error || 'Error en la solicitud');
+      }
+      return response.json();
+    } catch (err) {
+      // Fallback to demo data on network failure
+      if (this._demoMode) {
+        const demoData = getDemoResponse(endpoint);
+        if (demoData !== null) return demoData as T;
+      }
+      throw err;
     }
-    return response.json();
   }
 
   // Método público para componentes que necesitan llamadas directas
