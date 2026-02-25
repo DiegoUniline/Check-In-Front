@@ -103,7 +103,7 @@ export function DetalleReservaModal({
     setLoadingCargos(true);
     try {
       const [cargosData, pagosData, conceptosData] = await Promise.all([
-        api.getCargos?.(reserva.id) || Promise.resolve([]),
+        api.getCargosReserva?.(reserva.id) || Promise.resolve([]),
         api.getPagos?.(reserva.id) || Promise.resolve([]),
         api.getConceptosCargo?.() || Promise.resolve([])
       ]);

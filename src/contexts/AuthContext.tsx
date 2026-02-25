@@ -48,7 +48,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return true;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error, trying demo fallback:', error);
+      // Demo fallback: allow demo credentials when backend is unavailable
+      if (email === 'admin@hotel.com' && password === 'Admin123!') {
+        const demoUser: User = {
+          id: 'demo-001',
+          email: 'admin@hotel.com',
+          nombre: 'Admin Demo',
+          apellidoPaterno: 'Hotel',
+          rol: 'Admin',
+          hotelNombre: 'Hotel Vista Mar',
+        };
+        setUser(demoUser);
+        localStorage.setItem('user', JSON.stringify(demoUser));
+        setIsLoading(false);
+        return true;
+      }
       setIsLoading(false);
       return false;
     }
