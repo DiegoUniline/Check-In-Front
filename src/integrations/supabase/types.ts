@@ -14,6 +14,223 @@ export type Database = {
   }
   public: {
     Tables: {
+      habitaciones: {
+        Row: {
+          created_at: string | null
+          estado_habitacion: string | null
+          estado_limpieza: string | null
+          estado_mantenimiento: string | null
+          hotel_id: string
+          id: string
+          notas: string | null
+          numero: string
+          piso: number | null
+          tipo_habitacion_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          estado_habitacion?: string | null
+          estado_limpieza?: string | null
+          estado_mantenimiento?: string | null
+          hotel_id: string
+          id?: string
+          notas?: string | null
+          numero: string
+          piso?: number | null
+          tipo_habitacion_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          estado_habitacion?: string | null
+          estado_limpieza?: string | null
+          estado_mantenimiento?: string | null
+          hotel_id?: string
+          id?: string
+          notas?: string | null
+          numero?: string
+          piso?: number | null
+          tipo_habitacion_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habitaciones_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habitaciones_tipo_habitacion_id_fkey"
+            columns: ["tipo_habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_habitacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotels: {
+        Row: {
+          ciudad: string | null
+          created_at: string | null
+          direccion: string | null
+          email: string | null
+          estado: string | null
+          estrellas: number | null
+          hora_checkin: string | null
+          hora_checkout: string | null
+          id: string
+          logo_url: string | null
+          nombre: string
+          pais: string | null
+          razon_social: string | null
+          rfc: string | null
+          telefono: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ciudad?: string | null
+          created_at?: string | null
+          direccion?: string | null
+          email?: string | null
+          estado?: string | null
+          estrellas?: number | null
+          hora_checkin?: string | null
+          hora_checkout?: string | null
+          id?: string
+          logo_url?: string | null
+          nombre: string
+          pais?: string | null
+          razon_social?: string | null
+          rfc?: string | null
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ciudad?: string | null
+          created_at?: string | null
+          direccion?: string | null
+          email?: string | null
+          estado?: string | null
+          estrellas?: number | null
+          hora_checkin?: string | null
+          hora_checkout?: string | null
+          id?: string
+          logo_url?: string | null
+          nombre?: string
+          pais?: string | null
+          razon_social?: string | null
+          rfc?: string | null
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          activo: boolean | null
+          apellido_materno: string | null
+          apellido_paterno: string | null
+          created_at: string | null
+          email: string | null
+          foto_url: string | null
+          hotel_id: string | null
+          id: string
+          nombre: string
+          telefono: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          apellido_materno?: string | null
+          apellido_paterno?: string | null
+          created_at?: string | null
+          email?: string | null
+          foto_url?: string | null
+          hotel_id?: string | null
+          id: string
+          nombre: string
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          apellido_materno?: string | null
+          apellido_paterno?: string | null
+          created_at?: string | null
+          email?: string | null
+          foto_url?: string | null
+          hotel_id?: string | null
+          id?: string
+          nombre?: string
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tipos_habitacion: {
+        Row: {
+          amenidades: string[] | null
+          capacidad_adultos: number | null
+          capacidad_maxima: number | null
+          capacidad_ninos: number | null
+          codigo: string
+          created_at: string | null
+          descripcion: string | null
+          hotel_id: string
+          id: string
+          nombre: string
+          precio_base: number | null
+          precio_persona_extra: number | null
+        }
+        Insert: {
+          amenidades?: string[] | null
+          capacidad_adultos?: number | null
+          capacidad_maxima?: number | null
+          capacidad_ninos?: number | null
+          codigo: string
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id: string
+          id?: string
+          nombre: string
+          precio_base?: number | null
+          precio_persona_extra?: number | null
+        }
+        Update: {
+          amenidades?: string[] | null
+          capacidad_adultos?: number | null
+          capacidad_maxima?: number | null
+          capacidad_ninos?: number | null
+          codigo?: string
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          precio_base?: number | null
+          precio_persona_extra?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tipos_habitacion_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
