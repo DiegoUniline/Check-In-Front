@@ -88,6 +88,38 @@ export type Database = {
           },
         ]
       }
+      categorias_producto: {
+        Row: {
+          created_at: string | null
+          descripcion: string | null
+          hotel_id: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorias_producto_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           apellido_materno: string | null
@@ -152,6 +184,114 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          estado: string | null
+          fecha: string | null
+          hotel_id: string
+          id: string
+          impuesto: number | null
+          notas: string | null
+          numero_orden: string | null
+          proveedor_id: string | null
+          proveedor_nombre: string | null
+          subtotal: number | null
+          total: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          estado?: string | null
+          fecha?: string | null
+          hotel_id: string
+          id?: string
+          impuesto?: number | null
+          notas?: string | null
+          numero_orden?: string | null
+          proveedor_id?: string | null
+          proveedor_nombre?: string | null
+          subtotal?: number | null
+          total?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          estado?: string | null
+          fecha?: string | null
+          hotel_id?: string
+          id?: string
+          impuesto?: number | null
+          notas?: string | null
+          numero_orden?: string | null
+          proveedor_id?: string | null
+          proveedor_nombre?: string | null
+          subtotal?: number | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_detalle: {
+        Row: {
+          cantidad: number | null
+          compra_id: string
+          id: string
+          precio_unitario: number | null
+          producto_id: string | null
+          producto_nombre: string | null
+          total: number | null
+        }
+        Insert: {
+          cantidad?: number | null
+          compra_id: string
+          id?: string
+          precio_unitario?: number | null
+          producto_id?: string | null
+          producto_nombre?: string | null
+          total?: number | null
+        }
+        Update: {
+          cantidad?: number | null
+          compra_id?: string
+          id?: string
+          precio_unitario?: number | null
+          producto_id?: string | null
+          producto_nombre?: string | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_detalle_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_detalle_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
             referencedColumns: ["id"]
           },
         ]
@@ -283,6 +423,69 @@ export type Database = {
           },
         ]
       }
+      gastos: {
+        Row: {
+          categoria: string
+          comprobante: string | null
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          fecha: string | null
+          hotel_id: string
+          id: string
+          metodo_pago: string | null
+          monto: number
+          notas: string | null
+          proveedor_id: string | null
+          proveedor_nombre: string | null
+        }
+        Insert: {
+          categoria: string
+          comprobante?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          fecha?: string | null
+          hotel_id: string
+          id?: string
+          metodo_pago?: string | null
+          monto: number
+          notas?: string | null
+          proveedor_id?: string | null
+          proveedor_nombre?: string | null
+        }
+        Update: {
+          categoria?: string
+          comprobante?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          fecha?: string | null
+          hotel_id?: string
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          notas?: string | null
+          proveedor_id?: string | null
+          proveedor_nombre?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       habitaciones: {
         Row: {
           created_at: string | null
@@ -397,6 +600,53 @@ export type Database = {
         }
         Relationships: []
       }
+      movimientos_inventario: {
+        Row: {
+          cantidad: number
+          created_at: string | null
+          id: string
+          motivo: string | null
+          producto_id: string
+          referencia: string | null
+          stock_anterior: number | null
+          stock_nuevo: number | null
+          tipo: string
+          usuario_id: string | null
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          producto_id: string
+          referencia?: string | null
+          stock_anterior?: number | null
+          stock_nuevo?: number | null
+          tipo: string
+          usuario_id?: string | null
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          producto_id?: string
+          referencia?: string | null
+          stock_anterior?: number | null
+          stock_nuevo?: number | null
+          tipo?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_inventario_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           created_at: string | null
@@ -454,6 +704,78 @@ export type Database = {
           },
         ]
       }
+      productos: {
+        Row: {
+          activo: boolean | null
+          categoria: string | null
+          categoria_id: string | null
+          codigo: string | null
+          created_at: string | null
+          descripcion: string | null
+          hotel_id: string
+          id: string
+          imagen: string | null
+          nombre: string
+          precio_compra: number | null
+          precio_venta: number | null
+          stock_actual: number | null
+          stock_minimo: number | null
+          unidad: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          categoria?: string | null
+          categoria_id?: string | null
+          codigo?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id: string
+          id?: string
+          imagen?: string | null
+          nombre: string
+          precio_compra?: number | null
+          precio_venta?: number | null
+          stock_actual?: number | null
+          stock_minimo?: number | null
+          unidad?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          categoria?: string | null
+          categoria_id?: string | null
+          codigo?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id?: string
+          id?: string
+          imagen?: string | null
+          nombre?: string
+          precio_compra?: number | null
+          precio_venta?: number | null
+          stock_actual?: number | null
+          stock_minimo?: number | null
+          unidad?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "productos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           activo: boolean | null
@@ -497,6 +819,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proveedores: {
+        Row: {
+          activo: boolean | null
+          contacto: string | null
+          created_at: string | null
+          direccion: string | null
+          email: string | null
+          hotel_id: string
+          id: string
+          nombre: string
+          notas: string | null
+          rfc: string | null
+          telefono: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          contacto?: string | null
+          created_at?: string | null
+          direccion?: string | null
+          email?: string | null
+          hotel_id: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          rfc?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          contacto?: string | null
+          created_at?: string | null
+          direccion?: string | null
+          email?: string | null
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          rfc?: string | null
+          telefono?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedores_hotel_id_fkey"
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
@@ -814,6 +1186,53 @@ export type Database = {
           },
         ]
       }
+      transacciones: {
+        Row: {
+          concepto: string | null
+          created_at: string | null
+          fecha: string | null
+          hotel_id: string
+          id: string
+          monto: number
+          notas: string | null
+          referencia_id: string | null
+          referencia_tipo: string | null
+          tipo: string
+        }
+        Insert: {
+          concepto?: string | null
+          created_at?: string | null
+          fecha?: string | null
+          hotel_id: string
+          id?: string
+          monto: number
+          notas?: string | null
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo: string
+        }
+        Update: {
+          concepto?: string | null
+          created_at?: string | null
+          fecha?: string | null
+          hotel_id?: string
+          id?: string
+          monto?: number
+          notas?: string | null
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacciones_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -831,6 +1250,124 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ventas: {
+        Row: {
+          cliente_nombre: string | null
+          created_at: string | null
+          created_by: string | null
+          fecha: string | null
+          habitacion_id: string | null
+          hotel_id: string
+          id: string
+          impuesto: number | null
+          metodo_pago: string | null
+          notas: string | null
+          numero_venta: string | null
+          reserva_id: string | null
+          subtotal: number | null
+          total: number | null
+        }
+        Insert: {
+          cliente_nombre?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          fecha?: string | null
+          habitacion_id?: string | null
+          hotel_id: string
+          id?: string
+          impuesto?: number | null
+          metodo_pago?: string | null
+          notas?: string | null
+          numero_venta?: string | null
+          reserva_id?: string | null
+          subtotal?: number | null
+          total?: number | null
+        }
+        Update: {
+          cliente_nombre?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          fecha?: string | null
+          habitacion_id?: string | null
+          hotel_id?: string
+          id?: string
+          impuesto?: number | null
+          metodo_pago?: string | null
+          notas?: string | null
+          numero_venta?: string | null
+          reserva_id?: string | null
+          subtotal?: number | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ventas_habitacion_id_fkey"
+            columns: ["habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "habitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ventas_detalle: {
+        Row: {
+          cantidad: number | null
+          id: string
+          precio_unitario: number | null
+          producto_id: string | null
+          producto_nombre: string | null
+          total: number | null
+          venta_id: string
+        }
+        Insert: {
+          cantidad?: number | null
+          id?: string
+          precio_unitario?: number | null
+          producto_id?: string | null
+          producto_nombre?: string | null
+          total?: number | null
+          venta_id: string
+        }
+        Update: {
+          cantidad?: number | null
+          id?: string
+          precio_unitario?: number | null
+          producto_id?: string | null
+          producto_nombre?: string | null
+          total?: number | null
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ventas_detalle_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_detalle_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
