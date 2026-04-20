@@ -360,9 +360,9 @@ export default function Reportes() {
                 <BarChart data={occupancyData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="dia" className="text-xs" />
-                  <YAxis className="text-xs" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                  <YAxis className="text-xs" allowDecimals={false} />
                   <Tooltip 
-                    formatter={(value: number) => [`${value}%`, 'Ocupación']}
+                    formatter={(value: number) => [`${value}`, 'Reservas']}
                     contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
                   />
                   <Bar dataKey="ocupacion" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
@@ -382,6 +382,11 @@ export default function Reportes() {
           </CardHeader>
           <CardContent>
             <div className="h-[200px]">
+              {sourceData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  Sin reservas registradas
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -400,6 +405,7 @@ export default function Reportes() {
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
