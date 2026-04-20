@@ -340,7 +340,7 @@ class ApiClient {
   };
 
   // ------- Pagos -------
-  getPagos = async (): Promise<any> => { const { data } = await supabase.from('pagos').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
+  getPagos = async (_params?: any): Promise<any> => { const { data } = await supabase.from('pagos').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
   getPagosReserva = async (reservaId: string): Promise<any> => { const { data } = await supabase.from('pagos').select('*').eq('reserva_id', reservaId).order('fecha', { ascending: false }); return data || []; };
   createPago = async (data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('pagos').insert({ ...data, hotel_id: this.hid() }).select().single();
@@ -476,14 +476,14 @@ class ApiClient {
   deleteGasto = async (id: string): Promise<any> => { const { error } = await supabase.from('gastos').delete().eq('id', id); if (error) throw error; return { ok: true }; };
 
   // ------- Proveedores -------
-  getProveedores = async (): Promise<any> => { const { data } = await supabase.from('proveedores').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
+  getProveedores = async (_params?: any): Promise<any> => { const { data } = await supabase.from('proveedores').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
   getProveedor = async (id: string): Promise<any> => { const { data } = await supabase.from('proveedores').select('*').eq('id', id).maybeSingle(); return data; };
   createProveedor = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('proveedores').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
   updateProveedor = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('proveedores').update(data).eq('id', id).select().single(); if (error) throw error; return r; };
   deleteProveedor = async (id: string): Promise<any> => { const { error } = await supabase.from('proveedores').delete().eq('id', id); if (error) throw error; return { ok: true }; };
 
   // ------- Compras -------
-  getCompras = async (): Promise<any> => { const { data } = await supabase.from('compras').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
+  getCompras = async (_params?: any): Promise<any> => { const { data } = await supabase.from('compras').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
   getCompra = async (id: string): Promise<any> => { const { data } = await supabase.from('compras').select('*, compras_detalle(*)').eq('id', id).maybeSingle(); return data; };
   createCompra = async (data: any): Promise<any> => { const { detalles, ...header } = data; const { data: r, error } = await supabase.from('compras').insert({ ...header, hotel_id: this.hid() }).select().single(); if (error) throw error; if (Array.isArray(detalles) && detalles.length) { await supabase.from('compras_detalle').insert(detalles.map((d: any) => ({ ...d, compra_id: r.id }))); } return r; };
   updateCompra = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('compras').update(data).eq('id', id).select().single(); if (error) throw error; return r; };
@@ -491,7 +491,7 @@ class ApiClient {
   deleteCompra = async (id: string): Promise<any> => { const { error } = await supabase.from('compras').delete().eq('id', id); if (error) throw error; return { ok: true }; };
 
   // ------- Ventas -------
-  getVentas = async (): Promise<any> => { const { data } = await supabase.from('ventas').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
+  getVentas = async (_params?: any): Promise<any> => { const { data } = await supabase.from('ventas').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
   getVenta = async (id: string): Promise<any> => { const { data } = await supabase.from('ventas').select('*, ventas_detalle(*)').eq('id', id).maybeSingle(); return data; };
   createVenta = async (data: any): Promise<any> => {
     const { detalles, ...header } = data;
@@ -504,7 +504,7 @@ class ApiClient {
   };
 
   // ------- Transacciones -------
-  getTransacciones = async (): Promise<any> => { const { data } = await supabase.from('transacciones').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
+  getTransacciones = async (_params?: any): Promise<any> => { const { data } = await supabase.from('transacciones').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
   getTransaccion = async (id: string): Promise<any> => { const { data } = await supabase.from('transacciones').select('*').eq('id', id).maybeSingle(); return data; };
 
   // ------- Hotel -------
@@ -527,7 +527,7 @@ class ApiClient {
   createHotelSaas = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('hotels').insert(data).select().single(); if (error) throw error; return r; };
   registrarHotelFull = async (_data: any): Promise<any> => ({});
   asignarHotelACuenta = async (_data: any): Promise<any> => ({});
-  getMiSuscripcion = async (): Promise<any> => ({ activa: true, plan: 'Demo', vence: '2099-12-31' });
+  getMiSuscripcion = async (_params?: any): Promise<any> => ({ activa: true, plan: 'Demo', vence: '2099-12-31' });
 
   // ------- Usuarios -------
   getUsuarios = async (): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('hotel_id', this.hid()); return (data || []).map((u: any) => ({ ...u, rol: 'Recepcion' })); };
