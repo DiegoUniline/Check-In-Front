@@ -2,11 +2,10 @@ import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TareaLimpieza } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
 interface TareasCriticasCardProps {
-  tareas: TareaLimpieza[];
+  tareas: any[];
   onAtender?: (tareaId: string) => void;
 }
 
