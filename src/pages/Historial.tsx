@@ -209,8 +209,8 @@ export default function Historial() {
 
   const handleVerDetalle = async (trans: Transaccion) => {
     try {
-      const detalles = await api.getTransaccion(trans.id);
-      setDetalleModal({ open: true, transaccion: { ...trans, ...detalles } });
+      const detalles: any = await api.getTransaccion(trans.id);
+      setDetalleModal({ open: true, transaccion: { ...trans, ...(detalles || {}) } as any });
     } catch {
       setDetalleModal({ open: true, transaccion: trans });
     }

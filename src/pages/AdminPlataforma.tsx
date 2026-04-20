@@ -94,7 +94,7 @@ export default function AdminPlataforma() {
         email: data.email_acceso,
         password: data.password,
         rol: 'admin',
-        cuenta_id: cuenta.id,
+        cuenta_id: (cuenta as any)?.id,
         hotel_id: null,
         activo: true
       });

@@ -51,7 +51,7 @@ export default function CheckOut() {
       ]);
       setReserva(reservaData);
       setPagos(Array.isArray(pagosData) ? pagosData : []);
-      setCargosExtra(reservaData.cargos_extra || []);
+      setCargosExtra((reservaData as any)?.cargos_extra || []);
     } catch (error) {
       console.error('Error cargando reserva:', error);
       toast({ title: 'Error', description: 'No se pudo cargar la reserva', variant: 'destructive' });

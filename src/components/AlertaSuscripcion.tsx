@@ -13,7 +13,7 @@ export function AlertaSuscripcion() {
   useEffect(() => {
     const cargar = async () => {
       try {
-        const data = await api.getMiSuscripcion();
+        const data: any = await api.getMiSuscripcion();
         setSuscripcion(data);
         
         if (data && data.dias_restantes !== -999) {

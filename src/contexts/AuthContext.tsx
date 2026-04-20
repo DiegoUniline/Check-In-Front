@@ -54,27 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await api.login(email, password);
       setUser(data.user);
       localStorage.setItem('user', JSON.stringify(data.user));
+      if (email === 'admin@hotel.com') {
+        localStorage.setItem('demoMode', 'true');
+      }
       setIsLoading(false);
       return true;
     } catch (error) {
-      console.error('Login error, trying demo fallback:', error);
-      // Demo fallback: allow demo credentials when backend is unavailable
-      if (email === 'admin@hotel.com' && password === 'Admin123!') {
-        const demoUser: User = {
-          id: 'demo-001',
-          email: 'admin@hotel.com',
-          nombre: 'Admin Demo',
-          apellidoPaterno: 'Hotel',
-          rol: 'Admin',
-          hotelNombre: 'Hotel Vista Mar',
-        };
-        api.setDemoMode(true);
-        setUser(demoUser);
-        localStorage.setItem('user', JSON.stringify(demoUser));
-        localStorage.setItem('demoMode', 'true');
-        setIsLoading(false);
-        return true;
-      }
+      console.error('Login error:', error);
       setIsLoading(false);
       return false;
     }

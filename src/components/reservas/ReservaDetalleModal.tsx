@@ -429,7 +429,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     
     setProcessing(true);
     try {
-      const result = await api.devolverEntregable?.(ent.id, {
+      const result: any = await api.devolverEntregable?.(ent.id, {
         cantidad_devuelta: cantDevuelta,
         costo_unitario: costo,
         crear_cargo: devolucionForm.crearCargo && faltantes > 0 && costo > 0
