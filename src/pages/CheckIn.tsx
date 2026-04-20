@@ -70,12 +70,13 @@ export default function CheckIn() {
       }
 
       // Prellenar formulario
+      const cli: any = (reservaData as any).cliente || (reservaData as any).clientes || {};
       setFormData({
-        nombre: reservaData.cliente?.nombre || reservaData.huesped_nombre || '',
-        apellidoPaterno: reservaData.cliente?.apellido_paterno || '',
-        documento: reservaData.cliente?.numero_documento || '',
-        nacionalidad: reservaData.cliente?.nacionalidad || 'Mexicana',
-        email: reservaData.cliente?.email || '',
+        nombre: cli.nombre || (reservaData as any).huesped_nombre || '',
+        apellidoPaterno: cli.apellido_paterno || '',
+        documento: cli.numero_documento || '',
+        nacionalidad: cli.nacionalidad || 'Mexicana',
+        email: cli.email || '',
         habitacionId: reservaData.habitacion_id || '',
         anticipo: reservaData.total_pagado || 0,
         metodoPago: 'Tarjeta',
