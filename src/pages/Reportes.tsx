@@ -118,10 +118,10 @@ export default function Reportes() {
         ocupacion: Math.round(ocupacionActual),
         huespedes: dashStats?.huespedes_actuales || totalReservas,
         adr: totalReservas > 0 ? Math.round(totalIngresos / totalReservas) : 0,
-        ingresosChange: 12.5,
-        ocupacionChange: 5.2,
-        huespedesChange: 8.1,
-        adrChange: -2.3,
+        ingresosChange: 0,
+        ocupacionChange: 0,
+        huespedesChange: 0,
+        adrChange: 0,
       });
 
       // Generate revenue chart data
@@ -148,19 +148,35 @@ export default function Reportes() {
 
       // Occupancy by day of week
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-      const occupancyChartData = dayNames.map((dia, idx) => ({
-        dia,
-        ocupacion: Math.round(60 + Math.random() * 35), // Simulated for now
-      }));
+      const occupancyChartData = dayNames.map((dia) => {
+        const reservasDia = Array.isArray(reservas)
+          ? reservas.filter((r: any) => {
+              const f = new Date(r.fecha_checkin);
+              return f.getDay() === dayNames.indexOf(dia);
+            }).length
+          : 0;
+        return { dia, ocupacion: reservasDia };
+      });
       setOccupancyData(occupancyChartData);
 
-      // Source data (simulated - backend would provide this)
-      setSourceData([
-        { name: 'Directo', value: 45, color: CHART_COLORS[0] },
-        { name: 'Booking', value: 25, color: CHART_COLORS[1] },
-        { name: 'Expedia', value: 15, color: CHART_COLORS[2] },
-        { name: 'Otros', value: 15, color: CHART_COLORS[3] },
-      ]);
+      // Source data calculado desde reservas reales (campo origen)
+      if (Array.isArray(reservas) && reservas.length > 0) {
+        const origenes: Record<string, number> = {};
+        reservas.forEach((r: any) => {
+          const o = r.origen || 'Directo';
+          origenes[o] = (origenes[o] || 0) + 1;
+        });
+        const total = reservas.length;
+        setSourceData(
+          Object.entries(origenes).map(([name, count], i) => ({
+            name,
+            value: Math.round((count / total) * 100),
+            color: CHART_COLORS[i % CHART_COLORS.length],
+          }))
+        );
+      } else {
+        setSourceData([]);
+      }
 
       // Room type performance
       if (Array.isArray(tiposHab) && tiposHab.length > 0) {
