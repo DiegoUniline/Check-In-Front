@@ -22,25 +22,34 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/contexts/ThemeContext';
-import { mockHotel } from '@/data/mockData';
 import api from '@/lib/api';
+
+const emptyHotel = {
+  nombre: '',
+  razonSocial: '',
+  rfc: '',
+  direccion: '',
+  ciudad: '',
+  estado: '',
+  pais: 'México',
+  telefono: '',
+  email: '',
+  horaCheckin: '15:00',
+  horaCheckout: '12:00',
+  estrellas: 3,
+};
 
 export default function Configuracion() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const [hotelData, setHotelData] = useState(mockHotel);
+  const [hotelData, setHotelData] = useState<any>(emptyHotel);
   const [loadingHotel, setLoadingHotel] = useState(true);
   const [savingHotel, setSavingHotel] = useState(false);
 
   const mapBackendToUi = (h: any) => {
-    /*
-      Mapeo backend -> UI.
-      Backend: `check-in-back/src/routes/hotel.js` devuelve columnas snake_case.
-      UI (este archivo) usa camelCase (mockHotel).
-      Relacionado con `POST /api/hotel` (updateHotel) en `Check-In-Front/src/lib/api.ts`.
-    */
-    if (!h) return mockHotel;
+    // Mapeo backend (snake_case) -> UI (camelCase)
+    if (!h) return emptyHotel;
     return {
       ...hotelData,
       nombre: h.nombre ?? hotelData.nombre,
@@ -59,10 +68,7 @@ export default function Configuracion() {
   };
 
   const mapUiToBackend = (ui: any) => {
-    /*
-      Mapeo UI -> backend (snake_case).
-      Consumido por `check-in-back/src/routes/hotel.js` (POST `/api/hotel`).
-    */
+    // Mapeo UI (camelCase) -> backend (snake_case)
     return {
       nombre: ui.nombre,
       razon_social: ui.razonSocial,
