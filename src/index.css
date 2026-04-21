@@ -406,11 +406,6 @@
 
 /* Specific component fixes */
 
-/* Dialog/Modal - prevent overflow */
-[role="dialog"] {
-  max-width: calc(100vw - 2rem);
-}
-
 /* Select dropdown - ensure visible */
 [data-radix-popper-content-wrapper] {
   z-index: 50 !important;
