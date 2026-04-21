@@ -23,7 +23,11 @@ class ApiClient {
   }
 
   getHotelId(): string | null {
-    if (!this.hotelId) this.hotelId = localStorage.getItem('hotel_id') || DEMO_HOTEL_ID;
+    if (!this.hotelId) {
+      const stored = localStorage.getItem('hotel_id');
+      // Solo caer al hotel demo si estamos explícitamente en modo demo
+      this.hotelId = stored || (this._demoMode ? DEMO_HOTEL_ID : null);
+    }
     return this.hotelId;
   }
 
