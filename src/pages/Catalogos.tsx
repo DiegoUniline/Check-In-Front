@@ -516,7 +516,7 @@ export default function Catalogos() {
 
       {/* Modal Tipo Habitación */}
       <Dialog open={modalTipoOpen} onOpenChange={setModalTipoOpen}>
-        <DialogContent className="w-[95vw] max-w-lg max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTipo ? 'Editar Tipo de Habitación' : 'Nuevo Tipo de Habitación'}</DialogTitle>
           </DialogHeader>
@@ -621,7 +621,7 @@ export default function Catalogos() {
 
       {/* Modal Categoría */}
       <Dialog open={modalCatOpen} onOpenChange={setModalCatOpen}>
-        <DialogContent className="w-[95vw] max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Nueva Categoría</DialogTitle>
           </DialogHeader>
@@ -652,7 +652,7 @@ export default function Catalogos() {
 
       {/* Modal Entregable */}
       <Dialog open={modalEntregableOpen} onOpenChange={setModalEntregableOpen}>
-        <DialogContent className="w-[95vw] max-w-md max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingEntregable ? 'Editar Entregable' : 'Nuevo Entregable'}</DialogTitle>
           </DialogHeader>

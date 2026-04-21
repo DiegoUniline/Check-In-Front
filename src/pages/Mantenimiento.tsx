@@ -250,7 +250,7 @@ export default function Mantenimiento() {
               Nuevo Ticket
             </Button>
           </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-lg max-h-[88vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[88vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nuevo Ticket de Mantenimiento</DialogTitle>
               <DialogDescription>Registra un nuevo problema de mantenimiento</DialogDescription>
