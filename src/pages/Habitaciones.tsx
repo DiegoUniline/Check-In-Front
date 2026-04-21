@@ -75,13 +75,17 @@ export default function Habitaciones() {
   
   // Form state
   const [formData, setFormData] = useState({
-    tipo_id: '',
+    tipo_habitacion_id: '',
     numero: '',
     piso: '',
     estado_habitacion: 'Disponible',
     estado_limpieza: 'Limpia',
     estado_mantenimiento: 'OK',
   });
+
+  // Loading flags para evitar doble-click
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -103,12 +107,17 @@ export default function Habitaciones() {
     }
   };
 
-  const pisos = [...new Set(habitaciones.map(h => h.piso))].sort();
+  const pisos = [...new Set(
+    habitaciones
+      .map(h => h.piso)
+      .filter((p): p is number => p !== null && p !== undefined)
+  )].sort((a, b) => a - b);
 
   const filteredHabitaciones = habitaciones.filter(h => {
-    const matchSearch = h.numero.includes(searchQuery);
-    const matchPiso = filterPiso === 'all' || h.piso.toString() === filterPiso;
-    const matchTipo = filterTipo === 'all' || h.tipo_id === filterTipo;
+    const numero = (h.numero ?? '').toString();
+    const matchSearch = numero.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchPiso = filterPiso === 'all' || (h.piso != null && h.piso.toString() === filterPiso);
+    const matchTipo = filterTipo === 'all' || h.tipo_habitacion_id === filterTipo;
     const matchEstado = filterEstado === 'all' || h.estado_habitacion === filterEstado;
     return matchSearch && matchPiso && matchTipo && matchEstado;
   });
