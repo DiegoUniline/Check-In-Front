@@ -402,7 +402,7 @@ export default function Clientes() {
 
       {/* Modal Detalle */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="w-[95vw] max-w-xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
@@ -489,7 +489,7 @@ export default function Clientes() {
 
       {/* Modal Crear/Editar Cliente */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="w-[95vw] max-w-xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
             <DialogDescription>

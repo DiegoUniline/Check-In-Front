@@ -447,7 +447,7 @@ export default function Habitaciones() {
 
       {/* Modal Nueva/Editar CORREGIDO */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="w-[95vw] max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editingHab ? 'Editar Habitación' : 'Nueva Habitación'}</DialogTitle>
             <DialogDescription>
@@ -517,7 +517,7 @@ export default function Habitaciones() {
 
       {/* AlertDialog para eliminar */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="w-[95vw] max-w-md">
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar habitación?</AlertDialogTitle>
             <AlertDialogDescription>

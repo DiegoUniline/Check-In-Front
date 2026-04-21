@@ -474,7 +474,7 @@ export default function HistorialReservas() {
       {/* Modal Detalle CORREGIDO */}
       <Dialog open={modalDetalleOpen} onOpenChange={setModalDetalleOpen}>
         {/* Aquí está el arreglo del ancho: w-[95vw] y overflow-y-auto */}
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[88vh] overflow-y-auto p-4 md:p-6">
+        <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto p-4 md:p-6">
           <DialogHeader>
             <div className="flex flex-wrap items-center gap-2 pr-8">
               <DialogTitle className="text-xl">
