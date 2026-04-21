@@ -156,7 +156,12 @@ class ApiClient {
   }
 
   // ------- Helpers -------
-  private hid() { return this.getHotelId() || DEMO_HOTEL_ID; }
+  private hid() {
+    const id = this.getHotelId();
+    // Si no hay hotel_id real (usuario sin profile), devolvemos un UUID
+    // imposible para que las queries no caigan al hotel demo accidentalmente.
+    return id || '00000000-0000-0000-0000-000000000000';
+  }
 
   // ------- Dashboard -------
   getDashboardStats = async (): Promise<any> => {
