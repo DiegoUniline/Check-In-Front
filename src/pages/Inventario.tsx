@@ -384,7 +384,7 @@ export default function Inventario() {
 
       {/* Modal Producto */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
             <DialogDescription>
@@ -468,7 +468,7 @@ export default function Inventario() {
 
       {/* Modal Ajuste Stock */}
       <Dialog open={ajusteModal.open} onOpenChange={(open) => setAjusteModal({ open, producto: open ? ajusteModal.producto : null })}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Ajustar Stock</DialogTitle>
             <DialogDescription>

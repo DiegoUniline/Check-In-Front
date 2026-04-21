@@ -379,7 +379,7 @@ export default function Turnos() {
 
       {/* Open Shift Dialog */}
       <Dialog open={isAbrirDialogOpen} onOpenChange={setIsAbrirDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Unlock className="h-5 w-5" />

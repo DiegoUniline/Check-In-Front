@@ -335,7 +335,7 @@ export default function Limpieza() {
       )}
 
       <Dialog open={asignarModal.open} onOpenChange={(open) => setAsignarModal({ open, tarea: open ? asignarModal.tarea : null })}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Asignar tarea de limpieza</DialogTitle>
             <DialogDescription>Selecciona o crea un empleado para esta tarea</DialogDescription>

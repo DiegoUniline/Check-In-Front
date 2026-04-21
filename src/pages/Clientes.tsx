@@ -489,7 +489,7 @@ export default function Clientes() {
 
       {/* Modal Crear/Editar Cliente */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
             <DialogDescription>
