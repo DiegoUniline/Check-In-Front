@@ -23,7 +23,11 @@ class ApiClient {
   }
 
   getHotelId(): string | null {
-    if (!this.hotelId) this.hotelId = localStorage.getItem('hotel_id') || DEMO_HOTEL_ID;
+    if (!this.hotelId) {
+      const stored = localStorage.getItem('hotel_id');
+      // Solo caer al hotel demo si estamos explícitamente en modo demo
+      this.hotelId = stored || (this._demoMode ? DEMO_HOTEL_ID : null);
+    }
     return this.hotelId;
   }
 
@@ -152,7 +156,12 @@ class ApiClient {
   }
 
   // ------- Helpers -------
-  private hid() { return this.getHotelId() || DEMO_HOTEL_ID; }
+  private hid() {
+    const id = this.getHotelId();
+    // Si no hay hotel_id real (usuario sin profile), devolvemos un UUID
+    // imposible para que las queries no caigan al hotel demo accidentalmente.
+    return id || '00000000-0000-0000-0000-000000000000';
+  }
 
   // ------- Dashboard -------
   getDashboardStats = async (): Promise<any> => {
