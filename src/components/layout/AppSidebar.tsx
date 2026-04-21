@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import { useAuth } from "@/contexts/AuthContext"; // Importante para detectar a Diego
+import { useAuth } from "@/contexts/useAuth"; // Importante para detectar a Diego
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
