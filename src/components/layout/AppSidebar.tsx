@@ -20,6 +20,8 @@ import {
   ShieldCheck // Icono para Diego
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -76,8 +78,35 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const { user } = useAuth(); // Detectamos al usuario actual
   const collapsed = state === 'collapsed';
-  
-  const occupancyPercent = 84;
+
+  const [ocupadas, setOcupadas] = useState(0);
+  const [totalHab, setTotalHab] = useState(0);
+
+  useEffect(() => {
+    const cargarOcupacion = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('habitaciones')
+          .select('estado_habitacion');
+        if (error) throw error;
+        const total = data?.length ?? 0;
+        const ocup = (data ?? []).filter(
+          (h: any) => h.estado_habitacion === 'Ocupada'
+        ).length;
+        setTotalHab(total);
+        setOcupadas(ocup);
+      } catch (e) {
+        setTotalHab(0);
+        setOcupadas(0);
+      }
+    };
+    cargarOcupacion();
+    const interval = setInterval(cargarOcupacion, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const occupancyPercent =
+    totalHab > 0 ? Math.round((ocupadas / totalHab) * 100) : 0;
 
   const renderNavItems = (items: typeof mainNavItems) => (
     <SidebarMenu>
@@ -173,7 +202,9 @@ export function AppSidebar() {
               <span className="text-lg font-bold text-primary">{occupancyPercent}%</span>
             </div>
             <Progress value={occupancyPercent} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-2">42 de 50 habitaciones</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              {ocupadas} de {totalHab} habitaciones
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1">
