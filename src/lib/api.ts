@@ -205,7 +205,20 @@ class ApiClient {
     if (error) throw error; return data || [];
   };
   createTipoHabitacion = async (data: any): Promise<any> => {
-    const { data: r, error } = await supabase.from('tipos_habitacion').insert({ ...data, hotel_id: this.hid() }).select().single();
+    const codigo =
+      data.codigo ||
+      (data.nombre
+        ? data.nombre
+            .toString()
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '')
+            .slice(0, 6) || `TH${Date.now().toString().slice(-5)}`
+        : `TH${Date.now().toString().slice(-5)}`);
+    const { data: r, error } = await supabase
+      .from('tipos_habitacion')
+      .insert({ ...data, codigo, hotel_id: this.hid() })
+      .select()
+      .single();
     if (error) throw error; return r;
   };
   updateTipoHabitacion = async (id: string, data: any): Promise<any> => {
