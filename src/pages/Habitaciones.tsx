@@ -75,13 +75,17 @@ export default function Habitaciones() {
   
   // Form state
   const [formData, setFormData] = useState({
-    tipo_id: '',
+    tipo_habitacion_id: '',
     numero: '',
     piso: '',
     estado_habitacion: 'Disponible',
     estado_limpieza: 'Limpia',
     estado_mantenimiento: 'OK',
   });
+
+  // Loading flags para evitar doble-click
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -103,12 +107,17 @@ export default function Habitaciones() {
     }
   };
 
-  const pisos = [...new Set(habitaciones.map(h => h.piso))].sort();
+  const pisos = [...new Set(
+    habitaciones
+      .map(h => h.piso)
+      .filter((p): p is number => p !== null && p !== undefined)
+  )].sort((a, b) => a - b);
 
   const filteredHabitaciones = habitaciones.filter(h => {
-    const matchSearch = h.numero.includes(searchQuery);
-    const matchPiso = filterPiso === 'all' || h.piso.toString() === filterPiso;
-    const matchTipo = filterTipo === 'all' || h.tipo_id === filterTipo;
+    const numero = (h.numero ?? '').toString();
+    const matchSearch = numero.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchPiso = filterPiso === 'all' || (h.piso != null && h.piso.toString() === filterPiso);
+    const matchTipo = filterTipo === 'all' || h.tipo_habitacion_id === filterTipo;
     const matchEstado = filterEstado === 'all' || h.estado_habitacion === filterEstado;
     return matchSearch && matchPiso && matchTipo && matchEstado;
   });
@@ -159,7 +168,7 @@ export default function Habitaciones() {
   const openNewModal = () => {
     setEditingHab(null);
     setFormData({
-      tipo_id: tiposHabitacion[0]?.id || '',
+      tipo_habitacion_id: tiposHabitacion[0]?.id || '',
       numero: '',
       piso: '1',
       estado_habitacion: 'Disponible',
@@ -172,21 +181,28 @@ export default function Habitaciones() {
   const openEditModal = (hab: any) => {
     setEditingHab(hab);
     setFormData({
-      tipo_id: hab.tipo_id,
-      numero: hab.numero,
-      piso: hab.piso.toString(),
-      estado_habitacion: hab.estado_habitacion,
-      estado_limpieza: hab.estado_limpieza,
-      estado_mantenimiento: hab.estado_mantenimiento,
+      tipo_habitacion_id: hab.tipo_habitacion_id || '',
+      numero: hab.numero || '',
+      piso: hab.piso != null ? hab.piso.toString() : '',
+      estado_habitacion: hab.estado_habitacion || 'Disponible',
+      estado_limpieza: hab.estado_limpieza || 'Limpia',
+      estado_mantenimiento: hab.estado_mantenimiento || 'OK',
     });
     setModalOpen(true);
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
+    if (!formData.numero.trim()) {
+      toast({ title: 'Falta el número', description: 'Ingresa el número de habitación', variant: 'destructive' });
+      return;
+    }
+    setIsSaving(true);
     try {
+      const pisoNum = parseInt(formData.piso, 10);
       const data = {
         ...formData,
-        piso: parseInt(formData.piso),
+        piso: isNaN(pisoNum) ? null : pisoNum,
       };
       
       if (editingHab) {
@@ -201,11 +217,14 @@ export default function Habitaciones() {
       cargarDatos();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'No se pudo guardar', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!habToDelete) return;
+    if (!habToDelete || isDeleting) return;
+    setIsDeleting(true);
     try {
       await api.deleteHabitacion(habToDelete.id);
       toast({ title: 'Habitación eliminada', description: `Habitación ${habToDelete.numero} eliminada` });
@@ -214,6 +233,8 @@ export default function Habitaciones() {
       cargarDatos();
     } catch (error) {
       toast({ title: 'Error', description: 'No se pudo eliminar', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -467,8 +488,8 @@ export default function Habitaciones() {
               <Label>Tipo de Habitación</Label>
               <ComboboxCreatable
                 options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base}` }))}
-                value={formData.tipo_id}
-                onValueChange={(v) => setFormData({ ...formData, tipo_id: v })}
+                value={formData.tipo_habitacion_id}
+                onValueChange={(v) => setFormData({ ...formData, tipo_habitacion_id: v })}
                 onCreate={async (nombre) => {
                   try {
                     const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
@@ -509,8 +530,10 @@ export default function Habitaciones() {
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editingHab ? 'Guardar' : 'Crear'}</Button>
+            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={isSaving}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Guardando...' : (editingHab ? 'Guardar' : 'Crear')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -525,9 +548,9 @@ export default function Habitaciones() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Eliminar
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground">
+              {isDeleting ? 'Eliminando...' : 'Eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

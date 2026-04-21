@@ -170,7 +170,13 @@ class ApiClient {
     if (params?.estado_habitacion) q = q.eq('estado_habitacion', params.estado_habitacion);
     const { data, error } = await q;
     if (error) throw error;
-    return (data || []).map((h: any) => ({ ...h, tipo: h.tipos_habitacion?.nombre, precio_base: h.tipos_habitacion?.precio_base }));
+    return (data || []).map((h: any) => ({
+      ...h,
+      tipo: h.tipos_habitacion?.nombre,
+      tipo_nombre: h.tipos_habitacion?.nombre,
+      tipo_codigo: h.tipos_habitacion?.codigo,
+      precio_base: h.tipos_habitacion?.precio_base,
+    }));
   };
   getHabitacion = async (id: string): Promise<any> => {
     const { data, error } = await supabase.from('habitaciones').select('*, tipos_habitacion(*)').eq('id', id).maybeSingle();

@@ -68,9 +68,10 @@ export function ComboboxCreatable({
       const result = await onCreate(search.trim());
       if (result) {
         onValueChange(result.value);
+        setSearch("");
+        setOpen(false);
       }
-      setSearch("");
-      setOpen(false);
+      // Si onCreate retorna undefined (error), mantenemos el popover abierto
     } catch (error) {
       console.error("Error creating:", error);
     } finally {
