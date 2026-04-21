@@ -29,6 +29,9 @@ import NotFound from "./pages/NotFound";
 import Catalogos from "./pages/Catalogos";
 import Usuarios from "./pages/Usuarios";
 import AdminPlataforma from "./pages/AdminPlataforma";
+import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +58,9 @@ const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
+    <Route path="/signup" element={<Signup />} />
+    <Route path="/forgot-password" element={<ForgotPassword />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/" element={<Navigate to="/dashboard" replace />} />
     <Route
       path="/admin-plataforma"

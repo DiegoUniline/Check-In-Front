@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Eye, EyeOff, Hotel, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -138,8 +138,8 @@ export default function Login() {
                   Recordarme
                 </Label>
               </div>
-              <Button variant="link" className="px-0 text-sm text-primary" type="button">
-                ¿Olvidaste tu contraseña?
+              <Button variant="link" className="px-0 text-sm text-primary" type="button" asChild>
+                <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link>
               </Button>
             </div>
 
@@ -156,8 +156,14 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Demo credentials hint */}
-          <div className="mt-6 rounded-lg bg-muted/50 p-3 text-center">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            ¿No tienes cuenta?{' '}
+            <Link to="/signup" className="text-primary font-medium hover:underline">
+              Crea tu hotel
+            </Link>
+          </p>
+
+          <div className="mt-4 rounded-lg bg-muted/50 p-3 text-center">
             <p className="text-xs text-muted-foreground">
               <strong>Demo:</strong> admin@hotel.com / Admin123!
             </p>
