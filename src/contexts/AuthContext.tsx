@@ -17,6 +17,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,6 +75,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('demoMode');
   };
 
+  const refreshUser = async () => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*, hotels(nombre)')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      if (profile?.hotel_id) api.setHotelId(profile.hotel_id);
+      const u: User = {
+        id: session.user.id,
+        email: session.user.email || '',
+        nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
+        apellidoPaterno: profile?.apellido_paterno || '',
+        rol: 'Admin',
+        hotelNombre: (profile as any)?.hotels?.nombre || 'Hotel',
+      };
+      setUser(u);
+      localStorage.setItem('user', JSON.stringify(u));
+      localStorage.setItem('token', session.access_token);
+      localStorage.removeItem('demoMode');
+    } catch (e) {
+      console.error('refreshUser error', e);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -81,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       logout,
+      refreshUser,
     }}>
       {children}
     </AuthContext.Provider>
