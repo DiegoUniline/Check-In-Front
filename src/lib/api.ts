@@ -106,6 +106,51 @@ class ApiClient {
     this._demoMode = false;
   }
 
+  async signup(params: { email: string; password: string; nombre: string; apellido_paterno?: string; hotel_nombre: string }) {
+    const { email, password, nombre, apellido_paterno, hotel_nombre } = params;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+        data: { nombre, apellido_paterno: apellido_paterno || '', hotel_nombre },
+      },
+    });
+    if (error) throw new Error(error.message);
+    if (!data.session) {
+      // Si no hay sesión (verificación pendiente), el caller debe redirigir a login
+      return { needsConfirmation: true, user: null };
+    }
+    // Sesión activa: leer profile creado por el trigger
+    const { data: profile } = await supabase.from('profiles').select('*, hotels(nombre)').eq('id', data.user!.id).maybeSingle();
+    const hotelId = profile?.hotel_id || null;
+    if (hotelId) this.setHotelId(hotelId);
+    return {
+      needsConfirmation: false,
+      user: {
+        id: data.user!.id,
+        email: data.user!.email || email,
+        nombre: profile?.nombre || nombre,
+        apellidoPaterno: profile?.apellido_paterno || '',
+        rol: 'Admin',
+        hotelNombre: (profile as any)?.hotels?.nombre || hotel_nombre,
+        hotel_id: hotelId,
+      },
+    };
+  }
+
+  async requestPasswordReset(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async updatePassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message);
+  }
+
   // ------- Helpers -------
   private hid() { return this.getHotelId() || DEMO_HOTEL_ID; }
 
