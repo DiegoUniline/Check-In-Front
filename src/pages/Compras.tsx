@@ -576,7 +576,7 @@ export default function Compras() {
       {/* New Order Dialog */}
       <Dialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen}>
         {/* Modal responsive (móvil): ancho casi completo + scroll vertical */}
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" />

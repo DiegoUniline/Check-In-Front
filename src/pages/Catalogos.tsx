@@ -516,7 +516,7 @@ export default function Catalogos() {
 
       {/* Modal Tipo Habitación */}
       <Dialog open={modalTipoOpen} onOpenChange={setModalTipoOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[95vw] max-w-lg max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTipo ? 'Editar Tipo de Habitación' : 'Nuevo Tipo de Habitación'}</DialogTitle>
           </DialogHeader>
