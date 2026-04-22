@@ -4,7 +4,8 @@ import { format, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   ChevronLeft, ChevronRight, Plus, Search, 
-  CalendarDays, BedDouble, Users, RefreshCw, Calendar
+  CalendarDays, BedDouble, Users, RefreshCw, Calendar,
+  LogIn, LogOut, Clock, ArrowRight, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,7 +74,9 @@ export default function Reservas() {
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
   const [modalDetalle, setModalDetalle] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
-  const [tabActiva, setTabActiva] = useState<'recepcion' | 'reservas'>('recepcion');
+  const [tabActiva, setTabActiva] = useState<'recepcion' | 'checkin' | 'checkout' | 'reservas'>('recepcion');
+  const [busquedaCheckin, setBusquedaCheckin] = useState('');
+  const [busquedaCheckout, setBusquedaCheckout] = useState('');
 
   const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
 
