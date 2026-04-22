@@ -1,50 +1,43 @@
 
 
-## Plan: Reparar aislamiento de datos por hotel para Diego
+## Arreglar colores de fondo en cards de Recepción
 
-### Problema raíz
+Las cards de habitaciones se están renderizando casi sin color (apenas un gris pálido) en lugar de los verdes/azules/rojos esperados. El problema es que las clases gradient (`bg-gradient-to-br from-emerald-500 to-emerald-600`) están produciendo un resultado demasiado tenue y poco contrastante para tu pantalla, perdiendo la identidad visual de "Disponible / Reservada / Ocupada".
 
-Las migraciones anteriores que creé (`20260421235100_rls_per_hotel.sql` y `20260422000000_signup_trigger_and_strict_rls.sql`) **no se aplicaron a la base de datos**. Verifiqué directo en Postgres y:
+### Cambios
 
-- La función `public.current_user_hotel_id()` **no existe**.
-- La función `public.handle_new_user()` y su trigger **no existen**.
-- El usuario `diego.leon@uniline.mx` (id `8c03bf4f...`) **existe en auth.users pero no tiene profile, hotel ni rol**.
-- Solo existe el hotel demo `Hotel Vista Mar` en la tabla `hotels`.
-- Todas las RLS siguen siendo `USING (true)` → cualquier autenticado ve todo.
+**Archivo único: `src/components/reservas/RecepcionGrid.tsx`**
 
-Por eso Diego entra y ve el hotel demo completo: el frontend hace fallback al hotel demo cuando no encuentra hotel propio, y RLS no bloquea nada.
+1. **Reemplazar gradientes débiles por colores sólidos vibrantes** en `ESTADO_META`:
+   - `libre` → fondo verde sólido vivo (el "verde original" que pediste, alineado al token `--success` del sistema): `bg-emerald-500` con borde `border-emerald-600`.
+   - `reservada` → `bg-blue-500` / `border-blue-600`.
+   - `ocupada` → `bg-rose-500` / `border-rose-600`.
+   - `mantenimiento` → `bg-amber-500` / `border-amber-600`.
 
-### Solución (1 sola migración consolidada y verificada)
+2. **Asegurar contraste del texto sobre los fondos sólidos**:
+   - Número de habitación, estado y huésped: `text-white` puro.
+   - Texto secundario (tipo, piso, pax, noches): `text-white/85` (más legible que `/80`).
+   - Pill de saldo: fondo `bg-white text-rose-600 font-bold` para que destaque sobre cualquier color.
 
-**Migración nueva**: `supabase/migrations/<timestamp>_fix_signup_and_strict_rls.sql`
+3. **Mantener la identidad visual ya aprobada**:
+   - Proporción áurea `aspect-[1.618/1]`, mínimo `160px`.
+   - Icono `BedDouble` decorativo grande a la derecha en `text-white/30`.
+   - Glow sutil en la esquina superior izquierda.
+   - Footer "DISPONIBLE / RESERVADA / OCUPADA →" con flecha animada en hover.
+   - Hover: `hover:brightness-110 hover:-translate-y-1 hover:shadow-xl`.
 
-1. **Crear función helper** `public.current_user_hotel_id()` (SECURITY DEFINER, lee `profiles.hotel_id` para `auth.uid()`).
-2. **Crear función + trigger** `handle_new_user()` en `auth.users` que crea automáticamente:
-   - 1 hotel nuevo (`{email}'s Hotel`)
-   - 1 profile vinculado a ese hotel
-   - 1 rol Admin en `user_roles`
-   - Excluye `admin@hotel.com` (demo).
-3. **Backfill para Diego**: crear su hotel, profile y rol Admin manualmente para que pueda usar la app inmediatamente sin re-registrarse.
-4. **Reemplazar TODAS las políticas RLS permisivas** (`USING true`) por filtros estrictos `hotel_id = current_user_hotel_id()` en las 17 tablas operativas:
-   - Directas: `habitaciones`, `tipos_habitacion`, `clientes`, `reservas`, `pagos`, `cargos`, `productos`, `categorias_producto`, `proveedores`, `compras`, `gastos`, `ventas`, `tareas_limpieza`, `tareas_mantenimiento`, `entregables`, `conceptos_cargo`, `transacciones`.
-   - Hijas (sin `hotel_id` directo, vía EXISTS al padre): `compras_detalle`, `ventas_detalle`, `entregables_reserva`, `movimientos_inventario`.
-5. **Restringir `hotels`**: SELECT solo del hotel propio.
+4. **Leyenda superior**: mantener igual (puntitos de color + contador).
 
-### Detalles técnicos
-
-- Cada tabla tendrá 4 políticas: SELECT/INSERT/UPDATE/DELETE, todas filtrando por `hotel_id = current_user_hotel_id()`.
-- INSERT usa `WITH CHECK` para forzar que solo se inserten filas del propio hotel.
-- Tablas hijas usan `EXISTS (SELECT 1 FROM padre WHERE padre.id = hijo.fk AND padre.hotel_id = current_user_hotel_id())`.
-- `current_user_hotel_id()` es STABLE y SECURITY DEFINER → se evalúa una vez por consulta y bypasea RLS de `profiles`.
+5. **Vista Tabla**: sin cambios en estructura; los badges ya usan `meta.short` y siguen funcionando con los nuevos colores.
 
 ### Resultado esperado
 
-- Diego al entrar verá su propio hotel vacío (sin habitaciones, reservas, etc.).
-- El usuario demo (`admin@hotel.com`) seguirá viendo el hotel demo aislado.
-- Cualquier nuevo signup creará automáticamente su hotel propio.
-- A nivel BD, ningún usuario podrá leer/escribir datos de otro hotel aunque manipule el frontend.
+| Estado | Color de card |
+|---|---|
+| Disponible | Verde esmeralda sólido (clic → check-in directo) |
+| Reservada hoy | Azul sólido (clic → ver reserva) |
+| Ocupada | Rojo/rosa sólido (clic → ver detalle) |
+| Mantenimiento | Ámbar sólido (no clickeable) |
 
-### Acción que debe hacer el usuario después
-
-Cerrar sesión y volver a entrar con `diego.leon@uniline.mx` para que el frontend recargue su nuevo `hotel_id`.
+Las cards quedarán claramente diferenciables de un vistazo, con texto blanco bien legible y la pill del saldo pendiente resaltando en blanco con números rojos.
 
