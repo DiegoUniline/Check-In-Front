@@ -537,8 +537,26 @@ function CheckInOutPanel({
   onRefresh,
 }: CheckInOutPanelProps) {
   const esCheckin = tipo === 'checkin';
-  const accent = esCheckin ? 'emerald' : 'orange';
   const Icon = esCheckin ? LogIn : LogOut;
+  const palette = esCheckin
+    ? {
+        cardBorder: 'border-emerald-200 dark:border-emerald-900',
+        cardBg: 'bg-emerald-50/40 dark:bg-emerald-950/10',
+        iconBg: 'bg-emerald-500/10',
+        iconText: 'text-emerald-600 dark:text-emerald-400',
+        bigText: 'text-emerald-600 dark:text-emerald-400',
+        avatarBg: 'bg-emerald-100 dark:bg-emerald-950/40',
+        avatarText: 'text-emerald-700 dark:text-emerald-300',
+      }
+    : {
+        cardBorder: 'border-orange-200 dark:border-orange-900',
+        cardBg: 'bg-orange-50/40 dark:bg-orange-950/10',
+        iconBg: 'bg-orange-500/10',
+        iconText: 'text-orange-600 dark:text-orange-400',
+        bigText: 'text-orange-600 dark:text-orange-400',
+        avatarBg: 'bg-orange-100 dark:bg-orange-950/40',
+        avatarText: 'text-orange-700 dark:text-orange-300',
+      };
   const titulo = esCheckin ? 'Llegadas de hoy' : 'Salidas de hoy';
   const subtitulo = esCheckin
     ? 'Reservas con check-in programado para hoy'
@@ -565,11 +583,11 @@ function CheckInOutPanel({
   return (
     <div className="space-y-3">
       {/* Header */}
-      <Card className={`border-${accent}-200 dark:border-${accent}-900 bg-${accent}-50/40 dark:bg-${accent}-950/10`}>
+      <Card className={`${palette.cardBorder} ${palette.cardBg}`}>
         <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-lg bg-${accent}-500/10 flex items-center justify-center`}>
-              <Icon className={`h-5 w-5 text-${accent}-600 dark:text-${accent}-400`} />
+            <div className={`h-10 w-10 rounded-lg ${palette.iconBg} flex items-center justify-center`}>
+              <Icon className={`h-5 w-5 ${palette.iconText}`} />
             </div>
             <div>
               <h3 className="text-base font-semibold leading-tight">{titulo}</h3>
@@ -578,7 +596,7 @@ function CheckInOutPanel({
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className={`text-2xl font-light tabular-nums leading-none text-${accent}-600 dark:text-${accent}-400`}>
+              <p className={`text-2xl font-light tabular-nums leading-none ${palette.bigText}`}>
                 {data.length}
               </p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
@@ -653,7 +671,7 @@ function CheckInOutPanel({
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`h-11 w-11 rounded-full bg-${accent}-100 dark:bg-${accent}-950/40 text-${accent}-700 dark:text-${accent}-300 flex items-center justify-center font-semibold text-sm flex-shrink-0`}
+                    className={`h-11 w-11 rounded-full ${palette.avatarBg} ${palette.avatarText} flex items-center justify-center font-semibold text-sm flex-shrink-0`}
                   >
                     {initials || '?'}
                   </div>
