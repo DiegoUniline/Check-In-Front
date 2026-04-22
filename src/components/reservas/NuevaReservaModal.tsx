@@ -447,7 +447,11 @@ const noches = differenceInDays(
     }));
   };
 
-  const progressValue = (step / 4) * 100;
+  const totalSteps = preload?.habitacion?.id ? 3 : 4;
+  const currentStepLabel = preload?.habitacion?.id
+    ? (step === 1 ? 1 : step === 3 ? 2 : step === 4 ? 3 : step)
+    : step;
+  const progressValue = (currentStepLabel / totalSteps) * 100;
 
   return (
     <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
@@ -457,7 +461,7 @@ const noches = differenceInDays(
             {origen === 'Recepcion' ? <><UserPlus className="h-5 w-5" /> Check-in Directo</> : <><CalendarPlus className="h-5 w-5" /> Nueva Reserva</>}
           </DialogTitle>
           <DialogDescription>
-            Paso {step} de 4 - {step === 1 ? 'Fechas' : step === 2 ? 'Habitación' : step === 3 ? 'Huésped' : 'Confirmar'}
+            Paso {currentStepLabel} de {totalSteps} - {step === 1 ? 'Fechas' : step === 2 ? 'Habitación' : step === 3 ? 'Huésped' : 'Confirmar'}
           </DialogDescription>
         </DialogHeader>
 
