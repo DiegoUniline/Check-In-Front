@@ -88,8 +88,6 @@ export default function CheckIn() {
         nacionalidad: cli.nacionalidad || 'Mexicana',
         email: cli.email || '',
         habitacionId: reservaData.habitacion_id || '',
-        anticipo: reservaData.total_pagado || 0,
-        metodoPago: 'Tarjeta',
       });
     } catch (error) {
       console.error('Error cargando reserva:', error);
