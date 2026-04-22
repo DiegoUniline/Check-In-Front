@@ -214,7 +214,7 @@ export function RecepcionGrid({
           <p className="text-sm text-muted-foreground">No hay habitaciones para mostrar</p>
         </Card>
       ) : vista === 'cards' ? (
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.map((item) => (
             <RoomCard key={item.habitacion.id} item={item} onClick={() => handleClick(item)} />
           ))}
