@@ -28,6 +28,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
+import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
@@ -71,6 +73,7 @@ export default function Reservas() {
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
   const [modalDetalle, setModalDetalle] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
+  const [tabActiva, setTabActiva] = useState<'recepcion' | 'reservas'>('recepcion');
 
   const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
 
@@ -129,6 +132,12 @@ export default function Reservas() {
   const handleReservationClick = (reserva: any) => {
     setReservaSeleccionada(reserva);
     setModalDetalle(true);
+  };
+
+  const handleRecepcionLibreClick = (habitacion: any) => {
+    const hoy = new Date();
+    setPreloadReserva({ habitacion, fechaCheckin: hoy, fechaCheckout: addDays(hoy, 1) });
+    setModalNuevaReserva(true);
   };
 
   const totalHabitaciones = habitaciones.length;
@@ -224,8 +233,66 @@ export default function Reservas() {
           </Card>
         </div>
 
-        {/* Controles */}
-        <Card>
+        {/* Tabs */}
+        <Tabs value={tabActiva} onValueChange={(v) => setTabActiva(v as 'recepcion' | 'reservas')}>
+          <TabsList className="grid w-full grid-cols-2 max-w-sm">
+            <TabsTrigger value="recepcion">
+              <BedDouble className="h-4 w-4 mr-1.5" />
+              Recepción
+            </TabsTrigger>
+            <TabsTrigger value="reservas">
+              <CalendarDays className="h-4 w-4 mr-1.5" />
+              Reservas
+            </TabsTrigger>
+          </TabsList>
+
+          {/* TAB RECEPCIÓN: Cards por habitación */}
+          <TabsContent value="recepcion" className="space-y-3 mt-3">
+            <Card>
+              <CardContent className="p-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                    <SelectTrigger className="w-[140px] h-8 text-xs">
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {tiposHabitacion.map(tipo => (
+                        <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar habitación..."
+                      className="pl-7 h-8 w-[200px] text-xs"
+                      value={busqueda}
+                      onChange={(e) => setBusqueda(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12 border rounded-lg bg-card">
+                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <RecepcionGrid
+                habitaciones={habitacionesFiltradas}
+                reservas={reservas}
+                onLibreClick={handleRecepcionLibreClick}
+                onOcupadaClick={handleReservationClick}
+                onReservadaClick={handleReservationClick}
+              />
+            )}
+          </TabsContent>
+
+          {/* TAB RESERVAS: Timeline existente */}
+          <TabsContent value="reservas" className="space-y-3 mt-3">
+            <Card>
           <CardContent className="p-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1">
@@ -301,6 +368,8 @@ export default function Reservas() {
             />
           )}
         </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modales */}
