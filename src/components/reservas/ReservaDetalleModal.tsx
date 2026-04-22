@@ -714,10 +714,10 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium flex items-center gap-2"><DoorOpen className="h-4 w-4" /> Check-in pendiente</span>
                 <span className="text-sm text-muted-foreground">
-                  {[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length}/3
+                  {[documentoVerificado, tarjetaRegistrada].filter(Boolean).length}/2
                 </span>
               </div>
-              <Progress value={[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length * 33.33} className="h-2" />
+              <Progress value={[documentoVerificado, tarjetaRegistrada].filter(Boolean).length * 50} className="h-2" />
             </CardContent>
           </Card>
         )}
