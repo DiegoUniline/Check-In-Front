@@ -356,9 +356,9 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
                 )}
               </div>
               {saldo > 0 && (
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/25 backdrop-blur-sm w-fit mt-0.5">
+                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white text-rose-600 w-fit mt-0.5 shadow-sm">
                   <Wallet className="h-2.5 w-2.5" />
-                  <span className={cn('text-[10px] font-bold tabular-nums', meta.textStrong)}>
+                  <span className="text-[10px] font-bold tabular-nums">
                     ${saldo.toLocaleString()}
                   </span>
                 </div>
