@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 import {
   Sidebar,
   SidebarContent,
@@ -85,10 +85,7 @@ export function AppSidebar() {
   useEffect(() => {
     const cargarOcupacion = async () => {
       try {
-        const { data, error } = await supabase
-          .from('habitaciones')
-          .select('estado_habitacion');
-        if (error) throw error;
+        const data = await api.getHabitaciones();
         const total = data?.length ?? 0;
         const ocup = (data ?? []).filter(
           (h: any) => h.estado_habitacion === 'Ocupada'
