@@ -209,14 +209,18 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
 
   const cargarDatos = async () => {
     try {
-      const [tiposData, entregablesData, conceptosData] = await Promise.all([
+      const [tiposData, entregablesData, conceptosData, clientesData] = await Promise.all([
         api.getTiposHabitacion(),
         api.getEntregables?.() || Promise.resolve([]),
-        api.getConceptosCargo?.() || Promise.resolve([])
+        api.getConceptosCargo?.() || Promise.resolve([]),
+        api.getClientes?.() || Promise.resolve([]),
       ]);
       setTiposHabitacion(tiposData);
       setEntregables(entregablesData);
       setConceptosCargo(conceptosData);
+      // Cargamos TODOS los clientes una sola vez al abrir el modal y filtramos en memoria.
+      // Así el campo "Buscar cliente" muestra resultados desde la primera letra sin esperar al backend.
+      setClientes(Array.isArray(clientesData) ? clientesData : []);
     } catch (error) {
       console.error('Error cargando datos:', error);
     }
@@ -240,23 +244,23 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     }
   };
 
-  const buscarClientes = async (query: string) => {
-    if (!query || query.length < 2) {
-      setClientes([]);
-      return;
-    }
-    try {
-      const data = await api.getClientes({ search: query });
-      setClientes(data.slice(0, 5));
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => buscarClientes(searchCliente), 300);
-    return () => clearTimeout(timer);
-  }, [searchCliente]);
+  // Filtrado local de clientes: trabaja sobre la lista completa cargada en `cargarDatos`.
+  // Si no hay búsqueda, mostramos los primeros 8 para no saturar la UI.
+  const clientesFiltrados = (() => {
+    const q = searchCliente.trim().toLowerCase();
+    if (!q) return clientes.slice(0, 8);
+    return clientes
+      .filter((c: any) => {
+        const nombre = `${c.nombre || ''} ${c.apellido_paterno || ''} ${c.apellido_materno || ''}`.toLowerCase();
+        return (
+          nombre.includes(q) ||
+          (c.email || '').toLowerCase().includes(q) ||
+          (c.telefono || '').toLowerCase().includes(q) ||
+          (c.numero_documento || '').toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 20);
+  })();
 
   const handleSelectCliente = (cliente: any) => {
     setFormData({ ...formData, clienteId: cliente.id, clienteData: cliente });
