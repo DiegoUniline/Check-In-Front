@@ -706,9 +706,9 @@ const noches = differenceInDays(
                     <Input placeholder="Nombre, email o teléfono..." className="pl-9" value={searchCliente} onChange={(e) => setSearchCliente(e.target.value)} />
                   </div>
                 </div>
-                {clientes.length > 0 && (
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {clientes.map(cliente => (
+                {clientesFiltrados.length > 0 && (
+                  <div className="space-y-2 max-h-[260px] overflow-y-auto">
+                    {clientesFiltrados.map(cliente => (
                       <Card key={cliente.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => handleSelectCliente(cliente)}>
                         <CardContent className="p-3 flex items-center justify-between">
                           <div className="flex items-center gap-3">
