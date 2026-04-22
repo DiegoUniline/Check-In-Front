@@ -72,6 +72,23 @@ interface PagoTemp {
   concepto: string;
 }
 
+interface ImpuestoTemp {
+  id: string;
+  nombre: string;
+  tasa: number; // porcentaje
+}
+
+// Catálogo de impuestos típicos en México aplicables a hospedaje.
+// El usuario puede agregar/quitar/editar libremente.
+const IMPUESTOS_MEXICO_SUGERIDOS: { nombre: string; tasa: number; descripcion: string }[] = [
+  { nombre: 'IVA 16%', tasa: 16, descripcion: 'Impuesto al Valor Agregado general' },
+  { nombre: 'IVA Frontera 8%', tasa: 8, descripcion: 'IVA región fronteriza norte/sur' },
+  { nombre: 'ISH 3%', tasa: 3, descripcion: 'Impuesto Sobre Hospedaje (promedio)' },
+  { nombre: 'ISH 2%', tasa: 2, descripcion: 'ISH tasa baja (algunos estados)' },
+  { nombre: 'ISH 5%', tasa: 5, descripcion: 'ISH tasa alta (algunos estados)' },
+  { nombre: 'Cuota turística', tasa: 1, descripcion: 'Aporte / cuota turística local' },
+];
+
 interface FormData {
   fechaCheckin: Date;
   fechaCheckout: Date;
@@ -97,7 +114,7 @@ interface FormData {
   notasInternas: string;
   descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
   descuentoValor: number;
-  ivaPorcentaje: number;
+  impuestos: ImpuestoTemp[];
   entregablesSeleccionados: string[];
   cargos: CargoTemp[];
   pagos: PagoTemp[];
@@ -131,7 +148,7 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => ({
   notasInternas: '',
   descuentoTipo: 'none',
   descuentoValor: 0,
-  ivaPorcentaje: 0,
+  impuestos: [],
   entregablesSeleccionados: [],
   cargos: [],
   pagos: [],
