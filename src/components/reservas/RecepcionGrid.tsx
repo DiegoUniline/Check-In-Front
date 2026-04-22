@@ -4,7 +4,7 @@ import { es } from 'date-fns/locale';
 import {
   BedDouble, User, Clock, AlertCircle, LayoutGrid, List,
   CheckCircle2, CalendarClock, DoorOpen, Wrench, Users as UsersIcon,
-  Wallet, MoonStar, ArrowRight,
+  Wallet, MoonStar, ArrowRight, Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -38,81 +38,61 @@ const ESTADO_META: Record<EstadoCard, {
   cardBg: string;
   cardBorder: string;
   cardHover: string;
-  iconBg: string;
-  iconColor: string;
-  textPrimary: string;
-  textMuted: string;
-  textStrong: string;
+  accent: string;
+  accentText: string;
   divider: string;
-  ctaBg: string;
   icon: typeof CheckCircle2;
 }> = {
   libre: {
     label: 'Disponible',
     short: 'Libre',
     dot: 'bg-emerald-500',
-    badge: 'bg-white/95 text-emerald-700 border-white/40 shadow-sm',
-    cardBg: 'bg-emerald-500',
-    cardBorder: 'border-emerald-600',
-    cardHover: 'hover:brightness-110 hover:shadow-emerald-500/40',
-    iconBg: 'bg-white/15',
-    iconColor: 'text-white',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/85',
-    textStrong: 'text-white',
-    divider: 'border-white/20',
-    ctaBg: 'bg-white/10 hover:bg-white/20',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    cardBg: 'bg-card',
+    cardBorder: 'border-border',
+    cardHover: 'hover:border-emerald-400 hover:shadow-md hover:shadow-emerald-500/5',
+    accent: 'bg-emerald-500',
+    accentText: 'text-emerald-600 dark:text-emerald-400',
+    divider: 'border-border',
     icon: CheckCircle2,
   },
   reservada: {
     label: 'Reservada hoy',
     short: 'Reservada',
     dot: 'bg-blue-500',
-    badge: 'bg-white/95 text-blue-700 border-white/40 shadow-sm',
-    cardBg: 'bg-blue-500',
-    cardBorder: 'border-blue-600',
-    cardHover: 'hover:brightness-110 hover:shadow-blue-500/40',
-    iconBg: 'bg-white/15',
-    iconColor: 'text-white',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/85',
-    textStrong: 'text-white',
-    divider: 'border-white/20',
-    ctaBg: 'bg-white/10 hover:bg-white/20',
+    badge: 'bg-blue-50 text-blue-700 border-blue-200',
+    cardBg: 'bg-blue-50/40 dark:bg-blue-950/20',
+    cardBorder: 'border-blue-200 dark:border-blue-900',
+    cardHover: 'hover:border-blue-400 hover:shadow-md hover:shadow-blue-500/5',
+    accent: 'bg-blue-500',
+    accentText: 'text-blue-600 dark:text-blue-400',
+    divider: 'border-blue-100 dark:border-blue-900',
     icon: CalendarClock,
   },
   ocupada: {
     label: 'Ocupada',
     short: 'Ocupada',
-    dot: 'bg-rose-500',
-    badge: 'bg-white/95 text-rose-700 border-white/40 shadow-sm',
-    cardBg: 'bg-rose-500',
-    cardBorder: 'border-rose-600',
-    cardHover: 'hover:brightness-110 hover:shadow-rose-500/40',
-    iconBg: 'bg-white/15',
-    iconColor: 'text-white',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/85',
-    textStrong: 'text-white',
-    divider: 'border-white/20',
-    ctaBg: 'bg-white/10 hover:bg-white/20',
+    dot: 'bg-amber-500',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200',
+    cardBg: 'bg-amber-50/50 dark:bg-amber-950/20',
+    cardBorder: 'border-amber-200 dark:border-amber-900',
+    cardHover: 'hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/5',
+    accent: 'bg-amber-500',
+    accentText: 'text-amber-700 dark:text-amber-400',
+    divider: 'border-amber-100 dark:border-amber-900',
     icon: DoorOpen,
   },
   mantenimiento: {
     label: 'Mantenimiento',
     short: 'Mantto.',
-    dot: 'bg-amber-500',
-    badge: 'bg-white/95 text-amber-700 border-white/40 shadow-sm',
-    cardBg: 'bg-amber-500',
-    cardBorder: 'border-amber-600',
+    dot: 'bg-rose-500',
+    badge: 'bg-rose-50 text-rose-700 border-rose-200',
+    cardBg: 'bg-muted/40',
+    cardBorder: 'border-dashed border-border',
     cardHover: '',
-    iconBg: 'bg-white/15',
-    iconColor: 'text-white',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/85',
-    textStrong: 'text-white',
-    divider: 'border-white/20',
-    ctaBg: '',
+    accent: 'bg-rose-500',
+    accentText: 'text-rose-600 dark:text-rose-400',
+    divider: 'border-border',
     icon: Wrench,
   },
 };
@@ -214,14 +194,66 @@ export function RecepcionGrid({
           <p className="text-sm text-muted-foreground">No hay habitaciones para mostrar</p>
         </Card>
       ) : vista === 'cards' ? (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {items.map((item) => (
-            <RoomCard key={item.habitacion.id} item={item} onClick={() => handleClick(item)} />
-          ))}
-        </div>
+        <FloorGroups items={items} onClick={handleClick} />
       ) : (
         <RoomTable items={items} onRowClick={handleClick} />
       )}
+    </div>
+  );
+}
+
+/* ---------------- AGRUPACIÓN POR PISO ---------------- */
+
+function FloorGroups({
+  items,
+  onClick,
+}: {
+  items: HabitacionStatus[];
+  onClick: (i: HabitacionStatus) => void;
+}) {
+  const grupos = useMemo(() => {
+    const map = new Map<number, HabitacionStatus[]>();
+    items.forEach((item) => {
+      const piso = Number(item.habitacion.piso) || 0;
+      if (!map.has(piso)) map.set(piso, []);
+      map.get(piso)!.push(item);
+    });
+    // ordenar habitaciones dentro de cada piso por número
+    map.forEach((arr) =>
+      arr.sort((a, b) =>
+        String(a.habitacion.numero).localeCompare(String(b.habitacion.numero), undefined, { numeric: true })
+      )
+    );
+    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
+  }, [items]);
+
+  return (
+    <div className="space-y-7">
+      {grupos.map(([piso, hab]) => {
+        const libres = hab.filter((h) => h.estado === 'libre').length;
+        return (
+          <section key={piso}>
+            <header className="mb-3 flex items-baseline justify-between">
+              <div className="flex items-baseline gap-3">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
+                  {piso === 0 ? 'Sin piso' : `Piso ${piso}`}
+                </span>
+                <span className="text-[10px] text-muted-foreground/70">
+                  · {hab.length} habitaciones
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                <span className="font-semibold text-foreground tabular-nums">{libres}</span> disponibles
+              </span>
+            </header>
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {hab.map((item) => (
+                <RoomCard key={item.habitacion.id} item={item} onClick={() => onClick(item)} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -263,14 +295,6 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
     }
   };
 
-  const ctaLabel = estado === 'libre'
-    ? 'Check-in directo'
-    : estado === 'reservada'
-    ? 'Ver reserva'
-    : estado === 'ocupada'
-    ? 'Ver detalle'
-    : 'Bloqueada';
-
   return (
     <div
       role={isClickable ? 'button' : undefined}
@@ -279,107 +303,81 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
       onClick={isClickable ? onClick : undefined}
       onKeyDown={handleKey}
       className={cn(
-        'group relative overflow-hidden rounded-xl transition-all duration-300 border-2',
-        'aspect-[1.618/1] min-h-[160px]',
+        'group relative rounded-xl border transition-all duration-200',
+        'p-4 min-h-[128px] flex flex-col',
         meta.cardBg,
         meta.cardBorder,
-        meta.textPrimary,
-        'shadow-lg',
-        isClickable && 'cursor-pointer hover:shadow-xl hover:-translate-y-1',
-        isClickable && meta.cardHover,
-        !isClickable && 'cursor-not-allowed',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2'
+        isClickable && 'cursor-pointer ' + meta.cardHover,
+        !isClickable && 'cursor-not-allowed opacity-70',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
       )}
     >
-      {/* Icono cama enorme decorativo a la derecha */}
-      <div
-        aria-hidden
-        className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
-      >
-        {estado === 'mantenimiento' ? (
-          <Wrench className="h-20 w-20 text-white/25" strokeWidth={1.5} />
-        ) : (
-          <BedDouble className="h-20 w-20 text-white/25" strokeWidth={1.5} />
+      {/* Estado: punto + texto pequeño en la esquina superior */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center gap-1.5">
+          <span className={cn('h-1.5 w-1.5 rounded-full', meta.accent)} />
+          <span className={cn('text-[10px] uppercase tracking-wider font-semibold', meta.accentText)}>
+            {meta.label}
+          </span>
+        </div>
+        {saldo > 0 && (
+          <span className="text-[10px] font-bold tabular-nums text-rose-600 dark:text-rose-400">
+            ${saldo.toLocaleString()}
+          </span>
         )}
       </div>
 
-      {/* Brillo decorativo */}
-      <div
-        aria-hidden
-        className="absolute -top-16 -left-16 h-40 w-40 rounded-full bg-white/10 blur-3xl pointer-events-none"
-      />
-
-      <div className="relative h-full p-4 flex flex-col justify-between">
-        {/* Top: Nro grande + tipo */}
-        <div className="min-w-0 pr-20">
-          <h3 className={cn('text-3xl font-black leading-none tracking-tight tabular-nums', meta.textStrong)}>
-            Nro:{habitacion.numero}
-          </h3>
-          <p className={cn('text-sm font-medium mt-1.5 truncate', meta.textMuted)}>
-            {habitacion.tipo_nombre || 'Sin tipo'}
-            {habitacion.piso != null && ` · Piso ${habitacion.piso}`}
-          </p>
-        </div>
-
-        {/* Mid: Info huésped (solo si aplica) */}
-        <div className="relative z-10 min-h-0 my-1 pr-20">
-          {huesped ? (
-            <div className="space-y-0.5">
-              <p className={cn('text-xs font-bold truncate flex items-center gap-1', meta.textStrong)}>
-                <User className="h-3 w-3 opacity-80 flex-shrink-0" />
-                <span className="truncate">{huesped}</span>
-              </p>
-              <div className={cn('flex flex-wrap gap-x-2.5 gap-y-0.5 text-[10px] font-medium', meta.textMuted)}>
-                {personas > 0 && (
-                  <span className="flex items-center gap-1">
-                    <UsersIcon className="h-2.5 w-2.5" />
-                    {personas} pax
-                  </span>
-                )}
-                {nochesRestantes !== null && (
-                  <span className="flex items-center gap-1">
-                    <MoonStar className="h-2.5 w-2.5" />
-                    {nochesRestantes}n
-                  </span>
-                )}
-                {horaLlegada && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-2.5 w-2.5" />
-                    {horaLlegada}
-                  </span>
-                )}
-                {fechaSalida && (
-                  <span className="flex items-center gap-1">
-                    <ArrowRight className="h-2.5 w-2.5" />
-                    {fechaSalida}
-                  </span>
-                )}
-              </div>
-              {saldo > 0 && (
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white text-rose-600 w-fit mt-0.5 shadow-sm">
-                  <Wallet className="h-2.5 w-2.5" />
-                  <span className="text-[10px] font-bold tabular-nums">
-                    ${saldo.toLocaleString()}
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : null}
-        </div>
-
-        {/* Footer: estado + flecha */}
-        <div className="relative z-10 flex items-center gap-1.5 pt-2 border-t border-white/25">
-          <span className={cn('text-xs font-extrabold tracking-wider uppercase', meta.textStrong)}>
-            {meta.short === 'Libre' ? 'Disponible' : meta.short === 'Mantto.' ? 'Mantenimiento' : meta.short}
-          </span>
-          {isClickable && (
-            <ArrowRight className={cn(
-              'h-3.5 w-3.5 transition-transform group-hover:translate-x-1',
-              meta.textStrong
-            )} />
-          )}
-        </div>
+      {/* Número de habitación: protagonista, peso ligero */}
+      <div className="flex items-baseline gap-2">
+        <h3 className="text-3xl font-light leading-none tracking-tight tabular-nums text-foreground">
+          {habitacion.numero}
+        </h3>
+        {isClickable && (
+          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity ml-auto self-center" />
+        )}
       </div>
+
+      {/* Tipo de habitación */}
+      <p className="text-xs text-muted-foreground mt-1.5 truncate">
+        {habitacion.tipo_nombre || 'Sin tipo'}
+      </p>
+
+      {/* Información del huésped (solo si aplica) */}
+      {huesped ? (
+        <div className={cn('mt-auto pt-3 border-t', meta.divider)}>
+          <p className="text-xs font-medium text-foreground truncate flex items-center gap-1.5">
+            <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <span className="truncate">{huesped}</span>
+          </p>
+          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground mt-1">
+            {personas > 0 && (
+              <span className="flex items-center gap-0.5">
+                <UsersIcon className="h-2.5 w-2.5" />
+                {personas} pax
+              </span>
+            )}
+            {nochesRestantes !== null && (
+              <span className="flex items-center gap-0.5">
+                <MoonStar className="h-2.5 w-2.5" />
+                {nochesRestantes}n rest.
+              </span>
+            )}
+            {horaLlegada && (
+              <span className="flex items-center gap-0.5">
+                <Clock className="h-2.5 w-2.5" />
+                {horaLlegada}
+              </span>
+            )}
+            {fechaSalida && (
+              <span className="flex items-center gap-0.5">
+                Sale {fechaSalida}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-auto" />
+      )}
     </div>
   );
 }
