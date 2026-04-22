@@ -272,14 +272,14 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
     : 'Bloqueada';
 
   return (
-    <Card
+    <div
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : -1}
       aria-label={`Habitación ${habitacion.numero} - ${meta.label}`}
       onClick={isClickable ? onClick : undefined}
       onKeyDown={handleKey}
       className={cn(
-        'group relative overflow-hidden transition-all duration-300 border',
+        'group relative overflow-hidden rounded-lg transition-all duration-300 border',
         'aspect-[1.618/1]',
         meta.cardBg,
         meta.cardBorder,
@@ -407,7 +407,7 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
 
