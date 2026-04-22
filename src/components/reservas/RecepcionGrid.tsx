@@ -35,44 +35,84 @@ const ESTADO_META: Record<EstadoCard, {
   short: string;
   dot: string;
   badge: string;
-  ring: string;
-  accent: string;
+  cardBg: string;
+  cardBorder: string;
+  cardHover: string;
+  iconBg: string;
+  iconColor: string;
+  textPrimary: string;
+  textMuted: string;
+  textStrong: string;
+  divider: string;
+  ctaBg: string;
   icon: typeof CheckCircle2;
 }> = {
   libre: {
     label: 'Disponible',
     short: 'Libre',
     dot: 'bg-emerald-500',
-    badge: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-    ring: 'ring-emerald-500/20 hover:ring-emerald-500/40',
-    accent: 'from-emerald-500/10 to-transparent',
+    badge: 'bg-white/95 text-emerald-700 border-white/40 shadow-sm',
+    cardBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    cardBorder: 'border-emerald-700/40',
+    cardHover: 'hover:from-emerald-500 hover:to-emerald-700 hover:shadow-emerald-500/30',
+    iconBg: 'bg-white/15',
+    iconColor: 'text-white',
+    textPrimary: 'text-white',
+    textMuted: 'text-emerald-50/80',
+    textStrong: 'text-white',
+    divider: 'border-white/20',
+    ctaBg: 'bg-white/10 hover:bg-white/20',
     icon: CheckCircle2,
   },
   reservada: {
     label: 'Reservada hoy',
     short: 'Reservada',
     dot: 'bg-blue-500',
-    badge: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
-    ring: 'ring-blue-500/20 hover:ring-blue-500/40',
-    accent: 'from-blue-500/10 to-transparent',
+    badge: 'bg-white/95 text-blue-700 border-white/40 shadow-sm',
+    cardBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    cardBorder: 'border-blue-700/40',
+    cardHover: 'hover:from-blue-500 hover:to-blue-700 hover:shadow-blue-500/30',
+    iconBg: 'bg-white/15',
+    iconColor: 'text-white',
+    textPrimary: 'text-white',
+    textMuted: 'text-blue-50/80',
+    textStrong: 'text-white',
+    divider: 'border-white/20',
+    ctaBg: 'bg-white/10 hover:bg-white/20',
     icon: CalendarClock,
   },
   ocupada: {
     label: 'Ocupada',
     short: 'Ocupada',
     dot: 'bg-rose-500',
-    badge: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20',
-    ring: 'ring-rose-500/20 hover:ring-rose-500/40',
-    accent: 'from-rose-500/10 to-transparent',
+    badge: 'bg-white/95 text-rose-700 border-white/40 shadow-sm',
+    cardBg: 'bg-gradient-to-br from-rose-500 to-rose-600',
+    cardBorder: 'border-rose-700/40',
+    cardHover: 'hover:from-rose-500 hover:to-rose-700 hover:shadow-rose-500/30',
+    iconBg: 'bg-white/15',
+    iconColor: 'text-white',
+    textPrimary: 'text-white',
+    textMuted: 'text-rose-50/80',
+    textStrong: 'text-white',
+    divider: 'border-white/20',
+    ctaBg: 'bg-white/10 hover:bg-white/20',
     icon: DoorOpen,
   },
   mantenimiento: {
     label: 'Mantenimiento',
     short: 'Mantto.',
     dot: 'bg-amber-500',
-    badge: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-    ring: 'ring-amber-500/20',
-    accent: 'from-amber-500/10 to-transparent',
+    badge: 'bg-white/95 text-amber-700 border-white/40 shadow-sm',
+    cardBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    cardBorder: 'border-amber-700/40',
+    cardHover: '',
+    iconBg: 'bg-white/15',
+    iconColor: 'text-white',
+    textPrimary: 'text-white',
+    textMuted: 'text-amber-50/80',
+    textStrong: 'text-white',
+    divider: 'border-white/20',
+    ctaBg: '',
     icon: Wrench,
   },
 };
