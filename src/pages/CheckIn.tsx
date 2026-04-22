@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -89,63 +89,7 @@ export default function CheckIn() {
 
   const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId);
 
-  // Canvas drawing handlers
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    setIsDrawing(true);
-    const rect = canvas.getBoundingClientRect();
-    ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.strokeStyle = 'hsl(var(--foreground))';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    setHasSignature(true);
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasSignature(false);
-  };
-
   const handleSubmit = async () => {
-    if (!hasSignature) {
-      toast({
-        variant: 'destructive',
-        title: 'Firma requerida',
-        description: 'El huésped debe firmar el registro.',
-      });
-      return;
-    }
-
     if (!formData.habitacionId) {
       toast({
         variant: 'destructive',
