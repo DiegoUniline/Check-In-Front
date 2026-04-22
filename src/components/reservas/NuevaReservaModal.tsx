@@ -275,6 +275,8 @@ const noches = differenceInDays(
   const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = total - totalPagado;
 
+  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   // FIX: Solo cambiar checkin a hoy, mantener checkout seleccionado
   const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
     setOrigen(nuevoOrigen);
@@ -862,29 +864,29 @@ const noches = differenceInDays(
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between opacity-80">
                       <span>Hospedaje ({noches} {noches === 1 ? 'noche' : 'noches'})</span>
-                      <span>${subtotalHospedaje.toLocaleString()}</span>
+                      <span>${fmt(subtotalHospedaje)}</span>
                     </div>
                     {totalPersonaExtra > 0 && (
                       <div className="flex justify-between opacity-80">
                         <span>Persona extra ({formData.personasExtra})</span>
-                        <span>${totalPersonaExtra.toLocaleString()}</span>
+                        <span>${fmt(totalPersonaExtra)}</span>
                       </div>
                     )}
                     {totalCargosExtras > 0 && (
                       <div className="flex justify-between opacity-80">
                         <span>Cargos extras ({formData.cargos.length})</span>
-                        <span>${totalCargosExtras.toLocaleString()}</span>
+                        <span>${fmt(totalCargosExtras)}</span>
                       </div>
                     )}
                     {descuentoMonto > 0 && (
                       <div className="flex justify-between text-green-300">
                         <span>Descuento</span>
-                        <span>-${descuentoMonto.toLocaleString()}</span>
+                        <span>-${fmt(descuentoMonto)}</span>
                       </div>
                     )}
                     <div className="flex justify-between opacity-80">
                       <span>IVA (16%)</span>
-                      <span>${impuestos.toLocaleString()}</span>
+                      <span>${fmt(impuestos)}</span>
                     </div>
                   </div>
                   
@@ -892,7 +894,7 @@ const noches = differenceInDays(
                   
                   <div className="flex justify-between font-bold text-2xl">
                     <span>Total</span>
-                    <span>${total.toLocaleString()}</span>
+                    <span>${fmt(total)}</span>
                   </div>
                   
                   <Separator className="bg-primary-foreground/20" />
@@ -943,11 +945,11 @@ const noches = differenceInDays(
                     <div className="p-3 rounded-lg bg-primary-foreground/10 space-y-1">
                       <div className="flex justify-between text-sm">
                         <span>Pagado:</span>
-                        <span>${totalPagado.toLocaleString()}</span>
+                        <span>${fmt(totalPagado)}</span>
                       </div>
                       <div className="flex justify-between font-bold">
                         <span>Saldo pendiente:</span>
-                        <span className={saldoPendiente <= 0 ? 'text-green-300' : 'text-yellow-300'}>${saldoPendiente.toLocaleString()}</span>
+                        <span className={saldoPendiente <= 0 ? 'text-green-300' : 'text-yellow-300'}>${fmt(saldoPendiente)}</span>
                       </div>
                     </div>
                   </div>
