@@ -106,6 +106,10 @@ export function RecepcionGrid({
   onReservadaClick,
 }: RecepcionGridProps) {
   const [vista, setVista] = useState<'cards' | 'tabla'>('cards');
+  const [filtroEstado, setFiltroEstado] = useState<EstadoCard | 'all'>('all');
+  const [filtroPiso, setFiltroPiso] = useState<number | 'all'>('all');
+  const [filtroTipo, setFiltroTipo] = useState<string>('all');
+  const [query, setQuery] = useState('');
   const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
   const items: HabitacionStatus[] = useMemo(() => {
@@ -139,6 +143,53 @@ export function RecepcionGrid({
     mantenimiento: items.filter((i) => i.estado === 'mantenimiento').length,
   }), [items]);
 
+  // Pisos y tipos únicos para chips
+  const pisos = useMemo(() => {
+    const set = new Set<number>();
+    items.forEach((i) => set.add(Number(i.habitacion.piso) || 0));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [items]);
+
+  const tipos = useMemo(() => {
+    const map = new Map<string, string>();
+    items.forEach((i) => {
+      const id = i.habitacion.tipo_habitacion_id || i.habitacion.tipo_id || i.habitacion.tipo_nombre;
+      const nombre = i.habitacion.tipo_nombre || 'Sin tipo';
+      if (id) map.set(String(id), nombre);
+    });
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
+  }, [items]);
+
+  // Items filtrados por chips + búsqueda
+  const itemsFiltrados = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((i) => {
+      if (filtroEstado !== 'all' && i.estado !== filtroEstado) return false;
+      if (filtroPiso !== 'all' && (Number(i.habitacion.piso) || 0) !== filtroPiso) return false;
+      if (filtroTipo !== 'all') {
+        const id = i.habitacion.tipo_habitacion_id || i.habitacion.tipo_id || i.habitacion.tipo_nombre;
+        if (String(id) !== filtroTipo) return false;
+      }
+      if (q) {
+        const numero = String(i.habitacion.numero || '').toLowerCase();
+        const tipo = String(i.habitacion.tipo_nombre || '').toLowerCase();
+        const huesped = i.reservaActiva
+          ? `${i.reservaActiva.cliente_nombre || ''} ${i.reservaActiva.apellido_paterno || ''}`.toLowerCase()
+          : '';
+        if (!numero.includes(q) && !tipo.includes(q) && !huesped.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [items, filtroEstado, filtroPiso, filtroTipo, query]);
+
+  const hayFiltros = filtroEstado !== 'all' || filtroPiso !== 'all' || filtroTipo !== 'all' || query.length > 0;
+  const limpiarFiltros = () => {
+    setFiltroEstado('all');
+    setFiltroPiso('all');
+    setFiltroTipo('all');
+    setQuery('');
+  };
+
   const handleClick = (item: HabitacionStatus) => {
     if (item.estado === 'libre') return onLibreClick(item.habitacion);
     if (item.estado === 'ocupada' && item.reservaActiva) return onOcupadaClick?.(item.reservaActiva);
@@ -147,24 +198,25 @@ export function RecepcionGrid({
 
   return (
     <div className="space-y-3">
-      {/* Toolbar: leyenda + toggle vista */}
+      {/* Toolbar: búsqueda + toggle vista */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex flex-wrap gap-2">
-          {(['libre', 'reservada', 'ocupada', 'mantenimiento'] as EstadoCard[]).map((e) => {
-            const count = (stats as any)[e === 'libre' ? 'libres' : e === 'reservada' ? 'reservadas' : e === 'ocupada' ? 'ocupadas' : 'mantenimiento'];
-            if (e === 'mantenimiento' && count === 0) return null;
-            const meta = ESTADO_META[e];
-            return (
-              <div
-                key={e}
-                className="flex items-center gap-2 px-2.5 py-1 rounded-full border bg-card text-xs font-medium"
-              >
-                <span className={cn('h-2 w-2 rounded-full', meta.dot)} />
-                <span className="text-muted-foreground">{meta.label}</span>
-                <span className="font-semibold text-foreground tabular-nums">{count}</span>
-              </div>
-            );
-          })}
+        <div className="relative flex-1 max-w-sm min-w-[180px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por habitación, tipo o huésped…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-8 h-8 text-xs"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-1 p-0.5 bg-muted rounded-lg">
@@ -189,17 +241,154 @@ export function RecepcionGrid({
         </div>
       </div>
 
-      {items.length === 0 ? (
+      {/* Chips: Estado */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <FilterChip
+          active={filtroEstado === 'all'}
+          onClick={() => setFiltroEstado('all')}
+          label="Todas"
+          count={items.length}
+        />
+        {(['libre', 'reservada', 'ocupada', 'mantenimiento'] as EstadoCard[]).map((e) => {
+          const count = (stats as any)[e === 'libre' ? 'libres' : e === 'reservada' ? 'reservadas' : e === 'ocupada' ? 'ocupadas' : 'mantenimiento'];
+          if (e === 'mantenimiento' && count === 0) return null;
+          const meta = ESTADO_META[e];
+          return (
+            <FilterChip
+              key={e}
+              active={filtroEstado === e}
+              onClick={() => setFiltroEstado(filtroEstado === e ? 'all' : e)}
+              label={meta.label}
+              count={count}
+              dotClass={meta.dot}
+            />
+          );
+        })}
+      </div>
+
+      {/* Chips: Piso y Tipo */}
+      {(pisos.length > 1 || tipos.length > 1) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {pisos.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mr-1">
+                Piso
+              </span>
+              <FilterChip
+                active={filtroPiso === 'all'}
+                onClick={() => setFiltroPiso('all')}
+                label="Todos"
+                size="sm"
+              />
+              {pisos.map((p) => (
+                <FilterChip
+                  key={p}
+                  active={filtroPiso === p}
+                  onClick={() => setFiltroPiso(filtroPiso === p ? 'all' : p)}
+                  label={p === 0 ? 'S/P' : `P${p}`}
+                  size="sm"
+                />
+              ))}
+            </div>
+          )}
+          {tipos.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mr-1">
+                Tipo
+              </span>
+              <FilterChip
+                active={filtroTipo === 'all'}
+                onClick={() => setFiltroTipo('all')}
+                label="Todos"
+                size="sm"
+              />
+              {tipos.map((t) => (
+                <FilterChip
+                  key={t.id}
+                  active={filtroTipo === t.id}
+                  onClick={() => setFiltroTipo(filtroTipo === t.id ? 'all' : t.id)}
+                  label={t.nombre}
+                  size="sm"
+                />
+              ))}
+            </div>
+          )}
+          {hayFiltros && (
+            <button
+              onClick={limpiarFiltros}
+              className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 ml-auto"
+            >
+              <X className="h-3 w-3" />
+              Limpiar
+            </button>
+          )}
+        </div>
+      )}
+
+      {itemsFiltrados.length === 0 ? (
         <Card className="p-12 text-center">
           <BedDouble className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No hay habitaciones para mostrar</p>
+          <p className="text-sm text-muted-foreground">
+            {hayFiltros ? 'No hay habitaciones que coincidan con los filtros' : 'No hay habitaciones para mostrar'}
+          </p>
+          {hayFiltros && (
+            <Button variant="outline" size="sm" className="mt-4" onClick={limpiarFiltros}>
+              Limpiar filtros
+            </Button>
+          )}
         </Card>
       ) : vista === 'cards' ? (
-        <FloorGroups items={items} onClick={handleClick} />
+        <FloorGroups items={itemsFiltrados} onClick={handleClick} />
       ) : (
-        <RoomTable items={items} onRowClick={handleClick} />
+        <RoomTable items={itemsFiltrados} onRowClick={handleClick} />
       )}
     </div>
+  );
+}
+
+/* ---------------- CHIP DE FILTRO ---------------- */
+
+function FilterChip({
+  active,
+  onClick,
+  label,
+  count,
+  dotClass,
+  size = 'md',
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+  dotClass?: string;
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border transition-all',
+        size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs',
+        'font-medium',
+        active
+          ? 'bg-foreground text-background border-foreground shadow-sm'
+          : 'bg-card text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
+      )}
+    >
+      {dotClass && <span className={cn('h-1.5 w-1.5 rounded-full', dotClass)} />}
+      <span>{label}</span>
+      {typeof count === 'number' && (
+        <span
+          className={cn(
+            'tabular-nums font-semibold',
+            active ? 'text-background/80' : 'text-foreground'
+          )}
+        >
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
 
