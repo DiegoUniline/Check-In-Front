@@ -295,14 +295,6 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
     }
   };
 
-  const ctaLabel = estado === 'libre'
-    ? 'Check-in directo'
-    : estado === 'reservada'
-    ? 'Ver reserva'
-    : estado === 'ocupada'
-    ? 'Ver detalle'
-    : 'Bloqueada';
-
   return (
     <div
       role={isClickable ? 'button' : undefined}
