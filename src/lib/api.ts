@@ -85,10 +85,11 @@ class ApiClient {
       };
     }
     // Auth real con Supabase
+    this.setDemoMode(false);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     const { data: profile } = await supabase.from('profiles').select('*, hotels(nombre)').eq('id', data.user.id).maybeSingle();
-    const hotelId = profile?.hotel_id || DEMO_HOTEL_ID;
+    const hotelId = profile?.hotel_id || null;
     this.setHotelId(hotelId);
     return {
       token: data.session?.access_token || '',
@@ -98,7 +99,7 @@ class ApiClient {
         nombre: profile?.nombre || email.split('@')[0],
         apellidoPaterno: profile?.apellido_paterno || '',
         rol: 'Admin',
-        hotelNombre: (profile as any)?.hotels?.nombre || 'Hotel',
+        hotelNombre: (profile as any)?.hotels?.nombre || (data.user.user_metadata?.hotel_nombre as string) || 'Hotel',
         hotel_id: hotelId,
       },
     };
