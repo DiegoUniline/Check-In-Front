@@ -1055,7 +1055,7 @@ const noches = differenceInDays(
                           })
                         }
                       >
-                        <SelectTrigger className="w-36 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+                        <SelectTrigger className="w-36 bg-background border-input text-foreground">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1067,13 +1067,13 @@ const noches = differenceInDays(
                       {formData.descuentoTipo !== 'none' && (
                         <div className="relative flex-1">
                           {formData.descuentoTipo === 'Porcentaje' ? (
-                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-foreground/60" />
+                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           ) : (
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-foreground/60" />
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           )}
                           <Input
                             type="number"
-                            className="pl-9 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50"
+                            className="pl-9 bg-background border-input text-foreground"
                             value={formData.descuentoValor}
                             onChange={(e) =>
                               setFormData({
@@ -1103,15 +1103,22 @@ const noches = differenceInDays(
                     </Label>
                     
                     <div className="flex gap-2">
-                      <Input 
-                        type="number" 
-                        placeholder="Monto" 
-                        className="bg-primary-foreground/10 border-primary-foreground/20 flex-1 placeholder:text-primary-foreground/50" 
-                        value={pagoMonto} 
-                        onChange={(e) => setPagoMonto(e.target.value)} 
+                      <Input
+                        type="number"
+                        // Placeholder muestra el saldo pendiente; al enfocar, si el campo está vacío,
+                        // lo autollenamos con el saldo para que el usuario solo confirme con "+".
+                        placeholder={saldoPendiente > 0 ? fmt(saldoPendiente) : 'Monto'}
+                        className="bg-background border-input text-foreground flex-1"
+                        value={pagoMonto}
+                        onFocus={() => {
+                          if (!pagoMonto && saldoPendiente > 0) {
+                            setPagoMonto(saldoPendiente.toFixed(2));
+                          }
+                        }}
+                        onChange={(e) => setPagoMonto(e.target.value)}
                       />
                       <Select value={pagoMetodo} onValueChange={setPagoMetodo}>
-                        <SelectTrigger className="w-32 bg-primary-foreground/10 border-primary-foreground/20">
+                        <SelectTrigger className="w-32 bg-background border-input text-foreground">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
