@@ -266,14 +266,18 @@ const noches = differenceInDays(
   const totalPersonaExtra = formData.personasExtra * formData.cargoPersonaExtra * noches;
   const totalCargosExtras = formData.cargos.reduce((sum, c) => sum + c.total, 0);
   const subtotal = subtotalHospedaje + totalPersonaExtra + totalCargosExtras;
-  
+
+  // IVA configurable manualmente (0 por default)
+  const ivaRate = (formData.ivaPorcentaje || 0) / 100;
+  const impuestos = subtotal * ivaRate;
+  const totalBruto = subtotal + impuestos;
+
+  // Descuento se aplica sobre el TOTAL (subtotal + IVA)
   let descuentoMonto = 0;
   if (formData.descuentoTipo === 'Monto') descuentoMonto = formData.descuentoValor;
-  else if (formData.descuentoTipo === 'Porcentaje') descuentoMonto = subtotal * (formData.descuentoValor / 100);
-  
-  const subtotalConDescuento = subtotal - descuentoMonto;
-  const impuestos = subtotalConDescuento * 0.16;
-  const total = subtotalConDescuento + impuestos;
+  else if (formData.descuentoTipo === 'Porcentaje') descuentoMonto = totalBruto * (formData.descuentoValor / 100);
+
+  const total = Math.max(0, totalBruto - descuentoMonto);
   const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = total - totalPagado;
 
