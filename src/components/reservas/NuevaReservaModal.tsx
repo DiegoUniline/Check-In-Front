@@ -828,10 +828,21 @@ const noches = differenceInDays(
                 <CardContent className="p-4 space-y-3">
                   <Label className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Cargos Extras</Label>
                   <div className="flex gap-2">
-                    <Select value={cargoConcepto} onValueChange={(v) => { setCargoConcepto(v); const c = conceptosCargo.find(x => x.id === v); if (c?.precio_default) setCargoMonto(c.precio_default.toString()); }}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="Concepto..." /></SelectTrigger>
-                      <SelectContent>{conceptosCargo.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <ComboboxCreatable
+                        options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
+                        value={cargoConcepto}
+                        onValueChange={(v) => {
+                          setCargoConcepto(v);
+                          const c = conceptosCargo.find(x => x.id === v);
+                          if (c?.precio) setCargoMonto(c.precio.toString());
+                        }}
+                        onCreate={handleCrearConcepto}
+                        placeholder="Concepto..."
+                        searchPlaceholder="Buscar o crear concepto..."
+                        createLabel="Crear"
+                      />
+                    </div>
                     <Input className="w-20" type="number" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
                     <Input className="w-28" type="number" placeholder="$" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
                     <Button onClick={handleAgregarCargo} disabled={!cargoConcepto}><Plus className="h-4 w-4" /></Button>
