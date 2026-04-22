@@ -1188,7 +1188,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Button>
 
                 {/* Si está confirmada y faltan verificaciones, damos salida explícita para forzar sin bloquear operación */}
-                {r.estado === 'Confirmada' && (!documentoVerificado || !tarjetaRegistrada || !firmaDigital) && (
+                {r.estado === 'Confirmada' && (!documentoVerificado || !tarjetaRegistrada) && (
                   <Button
                     variant="outline"
                     className="w-full"
