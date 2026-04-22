@@ -923,6 +923,91 @@ export default function Catalogos() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal Método de Pago */}
+      <Dialog open={modalMetodoOpen} onOpenChange={setModalMetodoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingMetodo ? 'Editar Método de Pago' : 'Nuevo Método de Pago'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Nombre *</Label>
+              <Input
+                value={formMetodo.nombre}
+                onChange={(e) => setFormMetodo({ ...formMetodo, nombre: e.target.value })}
+                placeholder="Ej: Visa, Mercado Pago, BBVA Transferencia"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Tipo</Label>
+              <Select value={formMetodo.tipo} onValueChange={(v) => setFormMetodo({ ...formMetodo, tipo: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Efectivo">Efectivo</SelectItem>
+                  <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                  <SelectItem value="Transferencia">Transferencia</SelectItem>
+                  <SelectItem value="Pasarela">Pasarela (Stripe, PayPal...)</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="Cripto">Criptomoneda</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Descripción</Label>
+              <Textarea
+                value={formMetodo.descripcion}
+                onChange={(e) => setFormMetodo({ ...formMetodo, descripcion: e.target.value })}
+                placeholder="Notas internas (opcional)"
+                rows={2}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Orden de aparición</Label>
+              <Input
+                type="number"
+                value={formMetodo.orden}
+                onChange={(e) => setFormMetodo({ ...formMetodo, orden: e.target.value })}
+                min="0"
+              />
+              <p className="text-xs text-muted-foreground">Menor número aparece primero en los selectores.</p>
+            </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <Label className="text-base">Activo</Label>
+                <p className="text-sm text-muted-foreground">Disponible para registrar pagos</p>
+              </div>
+              <Switch
+                checked={formMetodo.activo}
+                onCheckedChange={(checked) => setFormMetodo({ ...formMetodo, activo: checked })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalMetodoOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveMetodo}>{editingMetodo ? 'Guardar' : 'Crear'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar eliminar método */}
+      <AlertDialog open={deleteMetodoDialog} onOpenChange={setDeleteMetodoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar método de pago?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de eliminar "{metodoToDelete?.nombre}"? Los pagos ya registrados conservarán el nombre.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMetodo} className="bg-destructive text-destructive-foreground">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
