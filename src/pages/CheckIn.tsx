@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  User, CreditCard, BedDouble, FileSignature, Check, 
-  ChevronRight, Loader2, Trash2 
+  User, CreditCard, BedDouble, Check, 
+  ChevronRight, Loader2 
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -29,9 +29,6 @@ export default function CheckIn() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -92,63 +89,7 @@ export default function CheckIn() {
 
   const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId);
 
-  // Canvas drawing handlers
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    setIsDrawing(true);
-    const rect = canvas.getBoundingClientRect();
-    ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.strokeStyle = 'hsl(var(--foreground))';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    setHasSignature(true);
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasSignature(false);
-  };
-
   const handleSubmit = async () => {
-    if (!hasSignature) {
-      toast({
-        variant: 'destructive',
-        title: 'Firma requerida',
-        description: 'El huésped debe firmar el registro.',
-      });
-      return;
-    }
-
     if (!formData.habitacionId) {
       toast({
         variant: 'destructive',
@@ -222,7 +163,7 @@ export default function CheckIn() {
           <span className="text-sm font-medium">Progreso del Check-in</span>
           <span className="text-sm text-muted-foreground">Paso 1 de 1</span>
         </div>
-        <Progress value={hasSignature ? 100 : 50} className="h-2" />
+        <Progress value={formData.habitacionId ? 100 : 50} className="h-2" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -342,43 +283,6 @@ export default function CheckIn() {
             </CardContent>
           </Card>
 
-          {/* Digital signature */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileSignature className="h-5 w-5 text-primary" />
-                Firma Digital
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative border rounded-lg bg-muted/30 p-1">
-                <canvas
-                  ref={canvasRef}
-                  width={500}
-                  height={150}
-                  className="w-full cursor-crosshair rounded bg-background"
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                />
-                {!hasSignature && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <p className="text-muted-foreground text-sm">Firme aquí</p>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-between items-center mt-3">
-                <p className="text-xs text-muted-foreground">
-                  Al firmar, acepto los términos y condiciones del hotel.
-                </p>
-                <Button variant="ghost" size="sm" onClick={clearSignature}>
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Borrar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Right column - Payment summary (sticky) */}
