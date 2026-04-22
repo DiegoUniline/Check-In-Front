@@ -514,3 +514,198 @@ export default function Reservas() {
     </MainLayout>
   );
 }
+
+/* ===================== Check-In / Check-Out Panel ===================== */
+
+interface CheckInOutPanelProps {
+  tipo: 'checkin' | 'checkout';
+  data: any[];
+  loading: boolean;
+  busqueda: string;
+  onBusquedaChange: (value: string) => void;
+  onAction: (id: string) => void;
+  onRefresh: () => void;
+}
+
+function CheckInOutPanel({
+  tipo,
+  data,
+  loading,
+  busqueda,
+  onBusquedaChange,
+  onAction,
+  onRefresh,
+}: CheckInOutPanelProps) {
+  const esCheckin = tipo === 'checkin';
+  const accent = esCheckin ? 'emerald' : 'orange';
+  const Icon = esCheckin ? LogIn : LogOut;
+  const titulo = esCheckin ? 'Llegadas de hoy' : 'Salidas de hoy';
+  const subtitulo = esCheckin
+    ? 'Reservas con check-in programado para hoy'
+    : 'Huéspedes que finalizan su estancia hoy';
+  const ctaLabel = esCheckin ? 'Iniciar Check-In' : 'Iniciar Check-Out';
+  const emptyText = esCheckin
+    ? 'No hay llegadas pendientes para hoy.'
+    : 'No hay salidas programadas para hoy.';
+
+  const filtrados = data.filter((r: any) => {
+    if (!busqueda) return true;
+    const q = busqueda.toLowerCase();
+    const nombre = `${r.cliente_nombre || r.nombre || ''} ${r.apellido_paterno || ''}`.toLowerCase();
+    const hab = String(r.habitacion_numero || '').toLowerCase();
+    const num = String(r.numero_reserva || r.id || '').toLowerCase();
+    return nombre.includes(q) || hab.includes(q) || num.includes(q);
+  });
+
+  const totalPersonas = data.reduce(
+    (acc: number, r: any) => acc + (Number(r.adultos) || 0) + (Number(r.ninos) || 0),
+    0
+  );
+
+  return (
+    <div className="space-y-3">
+      {/* Header */}
+      <Card className={`border-${accent}-200 dark:border-${accent}-900 bg-${accent}-50/40 dark:bg-${accent}-950/10`}>
+        <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-lg bg-${accent}-500/10 flex items-center justify-center`}>
+              <Icon className={`h-5 w-5 text-${accent}-600 dark:text-${accent}-400`} />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold leading-tight">{titulo}</h3>
+              <p className="text-xs text-muted-foreground">{subtitulo}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className={`text-2xl font-light tabular-nums leading-none text-${accent}-600 dark:text-${accent}-400`}>
+                {data.length}
+              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
+                Reservas
+              </p>
+            </div>
+            <div className="text-right border-l pl-4">
+              <p className="text-2xl font-light tabular-nums leading-none">
+                {totalPersonas}
+              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
+                Personas
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Buscador */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por huésped, habitación o número de reserva…"
+          value={busqueda}
+          onChange={(e) => onBusquedaChange(e.target.value)}
+          className="pl-8 h-9 text-sm"
+        />
+        {busqueda && (
+          <button
+            onClick={() => onBusquedaChange('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Limpiar búsqueda"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Lista */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12 border rounded-lg bg-card">
+          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : filtrados.length === 0 ? (
+        <Card className="p-12 text-center">
+          <Icon className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">
+            {busqueda ? 'No se encontraron reservas con ese término' : emptyText}
+          </p>
+        </Card>
+      ) : (
+        <div className="grid gap-2 md:grid-cols-2">
+          {filtrados.map((r: any) => {
+            const nombre = `${r.cliente_nombre || r.nombre || ''} ${r.apellido_paterno || ''}`.trim() || 'Sin nombre';
+            const personas = (Number(r.adultos) || 0) + (Number(r.ninos) || 0);
+            const saldo = Number(r.saldo_pendiente) || 0;
+            const initials = nombre
+              .split(' ')
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((s: string) => s[0]?.toUpperCase())
+              .join('');
+
+            return (
+              <Card
+                key={r.id}
+                className="p-3 hover:shadow-md transition-shadow cursor-pointer group"
+                onClick={() => onAction(r.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`h-11 w-11 rounded-full bg-${accent}-100 dark:bg-${accent}-950/40 text-${accent}-700 dark:text-${accent}-300 flex items-center justify-center font-semibold text-sm flex-shrink-0`}
+                  >
+                    {initials || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm truncate">{nombre}</p>
+                      {saldo > 0 && (
+                        <span className="text-[10px] font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                          ${saldo.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <BedDouble className="h-3 w-3" />
+                        {r.habitacion_numero ? `Hab. ${r.habitacion_numero}` : 'Sin asignar'}
+                      </span>
+                      {personas > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {personas} pax
+                        </span>
+                      )}
+                      {esCheckin && r.hora_llegada && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {r.hora_llegada}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground/60">
+                        · {r.numero_reserva || r.id?.slice(0, 8)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="opacity-60 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAction(r.id);
+                    }}
+                  >
+                    {ctaLabel}
+                    <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
