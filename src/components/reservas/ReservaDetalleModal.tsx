@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
 interface ReservaDetalleModalProps {
   open: boolean;

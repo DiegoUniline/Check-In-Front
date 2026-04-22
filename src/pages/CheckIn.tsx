@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
 export default function CheckIn() {
   const { id } = useParams();
