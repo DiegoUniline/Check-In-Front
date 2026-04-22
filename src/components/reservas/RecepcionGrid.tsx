@@ -4,12 +4,13 @@ import { es } from 'date-fns/locale';
 import {
   BedDouble, User, Clock, AlertCircle, LayoutGrid, List,
   CheckCircle2, CalendarClock, DoorOpen, Wrench, Users as UsersIcon,
-  Wallet, MoonStar, ArrowRight, Plus,
+  Wallet, MoonStar, ArrowRight, Plus, Search, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
