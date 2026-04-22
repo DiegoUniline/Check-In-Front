@@ -28,6 +28,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
+import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
@@ -71,6 +73,7 @@ export default function Reservas() {
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
   const [modalDetalle, setModalDetalle] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
+  const [tabActiva, setTabActiva] = useState<'recepcion' | 'reservas'>('recepcion');
 
   const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
 
@@ -129,6 +132,12 @@ export default function Reservas() {
   const handleReservationClick = (reserva: any) => {
     setReservaSeleccionada(reserva);
     setModalDetalle(true);
+  };
+
+  const handleRecepcionLibreClick = (habitacion: any) => {
+    const hoy = new Date();
+    setPreloadReserva({ habitacion, fechaCheckin: hoy, fechaCheckout: addDays(hoy, 1) });
+    setModalNuevaReserva(true);
   };
 
   const totalHabitaciones = habitaciones.length;
