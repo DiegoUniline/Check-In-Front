@@ -859,26 +859,66 @@ const noches = differenceInDays(
                 </CardContent>
               </Card>
 
-              {/* Descuento */}
+              {/* IVA + Descuento */}
               <Card>
-                <CardContent className="p-4">
-                  <Label className="mb-3 block">Descuento</Label>
-                  <div className="flex gap-4">
-                    <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as any, descuentoValor: 0 })}>
-                      <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sin descuento</SelectItem>
-                        <SelectItem value="Monto">Monto fijo</SelectItem>
-                        <SelectItem value="Porcentaje">Porcentaje</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {formData.descuentoTipo !== 'none' && (
-                      <div className="relative">
-                        {formData.descuentoTipo === 'Porcentaje' ? <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" /> : <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" />}
-                        <Input type="number" className="pl-9 w-32" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
+                <CardContent className="p-4 grid grid-cols-2 gap-6">
+                  <div>
+                    <Label className="mb-3 block flex items-center gap-2">
+                      <Percent className="h-4 w-4" /> IVA / Impuesto
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="pl-9"
+                          placeholder="0"
+                          value={formData.ivaPorcentaje}
+                          onChange={(e) => setFormData({ ...formData, ivaPorcentaje: parseFloat(e.target.value) || 0 })}
+                        />
                       </div>
+                      {impuestos > 0 && (
+                        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                          = ${fmt(impuestos)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Configura el % de impuesto. Déjalo en 0 si no aplica.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="mb-3 block">Descuento (sobre el total)</Label>
+                    <div className="flex gap-2">
+                      <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}>
+                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin descuento</SelectItem>
+                          <SelectItem value="Monto">Monto fijo</SelectItem>
+                          <SelectItem value="Porcentaje">Porcentaje</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {formData.descuentoTipo !== 'none' && (
+                        <div className="relative flex-1">
+                          {formData.descuentoTipo === 'Porcentaje'
+                            ? <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            : <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
+                          <Input
+                            type="number"
+                            className="pl-9"
+                            value={formData.descuentoValor}
+                            onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {descuentoMonto > 0 && (
+                      <p className="text-xs font-medium text-emerald-600 mt-2">
+                        -${fmt(descuentoMonto)} de descuento aplicado
+                      </p>
                     )}
-                    {descuentoMonto > 0 && <span className="text-green-600 font-medium self-center">-${descuentoMonto.toLocaleString()}</span>}
                   </div>
                 </CardContent>
               </Card>
