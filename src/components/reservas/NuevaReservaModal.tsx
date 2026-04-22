@@ -1034,7 +1034,57 @@ const noches = differenceInDays(
                   </div>
                   
                   <Separator className="bg-primary-foreground/20" />
-                  
+
+                  {/* Descuento aplicado sobre el total — input dentro del panel de resumen */}
+                  <div className="space-y-2 rounded-md bg-primary-foreground/10 p-3">
+                    <Label className="text-primary-foreground text-sm flex items-center gap-2">
+                      <Percent className="h-4 w-4" /> Descuento (sobre el total)
+                    </Label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={formData.descuentoTipo}
+                        onValueChange={(v) =>
+                          setFormData({
+                            ...formData,
+                            descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje',
+                            descuentoValor: 0,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="w-36 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin descuento</SelectItem>
+                          <SelectItem value="Monto">Monto fijo</SelectItem>
+                          <SelectItem value="Porcentaje">Porcentaje</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {formData.descuentoTipo !== 'none' && (
+                        <div className="relative flex-1">
+                          {formData.descuentoTipo === 'Porcentaje' ? (
+                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-foreground/60" />
+                          ) : (
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-foreground/60" />
+                          )}
+                          <Input
+                            type="number"
+                            className="pl-9 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50"
+                            value={formData.descuentoValor}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                descuentoValor: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator className="bg-primary-foreground/20" />
+
                   <div className="flex justify-between font-bold text-2xl">
                     <span>Total</span>
                     <span>${fmt(total)}</span>
