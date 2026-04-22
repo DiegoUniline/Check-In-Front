@@ -4,7 +4,7 @@ import { es } from 'date-fns/locale';
 import {
   BedDouble, User, Clock, AlertCircle, LayoutGrid, List,
   CheckCircle2, CalendarClock, DoorOpen, Wrench, Users as UsersIcon,
-  Wallet, MoonStar, ArrowRight,
+  Wallet, MoonStar, ArrowRight, Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -38,81 +38,61 @@ const ESTADO_META: Record<EstadoCard, {
   cardBg: string;
   cardBorder: string;
   cardHover: string;
-  iconBg: string;
-  iconColor: string;
-  textPrimary: string;
-  textMuted: string;
-  textStrong: string;
+  accent: string;
+  accentText: string;
   divider: string;
-  ctaBg: string;
   icon: typeof CheckCircle2;
 }> = {
   libre: {
     label: 'Disponible',
     short: 'Libre',
     dot: 'bg-emerald-500',
-    badge: 'bg-white/95 text-emerald-700 border-white/40 shadow-sm',
-    cardBg: 'bg-emerald-500',
-    cardBorder: 'border-emerald-600',
-    cardHover: 'hover:brightness-110 hover:shadow-emerald-500/40',
-    iconBg: 'bg-white/15',
-    iconColor: 'text-white',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/85',
-    textStrong: 'text-white',
-    divider: 'border-white/20',
-    ctaBg: 'bg-white/10 hover:bg-white/20',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    cardBg: 'bg-card',
+    cardBorder: 'border-border',
+    cardHover: 'hover:border-emerald-400 hover:shadow-md hover:shadow-emerald-500/5',
+    accent: 'bg-emerald-500',
+    accentText: 'text-emerald-600 dark:text-emerald-400',
+    divider: 'border-border',
     icon: CheckCircle2,
   },
   reservada: {
     label: 'Reservada hoy',
     short: 'Reservada',
     dot: 'bg-blue-500',
-    badge: 'bg-white/95 text-blue-700 border-white/40 shadow-sm',
-    cardBg: 'bg-blue-500',
-    cardBorder: 'border-blue-600',
-    cardHover: 'hover:brightness-110 hover:shadow-blue-500/40',
-    iconBg: 'bg-white/15',
-    iconColor: 'text-white',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/85',
-    textStrong: 'text-white',
-    divider: 'border-white/20',
-    ctaBg: 'bg-white/10 hover:bg-white/20',
+    badge: 'bg-blue-50 text-blue-700 border-blue-200',
+    cardBg: 'bg-blue-50/40 dark:bg-blue-950/20',
+    cardBorder: 'border-blue-200 dark:border-blue-900',
+    cardHover: 'hover:border-blue-400 hover:shadow-md hover:shadow-blue-500/5',
+    accent: 'bg-blue-500',
+    accentText: 'text-blue-600 dark:text-blue-400',
+    divider: 'border-blue-100 dark:border-blue-900',
     icon: CalendarClock,
   },
   ocupada: {
     label: 'Ocupada',
     short: 'Ocupada',
-    dot: 'bg-rose-500',
-    badge: 'bg-white/95 text-rose-700 border-white/40 shadow-sm',
-    cardBg: 'bg-rose-500',
-    cardBorder: 'border-rose-600',
-    cardHover: 'hover:brightness-110 hover:shadow-rose-500/40',
-    iconBg: 'bg-white/15',
-    iconColor: 'text-white',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/85',
-    textStrong: 'text-white',
-    divider: 'border-white/20',
-    ctaBg: 'bg-white/10 hover:bg-white/20',
+    dot: 'bg-amber-500',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200',
+    cardBg: 'bg-amber-50/50 dark:bg-amber-950/20',
+    cardBorder: 'border-amber-200 dark:border-amber-900',
+    cardHover: 'hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/5',
+    accent: 'bg-amber-500',
+    accentText: 'text-amber-700 dark:text-amber-400',
+    divider: 'border-amber-100 dark:border-amber-900',
     icon: DoorOpen,
   },
   mantenimiento: {
     label: 'Mantenimiento',
     short: 'Mantto.',
-    dot: 'bg-amber-500',
-    badge: 'bg-white/95 text-amber-700 border-white/40 shadow-sm',
-    cardBg: 'bg-amber-500',
-    cardBorder: 'border-amber-600',
+    dot: 'bg-rose-500',
+    badge: 'bg-rose-50 text-rose-700 border-rose-200',
+    cardBg: 'bg-muted/40',
+    cardBorder: 'border-dashed border-border',
     cardHover: '',
-    iconBg: 'bg-white/15',
-    iconColor: 'text-white',
-    textPrimary: 'text-white',
-    textMuted: 'text-white/85',
-    textStrong: 'text-white',
-    divider: 'border-white/20',
-    ctaBg: '',
+    accent: 'bg-rose-500',
+    accentText: 'text-rose-600 dark:text-rose-400',
+    divider: 'border-border',
     icon: Wrench,
   },
 };
