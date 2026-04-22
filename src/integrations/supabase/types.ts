@@ -600,6 +600,50 @@ export type Database = {
         }
         Relationships: []
       }
+      metodos_pago: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          descripcion: string | null
+          hotel_id: string
+          id: string
+          nombre: string
+          orden: number | null
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id: string
+          id?: string
+          nombre: string
+          orden?: number | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          orden?: number | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metodos_pago_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimientos_inventario: {
         Row: {
           cantidad: number
