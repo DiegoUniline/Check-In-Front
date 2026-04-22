@@ -279,70 +279,54 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
       onClick={isClickable ? onClick : undefined}
       onKeyDown={handleKey}
       className={cn(
-        'group relative overflow-hidden rounded-lg transition-all duration-300 border',
-        'aspect-[1.618/1]',
+        'group relative overflow-hidden rounded-xl transition-all duration-300 border-2',
+        'aspect-[1.618/1] min-h-[160px]',
         meta.cardBg,
         meta.cardBorder,
         meta.textPrimary,
-        'shadow-md',
+        'shadow-lg',
         isClickable && 'cursor-pointer hover:shadow-xl hover:-translate-y-1',
         isClickable && meta.cardHover,
         !isClickable && 'cursor-not-allowed',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2'
       )}
     >
-      {/* Decoración: número grande de fondo */}
+      {/* Icono cama enorme decorativo a la derecha */}
       <div
         aria-hidden
-        className={cn(
-          'absolute -right-4 -bottom-6 text-[7rem] font-black leading-none select-none pointer-events-none',
-          'opacity-10 tracking-tighter'
-        )}
+        className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
       >
-        {habitacion.numero}
+        {estado === 'mantenimiento' ? (
+          <Wrench className="h-20 w-20 text-white/25" strokeWidth={1.5} />
+        ) : (
+          <BedDouble className="h-20 w-20 text-white/25" strokeWidth={1.5} />
+        )}
       </div>
 
       {/* Brillo decorativo */}
       <div
         aria-hidden
-        className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-white/10 blur-2xl pointer-events-none"
+        className="absolute -top-16 -left-16 h-40 w-40 rounded-full bg-white/10 blur-3xl pointer-events-none"
       />
 
       <div className="relative h-full p-4 flex flex-col justify-between">
-        {/* Top row: Hab + Badge */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className={cn('h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0', meta.iconBg)}>
-              <BedDouble className={cn('h-5 w-5', meta.iconColor)} />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-baseline gap-1">
-                <span className={cn('text-[10px] font-semibold uppercase tracking-wider', meta.textMuted)}>
-                  Hab.
-                </span>
-                <span className={cn('text-xl font-black leading-none tabular-nums', meta.textStrong)}>
-                  {habitacion.numero}
-                </span>
-              </div>
-              <p className={cn('text-[11px] mt-0.5 truncate', meta.textMuted)}>
-                {habitacion.tipo_nombre || 'Sin tipo'}
-                {habitacion.piso != null && ` · P${habitacion.piso}`}
-              </p>
-            </div>
-          </div>
-
-          <Badge variant="outline" className={cn('gap-1 text-[9px] font-bold border px-2 py-0.5 flex-shrink-0', meta.badge)}>
-            <Icon className="h-2.5 w-2.5" />
-            {meta.short.toUpperCase()}
-          </Badge>
+        {/* Top: Nro grande + tipo */}
+        <div className="min-w-0 pr-20">
+          <h3 className={cn('text-3xl font-black leading-none tracking-tight tabular-nums', meta.textStrong)}>
+            Nro:{habitacion.numero}
+          </h3>
+          <p className={cn('text-sm font-medium mt-1.5 truncate', meta.textMuted)}>
+            {habitacion.tipo_nombre || 'Sin tipo'}
+            {habitacion.piso != null && ` · Piso ${habitacion.piso}`}
+          </p>
         </div>
 
-        {/* Mid: Info huésped o estado vacío */}
-        <div className="flex-1 flex flex-col justify-center min-h-0 my-1">
+        {/* Mid: Info huésped (solo si aplica) */}
+        <div className="relative z-10 min-h-0 my-1 pr-20">
           {huesped ? (
-            <div className="space-y-1">
-              <p className={cn('text-sm font-bold truncate flex items-center gap-1.5', meta.textStrong)}>
-                <User className="h-3.5 w-3.5 opacity-80 flex-shrink-0" />
+            <div className="space-y-0.5">
+              <p className={cn('text-xs font-bold truncate flex items-center gap-1', meta.textStrong)}>
+                <User className="h-3 w-3 opacity-80 flex-shrink-0" />
                 <span className="truncate">{huesped}</span>
               </p>
               <div className={cn('flex flex-wrap gap-x-2.5 gap-y-0.5 text-[10px] font-medium', meta.textMuted)}>
@@ -372,40 +356,29 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
                 )}
               </div>
               {saldo > 0 && (
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/20 backdrop-blur-sm w-fit">
+                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/25 backdrop-blur-sm w-fit mt-0.5">
                   <Wallet className="h-2.5 w-2.5" />
                   <span className={cn('text-[10px] font-bold tabular-nums', meta.textStrong)}>
-                    Debe ${saldo.toLocaleString()}
+                    ${saldo.toLocaleString()}
                   </span>
                 </div>
               )}
             </div>
-          ) : estado === 'libre' ? (
-            <p className={cn('text-xs italic', meta.textMuted)}>
-              Lista para recibir huéspedes
-            </p>
-          ) : estado === 'mantenimiento' ? (
-            <div className="flex items-center gap-1.5">
-              <AlertCircle className={cn('h-3.5 w-3.5 flex-shrink-0', meta.textPrimary)} />
-              <p className={cn('text-xs', meta.textMuted)}>
-                Bloqueada por mantenimiento
-              </p>
-            </div>
           ) : null}
         </div>
 
-        {/* CTA */}
-        {isClickable && (
-          <div className={cn(
-            'flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md transition-colors',
-            meta.ctaBg
-          )}>
-            <span className={cn('text-[11px] font-semibold', meta.textStrong)}>
-              {ctaLabel}
-            </span>
-            <ArrowRight className={cn('h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5', meta.textStrong)} />
-          </div>
-        )}
+        {/* Footer: estado + flecha */}
+        <div className="relative z-10 flex items-center gap-1.5 pt-2 border-t border-white/25">
+          <span className={cn('text-xs font-extrabold tracking-wider uppercase', meta.textStrong)}>
+            {meta.short === 'Libre' ? 'Disponible' : meta.short === 'Mantto.' ? 'Mantenimiento' : meta.short}
+          </span>
+          {isClickable && (
+            <ArrowRight className={cn(
+              'h-3.5 w-3.5 transition-transform group-hover:translate-x-1',
+              meta.textStrong
+            )} />
+          )}
+        </div>
       </div>
     </div>
   );
