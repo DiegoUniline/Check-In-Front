@@ -40,6 +40,7 @@ export interface ReservationPreload {
   habitacion?: any;
   fechaCheckin?: Date;
   fechaCheckout?: Date;
+  origen?: 'Reserva' | 'Recepcion';
 }
 
 interface NuevaReservaModalProps {
@@ -160,7 +161,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     if (open) {
       cargarDatos();
       setStep(1);
-      setOrigen('Reserva');
+      setOrigen(preload?.origen || 'Reserva');
       setCrearNuevoCliente(false);
       setSearchCliente('');
       setFormData(createInitialFormData(preload));

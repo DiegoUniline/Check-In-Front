@@ -136,7 +136,12 @@ export default function Reservas() {
 
   const handleRecepcionLibreClick = (habitacion: any) => {
     const hoy = new Date();
-    setPreloadReserva({ habitacion, fechaCheckin: hoy, fechaCheckout: addDays(hoy, 1) });
+    setPreloadReserva({
+      habitacion,
+      fechaCheckin: hoy,
+      fechaCheckout: addDays(hoy, 1),
+      origen: 'Recepcion',
+    });
     setModalNuevaReserva(true);
   };
 
