@@ -324,9 +324,10 @@ const noches = differenceInDays(
     const cantidad = parseFloat(cargoCantidad) || 1;
     const precioUnitario = parseFloat(cargoMonto);
     const subtotalCargo = cantidad * precioUnitario;
-    const aplicaIva = concepto?.aplica_iva ?? true;
-    const impuestoCargo = aplicaIva ? subtotalCargo * 0.16 : 0;
-    
+    // IVA de cargos extras: NO automático, se incluye en el IVA global configurable
+    const aplicaIva = false;
+    const impuestoCargo = 0;
+
     setFormData(prev => ({ 
       ...prev, 
       cargos: [...prev.cargos, {
@@ -339,6 +340,17 @@ const noches = differenceInDays(
       }] 
     }));
     setCargoConcepto(''); setCargoCantidad('1'); setCargoMonto('');
+  };
+
+  const handleCrearConcepto = async (nombre: string) => {
+    try {
+      const nuevo = await api.createConceptoCargo({ nombre, precio: 0 });
+      setConceptosCargo(prev => [...prev, nuevo]);
+      toast({ title: '✅ Concepto creado', description: nombre });
+      return { value: nuevo.id, label: nuevo.nombre };
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'No se pudo crear el concepto', variant: 'destructive' });
+    }
   };
 
   const handleAgregarPago = () => {
@@ -464,7 +476,7 @@ const noches = differenceInDays(
 
   return (
     <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
-      <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {origen === 'Recepcion' ? <><UserPlus className="h-5 w-5" /> Check-in Directo</> : <><CalendarPlus className="h-5 w-5" /> Nueva Reserva</>}
