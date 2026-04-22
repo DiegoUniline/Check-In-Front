@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
 export default function CheckIn() {
   const { id } = useParams();
@@ -420,19 +421,10 @@ export default function CheckIn() {
                   </div>
                   <div className="space-y-2">
                     <Label>Método de Pago</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['Tarjeta', 'Efectivo'].map(metodo => (
-                        <Button
-                          key={metodo}
-                          variant={formData.metodoPago === metodo ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setFormData({...formData, metodoPago: metodo})}
-                          className="w-full"
-                        >
-                          {metodo}
-                        </Button>
-                      ))}
-                    </div>
+                    <MetodoPagoSelect
+                      value={formData.metodoPago}
+                      onChange={(v) => setFormData({ ...formData, metodoPago: v })}
+                    />
                   </div>
                 </div>
 

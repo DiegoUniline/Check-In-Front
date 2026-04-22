@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
 interface ReservaDetalleModalProps {
   open: boolean;
@@ -1074,14 +1075,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   <CardContent>
                     <div className="flex gap-2">
                       <Input type="number" placeholder="Monto" value={montoAbono} onChange={(e) => setMontoAbono(e.target.value)} className="flex-1" />
-                      <Select value={metodoPago} onValueChange={setMetodoPago}>
-                        <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Efectivo">Efectivo</SelectItem>
-                          <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                          <SelectItem value="Transferencia">Transferencia</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <MetodoPagoSelect value={metodoPago} onChange={setMetodoPago} className="w-[160px]" />
                       <Button onClick={handleAbonar} disabled={processing}>
                         <CreditCard className="h-4 w-4 mr-1" /> Pagar
                       </Button>

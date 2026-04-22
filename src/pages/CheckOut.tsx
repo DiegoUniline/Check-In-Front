@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
 export default function CheckOut() {
   const { id } = useParams();
@@ -290,19 +291,7 @@ export default function CheckOut() {
 
                 <div className="space-y-2">
                   <Label>Método de Pago</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['Tarjeta', 'Efectivo'].map(metodo => (
-                      <Button
-                        key={metodo}
-                        variant={metodoPago === metodo ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setMetodoPago(metodo)}
-                        className="w-full"
-                      >
-                        {metodo}
-                      </Button>
-                    ))}
-                  </div>
+                  <MetodoPagoSelect value={metodoPago} onChange={setMetodoPago} />
                 </div>
 
                 <div className="pt-4 space-y-2">

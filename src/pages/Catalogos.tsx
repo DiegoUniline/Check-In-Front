@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound } from 'lucide-react';
+import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -81,10 +82,26 @@ export default function Catalogos() {
     activo: true,
   });
 
+  // Métodos de Pago
+  const [metodosPago, setMetodosPago] = useState<any[]>([]);
+  const [loadingMetodos, setLoadingMetodos] = useState(true);
+  const [modalMetodoOpen, setModalMetodoOpen] = useState(false);
+  const [editingMetodo, setEditingMetodo] = useState<any>(null);
+  const [deleteMetodoDialog, setDeleteMetodoDialog] = useState(false);
+  const [metodoToDelete, setMetodoToDelete] = useState<any>(null);
+  const [formMetodo, setFormMetodo] = useState({
+    nombre: '',
+    descripcion: '',
+    tipo: 'Efectivo',
+    activo: true,
+    orden: '0',
+  });
+
   useEffect(() => {
     cargarTiposHabitacion();
     cargarCategorias();
     cargarEntregables();
+    cargarMetodosPago();
   }, []);
 
   // ========== TIPOS HABITACIÓN ==========
@@ -286,6 +303,81 @@ export default function Catalogos() {
     }
   };
 
+  // ========== MÉTODOS DE PAGO ==========
+  const cargarMetodosPago = async () => {
+    try {
+      const data = await api.getMetodosPago();
+      setMetodosPago(data);
+    } catch (error) {
+      console.error('Error cargando métodos:', error);
+    } finally {
+      setLoadingMetodos(false);
+    }
+  };
+
+  const openNewMetodo = () => {
+    setEditingMetodo(null);
+    setFormMetodo({ nombre: '', descripcion: '', tipo: 'Efectivo', activo: true, orden: '0' });
+    setModalMetodoOpen(true);
+  };
+
+  const openEditMetodo = (m: any) => {
+    setEditingMetodo(m);
+    setFormMetodo({
+      nombre: m.nombre || '',
+      descripcion: m.descripcion || '',
+      tipo: m.tipo || 'Otro',
+      activo: m.activo !== false,
+      orden: (m.orden ?? 0).toString(),
+    });
+    setModalMetodoOpen(true);
+  };
+
+  const handleSaveMetodo = async () => {
+    if (!formMetodo.nombre.trim()) {
+      toast({ title: 'Error', description: 'El nombre es requerido', variant: 'destructive' });
+      return;
+    }
+    try {
+      const payload = {
+        nombre: formMetodo.nombre.trim(),
+        descripcion: formMetodo.descripcion.trim() || null,
+        tipo: formMetodo.tipo,
+        activo: formMetodo.activo,
+        orden: parseInt(formMetodo.orden) || 0,
+      };
+      if (editingMetodo) {
+        await api.updateMetodoPago(editingMetodo.id, payload);
+        toast({ title: 'Método actualizado', description: `${payload.nombre} guardado` });
+      } else {
+        await api.createMetodoPago(payload);
+        toast({ title: 'Método creado', description: `${payload.nombre} creado` });
+      }
+      setModalMetodoOpen(false);
+      cargarMetodosPago();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'No se pudo guardar', variant: 'destructive' });
+    }
+  };
+
+  const confirmDeleteMetodo = (m: any) => {
+    setMetodoToDelete(m);
+    setDeleteMetodoDialog(true);
+  };
+
+  const handleDeleteMetodo = async () => {
+    if (!metodoToDelete) return;
+    try {
+      await api.deleteMetodoPago(metodoToDelete.id);
+      toast({ title: 'Método eliminado', description: `${metodoToDelete.nombre} eliminado` });
+      setDeleteMetodoDialog(false);
+      setMetodoToDelete(null);
+      cargarMetodosPago();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'No se pudo eliminar', variant: 'destructive' });
+    }
+  };
+
   return (
     <MainLayout title="Catálogos" subtitle="Administración de catálogos del sistema">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -301,6 +393,10 @@ export default function Catalogos() {
           <TabsTrigger value="entregables">
             <KeyRound className="h-4 w-4 mr-2" />
             Entregables
+          </TabsTrigger>
+          <TabsTrigger value="metodos-pago">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Métodos de Pago
           </TabsTrigger>
         </TabsList>
 
@@ -503,6 +599,82 @@ export default function Catalogos() {
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           No hay entregables registrados
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: Métodos de Pago */}
+        <TabsContent value="metodos-pago">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Métodos de Pago</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Define los métodos de cobro que usa tu hotel. Aparecerán al registrar pagos en Check-in, Check-out, Reservas y POS.
+                </p>
+              </div>
+              <Button onClick={openNewMetodo}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Método
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {loadingMetodos ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Orden</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {metodosPago.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="text-muted-foreground">{m.orden ?? 0}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-muted-foreground" />
+                            {m.nombre}
+                          </div>
+                          {m.descripcion && <p className="text-xs text-muted-foreground mt-1">{m.descripcion}</p>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{m.tipo || 'Otro'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {m.activo ? (
+                            <Badge className="bg-success/15 text-success hover:bg-success/20 border-success/30">Activo</Badge>
+                          ) : (
+                            <Badge variant="secondary">Inactivo</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => openEditMetodo(m)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => confirmDeleteMetodo(m)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {metodosPago.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          No hay métodos de pago. Crea uno para empezar.
                         </TableCell>
                       </TableRow>
                     )}
@@ -746,6 +918,91 @@ export default function Catalogos() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteEntregable} className="bg-destructive text-destructive-foreground">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal Método de Pago */}
+      <Dialog open={modalMetodoOpen} onOpenChange={setModalMetodoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingMetodo ? 'Editar Método de Pago' : 'Nuevo Método de Pago'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Nombre *</Label>
+              <Input
+                value={formMetodo.nombre}
+                onChange={(e) => setFormMetodo({ ...formMetodo, nombre: e.target.value })}
+                placeholder="Ej: Visa, Mercado Pago, BBVA Transferencia"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Tipo</Label>
+              <Select value={formMetodo.tipo} onValueChange={(v) => setFormMetodo({ ...formMetodo, tipo: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Efectivo">Efectivo</SelectItem>
+                  <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                  <SelectItem value="Transferencia">Transferencia</SelectItem>
+                  <SelectItem value="Pasarela">Pasarela (Stripe, PayPal...)</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="Cripto">Criptomoneda</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Descripción</Label>
+              <Textarea
+                value={formMetodo.descripcion}
+                onChange={(e) => setFormMetodo({ ...formMetodo, descripcion: e.target.value })}
+                placeholder="Notas internas (opcional)"
+                rows={2}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Orden de aparición</Label>
+              <Input
+                type="number"
+                value={formMetodo.orden}
+                onChange={(e) => setFormMetodo({ ...formMetodo, orden: e.target.value })}
+                min="0"
+              />
+              <p className="text-xs text-muted-foreground">Menor número aparece primero en los selectores.</p>
+            </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <Label className="text-base">Activo</Label>
+                <p className="text-sm text-muted-foreground">Disponible para registrar pagos</p>
+              </div>
+              <Switch
+                checked={formMetodo.activo}
+                onCheckedChange={(checked) => setFormMetodo({ ...formMetodo, activo: checked })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalMetodoOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveMetodo}>{editingMetodo ? 'Guardar' : 'Crear'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar eliminar método */}
+      <AlertDialog open={deleteMetodoDialog} onOpenChange={setDeleteMetodoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar método de pago?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de eliminar "{metodoToDelete?.nombre}"? Los pagos ya registrados conservarán el nombre.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMetodo} className="bg-destructive text-destructive-foreground">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

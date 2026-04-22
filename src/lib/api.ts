@@ -448,6 +448,26 @@ class ApiClient {
   getConceptosCargo = async (): Promise<any> => { const { data } = await supabase.from('conceptos_cargo').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
   createConceptoCargo = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('conceptos_cargo').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
 
+  // ------- Métodos de Pago -------
+  getMetodosPago = async (params?: { soloActivos?: boolean }): Promise<any> => {
+    let q = (supabase as any).from('metodos_pago').select('*').eq('hotel_id', this.hid()).order('orden').order('nombre');
+    if (params?.soloActivos) q = q.eq('activo', true);
+    const { data } = await q;
+    return data || [];
+  };
+  createMetodoPago = async (data: any): Promise<any> => {
+    const { data: r, error } = await (supabase as any).from('metodos_pago').insert({ ...data, hotel_id: this.hid() }).select().single();
+    if (error) throw error; return r;
+  };
+  updateMetodoPago = async (id: string, data: any): Promise<any> => {
+    const { data: r, error } = await (supabase as any).from('metodos_pago').update({ ...data, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+    if (error) throw error; return r;
+  };
+  deleteMetodoPago = async (id: string): Promise<any> => {
+    const { error } = await (supabase as any).from('metodos_pago').delete().eq('id', id);
+    if (error) throw error; return { ok: true };
+  };
+
   // ------- Entregables -------
   getEntregables = async (): Promise<any> => { const { data } = await supabase.from('entregables').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
   createEntregable = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('entregables').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
