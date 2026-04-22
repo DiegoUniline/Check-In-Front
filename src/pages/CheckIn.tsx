@@ -309,85 +309,11 @@ export default function CheckIn() {
 
                 <Separator />
 
-                {/* Lista de pagos agregados */}
-                {pagos.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-                      Pagos registrados ({pagos.length})
-                    </Label>
-                    <div className="space-y-1.5">
-                      {pagos.map((p) => (
-                        <div
-                          key={p.id}
-                          className="flex items-center justify-between gap-2 rounded-md border bg-background px-3 py-2"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{p.metodo}</p>
-                            {p.referencia && (
-                              <p className="text-xs text-muted-foreground truncate">Ref: {p.referencia}</p>
-                            )}
-                          </div>
-                          <span className="text-sm font-semibold tabular-nums">
-                            ${p.monto.toLocaleString()}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleEliminarPago(p.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-sm pt-1">
-                      <span className="text-muted-foreground">Total pagado</span>
-                      <span className="font-semibold">${totalPagos.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Saldo restante</span>
-                      <span className={`font-semibold ${saldoRestante > 0 ? 'text-amber-600' : 'text-primary'}`}>
-                        ${saldoRestante.toLocaleString()}
-                      </span>
-                    </div>
-                    <Separator />
-                  </div>
-                )}
-
-                {/* Formulario para agregar nuevo pago */}
-                <div className="space-y-3">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-                    Agregar pago
-                  </Label>
-                  <div className="space-y-2">
-                    <Input
-                      type="number"
-                      placeholder="Monto"
-                      value={nuevoPago.monto}
-                      onChange={(e) => setNuevoPago({ ...nuevoPago, monto: e.target.value })}
-                    />
-                    <MetodoPagoSelect
-                      value={nuevoPago.metodo}
-                      onChange={(v) => setNuevoPago({ ...nuevoPago, metodo: v })}
-                    />
-                    <Input
-                      placeholder="Referencia (opcional)"
-                      value={nuevoPago.referencia}
-                      onChange={(e) => setNuevoPago({ ...nuevoPago, referencia: e.target.value })}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={handleAgregarPago}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Agregar pago
-                    </Button>
-                  </div>
-                </div>
+                <PagosMultiplesGrid
+                  total={total}
+                  pagos={pagos}
+                  onChange={setPagos}
+                />
 
                 <div className="pt-4 space-y-2">
                   <Button
