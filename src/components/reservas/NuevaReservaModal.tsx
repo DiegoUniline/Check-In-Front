@@ -560,20 +560,22 @@ const noches = differenceInDays(
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Tipo de habitación</Label>
-              <ComboboxCreatable
-                options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base?.toLocaleString()}/noche` }))}
-                value={formData.tipoHabitacion}
-                onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
-                onCreate={async (nombre) => {
-                  const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
-                  setTiposHabitacion([...tiposHabitacion, newTipo]);
-                  return { value: newTipo.id, label: `${newTipo.nombre} - $1,000/noche` };
-                }}
-                placeholder="Seleccionar..." searchPlaceholder="Buscar..." createLabel="Crear"
-              />
-            </div>
+            {!preload?.habitacion?.id && (
+              <div className="space-y-2">
+                <Label>Tipo de habitación</Label>
+                <ComboboxCreatable
+                  options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base?.toLocaleString()}/noche` }))}
+                  value={formData.tipoHabitacion}
+                  onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
+                  onCreate={async (nombre) => {
+                    const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
+                    setTiposHabitacion([...tiposHabitacion, newTipo]);
+                    return { value: newTipo.id, label: `${newTipo.nombre} - $1,000/noche` };
+                  }}
+                  placeholder="Seleccionar..." searchPlaceholder="Buscar..." createLabel="Crear"
+                />
+              </div>
+            )}
           </div>
         )}
 
