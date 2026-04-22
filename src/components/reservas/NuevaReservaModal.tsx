@@ -287,12 +287,26 @@ const noches = differenceInDays(
   };
 
   const handleNext = async () => {
-    if (step === 1) await buscarHabitaciones();
+    if (step === 1) {
+      // Si ya hay habitación preseleccionada (vino del timeline), saltar paso 2
+      if (preload?.habitacion?.id) {
+        setStep(3);
+        return;
+      }
+      await buscarHabitaciones();
+    }
     if (step < 4) setStep((step + 1) as Step);
   };
 
   const handleBack = () => {
-    if (step > 1) setStep((step - 1) as Step);
+    if (step > 1) {
+      // Si volvemos desde paso 3 y había habitación preseleccionada, regresar a paso 1
+      if (step === 3 && preload?.habitacion?.id) {
+        setStep(1);
+        return;
+      }
+      setStep((step - 1) as Step);
+    }
   };
 
   const handleAgregarCargo = () => {
