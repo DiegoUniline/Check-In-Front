@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  User, CreditCard, BedDouble, FileSignature, Check, 
-  ChevronRight, Loader2, Trash2 
+  User, CreditCard, BedDouble, Check, 
+  ChevronRight, Loader2 
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -29,9 +29,6 @@ export default function CheckIn() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   
