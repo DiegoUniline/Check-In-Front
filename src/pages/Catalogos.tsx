@@ -302,6 +302,81 @@ export default function Catalogos() {
     }
   };
 
+  // ========== MÉTODOS DE PAGO ==========
+  const cargarMetodosPago = async () => {
+    try {
+      const data = await api.getMetodosPago();
+      setMetodosPago(data);
+    } catch (error) {
+      console.error('Error cargando métodos:', error);
+    } finally {
+      setLoadingMetodos(false);
+    }
+  };
+
+  const openNewMetodo = () => {
+    setEditingMetodo(null);
+    setFormMetodo({ nombre: '', descripcion: '', tipo: 'Efectivo', activo: true, orden: '0' });
+    setModalMetodoOpen(true);
+  };
+
+  const openEditMetodo = (m: any) => {
+    setEditingMetodo(m);
+    setFormMetodo({
+      nombre: m.nombre || '',
+      descripcion: m.descripcion || '',
+      tipo: m.tipo || 'Otro',
+      activo: m.activo !== false,
+      orden: (m.orden ?? 0).toString(),
+    });
+    setModalMetodoOpen(true);
+  };
+
+  const handleSaveMetodo = async () => {
+    if (!formMetodo.nombre.trim()) {
+      toast({ title: 'Error', description: 'El nombre es requerido', variant: 'destructive' });
+      return;
+    }
+    try {
+      const payload = {
+        nombre: formMetodo.nombre.trim(),
+        descripcion: formMetodo.descripcion.trim() || null,
+        tipo: formMetodo.tipo,
+        activo: formMetodo.activo,
+        orden: parseInt(formMetodo.orden) || 0,
+      };
+      if (editingMetodo) {
+        await api.updateMetodoPago(editingMetodo.id, payload);
+        toast({ title: 'Método actualizado', description: `${payload.nombre} guardado` });
+      } else {
+        await api.createMetodoPago(payload);
+        toast({ title: 'Método creado', description: `${payload.nombre} creado` });
+      }
+      setModalMetodoOpen(false);
+      cargarMetodosPago();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'No se pudo guardar', variant: 'destructive' });
+    }
+  };
+
+  const confirmDeleteMetodo = (m: any) => {
+    setMetodoToDelete(m);
+    setDeleteMetodoDialog(true);
+  };
+
+  const handleDeleteMetodo = async () => {
+    if (!metodoToDelete) return;
+    try {
+      await api.deleteMetodoPago(metodoToDelete.id);
+      toast({ title: 'Método eliminado', description: `${metodoToDelete.nombre} eliminado` });
+      setDeleteMetodoDialog(false);
+      setMetodoToDelete(null);
+      cargarMetodosPago();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'No se pudo eliminar', variant: 'destructive' });
+    }
+  };
+
   return (
     <MainLayout title="Catálogos" subtitle="Administración de catálogos del sistema">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
