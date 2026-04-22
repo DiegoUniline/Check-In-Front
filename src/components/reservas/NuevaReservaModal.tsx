@@ -885,30 +885,108 @@ const noches = differenceInDays(
                 <CardContent className="p-4 grid grid-cols-2 gap-6">
                   <div>
                     <Label className="mb-3 block flex items-center gap-2">
-                      <Percent className="h-4 w-4" /> IVA / Impuesto
+                      <Percent className="h-4 w-4" /> Impuestos
                     </Label>
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="pl-9"
-                          placeholder="0"
-                          value={formData.ivaPorcentaje}
-                          onChange={(e) => setFormData({ ...formData, ivaPorcentaje: parseFloat(e.target.value) || 0 })}
-                        />
-                      </div>
-                      {impuestos > 0 && (
-                        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                          = ${fmt(impuestos)}
-                        </span>
+
+                    {/* Tabla editable de impuestos */}
+                    <div className="space-y-2">
+                      {formData.impuestos.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">
+                          Sin impuestos. Agrega uno desde las sugerencias o personalizado.
+                        </p>
                       )}
+                      {formData.impuestos.map((imp) => (
+                        <div key={imp.id} className="flex items-center gap-2">
+                          <Input
+                            className="flex-1 h-9"
+                            placeholder="Nombre"
+                            value={imp.nombre}
+                            onChange={(e) =>
+                              setFormData((p) => ({
+                                ...p,
+                                impuestos: p.impuestos.map((x) =>
+                                  x.id === imp.id ? { ...x, nombre: e.target.value } : x,
+                                ),
+                              }))
+                            }
+                          />
+                          <div className="relative w-24">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              className="h-9 pr-7"
+                              value={imp.tasa}
+                              onChange={(e) =>
+                                setFormData((p) => ({
+                                  ...p,
+                                  impuestos: p.impuestos.map((x) =>
+                                    x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x,
+                                  ),
+                                }))
+                              }
+                            />
+                            <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-20 text-right">
+                            ${fmt(subtotal * (imp.tasa / 100))}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 w-9 p-0"
+                            onClick={() =>
+                              setFormData((p) => ({
+                                ...p,
+                                impuestos: p.impuestos.filter((x) => x.id !== imp.id),
+                              }))
+                            }
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+
+                      {/* Sugerencias de impuestos en México */}
+                      <div className="flex flex-wrap gap-1 pt-2">
+                        {IMPUESTOS_MEXICO_SUGERIDOS.filter(
+                          (s) => !formData.impuestos.some((i) => i.nombre === s.nombre),
+                        ).map((sug) => (
+                          <button
+                            key={sug.nombre}
+                            type="button"
+                            title={sug.descripcion}
+                            className="text-xs px-2 py-1 rounded-full border border-dashed border-muted-foreground/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            onClick={() =>
+                              setFormData((p) => ({
+                                ...p,
+                                impuestos: [
+                                  ...p.impuestos,
+                                  { id: `imp-${Date.now()}`, nombre: sug.nombre, tasa: sug.tasa },
+                                ],
+                              }))
+                            }
+                          >
+                            + {sug.nombre}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className="text-xs px-2 py-1 rounded-full border border-dashed border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+                          onClick={() =>
+                            setFormData((p) => ({
+                              ...p,
+                              impuestos: [
+                                ...p.impuestos,
+                                { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 },
+                              ],
+                            }))
+                          }
+                        >
+                          + Personalizado
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Configura el % de impuesto. Déjalo en 0 si no aplica.
-                    </p>
                   </div>
                   <div>
                     <Label className="mb-3 block">Descuento (sobre el total)</Label>
@@ -968,12 +1046,14 @@ const noches = differenceInDays(
                         <span>${fmt(totalCargosExtras)}</span>
                       </div>
                     )}
-                    {impuestos > 0 && (
-                      <div className="flex justify-between opacity-80">
-                        <span>IVA ({formData.ivaPorcentaje}%)</span>
-                        <span>${fmt(impuestos)}</span>
-                      </div>
-                    )}
+                    {impuestosCalculados.map((imp) => (
+                      imp.monto > 0 && (
+                        <div key={imp.id} className="flex justify-between opacity-80">
+                          <span>{imp.nombre} ({imp.tasa}%)</span>
+                          <span>${fmt(imp.monto)}</span>
+                        </div>
+                      )
+                    ))}
                     {descuentoMonto > 0 && (
                       <div className="flex justify-between text-green-300">
                         <span>
