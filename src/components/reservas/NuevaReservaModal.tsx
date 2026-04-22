@@ -287,12 +287,26 @@ const noches = differenceInDays(
   };
 
   const handleNext = async () => {
-    if (step === 1) await buscarHabitaciones();
+    if (step === 1) {
+      // Si ya hay habitación preseleccionada (vino del timeline), saltar paso 2
+      if (preload?.habitacion?.id) {
+        setStep(3);
+        return;
+      }
+      await buscarHabitaciones();
+    }
     if (step < 4) setStep((step + 1) as Step);
   };
 
   const handleBack = () => {
-    if (step > 1) setStep((step - 1) as Step);
+    if (step > 1) {
+      // Si volvemos desde paso 3 y había habitación preseleccionada, regresar a paso 1
+      if (step === 3 && preload?.habitacion?.id) {
+        setStep(1);
+        return;
+      }
+      setStep((step - 1) as Step);
+    }
   };
 
   const handleAgregarCargo = () => {
@@ -433,7 +447,11 @@ const noches = differenceInDays(
     }));
   };
 
-  const progressValue = (step / 4) * 100;
+  const totalSteps = preload?.habitacion?.id ? 3 : 4;
+  const currentStepLabel = preload?.habitacion?.id
+    ? (step === 1 ? 1 : step === 3 ? 2 : step === 4 ? 3 : step)
+    : step;
+  const progressValue = (currentStepLabel / totalSteps) * 100;
 
   return (
     <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
@@ -443,7 +461,7 @@ const noches = differenceInDays(
             {origen === 'Recepcion' ? <><UserPlus className="h-5 w-5" /> Check-in Directo</> : <><CalendarPlus className="h-5 w-5" /> Nueva Reserva</>}
           </DialogTitle>
           <DialogDescription>
-            Paso {step} de 4 - {step === 1 ? 'Fechas' : step === 2 ? 'Habitación' : step === 3 ? 'Huésped' : 'Confirmar'}
+            Paso {currentStepLabel} de {totalSteps} - {step === 1 ? 'Fechas' : step === 2 ? 'Habitación' : step === 3 ? 'Huésped' : 'Confirmar'}
           </DialogDescription>
         </DialogHeader>
 
@@ -478,7 +496,7 @@ const noches = differenceInDays(
               </Card>
             )}
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className={cn("grid gap-4", origen === 'Recepcion' ? "grid-cols-2" : "grid-cols-3")}>
               <div className="space-y-2">
                 <Label>Check-in</Label>
                 <Popover>
@@ -507,13 +525,15 @@ const noches = differenceInDays(
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="space-y-2">
-                <Label>Hora llegada</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input type="time" className="pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
+              {origen !== 'Recepcion' && (
+                <div className="space-y-2">
+                  <Label>Hora llegada estimada</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input type="time" className="pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="grid grid-cols-4 gap-4">
@@ -544,20 +564,22 @@ const noches = differenceInDays(
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Tipo de habitación</Label>
-              <ComboboxCreatable
-                options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base?.toLocaleString()}/noche` }))}
-                value={formData.tipoHabitacion}
-                onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
-                onCreate={async (nombre) => {
-                  const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
-                  setTiposHabitacion([...tiposHabitacion, newTipo]);
-                  return { value: newTipo.id, label: `${newTipo.nombre} - $1,000/noche` };
-                }}
-                placeholder="Seleccionar..." searchPlaceholder="Buscar..." createLabel="Crear"
-              />
-            </div>
+            {!preload?.habitacion?.id && (
+              <div className="space-y-2">
+                <Label>Tipo de habitación</Label>
+                <ComboboxCreatable
+                  options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base?.toLocaleString()}/noche` }))}
+                  value={formData.tipoHabitacion}
+                  onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
+                  onCreate={async (nombre) => {
+                    const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
+                    setTiposHabitacion([...tiposHabitacion, newTipo]);
+                    return { value: newTipo.id, label: `${newTipo.nombre} - $1,000/noche` };
+                  }}
+                  placeholder="Seleccionar..." searchPlaceholder="Buscar..." createLabel="Crear"
+                />
+              </div>
+            )}
           </div>
         )}
 
