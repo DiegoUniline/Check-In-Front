@@ -88,7 +88,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       setEditMode(false);
       setDocumentoVerificado(false);
       setTarjetaRegistrada(false);
-      setFirmaDigital(false);
       setHabitacionInspeccionada(false);
       setLlaveDevuelta(false);
       setDevolucionExpandidaId(null);
