@@ -947,16 +947,20 @@ const noches = differenceInDays(
                         <span>${fmt(totalCargosExtras)}</span>
                       </div>
                     )}
+                    {impuestos > 0 && (
+                      <div className="flex justify-between opacity-80">
+                        <span>IVA ({formData.ivaPorcentaje}%)</span>
+                        <span>${fmt(impuestos)}</span>
+                      </div>
+                    )}
                     {descuentoMonto > 0 && (
                       <div className="flex justify-between text-green-300">
-                        <span>Descuento</span>
+                        <span>
+                          Descuento{formData.descuentoTipo === 'Porcentaje' ? ` (${formData.descuentoValor}%)` : ''}
+                        </span>
                         <span>-${fmt(descuentoMonto)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between opacity-80">
-                      <span>IVA (16%)</span>
-                      <span>${fmt(impuestos)}</span>
-                    </div>
                   </div>
                   
                   <Separator className="bg-primary-foreground/20" />
