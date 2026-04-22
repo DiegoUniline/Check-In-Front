@@ -6,6 +6,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 
@@ -35,6 +38,12 @@ function iconoMetodo(nombre: string) {
 export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
   const [metodos, setMetodos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ metodo: string; monto: string; referencia: string }>({
+    metodo: '',
+    monto: '',
+    referencia: '',
+  });
 
   useEffect(() => {
     let alive = true;
@@ -48,16 +57,32 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
   const totalPagado = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
   const saldo = Math.max(0, total - totalPagado);
 
-  const handleAgregarMetodo = (nombre: string) => {
-    // Si es el primer pago, toma todo el saldo restante.
-    // Si ya hay otros, agrega con 0 para que el usuario edite.
-    const monto = pagos.length === 0 ? total : saldo;
-    const nuevo: PagoItem = {
-      id: crypto.randomUUID(),
-      metodo: nombre,
-      monto: monto > 0 ? monto : 0,
-    };
-    onChange([...pagos, nuevo]);
+  const abrirModal = () => {
+    setDraft({
+      metodo: '',
+      monto: saldo > 0 ? String(saldo) : String(total),
+      referencia: '',
+    });
+    setOpen(true);
+  };
+
+  const seleccionarMetodo = (nombre: string) => {
+    setDraft((d) => ({ ...d, metodo: nombre }));
+  };
+
+  const confirmarPago = () => {
+    const monto = parseFloat(draft.monto) || 0;
+    if (!draft.metodo || monto <= 0) return;
+    onChange([
+      ...pagos,
+      {
+        id: crypto.randomUUID(),
+        metodo: draft.metodo,
+        monto,
+        referencia: draft.referencia || undefined,
+      },
+    ]);
+    setOpen(false);
   };
 
   const handleEditarMonto = (id: string, valor: string) => {
@@ -72,8 +97,6 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
   const handleEliminar = (id: string) => {
     onChange(pagos.filter(p => p.id !== id));
   };
-
-  const metodosDisponibles = metodos; // Permite seleccionar el mismo método varias veces
 
   return (
     <div className="space-y-4">
@@ -135,42 +158,105 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
         </div>
       )}
 
-      {/* Grid de métodos disponibles */}
-      <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-          <Plus className="h-3 w-3" />
-          {pagos.length === 0 ? 'Selecciona método de pago' : 'Agregar otro método'}
-        </Label>
-        {loading ? (
-          <div className="text-xs text-muted-foreground py-2">Cargando métodos...</div>
-        ) : metodosDisponibles.length === 0 ? (
-          <div className="text-xs text-muted-foreground py-2">
-            Sin métodos activos. Crea uno en Catálogos → Métodos de Pago.
+      {/* Botón único para abrir modal */}
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full border-dashed"
+        onClick={abrirModal}
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        {pagos.length === 0 ? 'Agregar pago' : 'Agregar otro pago'}
+      </Button>
+
+      {/* Modal de selección de método + monto */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar pago</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                Método de pago
+              </Label>
+              {loading ? (
+                <div className="text-sm text-muted-foreground py-4 text-center">
+                  Cargando métodos...
+                </div>
+              ) : metodos.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-4 text-center">
+                  Sin métodos activos. Crea uno en Catálogos.
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {metodos.map((m) => {
+                    const Icono = iconoMetodo(m.nombre);
+                    const activo = draft.metodo === m.nombre;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => seleccionarMetodo(m.nombre)}
+                        className={cn(
+                          'flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 bg-background',
+                          'px-2 py-3 text-xs font-medium transition-all',
+                          activo
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-dashed hover:border-primary hover:bg-primary/5 hover:text-primary',
+                          'active:scale-95'
+                        )}
+                      >
+                        <Icono className="h-5 w-5" />
+                        <span className="text-center leading-tight">{m.nombre}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Monto</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  autoFocus
+                  value={draft.monto}
+                  onChange={(e) => setDraft({ ...draft, monto: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Referencia (opcional)</Label>
+                <Input
+                  placeholder="Folio, últimos 4..."
+                  value={draft.referencia}
+                  onChange={(e) => setDraft({ ...draft, referencia: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs px-1 rounded-md bg-muted/50 py-2 px-3">
+              <span className="text-muted-foreground">Saldo a cubrir</span>
+              <span className="font-semibold tabular-nums">${saldo.toLocaleString()}</span>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {metodosDisponibles.map((m) => {
-              const Icono = iconoMetodo(m.nombre);
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => handleAgregarMetodo(m.nombre)}
-                  className={cn(
-                    'flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed bg-background',
-                    'px-3 py-3 text-xs font-medium transition-all',
-                    'hover:border-primary hover:bg-primary/5 hover:text-primary',
-                    'active:scale-95'
-                  )}
-                >
-                  <Icono className="h-5 w-5" />
-                  <span className="text-center leading-tight">{m.nombre}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmarPago}
+              disabled={!draft.metodo || !(parseFloat(draft.monto) > 0)}
+            >
+              Agregar pago
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
