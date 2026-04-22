@@ -284,10 +284,14 @@ const noches = differenceInDays(
   const totalCargosExtras = formData.cargos.reduce((sum, c) => sum + c.total, 0);
   const subtotal = subtotalHospedaje + totalPersonaExtra + totalCargosExtras;
 
-  // IVA configurable manualmente (0 por default)
-  const ivaRate = (formData.ivaPorcentaje || 0) / 100;
-  const impuestos = subtotal * ivaRate;
-  const totalBruto = subtotal + impuestos;
+  // Impuestos configurables manualmente (tabla editable, 0 por default)
+  // Cada impuesto se calcula sobre el subtotal y se suman en `totalImpuestos`.
+  const impuestosCalculados = formData.impuestos.map((imp) => ({
+    ...imp,
+    monto: subtotal * ((imp.tasa || 0) / 100),
+  }));
+  const totalImpuestos = impuestosCalculados.reduce((s, i) => s + i.monto, 0);
+  const totalBruto = subtotal + totalImpuestos;
 
   // Descuento se aplica sobre el TOTAL (subtotal + IVA)
   let descuentoMonto = 0;
