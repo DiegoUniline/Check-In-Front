@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   User, CreditCard, BedDouble, Check,
-  Loader2, Trash2, Plus,
+  Loader2,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -23,14 +23,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
-
-interface PagoItem {
-  id: string;
-  monto: number;
-  metodo: string;
-  referencia?: string;
-}
+import { PagosMultiplesGrid, type PagoItem } from '@/components/PagosMultiplesGrid';
 
 export default function CheckIn() {
   const { id } = useParams();
@@ -52,11 +45,6 @@ export default function CheckIn() {
   });
 
   const [pagos, setPagos] = useState<PagoItem[]>([]);
-  const [nuevoPago, setNuevoPago] = useState<{ monto: string; metodo: string; referencia: string }>({
-    monto: '',
-    metodo: '',
-    referencia: '',
-  });
 
   useEffect(() => {
     cargarDatos();
@@ -99,29 +87,6 @@ export default function CheckIn() {
 
   const totalPagos = pagos.reduce((sum, p) => sum + (Number(p.monto) || 0), 0);
 
-  const handleAgregarPago = () => {
-    const monto = parseFloat(nuevoPago.monto);
-    if (!monto || monto <= 0) {
-      toast({ variant: 'destructive', title: 'Monto inválido', description: 'Ingresa un monto mayor a 0.' });
-      return;
-    }
-    if (!nuevoPago.metodo) {
-      toast({ variant: 'destructive', title: 'Método requerido', description: 'Selecciona un método de pago.' });
-      return;
-    }
-    setPagos([...pagos, {
-      id: crypto.randomUUID(),
-      monto,
-      metodo: nuevoPago.metodo,
-      referencia: nuevoPago.referencia || undefined,
-    }]);
-    setNuevoPago({ monto: '', metodo: '', referencia: '' });
-  };
-
-  const handleEliminarPago = (pagoId: string) => {
-    setPagos(pagos.filter(p => p.id !== pagoId));
-  };
-
   const handleSubmit = async () => {
     if (!formData.habitacionId) {
       toast({
@@ -138,6 +103,7 @@ export default function CheckIn() {
 
       // Registrar todos los pagos
       for (const pago of pagos) {
+        if (!pago.monto || pago.monto <= 0) continue;
         await api.createPago({
           reserva_id: id,
           monto: pago.monto,
