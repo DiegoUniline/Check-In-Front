@@ -275,6 +275,8 @@ const noches = differenceInDays(
   const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = total - totalPagado;
 
+  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   // FIX: Solo cambiar checkin a hoy, mantener checkout seleccionado
   const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
     setOrigen(nuevoOrigen);
