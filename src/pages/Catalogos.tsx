@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -598,6 +599,82 @@ export default function Catalogos() {
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           No hay entregables registrados
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: Métodos de Pago */}
+        <TabsContent value="metodos-pago">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Métodos de Pago</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Define los métodos de cobro que usa tu hotel. Aparecerán al registrar pagos en Check-in, Check-out, Reservas y POS.
+                </p>
+              </div>
+              <Button onClick={openNewMetodo}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Método
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {loadingMetodos ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Orden</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {metodosPago.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="text-muted-foreground">{m.orden ?? 0}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-muted-foreground" />
+                            {m.nombre}
+                          </div>
+                          {m.descripcion && <p className="text-xs text-muted-foreground mt-1">{m.descripcion}</p>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{m.tipo || 'Otro'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {m.activo ? (
+                            <Badge className="bg-success/15 text-success hover:bg-success/20 border-success/30">Activo</Badge>
+                          ) : (
+                            <Badge variant="secondary">Inactivo</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => openEditMetodo(m)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => confirmDeleteMetodo(m)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {metodosPago.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          No hay métodos de pago. Crea uno para empezar.
                         </TableCell>
                       </TableRow>
                     )}
