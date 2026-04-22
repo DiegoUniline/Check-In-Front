@@ -116,7 +116,7 @@ export function TimelineGrid({
     if (!hasConflict) {
       const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
       const fechaCheckin = days[startIdx];
-      const fechaCheckout = addDays(days[endIdx], 1);
+      const fechaCheckout = days[endIdx];
       onCreateReservation?.(habitacion, fechaCheckin, fechaCheckout);
     }
 
