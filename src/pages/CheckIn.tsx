@@ -163,7 +163,7 @@ export default function CheckIn() {
           <span className="text-sm font-medium">Progreso del Check-in</span>
           <span className="text-sm text-muted-foreground">Paso 1 de 1</span>
         </div>
-        <Progress value={hasSignature ? 100 : 50} className="h-2" />
+        <Progress value={formData.habitacionId ? 100 : 50} className="h-2" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -283,43 +283,6 @@ export default function CheckIn() {
             </CardContent>
           </Card>
 
-          {/* Digital signature */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileSignature className="h-5 w-5 text-primary" />
-                Firma Digital
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative border rounded-lg bg-muted/30 p-1">
-                <canvas
-                  ref={canvasRef}
-                  width={500}
-                  height={150}
-                  className="w-full cursor-crosshair rounded bg-background"
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                />
-                {!hasSignature && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <p className="text-muted-foreground text-sm">Firme aquí</p>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-between items-center mt-3">
-                <p className="text-xs text-muted-foreground">
-                  Al firmar, acepto los términos y condiciones del hotel.
-                </p>
-                <Button variant="ghost" size="sm" onClick={clearSignature}>
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Borrar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Right column - Payment summary (sticky) */}
