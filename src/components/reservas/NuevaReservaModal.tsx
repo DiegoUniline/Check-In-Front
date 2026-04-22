@@ -131,6 +131,7 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => ({
   notasInternas: '',
   descuentoTipo: 'none',
   descuentoValor: 0,
+  ivaPorcentaje: 0,
   entregablesSeleccionados: [],
   cargos: [],
   pagos: [],
