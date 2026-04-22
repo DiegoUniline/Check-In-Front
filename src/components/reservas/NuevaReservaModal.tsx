@@ -97,6 +97,7 @@ interface FormData {
   notasInternas: string;
   descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
   descuentoValor: number;
+  ivaPorcentaje: number;
   entregablesSeleccionados: string[];
   cargos: CargoTemp[];
   pagos: PagoTemp[];
