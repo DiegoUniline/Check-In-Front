@@ -316,6 +316,32 @@ export default function Reservas() {
             )}
           </TabsContent>
 
+          {/* TAB CHECK-IN HOY */}
+          <TabsContent value="checkin" className="space-y-3 mt-3">
+            <CheckInOutPanel
+              tipo="checkin"
+              data={llegadasHoyData}
+              loading={loading}
+              busqueda={busquedaCheckin}
+              onBusquedaChange={setBusquedaCheckin}
+              onAction={(id) => navigate(`/checkin/${id}`)}
+              onRefresh={cargarDatos}
+            />
+          </TabsContent>
+
+          {/* TAB CHECK-OUT HOY */}
+          <TabsContent value="checkout" className="space-y-3 mt-3">
+            <CheckInOutPanel
+              tipo="checkout"
+              data={salidasHoyData}
+              loading={loading}
+              busqueda={busquedaCheckout}
+              onBusquedaChange={setBusquedaCheckout}
+              onAction={(id) => navigate(`/checkout/${id}`)}
+              onRefresh={cargarDatos}
+            />
+          </TabsContent>
+
           {/* TAB RESERVAS: Timeline existente */}
           <TabsContent value="reservas" className="space-y-3 mt-3">
             <Card>
