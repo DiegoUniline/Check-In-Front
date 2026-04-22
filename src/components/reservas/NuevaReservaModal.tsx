@@ -492,7 +492,7 @@ const noches = differenceInDays(
               </Card>
             )}
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className={cn("grid gap-4", origen === 'Recepcion' ? "grid-cols-2" : "grid-cols-3")}>
               <div className="space-y-2">
                 <Label>Check-in</Label>
                 <Popover>
@@ -521,13 +521,15 @@ const noches = differenceInDays(
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="space-y-2">
-                <Label>Hora llegada</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input type="time" className="pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
+              {origen !== 'Recepcion' && (
+                <div className="space-y-2">
+                  <Label>Hora llegada estimada</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input type="time" className="pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="grid grid-cols-4 gap-4">
