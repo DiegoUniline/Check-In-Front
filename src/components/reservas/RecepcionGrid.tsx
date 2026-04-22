@@ -194,14 +194,66 @@ export function RecepcionGrid({
           <p className="text-sm text-muted-foreground">No hay habitaciones para mostrar</p>
         </Card>
       ) : vista === 'cards' ? (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {items.map((item) => (
-            <RoomCard key={item.habitacion.id} item={item} onClick={() => handleClick(item)} />
-          ))}
-        </div>
+        <FloorGroups items={items} onClick={handleClick} />
       ) : (
         <RoomTable items={items} onRowClick={handleClick} />
       )}
+    </div>
+  );
+}
+
+/* ---------------- AGRUPACIÓN POR PISO ---------------- */
+
+function FloorGroups({
+  items,
+  onClick,
+}: {
+  items: HabitacionStatus[];
+  onClick: (i: HabitacionStatus) => void;
+}) {
+  const grupos = useMemo(() => {
+    const map = new Map<number, HabitacionStatus[]>();
+    items.forEach((item) => {
+      const piso = Number(item.habitacion.piso) || 0;
+      if (!map.has(piso)) map.set(piso, []);
+      map.get(piso)!.push(item);
+    });
+    // ordenar habitaciones dentro de cada piso por número
+    map.forEach((arr) =>
+      arr.sort((a, b) =>
+        String(a.habitacion.numero).localeCompare(String(b.habitacion.numero), undefined, { numeric: true })
+      )
+    );
+    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
+  }, [items]);
+
+  return (
+    <div className="space-y-7">
+      {grupos.map(([piso, hab]) => {
+        const libres = hab.filter((h) => h.estado === 'libre').length;
+        return (
+          <section key={piso}>
+            <header className="mb-3 flex items-baseline justify-between">
+              <div className="flex items-baseline gap-3">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
+                  {piso === 0 ? 'Sin piso' : `Piso ${piso}`}
+                </span>
+                <span className="text-[10px] text-muted-foreground/70">
+                  · {hab.length} habitaciones
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                <span className="font-semibold text-foreground tabular-nums">{libres}</span> disponibles
+              </span>
+            </header>
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {hab.map((item) => (
+                <RoomCard key={item.habitacion.id} item={item} onClick={() => onClick(item)} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
