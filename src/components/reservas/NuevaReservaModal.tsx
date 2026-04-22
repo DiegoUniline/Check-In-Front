@@ -945,11 +945,11 @@ const noches = differenceInDays(
                     <div className="p-3 rounded-lg bg-primary-foreground/10 space-y-1">
                       <div className="flex justify-between text-sm">
                         <span>Pagado:</span>
-                        <span>${totalPagado.toLocaleString()}</span>
+                        <span>${fmt(totalPagado)}</span>
                       </div>
                       <div className="flex justify-between font-bold">
                         <span>Saldo pendiente:</span>
-                        <span className={saldoPendiente <= 0 ? 'text-green-300' : 'text-yellow-300'}>${saldoPendiente.toLocaleString()}</span>
+                        <span className={saldoPendiente <= 0 ? 'text-green-300' : 'text-yellow-300'}>${fmt(saldoPendiente)}</span>
                       </div>
                     </div>
                   </div>
