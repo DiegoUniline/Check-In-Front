@@ -876,10 +876,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                         <Checkbox id="tarjeta" checked={tarjetaRegistrada} onCheckedChange={(c) => setTarjetaRegistrada(!!c)} />
                         <label htmlFor="tarjeta" className="text-sm cursor-pointer">Garantía/tarjeta registrada</label>
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="firma" checked={firmaDigital} onCheckedChange={(c) => setFirmaDigital(!!c)} />
-                        <label htmlFor="firma" className="text-sm cursor-pointer">Registro de huésped firmado</label>
-                      </div>
                     </CardContent>
                   </Card>
                 )}
