@@ -393,6 +393,10 @@ export default function Catalogos() {
             <KeyRound className="h-4 w-4 mr-2" />
             Entregables
           </TabsTrigger>
+          <TabsTrigger value="metodos-pago">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Métodos de Pago
+          </TabsTrigger>
         </TabsList>
 
         {/* TAB: Tipos de Habitación */}
