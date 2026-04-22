@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  User, CreditCard, BedDouble, FileSignature, Check, 
-  ChevronRight, Loader2, Trash2 
+  User, CreditCard, BedDouble, Check, 
+  Loader2, Trash2, Plus
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -25,13 +25,17 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
+interface PagoItem {
+  id: string;
+  monto: number;
+  metodo: string;
+  referencia?: string;
+}
+
 export default function CheckIn() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -46,8 +50,13 @@ export default function CheckIn() {
     nacionalidad: 'Mexicana',
     email: '',
     habitacionId: '',
-    anticipo: 0,
-    metodoPago: 'Tarjeta',
+  });
+
+  const [pagos, setPagos] = useState<PagoItem[]>([]);
+  const [nuevoPago, setNuevoPago] = useState<{ monto: number; metodo: string; referencia: string }>({
+    monto: 0,
+    metodo: '',
+    referencia: '',
   });
 
   useEffect(() => {
