@@ -330,7 +330,7 @@ export default function Clientes() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClientes.slice(0, 20).map(cliente => (
+              {filteredClientes.map(cliente => (
                 <TableRow key={cliente.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -399,7 +399,7 @@ export default function Clientes() {
       </Card>
 
       <p className="text-sm text-muted-foreground mt-4 text-center">
-        Mostrando {Math.min(20, filteredClientes.length)} de {filteredClientes.length} clientes
+        Mostrando {filteredClientes.length} de {clientes.length} clientes
       </p>
 
       {/* Modal Detalle */}
