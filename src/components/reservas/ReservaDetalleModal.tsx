@@ -48,7 +48,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   // Check-in
   const [documentoVerificado, setDocumentoVerificado] = useState(false);
   const [tarjetaRegistrada, setTarjetaRegistrada] = useState(false);
-  const [firmaDigital, setFirmaDigital] = useState(false);
   
   // Check-out
   const [habitacionInspeccionada, setHabitacionInspeccionada] = useState(false);
