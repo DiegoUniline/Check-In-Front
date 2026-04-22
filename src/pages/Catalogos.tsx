@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound } from 'lucide-react';
+import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,10 +81,26 @@ export default function Catalogos() {
     activo: true,
   });
 
+  // Métodos de Pago
+  const [metodosPago, setMetodosPago] = useState<any[]>([]);
+  const [loadingMetodos, setLoadingMetodos] = useState(true);
+  const [modalMetodoOpen, setModalMetodoOpen] = useState(false);
+  const [editingMetodo, setEditingMetodo] = useState<any>(null);
+  const [deleteMetodoDialog, setDeleteMetodoDialog] = useState(false);
+  const [metodoToDelete, setMetodoToDelete] = useState<any>(null);
+  const [formMetodo, setFormMetodo] = useState({
+    nombre: '',
+    descripcion: '',
+    tipo: 'Efectivo',
+    activo: true,
+    orden: '0',
+  });
+
   useEffect(() => {
     cargarTiposHabitacion();
     cargarCategorias();
     cargarEntregables();
+    cargarMetodosPago();
   }, []);
 
   // ========== TIPOS HABITACIÓN ==========
