@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  User, CreditCard, BedDouble, Check, 
-  ChevronRight, Loader2 
+import {
+  User, CreditCard, BedDouble, Check,
+  Loader2, Trash2, Plus,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -25,17 +25,23 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
+interface PagoItem {
+  id: string;
+  monto: number;
+  metodo: string;
+  referencia?: string;
+}
+
 export default function CheckIn() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
   const [reserva, setReserva] = useState<any>(null);
   const [habitacionesDisponibles, setHabitacionesDisponibles] = useState<any[]>([]);
-  
-  // Form state
+
   const [formData, setFormData] = useState({
     nombre: '',
     apellidoPaterno: '',
@@ -43,12 +49,18 @@ export default function CheckIn() {
     nacionalidad: 'Mexicana',
     email: '',
     habitacionId: '',
-    anticipo: 0,
-    metodoPago: 'Tarjeta',
+  });
+
+  const [pagos, setPagos] = useState<PagoItem[]>([]);
+  const [nuevoPago, setNuevoPago] = useState<{ monto: string; metodo: string; referencia: string }>({
+    monto: '',
+    metodo: '',
+    referencia: '',
   });
 
   useEffect(() => {
     cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const cargarDatos = async () => {
@@ -56,8 +68,7 @@ export default function CheckIn() {
     try {
       const reservaData = await api.getReserva(id);
       setReserva(reservaData);
-      
-      // Cargar habitaciones disponibles del mismo tipo
+
       if (reservaData.fecha_checkin && reservaData.fecha_checkout) {
         const habsDisp = await api.getHabitacionesDisponibles(
           reservaData.fecha_checkin,
@@ -67,7 +78,6 @@ export default function CheckIn() {
         setHabitacionesDisponibles(Array.isArray(habsDisp) ? habsDisp : []);
       }
 
-      // Prellenar formulario
       const cli: any = (reservaData as any).cliente || (reservaData as any).clientes || {};
       setFormData({
         nombre: cli.nombre || (reservaData as any).huesped_nombre || '',
@@ -76,8 +86,6 @@ export default function CheckIn() {
         nacionalidad: cli.nacionalidad || 'Mexicana',
         email: cli.email || '',
         habitacionId: reservaData.habitacion_id || '',
-        anticipo: reservaData.total_pagado || 0,
-        metodoPago: 'Tarjeta',
       });
     } catch (error) {
       console.error('Error cargando reserva:', error);
@@ -88,6 +96,31 @@ export default function CheckIn() {
   };
 
   const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId);
+
+  const totalPagos = pagos.reduce((sum, p) => sum + (Number(p.monto) || 0), 0);
+
+  const handleAgregarPago = () => {
+    const monto = parseFloat(nuevoPago.monto);
+    if (!monto || monto <= 0) {
+      toast({ variant: 'destructive', title: 'Monto inválido', description: 'Ingresa un monto mayor a 0.' });
+      return;
+    }
+    if (!nuevoPago.metodo) {
+      toast({ variant: 'destructive', title: 'Método requerido', description: 'Selecciona un método de pago.' });
+      return;
+    }
+    setPagos([...pagos, {
+      id: crypto.randomUUID(),
+      monto,
+      metodo: nuevoPago.metodo,
+      referencia: nuevoPago.referencia || undefined,
+    }]);
+    setNuevoPago({ monto: '', metodo: '', referencia: '' });
+  };
+
+  const handleEliminarPago = (pagoId: string) => {
+    setPagos(pagos.filter(p => p.id !== pagoId));
+  };
 
   const handleSubmit = async () => {
     if (!formData.habitacionId) {
@@ -102,22 +135,23 @@ export default function CheckIn() {
     setIsSubmitting(true);
     try {
       await api.checkin(id!, formData.habitacionId);
-      
-      // Registrar pago si hay anticipo
-      if (formData.anticipo > 0) {
+
+      // Registrar todos los pagos
+      for (const pago of pagos) {
         await api.createPago({
           reserva_id: id,
-          monto: formData.anticipo,
-          metodo_pago: formData.metodoPago,
+          monto: pago.monto,
+          metodo_pago: pago.metodo,
+          referencia: pago.referencia,
           concepto: 'Pago en Check-in',
         });
       }
-      
+
       toast({
         title: '✅ Check-in completado',
         description: `${formData.nombre} ${formData.apellidoPaterno} - Hab. ${selectedHabitacion?.numero}`,
       });
-      
+
       navigate('/dashboard');
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -151,25 +185,23 @@ export default function CheckIn() {
   const total = reserva.total || reserva.monto_total || 0;
   const subtotal = reserva.subtotal || total * 0.84;
   const impuestos = reserva.impuestos || total * 0.16;
+  const saldoRestante = Math.max(0, total - totalPagos);
 
   return (
-    <MainLayout 
-      title="Proceso de Check-In" 
+    <MainLayout
+      title="Proceso de Check-In"
       subtitle={`Reserva ${reserva.numero_reserva || reserva.id?.slice(0, 8)}`}
     >
-      {/* Progress bar */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium">Progreso del Check-in</span>
-          <span className="text-sm text-muted-foreground">Paso 1 de 1</span>
+          <span className="text-sm text-muted-foreground">{formData.habitacionId ? '100%' : '50%'}</span>
         </div>
         <Progress value={formData.habitacionId ? 100 : 50} className="h-2" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left column - Forms */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Guest info */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -181,32 +213,32 @@ export default function CheckIn() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nombre</Label>
-                  <Input 
+                  <Input
                     value={formData.nombre}
-                    onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Apellido Paterno</Label>
-                  <Input 
+                  <Input
                     value={formData.apellidoPaterno}
-                    onChange={(e) => setFormData({...formData, apellidoPaterno: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, apellidoPaterno: e.target.value })}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Documento de Identidad</Label>
-                  <Input 
+                  <Input
                     value={formData.documento}
-                    onChange={(e) => setFormData({...formData, documento: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, documento: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Nacionalidad</Label>
-                  <Select 
+                  <Select
                     value={formData.nacionalidad}
-                    onValueChange={(v) => setFormData({...formData, nacionalidad: v})}
+                    onValueChange={(v) => setFormData({ ...formData, nacionalidad: v })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -222,16 +254,15 @@ export default function CheckIn() {
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input 
+                <Input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Room assignment */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -254,9 +285,9 @@ export default function CheckIn() {
               </div>
               <div className="space-y-2">
                 <Label>Habitación Asignada</Label>
-                <Select 
+                <Select
                   value={formData.habitacionId}
-                  onValueChange={(v) => setFormData({...formData, habitacionId: v})}
+                  onValueChange={(v) => setFormData({ ...formData, habitacionId: v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar habitación" />
@@ -282,10 +313,8 @@ export default function CheckIn() {
               </div>
             </CardContent>
           </Card>
-
         </div>
 
-        {/* Right column - Payment summary (sticky) */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 space-y-4">
             <Card className="border-primary/20 bg-primary/5">
@@ -314,27 +343,89 @@ export default function CheckIn() {
 
                 <Separator />
 
-                <div className="space-y-3">
+                {/* Lista de pagos agregados */}
+                {pagos.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Anticipo / Pago</Label>
-                    <Input 
-                      type="number"
-                      value={formData.anticipo}
-                      onChange={(e) => setFormData({...formData, anticipo: parseFloat(e.target.value) || 0})}
-                    />
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                      Pagos registrados ({pagos.length})
+                    </Label>
+                    <div className="space-y-1.5">
+                      {pagos.map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between gap-2 rounded-md border bg-background px-3 py-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{p.metodo}</p>
+                            {p.referencia && (
+                              <p className="text-xs text-muted-foreground truncate">Ref: {p.referencia}</p>
+                            )}
+                          </div>
+                          <span className="text-sm font-semibold tabular-nums">
+                            ${p.monto.toLocaleString()}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleEliminarPago(p.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-sm pt-1">
+                      <span className="text-muted-foreground">Total pagado</span>
+                      <span className="font-semibold">${totalPagos.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Saldo restante</span>
+                      <span className={`font-semibold ${saldoRestante > 0 ? 'text-amber-600' : 'text-primary'}`}>
+                        ${saldoRestante.toLocaleString()}
+                      </span>
+                    </div>
+                    <Separator />
                   </div>
+                )}
+
+                {/* Formulario para agregar nuevo pago */}
+                <div className="space-y-3">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                    Agregar pago
+                  </Label>
                   <div className="space-y-2">
-                    <Label>Método de Pago</Label>
-                    <MetodoPagoSelect
-                      value={formData.metodoPago}
-                      onChange={(v) => setFormData({ ...formData, metodoPago: v })}
+                    <Input
+                      type="number"
+                      placeholder="Monto"
+                      value={nuevoPago.monto}
+                      onChange={(e) => setNuevoPago({ ...nuevoPago, monto: e.target.value })}
                     />
+                    <MetodoPagoSelect
+                      value={nuevoPago.metodo}
+                      onChange={(v) => setNuevoPago({ ...nuevoPago, metodo: v })}
+                    />
+                    <Input
+                      placeholder="Referencia (opcional)"
+                      value={nuevoPago.referencia}
+                      onChange={(e) => setNuevoPago({ ...nuevoPago, referencia: e.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleAgregarPago}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar pago
+                    </Button>
                   </div>
                 </div>
 
                 <div className="pt-4 space-y-2">
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     size="lg"
                     onClick={handleSubmit}
                     disabled={isSubmitting || !formData.habitacionId}
@@ -351,8 +442,8 @@ export default function CheckIn() {
                       </>
                     )}
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full"
                     onClick={() => navigate('/reservas')}
                   >

@@ -48,6 +48,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   // Check-in
   const [documentoVerificado, setDocumentoVerificado] = useState(false);
   const [tarjetaRegistrada, setTarjetaRegistrada] = useState(false);
+  const [firmaDigital, setFirmaDigital] = useState(false);
   
   // Check-out
   const [habitacionInspeccionada, setHabitacionInspeccionada] = useState(false);
@@ -88,6 +89,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       setEditMode(false);
       setDocumentoVerificado(false);
       setTarjetaRegistrada(false);
+      setFirmaDigital(false);
       setHabitacionInspeccionada(false);
       setLlaveDevuelta(false);
       setDevolucionExpandidaId(null);
@@ -249,11 +251,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       return;
     }
 
-    const faltanVerificaciones = !documentoVerificado || !tarjetaRegistrada;
+    const faltanVerificaciones = !documentoVerificado || !tarjetaRegistrada || !firmaDigital;
     if (r.estado === 'Confirmada' && faltanVerificaciones && !opts?.force) {
       toast({
         title: 'Verificaciones incompletas',
-        description: 'Marca las verificaciones o vuelve a intentar para forzar el check-in.',
+        description: 'Marca las 3 verificaciones o vuelve a intentar para forzar el check-in.',
         variant: 'destructive',
       });
       return;
@@ -714,10 +716,10 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium flex items-center gap-2"><DoorOpen className="h-4 w-4" /> Check-in pendiente</span>
                 <span className="text-sm text-muted-foreground">
-                  {[documentoVerificado, tarjetaRegistrada].filter(Boolean).length}/2
+                  {[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length}/3
                 </span>
               </div>
-              <Progress value={[documentoVerificado, tarjetaRegistrada].filter(Boolean).length * 50} className="h-2" />
+              <Progress value={[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length * 33.33} className="h-2" />
             </CardContent>
           </Card>
         )}
@@ -875,6 +877,10 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                       <div className="flex items-center space-x-3">
                         <Checkbox id="tarjeta" checked={tarjetaRegistrada} onCheckedChange={(c) => setTarjetaRegistrada(!!c)} />
                         <label htmlFor="tarjeta" className="text-sm cursor-pointer">Garantía/tarjeta registrada</label>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Checkbox id="firma" checked={firmaDigital} onCheckedChange={(c) => setFirmaDigital(!!c)} />
+                        <label htmlFor="firma" className="text-sm cursor-pointer">Registro de huésped firmado</label>
                       </div>
                     </CardContent>
                   </Card>
@@ -1188,7 +1194,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Button>
 
                 {/* Si está confirmada y faltan verificaciones, damos salida explícita para forzar sin bloquear operación */}
-                {r.estado === 'Confirmada' && (!documentoVerificado || !tarjetaRegistrada) && (
+                {r.estado === 'Confirmada' && (!documentoVerificado || !tarjetaRegistrada || !firmaDigital) && (
                   <Button
                     variant="outline"
                     className="w-full"
