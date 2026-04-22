@@ -97,6 +97,7 @@ interface FormData {
   notasInternas: string;
   descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
   descuentoValor: number;
+  ivaPorcentaje: number;
   entregablesSeleccionados: string[];
   cargos: CargoTemp[];
   pagos: PagoTemp[];
@@ -130,6 +131,7 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => ({
   notasInternas: '',
   descuentoTipo: 'none',
   descuentoValor: 0,
+  ivaPorcentaje: 0,
   entregablesSeleccionados: [],
   cargos: [],
   pagos: [],
@@ -264,14 +266,18 @@ const noches = differenceInDays(
   const totalPersonaExtra = formData.personasExtra * formData.cargoPersonaExtra * noches;
   const totalCargosExtras = formData.cargos.reduce((sum, c) => sum + c.total, 0);
   const subtotal = subtotalHospedaje + totalPersonaExtra + totalCargosExtras;
-  
+
+  // IVA configurable manualmente (0 por default)
+  const ivaRate = (formData.ivaPorcentaje || 0) / 100;
+  const impuestos = subtotal * ivaRate;
+  const totalBruto = subtotal + impuestos;
+
+  // Descuento se aplica sobre el TOTAL (subtotal + IVA)
   let descuentoMonto = 0;
   if (formData.descuentoTipo === 'Monto') descuentoMonto = formData.descuentoValor;
-  else if (formData.descuentoTipo === 'Porcentaje') descuentoMonto = subtotal * (formData.descuentoValor / 100);
-  
-  const subtotalConDescuento = subtotal - descuentoMonto;
-  const impuestos = subtotalConDescuento * 0.16;
-  const total = subtotalConDescuento + impuestos;
+  else if (formData.descuentoTipo === 'Porcentaje') descuentoMonto = totalBruto * (formData.descuentoValor / 100);
+
+  const total = Math.max(0, totalBruto - descuentoMonto);
   const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = total - totalPagado;
 
@@ -318,9 +324,10 @@ const noches = differenceInDays(
     const cantidad = parseFloat(cargoCantidad) || 1;
     const precioUnitario = parseFloat(cargoMonto);
     const subtotalCargo = cantidad * precioUnitario;
-    const aplicaIva = concepto?.aplica_iva ?? true;
-    const impuestoCargo = aplicaIva ? subtotalCargo * 0.16 : 0;
-    
+    // IVA de cargos extras: NO automático, se incluye en el IVA global configurable
+    const aplicaIva = false;
+    const impuestoCargo = 0;
+
     setFormData(prev => ({ 
       ...prev, 
       cargos: [...prev.cargos, {
@@ -333,6 +340,17 @@ const noches = differenceInDays(
       }] 
     }));
     setCargoConcepto(''); setCargoCantidad('1'); setCargoMonto('');
+  };
+
+  const handleCrearConcepto = async (nombre: string) => {
+    try {
+      const nuevo = await api.createConceptoCargo({ nombre, precio: 0 });
+      setConceptosCargo(prev => [...prev, nuevo]);
+      toast({ title: '✅ Concepto creado', description: nombre });
+      return { value: nuevo.id, label: nuevo.nombre };
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'No se pudo crear el concepto', variant: 'destructive' });
+    }
   };
 
   const handleAgregarPago = () => {
@@ -458,7 +476,7 @@ const noches = differenceInDays(
 
   return (
     <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
-      <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {origen === 'Recepcion' ? <><UserPlus className="h-5 w-5" /> Check-in Directo</> : <><CalendarPlus className="h-5 w-5" /> Nueva Reserva</>}
@@ -810,10 +828,21 @@ const noches = differenceInDays(
                 <CardContent className="p-4 space-y-3">
                   <Label className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Cargos Extras</Label>
                   <div className="flex gap-2">
-                    <Select value={cargoConcepto} onValueChange={(v) => { setCargoConcepto(v); const c = conceptosCargo.find(x => x.id === v); if (c?.precio_default) setCargoMonto(c.precio_default.toString()); }}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="Concepto..." /></SelectTrigger>
-                      <SelectContent>{conceptosCargo.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <ComboboxCreatable
+                        options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
+                        value={cargoConcepto}
+                        onValueChange={(v) => {
+                          setCargoConcepto(v);
+                          const c = conceptosCargo.find(x => x.id === v);
+                          if (c?.precio) setCargoMonto(c.precio.toString());
+                        }}
+                        onCreate={handleCrearConcepto}
+                        placeholder="Concepto..."
+                        searchPlaceholder="Buscar o crear concepto..."
+                        createLabel="Crear"
+                      />
+                    </div>
                     <Input className="w-20" type="number" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
                     <Input className="w-28" type="number" placeholder="$" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
                     <Button onClick={handleAgregarCargo} disabled={!cargoConcepto}><Plus className="h-4 w-4" /></Button>
@@ -830,26 +859,66 @@ const noches = differenceInDays(
                 </CardContent>
               </Card>
 
-              {/* Descuento */}
+              {/* IVA + Descuento */}
               <Card>
-                <CardContent className="p-4">
-                  <Label className="mb-3 block">Descuento</Label>
-                  <div className="flex gap-4">
-                    <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as any, descuentoValor: 0 })}>
-                      <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sin descuento</SelectItem>
-                        <SelectItem value="Monto">Monto fijo</SelectItem>
-                        <SelectItem value="Porcentaje">Porcentaje</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {formData.descuentoTipo !== 'none' && (
-                      <div className="relative">
-                        {formData.descuentoTipo === 'Porcentaje' ? <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" /> : <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" />}
-                        <Input type="number" className="pl-9 w-32" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
+                <CardContent className="p-4 grid grid-cols-2 gap-6">
+                  <div>
+                    <Label className="mb-3 block flex items-center gap-2">
+                      <Percent className="h-4 w-4" /> IVA / Impuesto
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="pl-9"
+                          placeholder="0"
+                          value={formData.ivaPorcentaje}
+                          onChange={(e) => setFormData({ ...formData, ivaPorcentaje: parseFloat(e.target.value) || 0 })}
+                        />
                       </div>
+                      {impuestos > 0 && (
+                        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                          = ${fmt(impuestos)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Configura el % de impuesto. Déjalo en 0 si no aplica.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="mb-3 block">Descuento (sobre el total)</Label>
+                    <div className="flex gap-2">
+                      <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}>
+                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin descuento</SelectItem>
+                          <SelectItem value="Monto">Monto fijo</SelectItem>
+                          <SelectItem value="Porcentaje">Porcentaje</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {formData.descuentoTipo !== 'none' && (
+                        <div className="relative flex-1">
+                          {formData.descuentoTipo === 'Porcentaje'
+                            ? <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            : <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
+                          <Input
+                            type="number"
+                            className="pl-9"
+                            value={formData.descuentoValor}
+                            onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {descuentoMonto > 0 && (
+                      <p className="text-xs font-medium text-emerald-600 mt-2">
+                        -${fmt(descuentoMonto)} de descuento aplicado
+                      </p>
                     )}
-                    {descuentoMonto > 0 && <span className="text-green-600 font-medium self-center">-${descuentoMonto.toLocaleString()}</span>}
                   </div>
                 </CardContent>
               </Card>
@@ -878,16 +947,20 @@ const noches = differenceInDays(
                         <span>${fmt(totalCargosExtras)}</span>
                       </div>
                     )}
+                    {impuestos > 0 && (
+                      <div className="flex justify-between opacity-80">
+                        <span>IVA ({formData.ivaPorcentaje}%)</span>
+                        <span>${fmt(impuestos)}</span>
+                      </div>
+                    )}
                     {descuentoMonto > 0 && (
                       <div className="flex justify-between text-green-300">
-                        <span>Descuento</span>
+                        <span>
+                          Descuento{formData.descuentoTipo === 'Porcentaje' ? ` (${formData.descuentoValor}%)` : ''}
+                        </span>
                         <span>-${fmt(descuentoMonto)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between opacity-80">
-                      <span>IVA (16%)</span>
-                      <span>${fmt(impuestos)}</span>
-                    </div>
                   </div>
                   
                   <Separator className="bg-primary-foreground/20" />
