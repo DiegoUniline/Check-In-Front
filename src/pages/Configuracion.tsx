@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Settings, Hotel, Users, CreditCard, Bell, 
-  Palette, Shield, Save, Building2, ExternalLink, ListChecks
+  Palette, Shield, Save, Building2, ExternalLink, ListChecks, Globe, Copy
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,11 @@ const emptyHotel = {
   horaCheckin: '15:00',
   horaCheckout: '12:00',
   estrellas: 3,
+  slug: '',
+  descripcionPublica: '',
+  permiteReservasOnline: false,
+  requiereAnticipo: false,
+  porcentajeAnticipo: 30,
 };
 
 export default function Configuracion() {
@@ -65,6 +70,11 @@ export default function Configuracion() {
       horaCheckin: h.hora_checkin ?? hotelData.horaCheckin,
       horaCheckout: h.hora_checkout ?? hotelData.horaCheckout,
       estrellas: Number(h.estrellas ?? hotelData.estrellas ?? 3),
+      slug: h.slug ?? hotelData.slug ?? '',
+      descripcionPublica: h.descripcion_publica ?? hotelData.descripcionPublica ?? '',
+      permiteReservasOnline: !!(h.permite_reservas_online ?? hotelData.permiteReservasOnline),
+      requiereAnticipo: !!(h.requiere_anticipo ?? hotelData.requiereAnticipo),
+      porcentajeAnticipo: Number(h.porcentaje_anticipo ?? hotelData.porcentajeAnticipo ?? 30),
     };
   };
 
@@ -83,6 +93,11 @@ export default function Configuracion() {
       hora_checkin: ui.horaCheckin,
       hora_checkout: ui.horaCheckout,
       estrellas: Number(ui.estrellas) || 3,
+      slug: (ui.slug || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || null,
+      descripcion_publica: ui.descripcionPublica || null,
+      permite_reservas_online: !!ui.permiteReservasOnline,
+      requiere_anticipo: !!ui.requiereAnticipo,
+      porcentaje_anticipo: Number(ui.porcentajeAnticipo) || 0,
     };
   };
 
@@ -135,9 +150,12 @@ export default function Configuracion() {
       subtitle="Ajustes del sistema y preferencias"
     >
       <Tabs defaultValue="hotel" className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-6 w-full max-w-3xl">
+        <TabsList className="grid grid-cols-2 md:grid-cols-7 w-full max-w-4xl">
           <TabsTrigger value="hotel">
             <Hotel className="mr-2 h-4 w-4" /> Hotel
+          </TabsTrigger>
+          <TabsTrigger value="reservas-online">
+            <Globe className="mr-2 h-4 w-4" /> Reservas Web
           </TabsTrigger>
           <TabsTrigger value="usuarios">
             <Users className="mr-2 h-4 w-4" /> Usuarios
