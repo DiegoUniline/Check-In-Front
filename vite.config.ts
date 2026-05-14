@@ -14,7 +14,12 @@ export default defineConfig(({ mode }) => ({
    * Relacionado con:
    * - `Check-In-Front/src/App.tsx` (usa `import.meta.env.BASE_URL` para el basename del Router)
    */
-  base: mode === "development" ? "/" : "/Check-In-Front/",
+  /**
+   * Base pública de la app.
+   * - Lovable (preview, harbor-haven.lovable.app, hospedapp.com) sirve desde "/".
+   * - Solo GitHub Pages necesita "/Check-In-Front/", se activa con BUILD_TARGET=ghpages.
+   */
+  base: process.env.BUILD_TARGET === "ghpages" ? "/Check-In-Front/" : "/",
   server: {
     host: "::",
     /**
