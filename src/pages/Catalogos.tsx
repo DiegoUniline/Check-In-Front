@@ -406,6 +406,11 @@ export default function Catalogos() {
   }), []);
   const dtMet = useDataTable<any>(metodosPago, metAcc, { storageKey: 'catalogos-metodos' });
 
+  const handleResetTipos = () => dtTipos.resetPersisted();
+  const handleResetCats = () => dtCats.resetPersisted();
+  const handleResetEnt = () => dtEnt.resetPersisted();
+  const handleResetMet = () => dtMet.resetPersisted();
+
   const bulkDelete = async (ids: string[], deleter: (id: string) => Promise<any>, label: string, reload: () => void, clear: () => void) => {
     try {
       await Promise.all(ids.map(id => deleter(id)));
