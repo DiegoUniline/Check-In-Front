@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   ShoppingBag, Plus, Search, Package, Truck, 
   Calendar, DollarSign, CheckCircle2, Clock, AlertCircle,
@@ -27,6 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { SortHeader } from '@/components/datatable/SortHeader';
+import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import {
   Table,
   TableBody,
@@ -73,6 +79,9 @@ export default function Compras() {
   const [detalleModal, setDetalleModal] = useState<{ open: boolean; orden: any | null }>({ open: false, orden: null });
   const [isNewProveedorOpen, setIsNewProveedorOpen] = useState(false);
   const [newProveedor, setNewProveedor] = useState({ nombre: '', rfc: '', contacto: '', telefono: '', email: '' });
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
+  const [provSearch, setProvSearch] = useState('');
+  const [eliminandoBulkProv, setEliminandoBulkProv] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -107,6 +116,97 @@ export default function Compras() {
 
   const totalPendiente = ordenes.filter(o => ['Enviada', 'Confirmada', 'EnTransito'].includes(o.estado)).reduce((s, o) => s + (Number(o.total) || 0), 0);
   const ordenesActivas = ordenes.filter(o => !['Recibida', 'Cancelada'].includes(o.estado)).length;
+
+  // ===== DataTable órdenes =====
+  const ordenAccessors = useMemo(() => ({
+    numero: (o: any) => o.numero || o.codigo || '',
+    proveedor: (o: any) => o.proveedor?.nombre || o.proveedor_nombre || '',
+    fecha: (o: any) => o.fecha || o.created_at || '',
+    estado: (o: any) => o.estado || '',
+    total: (o: any) => Number(o.total || 0),
+  }), []);
+  const dt = useDataTable<any>(filteredOrdenes, ordenAccessors);
+
+  const eliminarSeleccionadas = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteCompra?.(id) ?? Promise.resolve()));
+      toast({ title: 'Órdenes eliminadas', description: `Se eliminaron ${ids.length} orden(es).` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const cambiarEstadoBulk = async (estado: string) => {
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.updateEstadoCompra(id, estado)));
+      toast({ title: 'Estado actualizado', description: `${ids.length} orden(es) → ${estado}` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const exportarCsvOrdenes = () => {
+    const rows = dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed;
+    exportToCsv('ordenes_compra', rows, [
+      { key: 'numero', label: 'Orden', accessor: (o) => o.numero || o.codigo },
+      { key: 'proveedor', label: 'Proveedor', accessor: (o) => o.proveedor?.nombre || o.proveedor_nombre },
+      { key: 'fecha', label: 'Fecha', accessor: (o) => o.fecha || o.created_at },
+      { key: 'estado', label: 'Estado', accessor: (o) => o.estado },
+      { key: 'total', label: 'Total', accessor: (o) => Number(o.total || 0) },
+    ]);
+  };
+
+  // ===== DataTable proveedores =====
+  const filteredProveedores = useMemo(() => {
+    const q = provSearch.toLowerCase();
+    return proveedores.filter(p =>
+      !q || p.nombre?.toLowerCase().includes(q) || p.rfc?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q) || p.telefono?.includes(q)
+    );
+  }, [proveedores, provSearch]);
+  const provAccessors = useMemo(() => ({
+    nombre: (p: any) => p.nombre || '',
+    rfc: (p: any) => p.rfc || '',
+    contacto: (p: any) => p.contacto || '',
+    telefono: (p: any) => p.telefono || '',
+    email: (p: any) => p.email || '',
+  }), []);
+  const dtProv = useDataTable<any>(filteredProveedores, provAccessors);
+
+  const eliminarProveedoresSeleccionados = async () => {
+    setEliminandoBulkProv(true);
+    try {
+      const ids = Array.from(dtProv.selected);
+      await Promise.all(ids.map(id => api.deleteProveedor?.(id) ?? Promise.resolve()));
+      toast({ title: 'Proveedores eliminados', description: `Se eliminaron ${ids.length} proveedor(es).` });
+      dtProv.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
+    } finally {
+      setEliminandoBulkProv(false);
+    }
+  };
+
+  const exportarCsvProveedores = () => {
+    const rows = dtProv.selectedRows.length > 0 ? dtProv.selectedRows : dtProv.processed;
+    exportToCsv('proveedores', rows, [
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'rfc', label: 'RFC' },
+      { key: 'contacto', label: 'Contacto' },
+      { key: 'telefono', label: 'Teléfono' },
+      { key: 'email', label: 'Email' },
+    ]);
+  };
 
   const getEstadoColor = (estado: string) => {
     const colors: Record<string, string> = {
@@ -427,27 +527,68 @@ export default function Compras() {
             </div>
 
             <div className="hidden lg:block relative w-full overflow-x-auto touch-pan-x overscroll-x-contain">
+              <div className="p-3 border-b">
+                <BulkActionBar
+                  count={dt.selectedCount}
+                  onClear={dt.clearSelection}
+                  onDelete={eliminarSeleccionadas}
+                  onExport={exportarCsvOrdenes}
+                  deleting={eliminandoBulk}
+                  entityName="órdenes"
+                  extraActions={
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Enviada')}>Enviar</Button>
+                      <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Recibida')}>Marcar recibida</Button>
+                      <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Cancelada')}>Cancelar</Button>
+                    </>
+                  }
+                />
+              </div>
               <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Orden</TableHead>
-                    <TableHead>Proveedor</TableHead>
-                    <TableHead>Fecha</TableHead>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
+                        onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
+                        aria-label="Seleccionar todas"
+                      />
+                    </TableHead>
+                    <SortHeader label="Orden" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                    <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                    <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
                     <TableHead>Items</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                    <SortHeader label="Total" columnKey="total" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
                     <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                  <TableRow>
+                    <TableHead />
+                    <TableHead><ColumnFilterInput value={dt.filters.numero || ''} onChange={(v) => dt.setColumnFilter('numero', v)} placeholder="Orden" /></TableHead>
+                    <TableHead><ColumnFilterInput value={dt.filters.proveedor || ''} onChange={(v) => dt.setColumnFilter('proveedor', v)} placeholder="Proveedor" /></TableHead>
+                    <TableHead><ColumnFilterInput value={dt.filters.fecha || ''} onChange={(v) => dt.setColumnFilter('fecha', v)} placeholder="Fecha" /></TableHead>
+                    <TableHead />
+                    <TableHead><ColumnFilterInput value={dt.filters.estado || ''} onChange={(v) => dt.setColumnFilter('estado', v)} placeholder="Estado" /></TableHead>
+                    <TableHead><ColumnFilterInput value={dt.filters.total || ''} onChange={(v) => dt.setColumnFilter('total', v)} placeholder="$" /></TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrdenes.map(orden => {
+                  {dt.processed.map(orden => {
                     const numero = orden.numero || orden.codigo || `OC-${orden.id}`;
                     const provNombre = orden.proveedor?.nombre || orden.proveedor_nombre || '-';
                     const provContacto = orden.proveedor?.contacto || orden.proveedor_contacto || '';
                     const fecha = orden.fecha || orden.created_at;
                     const itemsCount = orden.items?.length || orden.items_count || 0;
                     return (
-                      <TableRow key={orden.id}>
+                      <TableRow key={orden.id} className={dt.selected.has(orden.id) ? 'bg-primary/5' : ''}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={dt.selected.has(orden.id)}
+                            onCheckedChange={() => dt.toggleRow(orden.id)}
+                            aria-label="Seleccionar fila"
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{numero}</TableCell>
                         <TableCell>
                           <div>
@@ -517,9 +658,9 @@ export default function Compras() {
                       </TableRow>
                     );
                   })}
-                  {filteredOrdenes.length === 0 && (
+                  {dt.processed.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         No hay órdenes de compra
                       </TableCell>
                     </TableRow>
@@ -534,7 +675,7 @@ export default function Compras() {
           <div className="flex justify-between items-center mb-6">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar proveedor..." className="pl-9" />
+              <Input placeholder="Buscar proveedor..." className="pl-9" value={provSearch} onChange={(e) => setProvSearch(e.target.value)} />
             </div>
             <Button onClick={() => setIsNewProveedorOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -542,10 +683,26 @@ export default function Compras() {
             </Button>
           </div>
 
+          <BulkActionBar
+            count={dtProv.selectedCount}
+            onClear={dtProv.clearSelection}
+            onDelete={eliminarProveedoresSeleccionados}
+            onExport={exportarCsvProveedores}
+            deleting={eliminandoBulkProv}
+            entityName="proveedores"
+          />
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {proveedores.map(prov => (
-              <Card key={prov.id} className="hover:shadow-md transition-all">
+            {dtProv.processed.map(prov => (
+              <Card key={prov.id} className={cn("hover:shadow-md transition-all", dtProv.selected.has(prov.id) && 'ring-2 ring-primary')}>
                 <CardContent className="p-4">
+                  <div className="flex justify-end mb-2">
+                    <Checkbox
+                      checked={dtProv.selected.has(prov.id)}
+                      onCheckedChange={() => dtProv.toggleRow(prov.id)}
+                      aria-label="Seleccionar proveedor"
+                    />
+                  </div>
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-lg bg-primary/10">
                       <Building className="h-5 w-5 text-primary" />
@@ -564,7 +721,7 @@ export default function Compras() {
                 </CardContent>
               </Card>
             ))}
-            {proveedores.length === 0 && (
+            {dtProv.processed.length === 0 && (
               <div className="col-span-full text-center py-8 text-muted-foreground">
                 No hay proveedores registrados
               </div>
