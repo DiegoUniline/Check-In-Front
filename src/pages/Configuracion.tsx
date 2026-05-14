@@ -80,6 +80,18 @@ export default function Configuracion() {
   };
 
   const mapUiToBackend = (ui: any) => {
+    const slugify = (s: string) =>
+      (s || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    // El slug se deriva SIEMPRE del nombre del hotel para que la URL coincida.
+    const slug = slugify(ui.nombre) || null;
     // Mapeo UI (camelCase) -> backend (snake_case)
     return {
       nombre: ui.nombre,
@@ -94,7 +106,7 @@ export default function Configuracion() {
       hora_checkin: ui.horaCheckin,
       hora_checkout: ui.horaCheckout,
       estrellas: Number(ui.estrellas) || 3,
-      slug: (ui.slug || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || null,
+      slug,
       descripcion_publica: ui.descripcionPublica || null,
       permite_reservas_online: !!ui.permiteReservasOnline,
       requiere_anticipo: !!ui.requiereAnticipo,
@@ -352,33 +364,47 @@ export default function Configuracion() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Identificador de tu hotel (slug)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={hotelData.slug || ''}
-                    onChange={(e) => setHotelData({ ...hotelData, slug: e.target.value })}
-                    placeholder="mi-hotel"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const url = `${window.location.origin}/h/${hotelData.slug}`;
-                      navigator.clipboard.writeText(url);
-                      toast({ title: 'Enlace copiado', description: url });
-                    }}
-                    disabled={!hotelData.slug}
-                  >
-                    <Copy className="h-4 w-4 mr-1" /> Copiar URL
-                  </Button>
-                </div>
-                {hotelData.slug && (
-                  <p className="text-xs text-muted-foreground">
-                    URL pública: <a className="underline" href={`/h/${hotelData.slug}`} target="_blank" rel="noreferrer">{window.location.origin}/h/{hotelData.slug}</a>
-                  </p>
-                )}
-              </div>
+              {(() => {
+                const slugAuto = (hotelData.nombre || '')
+                  .toString()
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .trim()
+                  .toLowerCase()
+                  .replace(/[^a-z0-9-]+/g, '-')
+                  .replace(/-+/g, '-')
+                  .replace(/^-|-$/g, '');
+                const url = slugAuto ? `${window.location.origin}/h/${slugAuto}` : '';
+                return (
+                  <div className="space-y-2">
+                    <Label>URL pública de tu hotel</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Se genera automáticamente con el nombre del hotel. Cámbialo desde el campo "Nombre del hotel" arriba.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input value={url} readOnly placeholder="Define el nombre del hotel para generar la URL" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(url);
+                          toast({ title: 'Enlace copiado', description: url });
+                        }}
+                        disabled={!slugAuto}
+                      >
+                        <Copy className="h-4 w-4 mr-1" /> Copiar
+                      </Button>
+                      {slugAuto && (
+                        <Button type="button" variant="outline" asChild>
+                          <a href={`/h/${slugAuto}`} target="_blank" rel="noreferrer">
+                            <Globe className="h-4 w-4 mr-1" /> Abrir
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="space-y-2">
                 <Label>Descripción pública del hotel</Label>
