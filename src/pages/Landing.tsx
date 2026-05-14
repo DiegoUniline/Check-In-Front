@@ -56,6 +56,7 @@ export default function Landing() {
             <a href="#funciones" className="hover:text-foreground transition">Funciones</a>
             <a href="#capturas" className="hover:text-foreground transition">Capturas</a>
             <a href="#reservas-web" className="hover:text-foreground transition">Reservas Web</a>
+            <a href="#soporte" className="hover:text-foreground transition">Soporte</a>
           </nav>
           <div className="flex items-center gap-2">
             <Button variant="ghost" asChild><Link to="/login">Iniciar sesión</Link></Button>
@@ -238,6 +239,41 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* SOPORTE / CONTACTO */}
+      <section id="soporte" className="container mx-auto px-4 pb-24">
+        <div className="grid md:grid-cols-2 gap-5">
+          <a
+            href="https://wa.me/523171035768?text=Hola%2C%20me%20interesa%20contratar%20HospedApp"
+            target="_blank" rel="noreferrer"
+            className="group rounded-2xl border bg-card p-8 hover:border-primary/40 hover:shadow-lg transition-all flex items-start gap-5"
+          >
+            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 group-hover:bg-emerald-500/20 transition">
+              <MessageCircle className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-emerald-600 mb-1">WHATSAPP · MÉXICO</div>
+              <h3 className="text-xl font-bold mb-1">Escríbenos por WhatsApp</h3>
+              <p className="text-sm text-muted-foreground mb-3">Soporte y ventas. Respuesta en minutos en horario laboral.</p>
+              <div className="text-lg font-semibold text-foreground">+52 317 103 5768</div>
+            </div>
+          </a>
+          <a
+            href="tel:+523171035768"
+            className="group rounded-2xl border bg-card p-8 hover:border-primary/40 hover:shadow-lg transition-all flex items-start gap-5"
+          >
+            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition">
+              <Phone className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-primary mb-1">LLAMADA DIRECTA</div>
+              <h3 className="text-xl font-bold mb-1">Habla con un asesor</h3>
+              <p className="text-sm text-muted-foreground mb-3">Te ayudamos a contratar y configurar tu hotel.</p>
+              <div className="text-lg font-semibold text-foreground">+52 317 103 5768</div>
+            </div>
+          </a>
+        </div>
+      </section>
+
       <footer className="border-t">
         <div className="container mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
@@ -245,11 +281,25 @@ export default function Landing() {
             © {new Date().getFullYear()} HospedApp · Sistema de gestión hotelera
           </div>
           <div className="flex items-center gap-4">
+            <a href="https://wa.me/523171035768" target="_blank" rel="noreferrer" className="hover:text-foreground flex items-center gap-1">
+              <MessageCircle className="h-3.5 w-3.5" /> +52 317 103 5768
+            </a>
             <Link to="/login" className="hover:text-foreground">Iniciar sesión</Link>
             <Link to="/signup" className="hover:text-foreground">Crear cuenta</Link>
           </div>
         </div>
       </footer>
+
+      {/* Botón flotante WhatsApp */}
+      <a
+        href="https://wa.me/523171035768?text=Hola%2C%20me%20interesa%20HospedApp"
+        target="_blank" rel="noreferrer"
+        aria-label="Contactar por WhatsApp"
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-emerald-500 text-white shadow-lg flex items-center justify-center hover:scale-110 hover:bg-emerald-600 transition-transform"
+      >
+        <MessageCircle className="h-6 w-6" />
+        <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-30" />
+      </a>
     </div>
   );
 }
