@@ -566,7 +566,7 @@ export default function Catalogos() {
                 <BulkActionBar
                   count={dtCats.selectedCount}
                   onClear={dtCats.clearSelection}
-                  onDelete={() => bulkDelete(Array.from(dtCats.selected), (id) => api.deleteCategoria?.(id) ?? Promise.resolve(), 'Categorías', cargarCategorias, dtCats.clearSelection)}
+                  onDelete={() => bulkDelete(Array.from(dtCats.selected), (id) => (api as any).deleteCategoria?.(id) ?? Promise.resolve(), 'Categorías', cargarCategorias, dtCats.clearSelection)}
                   onExport={() => exportToCsv('categorias_producto', dtCats.selectedRows.length ? dtCats.selectedRows : dtCats.processed, [
                     { key: 'nombre', label: 'Nombre' }, { key: 'descripcion', label: 'Descripción' },
                   ])}
