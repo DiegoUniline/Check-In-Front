@@ -960,6 +960,28 @@ export default function HistorialReservas() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirmación de eliminación masiva */}
+      <AlertDialog open={confirmarBorrado} onOpenChange={setConfirmarBorrado}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar {seleccionadas.size} reserva(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán también los cargos y pagos asociados a estas reservas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={eliminando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); eliminarSeleccionadas(); }}
+              disabled={eliminando}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {eliminando ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
