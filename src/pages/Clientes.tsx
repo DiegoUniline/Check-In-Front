@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Search, Plus, Star, Mail, Phone, 
-  MoreVertical, Eye, Edit, History, Award, X, Trash2
+  MoreVertical, Eye, Edit, History, Award, X, Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
