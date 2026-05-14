@@ -95,13 +95,13 @@ export default function PublicHotel() {
     if (!slug) return;
     (async () => {
       setLoading(true);
-      const { data: h } = await supabase.from('hotels').select('*').eq('slug', slug).maybeSingle();
+      const { data: h } = await (supabase.from('hotels') as any).select('*').eq('slug', slug).maybeSingle();
       if (!h) { setNotFound(true); setLoading(false); return; }
       setHotel(h as any);
 
       const [{ data: tps }, { data: hbs }] = await Promise.all([
-        supabase.from('tipos_habitacion').select('*').eq('hotel_id', h.id).eq('publico', true),
-        supabase.from('habitaciones').select('id, tipo_habitacion_id, excluida_publica').eq('hotel_id', h.id).eq('excluida_publica', false),
+        (supabase.from('tipos_habitacion') as any).select('*').eq('hotel_id', h.id).eq('publico', true),
+        (supabase.from('habitaciones') as any).select('id, tipo_habitacion_id, excluida_publica').eq('hotel_id', h.id).eq('excluida_publica', false),
       ]);
       setTipos((tps || []) as any);
       const counts: Record<string, number> = {};
