@@ -632,7 +632,7 @@ class ApiClient {
     const { data: hotels } = await supabase.from('hotels').select('*').order('created_at', { ascending: false });
     const { data: profiles } = await supabase.from('profiles').select('*');
     return (hotels || []).map((h: any) => {
-      const admin = (profiles || []).find((p: any) => p.hotel_id === h.id) || {};
+      const admin: any = (profiles || []).find((p: any) => p.hotel_id === h.id) || {};
       return {
         id: h.id,
         razon_social: h.razon_social || h.nombre,
