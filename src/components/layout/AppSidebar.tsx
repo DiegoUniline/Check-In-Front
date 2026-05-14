@@ -17,6 +17,7 @@ import {
   BookOpen,
   UserCog,
   FileText,
+  ShieldAlert,
   ShieldCheck // Icono para Diego
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -63,6 +64,7 @@ const salesNavItems = [
 
 const configNavItems = [
   { title: 'Usuarios', url: '/usuarios', icon: UserCog },
+  { title: 'Permisos', url: '/permisos', icon: ShieldAlert },
   { title: 'Turnos', url: '/turnos', icon: Clock },
   { title: 'Catálogos', url: '/catalogos', icon: BookOpen },
   { title: 'Configuración', url: '/configuracion', icon: Settings },

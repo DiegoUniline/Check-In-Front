@@ -90,6 +90,7 @@ export type Database = {
       }
       categorias_producto: {
         Row: {
+          activo: boolean
           created_at: string | null
           descripcion: string | null
           hotel_id: string
@@ -97,6 +98,7 @@ export type Database = {
           nombre: string
         }
         Insert: {
+          activo?: boolean
           created_at?: string | null
           descripcion?: string | null
           hotel_id: string
@@ -104,6 +106,7 @@ export type Database = {
           nombre: string
         }
         Update: {
+          activo?: boolean
           created_at?: string | null
           descripcion?: string | null
           hotel_id?: string
@@ -333,6 +336,7 @@ export type Database = {
       }
       entregables: {
         Row: {
+          activo: boolean
           costo_reposicion: number | null
           created_at: string | null
           descripcion: string | null
@@ -342,6 +346,7 @@ export type Database = {
           stock: number | null
         }
         Insert: {
+          activo?: boolean
           costo_reposicion?: number | null
           created_at?: string | null
           descripcion?: string | null
@@ -351,6 +356,7 @@ export type Database = {
           stock?: number | null
         }
         Update: {
+          activo?: boolean
           costo_reposicion?: number | null
           created_at?: string | null
           descripcion?: string | null
@@ -923,11 +929,14 @@ export type Database = {
       reservas: {
         Row: {
           adultos: number | null
+          cargo_persona_extra: number
           checkin_realizado: boolean | null
           checkout_realizado: boolean | null
           cliente_id: string | null
           created_at: string | null
           descuento: number | null
+          descuento_tipo: string | null
+          descuento_valor: number
           estado: string | null
           fecha_checkin: string
           fecha_checkout: string
@@ -938,8 +947,10 @@ export type Database = {
           ninos: number | null
           noches: number | null
           notas: string | null
+          notas_internas: string | null
           numero_reserva: string | null
           origen: string | null
+          personas_extra: number
           saldo_pendiente: number | null
           solicitudes_especiales: string | null
           subtotal_hospedaje: number | null
@@ -952,11 +963,14 @@ export type Database = {
         }
         Insert: {
           adultos?: number | null
+          cargo_persona_extra?: number
           checkin_realizado?: boolean | null
           checkout_realizado?: boolean | null
           cliente_id?: string | null
           created_at?: string | null
           descuento?: number | null
+          descuento_tipo?: string | null
+          descuento_valor?: number
           estado?: string | null
           fecha_checkin: string
           fecha_checkout: string
@@ -967,8 +981,10 @@ export type Database = {
           ninos?: number | null
           noches?: number | null
           notas?: string | null
+          notas_internas?: string | null
           numero_reserva?: string | null
           origen?: string | null
+          personas_extra?: number
           saldo_pendiente?: number | null
           solicitudes_especiales?: string | null
           subtotal_hospedaje?: number | null
@@ -981,11 +997,14 @@ export type Database = {
         }
         Update: {
           adultos?: number | null
+          cargo_persona_extra?: number
           checkin_realizado?: boolean | null
           checkout_realizado?: boolean | null
           cliente_id?: string | null
           created_at?: string | null
           descuento?: number | null
+          descuento_tipo?: string | null
+          descuento_valor?: number
           estado?: string | null
           fecha_checkin?: string
           fecha_checkout?: string
@@ -996,8 +1015,10 @@ export type Database = {
           ninos?: number | null
           noches?: number | null
           notas?: string | null
+          notas_internas?: string | null
           numero_reserva?: string | null
           origen?: string | null
+          personas_extra?: number
           saldo_pendiente?: number | null
           solicitudes_especiales?: string | null
           subtotal_hospedaje?: number | null

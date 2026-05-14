@@ -29,6 +29,7 @@ import HistorialReservas from "./pages/HistorialReservas";
 import NotFound from "./pages/NotFound";
 import Catalogos from "./pages/Catalogos";
 import Usuarios from "./pages/Usuarios";
+import Permisos from "./pages/Permisos";
 import AdminPlataforma from "./pages/AdminPlataforma";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -222,6 +223,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <Usuarios />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/permisos"
+      element={
+        <ProtectedRoute>
+          <Permisos />
         </ProtectedRoute>
       }
     />
