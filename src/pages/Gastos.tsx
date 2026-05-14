@@ -438,11 +438,6 @@ export default function Gastos() {
               <SortHeader label="Monto" columnKey="monto" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.monto} onFilterChange={(v) => dt.setColumnFilter('monto', v)} />
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
-            <TableRow>
-              <TableHead />
-
-              <TableHead />
-            </TableRow>
           </TableHeader>
           <TableBody>
             {dt.processed.map(gasto => {
