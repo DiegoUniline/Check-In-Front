@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
+import { PublicLinkBanner } from '@/components/PublicLinkBanner';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
@@ -160,7 +161,7 @@ export default function Reservas() {
   return (
     <MainLayout title="Recepción" subtitle="Gestión de reservas">
       <div className="space-y-3">
-        
+        <PublicLinkBanner />
         {/* Header */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
