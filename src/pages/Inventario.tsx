@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Package, Search, Plus, Edit, AlertTriangle,
   ArrowUpDown, MoreVertical, RefreshCw, Trash2
@@ -17,6 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { SortHeader } from '@/components/datatable/SortHeader';
+import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import {
   Select,
   SelectContent,
@@ -67,6 +73,7 @@ export default function Inventario() {
   const [ajusteModal, setAjusteModal] = useState<{ open: boolean; producto: any | null }>({ open: false, producto: null });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; producto: any | null }>({ open: false, producto: null });
   const [ajusteData, setAjusteData] = useState({ tipo: 'entrada', cantidad: '', motivo: '' });
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
   
   // Generar código automático
   const generarCodigo = () => {
@@ -116,6 +123,45 @@ export default function Inventario() {
 
   const lowStock = productos.filter(p => (p.stock_actual || 0) < (p.stock_minimo || 20));
   const totalValue = productos.reduce((sum, p) => sum + ((p.precio_venta || 0) * (p.stock_actual || 0)), 0);
+
+  // ===== DataTable: selección, sort y filtros por columna =====
+  const accessors = useMemo(() => ({
+    codigo: (p: any) => p.codigo || '',
+    nombre: (p: any) => p.nombre || '',
+    categoria: (p: any) => p.categoria_nombre || p.categoria || '',
+    precio: (p: any) => Number(p.precio_venta || 0),
+    stock: (p: any) => Number(p.stock_actual || 0),
+    valor: (p: any) => Number(p.precio_venta || 0) * Number(p.stock_actual || 0),
+  }), []);
+  const dt = useDataTable<any>(filteredProducts, accessors);
+
+  const eliminarSeleccionados = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteProducto(id)));
+      toast({ title: 'Productos eliminados', description: `Se eliminaron ${ids.length} producto(s).` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const exportarCsv = () => {
+    const rows = dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed;
+    exportToCsv('productos', rows, [
+      { key: 'codigo', label: 'Código' },
+      { key: 'nombre', label: 'Producto' },
+      { key: 'categoria', label: 'Categoría', accessor: (p) => p.categoria_nombre || p.categoria },
+      { key: 'precio_venta', label: 'Precio' },
+      { key: 'stock_actual', label: 'Stock' },
+      { key: 'stock_minimo', label: 'Stock mínimo' },
+      { key: 'valor', label: 'Valor', accessor: (p) => (p.precio_venta || 0) * (p.stock_actual || 0) },
+    ]);
+  };
 
   const openNewModal = () => {
     setEditingProduct(null);
@@ -309,21 +355,55 @@ export default function Inventario() {
 
       {/* Products table */}
       <Card>
+        <div className="p-3 border-b">
+          <BulkActionBar
+            count={dt.selectedCount}
+            onClear={dt.clearSelection}
+            onDelete={eliminarSeleccionados}
+            onExport={exportarCsv}
+            deleting={eliminandoBulk}
+            entityName="productos"
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Producto</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead className="text-right">Precio</TableHead>
-              <TableHead className="text-right">Stock</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
+                  onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
+                  aria-label="Seleccionar todos"
+                />
+              </TableHead>
+              <SortHeader label="Código" columnKey="codigo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Producto" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Precio" columnKey="precio" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
+              <SortHeader label="Stock" columnKey="stock" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
+              <SortHeader label="Valor" columnKey="valor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
               <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+            <TableRow>
+              <TableHead />
+              <TableHead><ColumnFilterInput value={dt.filters.codigo || ''} onChange={(v) => dt.setColumnFilter('codigo', v)} placeholder="Código" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.nombre || ''} onChange={(v) => dt.setColumnFilter('nombre', v)} placeholder="Producto" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.categoria || ''} onChange={(v) => dt.setColumnFilter('categoria', v)} placeholder="Categoría" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.precio || ''} onChange={(v) => dt.setColumnFilter('precio', v)} placeholder="$" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.stock || ''} onChange={(v) => dt.setColumnFilter('stock', v)} placeholder="#" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.valor || ''} onChange={(v) => dt.setColumnFilter('valor', v)} placeholder="$" /></TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.map(producto => (
-              <TableRow key={producto.id}>
+            {dt.processed.map(producto => (
+              <TableRow key={producto.id} className={dt.selected.has(producto.id) ? 'bg-primary/5' : ''}>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={dt.selected.has(producto.id)}
+                    onCheckedChange={() => dt.toggleRow(producto.id)}
+                    aria-label="Seleccionar fila"
+                  />
+                </TableCell>
                 <TableCell className="font-mono text-sm">{producto.codigo || '-'}</TableCell>
                 <TableCell className="font-medium">{producto.nombre}</TableCell>
                 <TableCell>
@@ -367,9 +447,9 @@ export default function Inventario() {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredProducts.length === 0 && (
+            {dt.processed.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No hay productos registrados
                 </TableCell>
               </TableRow>
@@ -379,7 +459,7 @@ export default function Inventario() {
       </Card>
 
       <p className="text-sm text-muted-foreground mt-4 text-center">
-        Mostrando {filteredProducts.length} de {productos.length} productos
+        Mostrando {dt.processed.length} de {productos.length} productos
       </p>
 
       {/* Modal Producto */}
