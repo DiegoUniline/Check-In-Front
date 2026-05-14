@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone, UserPlus
+  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone, UserPlus, Check
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -54,6 +54,13 @@ export default function AdminPlataforma() {
     plan_id: '', 
     fecha_inicio: new Date().toISOString().split('T')[0],
     fecha_fin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
+
+  const [modalPlan, setModalPlan] = useState<{ open: boolean; plan: any | null }>({ open: false, plan: null });
+  const [formPlan, setFormPlan] = useState({
+    nombre: '', descripcion: '', costo_mensual: 0, costo_anual: 0,
+    limite_hoteles: 1, limite_habitaciones_por_hotel: 10, limite_usuarios: 3,
+    features: '', activo: true, orden: 0,
   });
 
   // --- QUERIES ---
@@ -203,6 +210,65 @@ export default function AdminPlataforma() {
     },
     onError: (e: any) => toast.error(e.message)
   });
+
+  const guardarPlan = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        nombre: formPlan.nombre,
+        descripcion: formPlan.descripcion,
+        costo_mensual: Number(formPlan.costo_mensual) || 0,
+        costo_anual: Number(formPlan.costo_anual) || 0,
+        limite_hoteles: Number(formPlan.limite_hoteles) || 1,
+        limite_habitaciones_por_hotel: Number(formPlan.limite_habitaciones_por_hotel) || 10,
+        limite_usuarios: Number(formPlan.limite_usuarios) || 3,
+        features: formPlan.features.split('\n').map(f => f.trim()).filter(Boolean),
+        activo: formPlan.activo,
+        orden: Number(formPlan.orden) || 0,
+      };
+      if (modalPlan.plan?.id) return api.updatePlan(modalPlan.plan.id, payload);
+      return api.createPlan(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-planes'] });
+      toast.success(modalPlan.plan?.id ? 'Plan actualizado' : 'Plan creado');
+      setModalPlan({ open: false, plan: null });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const eliminarPlan = useMutation({
+    mutationFn: (id: string) => (api as any).deletePlan(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-planes'] });
+      toast.success('Plan eliminado');
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const abrirNuevoPlan = () => {
+    setFormPlan({
+      nombre: '', descripcion: '', costo_mensual: 0, costo_anual: 0,
+      limite_hoteles: 1, limite_habitaciones_por_hotel: 10, limite_usuarios: 3,
+      features: '', activo: true, orden: 0,
+    });
+    setModalPlan({ open: true, plan: null });
+  };
+
+  const abrirEditarPlan = (p: any) => {
+    setFormPlan({
+      nombre: p.nombre || '',
+      descripcion: p.descripcion || '',
+      costo_mensual: p.costo_mensual || 0,
+      costo_anual: p.costo_anual || 0,
+      limite_hoteles: p.limite_hoteles || 1,
+      limite_habitaciones_por_hotel: p.limite_habitaciones_por_hotel || 10,
+      limite_usuarios: p.limite_usuarios || 3,
+      features: Array.isArray(p.features) ? p.features.join('\n') : '',
+      activo: p.activo !== false,
+      orden: p.orden || 0,
+    });
+    setModalPlan({ open: true, plan: p });
+  };
 
   const cuentasFiltradas = useMemo(() => {
     return cuentas.filter((c: any) => 
@@ -416,18 +482,50 @@ export default function AdminPlataforma() {
         </TabsContent>
 
         <TabsContent value="planes">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex justify-end mb-4">
+            <Button onClick={abrirNuevoPlan}><Plus className="w-4 h-4 mr-2" /> Nuevo Plan</Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {planes.map((p: any) => (
-              <div key={p.id} className="bg-white border p-6 rounded-xl">
-                <Package className="text-blue-600 mb-4" />
-                <h3 className="font-bold text-lg">{p.nombre}</h3>
-                <p className="text-3xl font-black my-2">${p.costo_mensual}/mes</p>
-                <div className="space-y-2 mt-4 text-xs text-slate-500">
-                  <div className="flex justify-between"><span>Hoteles</span><span className="font-bold text-slate-900">{p.limite_hoteles}</span></div>
-                  <div className="flex justify-between"><span>Habitaciones</span><span className="font-bold text-slate-900">{p.limite_habitaciones_por_hotel}</span></div>
+              <div key={p.id} className="bg-white border p-6 rounded-xl flex flex-col">
+                <div className="flex justify-between items-start mb-2">
+                  <Package className="text-blue-600" />
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => abrirEditarPlan(p)}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-red-500"
+                      onClick={() => { if (confirm(`¿Eliminar plan "${p.nombre}"?`)) eliminarPlan.mutate(p.id); }}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
+                <h3 className="font-bold text-lg">{p.nombre}</h3>
+                <p className="text-xs text-slate-500 mb-2">{p.descripcion}</p>
+                <p className="text-3xl font-black my-2">${Number(p.costo_mensual).toLocaleString('es-MX')}<span className="text-xs font-normal text-slate-400">/mes</span></p>
+                {p.costo_anual > 0 && (
+                  <p className="text-xs text-slate-400">${Number(p.costo_anual).toLocaleString('es-MX')} MXN/año</p>
+                )}
+                <div className="space-y-2 mt-4 text-xs text-slate-500">
+                  <div className="flex justify-between"><span>Hoteles</span><span className="font-bold text-slate-900">{p.limite_hoteles >= 999 ? '∞' : p.limite_hoteles}</span></div>
+                  <div className="flex justify-between"><span>Habitaciones</span><span className="font-bold text-slate-900">{p.limite_habitaciones_por_hotel >= 999 ? '∞' : p.limite_habitaciones_por_hotel}</span></div>
+                  <div className="flex justify-between"><span>Usuarios</span><span className="font-bold text-slate-900">{p.limite_usuarios >= 999 ? '∞' : p.limite_usuarios}</span></div>
+                </div>
+                {Array.isArray(p.features) && p.features.length > 0 && (
+                  <ul className="mt-4 space-y-1 text-xs flex-1">
+                    {p.features.map((f: string, i: number) => (
+                      <li key={i} className="flex gap-2 items-start"><Check className="w-3 h-3 text-green-500 mt-0.5 shrink-0" /><span>{f}</span></li>
+                    ))}
+                  </ul>
+                )}
+                <span className={`mt-4 text-center text-xs px-2 py-1 rounded ${p.activo ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {p.activo ? 'Activo' : 'Inactivo'}
+                </span>
               </div>
             ))}
+            {planes.length === 0 && (
+              <div className="col-span-full text-center text-slate-400 py-12">No hay planes. Crea el primero.</div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
