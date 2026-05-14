@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw, Globe, GlobeLock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +66,7 @@ export default function Catalogos() {
     precio_base: '',
     precio_persona_extra: '0',
     amenidades: '',
-    publico: false,
+    publicar_web: true,
     fotos: [] as string[],
   });
 
@@ -137,7 +137,7 @@ export default function Catalogos() {
       precio_base: '',
       precio_persona_extra: '0',
       amenidades: '',
-      publico: false,
+      publicar_web: true,
       fotos: [] as string[],
     });
     setModalTipoOpen(true);
@@ -155,7 +155,7 @@ export default function Catalogos() {
       precio_base: tipo.precio_base?.toString() || '',
       precio_persona_extra: tipo.precio_persona_extra?.toString() || '0',
       amenidades: Array.isArray(tipo.amenidades) ? tipo.amenidades.join(', ') : '',
-      publico: !!tipo.publico,
+      publicar_web: tipo.publicar_web !== false,
       fotos: Array.isArray(tipo.fotos) ? tipo.fotos : [],
     });
     setModalTipoOpen(true);
@@ -173,7 +173,7 @@ export default function Catalogos() {
         precio_base: parseFloat(formTipo.precio_base),
         precio_persona_extra: parseFloat(formTipo.precio_persona_extra) || 0,
         amenidades: formTipo.amenidades.split(',').map(a => a.trim()).filter(a => a),
-        publico: formTipo.publico,
+        publicar_web: formTipo.publicar_web,
         fotos: formTipo.fotos,
       };
 
@@ -960,11 +960,11 @@ export default function Catalogos() {
                   <p className="text-xs text-muted-foreground">Permite que los huéspedes reserven este tipo desde tu página pública.</p>
                 </div>
                 <Switch
-                  checked={formTipo.publico}
-                  onCheckedChange={(v) => setFormTipo({ ...formTipo, publico: v })}
+                  checked={formTipo.publicar_web}
+                  onCheckedChange={(v) => setFormTipo({ ...formTipo, publicar_web: v })}
                 />
               </div>
-              {formTipo.publico && (
+              {formTipo.publicar_web && (
                 <div className="grid gap-2">
                   <Label>Fotos del tipo de habitación</Label>
                   <p className="text-xs text-muted-foreground">
