@@ -627,8 +627,23 @@ class ApiClient {
   getHotel = async (): Promise<any> => { const { data } = await supabase.from('hotels').select('*').eq('id', this.hid()).maybeSingle(); return data; };
   updateHotel = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('hotels').update(data).eq('id', this.hid()).select().single(); if (error) throw error; return r; };
 
-  // ------- SAAS (stubs vacíos) -------
-  getCuentas = async (): Promise<any> => [];
+  // ------- SAAS -------
+  getCuentas = async (): Promise<any> => {
+    const { data: hotels } = await supabase.from('hotels').select('*').order('created_at', { ascending: false });
+    const { data: profiles } = await supabase.from('profiles').select('*');
+    return (hotels || []).map((h: any) => {
+      const admin = (profiles || []).find((p: any) => p.hotel_id === h.id) || {};
+      return {
+        id: h.id,
+        razon_social: h.razon_social || h.nombre,
+        nombre_administrador: [admin.nombre, admin.apellido_paterno].filter(Boolean).join(' ') || '—',
+        email_acceso: admin.email || h.email || '—',
+        telefono: admin.telefono || h.telefono || '',
+        activo: true,
+        created_at: h.created_at,
+      };
+    });
+  };
   createCuenta = async (_data: any): Promise<any> => ({});
   updateCuenta = async (_id: string, _data: any): Promise<any> => ({});
   deleteCuenta = async (_id: string): Promise<any> => ({});
