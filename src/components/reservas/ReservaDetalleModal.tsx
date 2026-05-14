@@ -262,14 +262,16 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       return;
     }
 
-    const faltanVerificaciones = !documentoVerificado || !tarjetaRegistrada || !firmaDigital;
-    if (r.estado === 'Confirmada' && faltanVerificaciones && !opts?.force) {
-      toast({
-        title: 'Verificaciones incompletas',
-        description: 'Marca las 3 verificaciones o vuelve a intentar para forzar el check-in.',
-        variant: 'destructive',
-      });
-      return;
+    if (r.estado === 'Confirmada' && checklistCheckin.length > 0) {
+      const faltantes = checklistCheckin.filter((it) => !marcadosCheckin[it.id]);
+      if (faltantes.length > 0) {
+        toast({
+          title: 'Verificaciones incompletas',
+          description: `Faltan ${faltantes.length} de ${checklistCheckin.length} verificaciones por marcar.`,
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setProcessing(true);
@@ -286,9 +288,16 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   };
 
   const handleCheckout = async () => {
-    if (!habitacionInspeccionada || !llaveDevuelta) {
-      toast({ title: 'Faltan verificaciones', description: 'Complete la inspección y devolución de llaves', variant: 'destructive' });
-      return;
+    if (checklistCheckout.length > 0) {
+      const faltantes = checklistCheckout.filter((it) => !marcadosCheckout[it.id]);
+      if (faltantes.length > 0) {
+        toast({
+          title: 'Verificaciones incompletas',
+          description: `Faltan ${faltantes.length} de ${checklistCheckout.length} verificaciones por marcar.`,
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     
     const pendientes = reservaEntregables.filter(e => 
