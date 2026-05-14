@@ -88,13 +88,22 @@ export function AppSidebar() {
   useEffect(() => {
     const cargarOcupacion = async () => {
       try {
-        const data = await api.getHabitaciones();
-        const total = data?.length ?? 0;
-        const ocup = (data ?? []).filter(
-          (h: any) => h.estado_habitacion === 'Ocupada'
-        ).length;
+        // Calcular ocupación real desde reservas activas (con check-in pero sin check-out),
+        // no desde el campo `estado_habitacion` que puede quedar desincronizado si se
+        // eliminan reservas sin pasar por el flujo de checkout.
+        const [habs, reservas] = await Promise.all([
+          api.getHabitaciones().catch(() => []),
+          api.getReservas().catch(() => []),
+        ]);
+        const total = Array.isArray(habs) ? habs.length : 0;
+        const ocupadasIds = new Set(
+          (Array.isArray(reservas) ? reservas : [])
+            .filter((r: any) => r.checkin_realizado && !r.checkout_realizado)
+            .map((r: any) => r.habitacion_id)
+            .filter(Boolean)
+        );
         setTotalHab(total);
-        setOcupadas(ocup);
+        setOcupadas(ocupadasIds.size);
       } catch (e) {
         setTotalHab(0);
         setOcupadas(0);
