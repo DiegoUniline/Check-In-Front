@@ -75,6 +75,7 @@ export default function PublicHotel() {
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [tipos, setTipos] = useState<Tipo[]>([]);
   const [habitacionesByTipo, setHabitacionesByTipo] = useState<Record<string, number>>({});
+  const [fotosPorTipo, setFotosPorTipo] = useState<Record<string, string[]>>({});
   const [reservasOcupacion, setReservasOcupacion] = useState<any[]>([]);
 
   const [checkin, setCheckin] = useState(todayISO(1));
