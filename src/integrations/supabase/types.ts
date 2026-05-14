@@ -1694,6 +1694,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_hotel_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1701,6 +1702,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_superadmin: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role:
