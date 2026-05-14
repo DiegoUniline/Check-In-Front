@@ -555,6 +555,7 @@ export type Database = {
           estado_habitacion: string | null
           estado_limpieza: string | null
           estado_mantenimiento: string | null
+          excluida_publica: boolean
           hotel_id: string
           id: string
           notas: string | null
@@ -568,6 +569,7 @@ export type Database = {
           estado_habitacion?: string | null
           estado_limpieza?: string | null
           estado_mantenimiento?: string | null
+          excluida_publica?: boolean
           hotel_id: string
           id?: string
           notas?: string | null
@@ -581,6 +583,7 @@ export type Database = {
           estado_habitacion?: string | null
           estado_limpieza?: string | null
           estado_mantenimiento?: string | null
+          excluida_publica?: boolean
           hotel_id?: string
           id?: string
           notas?: string | null
@@ -1291,11 +1294,13 @@ export type Database = {
           codigo: string
           created_at: string | null
           descripcion: string | null
+          fotos: string[]
           hotel_id: string
           id: string
           nombre: string
           precio_base: number | null
           precio_persona_extra: number | null
+          publicar_web: boolean
         }
         Insert: {
           amenidades?: string[] | null
@@ -1305,11 +1310,13 @@ export type Database = {
           codigo: string
           created_at?: string | null
           descripcion?: string | null
+          fotos?: string[]
           hotel_id: string
           id?: string
           nombre: string
           precio_base?: number | null
           precio_persona_extra?: number | null
+          publicar_web?: boolean
         }
         Update: {
           amenidades?: string[] | null
@@ -1319,11 +1326,13 @@ export type Database = {
           codigo?: string
           created_at?: string | null
           descripcion?: string | null
+          fotos?: string[]
           hotel_id?: string
           id?: string
           nombre?: string
           precio_base?: number | null
           precio_persona_extra?: number | null
+          publicar_web?: boolean
         }
         Relationships: [
           {
