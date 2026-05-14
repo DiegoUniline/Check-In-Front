@@ -128,6 +128,17 @@ export default function Compras() {
   }), []);
   const dt = useDataTable<any>(filteredOrdenes, ordenAccessors, { storageKey: 'compras-ordenes' });
 
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterEstado('all');
+    dt.resetPersisted();
+  };
+
+  const handleResetAllProv = () => {
+    setProvSearch('');
+    dtProv.resetPersisted();
+  };
+
   const eliminarSeleccionadas = async () => {
     setEliminandoBulk(true);
     try {
