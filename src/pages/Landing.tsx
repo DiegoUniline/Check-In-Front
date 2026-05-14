@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -386,7 +387,7 @@ function TimelineMockup() {
               <div key={d} className="p-2 border-b border-r last:border-r-0 bg-muted/40 text-center text-muted-foreground">{d}</div>
             ))}
             {rooms.map((r, ri) => (
-              <>
+              <Fragment key={r}>
                 <div key={`r-${r}`} className="p-2 border-b border-r font-medium">{r}</div>
                 {days.map((d) => (
                   <div key={`${r}-${d}`} className="border-b border-r last:border-r-0 h-9 relative" />
@@ -408,7 +409,7 @@ function TimelineMockup() {
                     {res.label}
                   </motion.div>
                 ))}
-              </>
+              </Fragment>
             ))}
           </div>
         </div>
