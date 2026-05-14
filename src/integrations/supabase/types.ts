@@ -1527,6 +1527,81 @@ export type Database = {
           },
         ]
       }
+      whatsapp_envios: {
+        Row: {
+          created_at: string
+          error: string | null
+          estado: string
+          hotel_id: string
+          id: string
+          mensaje: string | null
+          reserva_id: string | null
+          respuesta: Json | null
+          telefono: string | null
+          template_key: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          estado?: string
+          hotel_id: string
+          id?: string
+          mensaje?: string | null
+          reserva_id?: string | null
+          respuesta?: Json | null
+          telefono?: string | null
+          template_key: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          estado?: string
+          hotel_id?: string
+          id?: string
+          mensaje?: string | null
+          reserva_id?: string | null
+          respuesta?: Json | null
+          telefono?: string | null
+          template_key?: string
+        }
+        Relationships: []
+      }
+      whatsapp_templates: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string | null
+          hotel_id: string
+          id: string
+          mensaje: string
+          nombre: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          hotel_id: string
+          id?: string
+          mensaje: string
+          nombre: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          hotel_id?: string
+          id?: string
+          mensaje?: string
+          nombre?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
