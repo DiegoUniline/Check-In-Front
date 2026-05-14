@@ -390,21 +390,21 @@ export default function Catalogos() {
     capacidad: (t: any) => Number(t.capacidad_maxima || 0),
     precio: (t: any) => Number(t.precio_base || 0),
   }), []);
-  const dtTipos = useDataTable<any>(tiposHabitacion, tipoAcc);
+  const dtTipos = useDataTable<any>(tiposHabitacion, tipoAcc, { storageKey: 'catalogos-tipos' });
   const catAcc = useMemo(() => ({ nombre: (c: any) => c.nombre || '', descripcion: (c: any) => c.descripcion || '' }), []);
-  const dtCats = useDataTable<any>(categorias, catAcc);
+  const dtCats = useDataTable<any>(categorias, catAcc, { storageKey: 'catalogos-categorias' });
   const entAcc = useMemo(() => ({
     nombre: (e: any) => e.nombre || '', descripcion: (e: any) => e.descripcion || '',
     devolucion: (e: any) => (e.requiere_devolucion ? 'Sí' : 'No'),
     costo: (e: any) => Number(e.costo_reposicion || 0),
     estado: (e: any) => (e.activo !== false ? 'Activo' : 'Inactivo'),
   }), []);
-  const dtEnt = useDataTable<any>(entregables, entAcc);
+  const dtEnt = useDataTable<any>(entregables, entAcc, { storageKey: 'catalogos-entregables' });
   const metAcc = useMemo(() => ({
     orden: (m: any) => Number(m.orden || 0), nombre: (m: any) => m.nombre || '',
     tipo: (m: any) => m.tipo || '', estado: (m: any) => (m.activo ? 'Activo' : 'Inactivo'),
   }), []);
-  const dtMet = useDataTable<any>(metodosPago, metAcc);
+  const dtMet = useDataTable<any>(metodosPago, metAcc, { storageKey: 'catalogos-metodos' });
 
   const bulkDelete = async (ids: string[], deleter: (id: string) => Promise<any>, label: string, reload: () => void, clear: () => void) => {
     try {

@@ -229,7 +229,7 @@ export default function Clientes() {
     lealtad: (c: Cliente) => c.nivel_lealtad || 'Bronce',
   }), []);
 
-  const dt = useDataTable<Cliente>(filteredClientes, accessors);
+  const dt = useDataTable<Cliente>(filteredClientes, accessors, { storageKey: 'clientes' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
   const eliminarSeleccionados = async () => {

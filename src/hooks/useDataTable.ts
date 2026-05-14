@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export type SortDir = 'asc' | 'desc' | null;
 
@@ -12,15 +12,64 @@ export type ColumnAccessor<T> = (row: T) => unknown;
  *
  * No renderiza nada — devuelve estado y datos transformados.
  */
+export interface UseDataTableOptions {
+  /**
+   * Si se provee, persiste filtros y orden en localStorage bajo
+   * `dt:<storageKey>` para que sobrevivan navegación y recarga.
+   */
+  storageKey?: string;
+}
+
+type PersistedState = {
+  sortKey: string | null;
+  sortDir: SortDir;
+  filters: Record<string, { text?: string; values?: string[] }>;
+};
+
+const STORAGE_PREFIX = 'dt:';
+
+function loadPersisted(storageKey?: string): Partial<PersistedState> {
+  if (!storageKey || typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_PREFIX + storageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return {
+      sortKey: typeof parsed.sortKey === 'string' ? parsed.sortKey : null,
+      sortDir: parsed.sortDir === 'asc' || parsed.sortDir === 'desc' ? parsed.sortDir : null,
+      filters: parsed.filters && typeof parsed.filters === 'object' ? parsed.filters : {},
+    };
+  } catch {
+    return {};
+  }
+}
+
 export function useDataTable<T extends { id: string }>(
   rows: T[],
-  accessors: Record<string, ColumnAccessor<T>>
+  accessors: Record<string, ColumnAccessor<T>>,
+  options: UseDataTableOptions = {}
 ) {
+  const { storageKey } = options;
+  const initial = useMemo(() => loadPersisted(storageKey), [storageKey]);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>(null);
+  const [sortKey, setSortKey] = useState<string | null>(initial.sortKey ?? null);
+  const [sortDir, setSortDir] = useState<SortDir>(initial.sortDir ?? null);
   // Filtros: cada columna puede tener `text` (búsqueda libre) y/o `values` (multi-select de valores exactos).
-  const [filters, setFilters] = useState<Record<string, { text?: string; values?: string[] }>>({});
+  const [filters, setFilters] = useState<Record<string, { text?: string; values?: string[] }>>(
+    initial.filters ?? {}
+  );
+
+  // Persistir cambios (sólo si hay storageKey)
+  useEffect(() => {
+    if (!storageKey || typeof window === 'undefined') return;
+    try {
+      const payload: PersistedState = { sortKey, sortDir, filters };
+      window.localStorage.setItem(STORAGE_PREFIX + storageKey, JSON.stringify(payload));
+    } catch {
+      /* quota / disabled — ignorar */
+    }
+  }, [storageKey, sortKey, sortDir, filters]);
 
   const toggleRow = (id: string) =>
     setSelected(prev => {
@@ -58,6 +107,19 @@ export function useDataTable<T extends { id: string }>(
     setFilters(prev => ({ ...prev, [key]: { ...prev[key], values } }));
 
   const clearFilters = () => setFilters({});
+
+  const resetPersisted = () => {
+    setSortKey(null);
+    setSortDir(null);
+    setFilters({});
+    if (storageKey && typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(STORAGE_PREFIX + storageKey);
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
   const processed = useMemo(() => {
     let out = rows;
@@ -147,5 +209,6 @@ export function useDataTable<T extends { id: string }>(
     setColumnFilter,
     setColumnFilterValues,
     clearFilters,
+    resetPersisted,
   };
 }

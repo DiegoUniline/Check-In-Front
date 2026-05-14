@@ -133,7 +133,7 @@ export default function Inventario() {
     stock: (p: any) => Number(p.stock_actual || 0),
     valor: (p: any) => Number(p.precio_venta || 0) * Number(p.stock_actual || 0),
   }), []);
-  const dt = useDataTable<any>(filteredProducts, accessors);
+  const dt = useDataTable<any>(filteredProducts, accessors, { storageKey: 'inventario' });
 
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);

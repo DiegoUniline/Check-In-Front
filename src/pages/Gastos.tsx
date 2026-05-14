@@ -139,7 +139,7 @@ export default function Gastos() {
     metodo: (g: any) => g.metodo_pago || g.metodoPago || '',
     monto: (g: any) => Number(g.monto) || 0,
   }), []);
-  const dt = useDataTable<any>(filteredGastos, accessors);
+  const dt = useDataTable<any>(filteredGastos, accessors, { storageKey: 'gastos' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
   const eliminarSeleccionados = async () => {
