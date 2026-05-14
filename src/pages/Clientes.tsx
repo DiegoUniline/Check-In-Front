@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Search, Plus, Star, Mail, Phone, 
-  MoreVertical, Eye, Edit, History, Award, X
+  MoreVertical, Eye, Edit, History, Award, X, Trash2
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { SortHeader } from '@/components/datatable/SortHeader';
+import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -213,6 +219,48 @@ export default function Clientes() {
            c.telefono?.includes(query);
   });
 
+  // ===== DataTable: selección, sort y filtros por columna =====
+  const accessors = useMemo(() => ({
+    nombre: (c: Cliente) => `${c.nombre || ''} ${c.apellido_paterno || ''} ${c.apellido_materno || ''}`.trim(),
+    email: (c: Cliente) => c.email || '',
+    telefono: (c: Cliente) => c.telefono || '',
+    estancias: (c: Cliente) => c.total_estancias || 0,
+    registro: (c: Cliente) => c.created_at || '',
+    lealtad: (c: Cliente) => c.nivel_lealtad || 'Bronce',
+  }), []);
+
+  const dt = useDataTable<Cliente>(filteredClientes, accessors);
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
+
+  const eliminarSeleccionados = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteCliente(id)));
+      toast({ title: 'Clientes eliminados', description: `Se eliminaron ${ids.length} cliente(s).` });
+      dt.clearSelection();
+      await cargarClientes();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message || 'No se pudieron eliminar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const exportarCsv = () => {
+    exportToCsv('clientes', dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed, [
+      { key: 'nombre', label: 'Nombre', accessor: (c) => c.nombre },
+      { key: 'apellido_paterno', label: 'Apellido Paterno', accessor: (c) => c.apellido_paterno },
+      { key: 'apellido_materno', label: 'Apellido Materno', accessor: (c) => c.apellido_materno },
+      { key: 'email', label: 'Email', accessor: (c) => c.email },
+      { key: 'telefono', label: 'Teléfono', accessor: (c) => c.telefono },
+      { key: 'tipo_cliente', label: 'Tipo', accessor: (c) => c.tipo_cliente },
+      { key: 'nivel_lealtad', label: 'Lealtad', accessor: (c) => c.nivel_lealtad },
+      { key: 'es_vip', label: 'VIP', accessor: (c) => (c.es_vip ? 'Sí' : 'No') },
+      { key: 'total_estancias', label: 'Estancias', accessor: (c) => c.total_estancias || 0 },
+    ]);
+  };
+
   const getLoyaltyColor = (nivel?: string) => {
     switch (nivel) {
       case 'Diamante': return 'bg-purple-500';
@@ -317,21 +365,57 @@ export default function Clientes() {
 
       {/* Table */}
       <Card className="overflow-hidden">
+        <div className="p-3 border-b">
+          <BulkActionBar
+            count={dt.selectedCount}
+            onClear={dt.clearSelection}
+            onDelete={eliminarSeleccionados}
+            onExport={exportarCsv}
+            deleting={eliminandoBulk}
+            entityName="clientes"
+          />
+        </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Contacto</TableHead>
-                <TableHead className="text-center">Estancias</TableHead>
-                <TableHead>Registro</TableHead>
-                <TableHead>Lealtad</TableHead>
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
+                    onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
+                    aria-label="Seleccionar todos"
+                  />
+                </TableHead>
+                <SortHeader label="Cliente" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                <SortHeader label="Contacto" columnKey="email" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                <SortHeader label="Estancias" columnKey="estancias" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="center" />
+                <SortHeader label="Registro" columnKey="registro" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                <SortHeader label="Lealtad" columnKey="lealtad" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
                 <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+              <TableRow>
+                <TableHead />
+                <TableHead><ColumnFilterInput value={dt.filters.nombre || ''} onChange={(v) => dt.setColumnFilter('nombre', v)} placeholder="Filtrar nombre" /></TableHead>
+                <TableHead><ColumnFilterInput value={dt.filters.email || ''} onChange={(v) => dt.setColumnFilter('email', v)} placeholder="Filtrar email/tel" /></TableHead>
+                <TableHead><ColumnFilterInput value={dt.filters.estancias || ''} onChange={(v) => dt.setColumnFilter('estancias', v)} placeholder="#" /></TableHead>
+                <TableHead><ColumnFilterInput value={dt.filters.registro || ''} onChange={(v) => dt.setColumnFilter('registro', v)} placeholder="Fecha" /></TableHead>
+                <TableHead><ColumnFilterInput value={dt.filters.lealtad || ''} onChange={(v) => dt.setColumnFilter('lealtad', v)} placeholder="Nivel" /></TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClientes.map(cliente => (
-                <TableRow key={cliente.id} className="cursor-pointer hover:bg-muted/50">
+              {dt.processed.map(cliente => (
+                <TableRow
+                  key={cliente.id}
+                  className={`cursor-pointer hover:bg-muted/50 ${dt.selected.has(cliente.id) ? 'bg-primary/5' : ''}`}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={dt.selected.has(cliente.id)}
+                      onCheckedChange={() => dt.toggleRow(cliente.id)}
+                      aria-label="Seleccionar fila"
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -393,13 +477,20 @@ export default function Clientes() {
                   </TableCell>
                 </TableRow>
               ))}
+              {dt.processed.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                    No hay clientes que coincidan con los filtros
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
       </Card>
 
       <p className="text-sm text-muted-foreground mt-4 text-center">
-        Mostrando {filteredClientes.length} de {clientes.length} clientes
+        Mostrando {dt.processed.length} de {clientes.length} clientes
       </p>
 
       {/* Modal Detalle */}
