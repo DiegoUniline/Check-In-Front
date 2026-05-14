@@ -679,10 +679,16 @@ export default function Compras() {
 
         <TabsContent value="proveedores">
           <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2 flex-1">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar proveedor..." className="pl-9" value={provSearch} onChange={(e) => setProvSearch(e.target.value)} />
             </div>
+            <Button variant="outline" size="sm" onClick={handleResetAllProv}>
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Restablecer
+            </Button>
+          </div>
             <Button onClick={() => setIsNewProveedorOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Proveedor
