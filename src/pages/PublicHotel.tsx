@@ -101,8 +101,6 @@ export default function PublicHotel() {
       ]);
       setTipos((tps || []) as any);
       setHabitaciones((hbs || []) as any);
-      // eslint-disable-next-line no-console
-      console.log('[PublicHotel] loaded', { tipos: (tps || []).length, habitaciones: (hbs || []).length });
       setLoading(false);
     })();
   }, [slug]);
@@ -255,7 +253,7 @@ export default function PublicHotel() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900">
+    <div className="min-h-screen bg-stone-50 text-stone-900 [color-scheme:light] [&_input]:bg-white [&_input]:text-stone-900 [&_input]:border-stone-200 [&_textarea]:bg-white [&_textarea]:text-stone-900 [&_textarea]:border-stone-200 [&_[role=combobox]]:bg-white [&_[role=combobox]]:text-stone-900">
       {/* Hero */}
       <header className="relative overflow-hidden bg-gradient-to-br from-stone-900 via-stone-800 to-amber-900 text-stone-50">
         <div className="absolute inset-0 opacity-20" style={{
