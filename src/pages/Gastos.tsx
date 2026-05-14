@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Receipt, Plus, Search, DollarSign,
   Tag, Building, Car, Utensils, Wrench, Package, Users,
@@ -35,6 +35,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { SortHeader } from '@/components/datatable/SortHeader';
+import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,6 +129,45 @@ export default function Gastos() {
     const matchCategoria = filterCategoria === 'all' || g.categoria === filterCategoria;
     return matchSearch && matchCategoria;
   });
+
+  // ===== DataTable: selección, sort y filtros por columna =====
+  const accessors = useMemo(() => ({
+    fecha: (g: any) => g.fecha || g.created_at || '',
+    categoria: (g: any) => g.categoria || '',
+    descripcion: (g: any) => g.descripcion || '',
+    proveedor: (g: any) => g.proveedor || '',
+    metodo: (g: any) => g.metodo_pago || g.metodoPago || '',
+    monto: (g: any) => Number(g.monto) || 0,
+  }), []);
+  const dt = useDataTable<any>(filteredGastos, accessors);
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
+
+  const eliminarSeleccionados = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteGasto(id)));
+      toast({ title: 'Gastos eliminados', description: `Se eliminaron ${ids.length}.` });
+      dt.clearSelection();
+      await cargarGastos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message || 'No se pudo eliminar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const exportarCsv = () => {
+    exportToCsv('gastos', dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed, [
+      { key: 'fecha', label: 'Fecha', accessor: (g) => g.fecha || g.created_at },
+      { key: 'categoria', label: 'Categoría', accessor: (g) => g.categoria },
+      { key: 'descripcion', label: 'Descripción', accessor: (g) => g.descripcion },
+      { key: 'proveedor', label: 'Proveedor', accessor: (g) => g.proveedor },
+      { key: 'metodo_pago', label: 'Método', accessor: (g) => g.metodo_pago },
+      { key: 'monto', label: 'Monto', accessor: (g) => g.monto },
+      { key: 'factura', label: 'Comprobante', accessor: (g) => g.factura },
+    ]);
+  };
 
   const totalMes = gastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
   const hoy = format(new Date(), 'yyyy-MM-dd');
