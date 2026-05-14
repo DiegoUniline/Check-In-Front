@@ -281,6 +281,7 @@ export default function Habitaciones() {
       estado_limpieza: 'Limpia',
       estado_mantenimiento: 'OK',
       excluida_publica: false,
+      fotos: [] as string[],
     });
     setModalOpen(true);
   };
@@ -295,6 +296,7 @@ export default function Habitaciones() {
       estado_limpieza: hab.estado_limpieza || 'Limpia',
       estado_mantenimiento: hab.estado_mantenimiento || 'OK',
       excluida_publica: !!hab.excluida_publica,
+      fotos: Array.isArray(hab.fotos) ? hab.fotos : [],
     });
     setModalOpen(true);
   };
@@ -639,7 +641,7 @@ export default function Habitaciones() {
 
       {/* Modal Nueva/Editar CORREGIDO */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingHab ? 'Editar Habitación' : 'Nueva Habitación'}</DialogTitle>
             <DialogDescription>
@@ -707,6 +709,19 @@ export default function Habitaciones() {
               <Switch
                 checked={formData.excluida_publica}
                 onCheckedChange={(v) => setFormData({ ...formData, excluida_publica: v })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label className="font-medium">Fotos de la habitación</Label>
+              <p className="text-xs text-muted-foreground">
+                Sube varias imágenes. Se convierten a WebP automáticamente para que no pesen. La primera se usa como portada.
+              </p>
+              <MultiImageUpload
+                bucket="habitacion-fotos"
+                value={formData.fotos || []}
+                onChange={(urls) => setFormData({ ...formData, fotos: urls })}
+                folder="habitaciones"
+                maxImages={10}
               />
             </div>
           </div>
