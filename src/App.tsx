@@ -77,7 +77,7 @@ const AppRoutes = () => (
     <Route
       path="/dashboard"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="dashboard">
           <Dashboard />
         </ProtectedRoute>
       }
@@ -85,7 +85,7 @@ const AppRoutes = () => (
     <Route
       path="/reservas"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="reservas">
           <Reservas />
         </ProtectedRoute>
       }
@@ -93,7 +93,7 @@ const AppRoutes = () => (
     <Route
       path="/habitaciones"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="habitaciones">
           <Habitaciones />
         </ProtectedRoute>
       }
@@ -101,7 +101,7 @@ const AppRoutes = () => (
     <Route
       path="/clientes"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="clientes">
           <Clientes />
         </ProtectedRoute>
       }
@@ -109,7 +109,7 @@ const AppRoutes = () => (
     <Route
       path="/limpieza"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="limpieza">
           <Limpieza />
         </ProtectedRoute>
       }
@@ -117,7 +117,7 @@ const AppRoutes = () => (
     <Route
       path="/mantenimiento"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="mantenimiento">
           <Mantenimiento />
         </ProtectedRoute>
       }
@@ -125,7 +125,7 @@ const AppRoutes = () => (
     <Route
       path="/pos"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="pos">
           <POS />
         </ProtectedRoute>
       }
@@ -133,7 +133,7 @@ const AppRoutes = () => (
     <Route
       path="/inventario"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="inventario">
           <Inventario />
         </ProtectedRoute>
       }
@@ -141,7 +141,7 @@ const AppRoutes = () => (
     <Route
       path="/reportes"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="reportes">
           <Reportes />
         </ProtectedRoute>
       }
@@ -149,7 +149,7 @@ const AppRoutes = () => (
     <Route
       path="/configuracion"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="configuracion">
           <Configuracion />
         </ProtectedRoute>
       }
@@ -157,7 +157,7 @@ const AppRoutes = () => (
     <Route
       path="/catalogos"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="catalogos">
           <Catalogos />
         </ProtectedRoute>
       }
@@ -165,7 +165,7 @@ const AppRoutes = () => (
     <Route
       path="/checkin/:id"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="checkin">
           <CheckIn />
         </ProtectedRoute>
       }
@@ -173,7 +173,7 @@ const AppRoutes = () => (
     <Route
       path="/checkout/:id"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="checkout">
           <CheckOut />
         </ProtectedRoute>
       }
@@ -181,7 +181,7 @@ const AppRoutes = () => (
     <Route
       path="/turnos"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="turnos">
           <Turnos />
         </ProtectedRoute>
       }
@@ -189,7 +189,7 @@ const AppRoutes = () => (
     <Route
       path="/gastos"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="gastos">
           <Gastos />
         </ProtectedRoute>
       }
@@ -197,7 +197,7 @@ const AppRoutes = () => (
     <Route
       path="/compras"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="compras">
           <Compras />
         </ProtectedRoute>
       }
@@ -205,7 +205,7 @@ const AppRoutes = () => (
     <Route
       path="/historial"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="historial">
           <Historial />
         </ProtectedRoute>
       }
@@ -213,7 +213,7 @@ const AppRoutes = () => (
     <Route
       path="/historial-reservas"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="historial-reservas">
           <HistorialReservas />
         </ProtectedRoute>
       }
@@ -221,7 +221,7 @@ const AppRoutes = () => (
     <Route
       path="/usuarios"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="usuarios">
           <Usuarios />
         </ProtectedRoute>
       }
@@ -229,7 +229,7 @@ const AppRoutes = () => (
     <Route
       path="/permisos"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute viewKey="permisos">
           <Permisos />
         </ProtectedRoute>
       }
