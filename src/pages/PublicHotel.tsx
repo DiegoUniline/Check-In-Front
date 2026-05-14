@@ -23,6 +23,18 @@ import { cn } from '@/lib/utils';
 import { format, addDays, differenceInCalendarDays, eachDayOfInterval, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
+import bannerImg from '@/assets/hotel-banner.jpg';
+import room1 from '@/assets/room-1.jpg';
+import room2 from '@/assets/room-2.jpg';
+import room3 from '@/assets/room-3.jpg';
+import room4 from '@/assets/room-4.jpg';
+
+const FALLBACK_ROOMS = [room1, room2, room3, room4];
+const fallbackRoomFor = (id: string) => {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return FALLBACK_ROOMS[h % FALLBACK_ROOMS.length];
+};
 
 type Hotel = {
   id: string; nombre: string; slug: string; descripcion_publica: string | null;
@@ -166,7 +178,8 @@ export default function PublicHotel() {
 
   const habitacionesConFotos = (h: Habitacion) => {
     const t = h.tipo_habitacion_id ? tipoMap[h.tipo_habitacion_id] : null;
-    return (h.fotos && h.fotos.length ? h.fotos : (t?.fotos || []));
+    const fotos = (h.fotos && h.fotos.length ? h.fotos : (t?.fotos || []));
+    return fotos.length ? fotos : [fallbackRoomFor(h.id)];
   };
 
   const openBooking = (h: Habitacion) => {
@@ -256,10 +269,13 @@ export default function PublicHotel() {
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 [color-scheme:light] [&_input]:bg-white [&_input]:text-stone-900 [&_input]:border-stone-200 [&_textarea]:bg-white [&_textarea]:text-stone-900 [&_textarea]:border-stone-200 [&_[role=combobox]]:bg-white [&_[role=combobox]]:text-stone-900">
       {/* Hero */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-stone-900 via-stone-800 to-amber-900 text-stone-50">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(251,191,36,0.4), transparent 40%), radial-gradient(circle at 80% 70%, rgba(120,53,15,0.5), transparent 40%)'
-        }} />
+      <header className="relative overflow-hidden text-stone-50">
+        <img
+          src={bannerImg}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/70 via-stone-900/55 to-stone-950/80" />
         <div className="container mx-auto px-6 py-12 md:py-20 relative">
           <div className="flex items-start gap-5">
             {hotel.logo_url ? (
