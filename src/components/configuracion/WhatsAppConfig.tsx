@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+// Tipos aún no se regeneran hasta que se aplica la migración; usamos un cliente sin tipos.
+const sb = supabase as any;
 
 /**
  * Configuración de WhatsApp:
@@ -48,19 +50,19 @@ export function WhatsAppConfig() {
   const cargar = async () => {
     setLoading(true);
     try {
-      const { data: hotels } = await supabase.from('hotels').select('*').limit(1);
+      const { data: hotels } = await sb.from('hotels').select('*').limit(1);
       const h = hotels?.[0];
       if (!h) throw new Error('No se encontró el hotel');
       setHotel(h);
 
-      const { data: tpls } = await supabase
+      const { data: tpls } = await sb
         .from('whatsapp_templates')
         .select('*')
         .eq('hotel_id', h.id);
 
       // Mezclar con defaults: si no existe, agregar la default
       const merged = TEMPLATES_DEFAULT.map((d) => {
-        const found = tpls?.find((t) => t.template_key === d.template_key);
+        const found = (tpls ?? []).find((t: any) => t.template_key === d.template_key);
         return found ? { ...d, ...found } : { ...d, hotel_id: h.id, activo: true };
       });
       setTemplates(merged);
@@ -78,7 +80,7 @@ export function WhatsAppConfig() {
     setSaving(true);
     try {
       // 1) hotel: token + enabled
-      const { error: hErr } = await supabase
+      const { error: hErr } = await sb
         .from('hotels')
         .update({
           whatsapp_token: hotel.whatsapp_token || null,
@@ -97,7 +99,7 @@ export function WhatsAppConfig() {
           activo: !!t.activo,
           updated_at: new Date().toISOString(),
         };
-        const { error } = await supabase
+        const { error } = await sb
           .from('whatsapp_templates')
           .upsert(payload, { onConflict: 'hotel_id,template_key' });
         if (error) throw error;
