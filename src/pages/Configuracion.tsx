@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Settings, Hotel, Users, CreditCard, Bell, 
-  Palette, Shield, Save, Building2, ExternalLink
+  Palette, Shield, Save, Building2, ExternalLink, ListChecks
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/lib/api';
+import { ChecklistConfig } from '@/components/configuracion/ChecklistConfig';
 
 const emptyHotel = {
   nombre: '',
@@ -134,12 +135,15 @@ export default function Configuracion() {
       subtitle="Ajustes del sistema y preferencias"
     >
       <Tabs defaultValue="hotel" className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-2 md:grid-cols-6 w-full max-w-3xl">
           <TabsTrigger value="hotel">
             <Hotel className="mr-2 h-4 w-4" /> Hotel
           </TabsTrigger>
           <TabsTrigger value="usuarios">
             <Users className="mr-2 h-4 w-4" /> Usuarios
+          </TabsTrigger>
+          <TabsTrigger value="checklists">
+            <ListChecks className="mr-2 h-4 w-4" /> Checklists
           </TabsTrigger>
           <TabsTrigger value="pagos">
             <CreditCard className="mr-2 h-4 w-4" /> Pagos
@@ -307,6 +311,11 @@ export default function Configuracion() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Checklists */}
+        <TabsContent value="checklists">
+          <ChecklistConfig />
         </TabsContent>
 
         {/* Payments */}

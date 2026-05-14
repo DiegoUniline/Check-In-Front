@@ -46,13 +46,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   
   // Check-in
-  const [documentoVerificado, setDocumentoVerificado] = useState(false);
-  const [tarjetaRegistrada, setTarjetaRegistrada] = useState(false);
-  const [firmaDigital, setFirmaDigital] = useState(false);
-  
-  // Check-out
-  const [habitacionInspeccionada, setHabitacionInspeccionada] = useState(false);
-  const [llaveDevuelta, setLlaveDevuelta] = useState(false);
+  // Checklists configurables por hotel
+  const [checklistCheckin, setChecklistCheckin] = useState<any[]>([]);
+  const [checklistCheckout, setChecklistCheckout] = useState<any[]>([]);
+  const [marcadosCheckin, setMarcadosCheckin] = useState<Record<string, boolean>>({});
+  const [marcadosCheckout, setMarcadosCheckout] = useState<Record<string, boolean>>({});
   
   // Pagos
   const [montoAbono, setMontoAbono] = useState('');
@@ -85,13 +83,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       cargarConceptos();
       cargarEntregables();
       cargarHabitaciones();
+      cargarChecklists();
       // Reset estados
       setEditMode(false);
-      setDocumentoVerificado(false);
-      setTarjetaRegistrada(false);
-      setFirmaDigital(false);
-      setHabitacionInspeccionada(false);
-      setLlaveDevuelta(false);
+      setMarcadosCheckin({});
+      setMarcadosCheckout({});
       setDevolucionExpandidaId(null);
     }
   }, [open, reservaInicial?.id]);
@@ -145,6 +141,21 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       setHabitaciones(data);
     } catch (error) {
       console.error('Error cargando habitaciones:', error);
+    }
+  };
+
+  const cargarChecklists = async () => {
+    try {
+      const [ci, co] = await Promise.all([
+        api.getChecklistItems?.({ tipo: 'checkin', soloActivos: true }) || [],
+        api.getChecklistItems?.({ tipo: 'checkout', soloActivos: true }) || [],
+      ]);
+      setChecklistCheckin(ci);
+      setChecklistCheckout(co);
+    } catch (error) {
+      console.error('Error cargando checklists:', error);
+      setChecklistCheckin([]);
+      setChecklistCheckout([]);
     }
   };
 
@@ -251,14 +262,16 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       return;
     }
 
-    const faltanVerificaciones = !documentoVerificado || !tarjetaRegistrada || !firmaDigital;
-    if (r.estado === 'Confirmada' && faltanVerificaciones && !opts?.force) {
-      toast({
-        title: 'Verificaciones incompletas',
-        description: 'Marca las 3 verificaciones o vuelve a intentar para forzar el check-in.',
-        variant: 'destructive',
-      });
-      return;
+    if (r.estado === 'Confirmada' && checklistCheckin.length > 0) {
+      const faltantes = checklistCheckin.filter((it) => !marcadosCheckin[it.id]);
+      if (faltantes.length > 0) {
+        toast({
+          title: 'Verificaciones incompletas',
+          description: `Faltan ${faltantes.length} de ${checklistCheckin.length} verificaciones por marcar.`,
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setProcessing(true);
@@ -275,9 +288,16 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   };
 
   const handleCheckout = async () => {
-    if (!habitacionInspeccionada || !llaveDevuelta) {
-      toast({ title: 'Faltan verificaciones', description: 'Complete la inspección y devolución de llaves', variant: 'destructive' });
-      return;
+    if (checklistCheckout.length > 0) {
+      const faltantes = checklistCheckout.filter((it) => !marcadosCheckout[it.id]);
+      if (faltantes.length > 0) {
+        toast({
+          title: 'Verificaciones incompletas',
+          description: `Faltan ${faltantes.length} de ${checklistCheckout.length} verificaciones por marcar.`,
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     
     const pendientes = reservaEntregables.filter(e => 
@@ -710,16 +730,19 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
           <DialogDescription>Gestiona los detalles de la reserva, cargos y pagos</DialogDescription>
         </DialogHeader>
 
-        {r.estado === 'Confirmada' && (
+        {r.estado === 'Confirmada' && checklistCheckin.length > 0 && (
           <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium flex items-center gap-2"><DoorOpen className="h-4 w-4" /> Check-in pendiente</span>
                 <span className="text-sm text-muted-foreground">
-                  {[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length}/3
+                  {checklistCheckin.filter((it) => marcadosCheckin[it.id]).length}/{checklistCheckin.length}
                 </span>
               </div>
-              <Progress value={[documentoVerificado, tarjetaRegistrada, firmaDigital].filter(Boolean).length * 33.33} className="h-2" />
+              <Progress
+                value={(checklistCheckin.filter((it) => marcadosCheckin[it.id]).length / checklistCheckin.length) * 100}
+                className="h-2"
+              />
             </CardContent>
           </Card>
         )}
@@ -866,22 +889,24 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   </div>
                 )}
 
-                {r.estado === 'Confirmada' && (
+                {r.estado === 'Confirmada' && checklistCheckin.length > 0 && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">✓ Verificaciones Check-in</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="doc" checked={documentoVerificado} onCheckedChange={(c) => setDocumentoVerificado(!!c)} />
-                        <label htmlFor="doc" className="text-sm cursor-pointer">Documento de identidad verificado</label>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="tarjeta" checked={tarjetaRegistrada} onCheckedChange={(c) => setTarjetaRegistrada(!!c)} />
-                        <label htmlFor="tarjeta" className="text-sm cursor-pointer">Garantía/tarjeta registrada</label>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="firma" checked={firmaDigital} onCheckedChange={(c) => setFirmaDigital(!!c)} />
-                        <label htmlFor="firma" className="text-sm cursor-pointer">Registro de huésped firmado</label>
-                      </div>
+                      {checklistCheckin.map((item) => (
+                        <div key={item.id} className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`ci-${item.id}`}
+                            checked={!!marcadosCheckin[item.id]}
+                            onCheckedChange={(c) =>
+                              setMarcadosCheckin((prev) => ({ ...prev, [item.id]: !!c }))
+                            }
+                          />
+                          <label htmlFor={`ci-${item.id}`} className="text-sm cursor-pointer">
+                            {item.nombre}
+                          </label>
+                        </div>
+                      ))}
                     </CardContent>
                   </Card>
                 )}
@@ -890,14 +915,25 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">✓ Verificaciones Check-out</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="insp" checked={habitacionInspeccionada} onCheckedChange={(c) => setHabitacionInspeccionada(!!c)} />
-                        <label htmlFor="insp" className="text-sm cursor-pointer">Habitación inspeccionada</label>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Checkbox id="llave" checked={llaveDevuelta} onCheckedChange={(c) => setLlaveDevuelta(!!c)} />
-                        <label htmlFor="llave" className="text-sm cursor-pointer">Llaves devueltas</label>
-                      </div>
+                      {checklistCheckout.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          Sin verificaciones configuradas. Configúralas en Configuración → Checklists.
+                        </p>
+                      )}
+                      {checklistCheckout.map((item) => (
+                        <div key={item.id} className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`co-${item.id}`}
+                            checked={!!marcadosCheckout[item.id]}
+                            onCheckedChange={(c) =>
+                              setMarcadosCheckout((prev) => ({ ...prev, [item.id]: !!c }))
+                            }
+                          />
+                          <label htmlFor={`co-${item.id}`} className="text-sm cursor-pointer">
+                            {item.nombre}
+                          </label>
+                        </div>
+                      ))}
                       {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length > 0 && (
                         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                           <p className="text-sm text-red-700 font-medium">⚠️ Entregables pendientes:</p>
@@ -1193,18 +1229,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Hacer Check-in</>}
                 </Button>
 
-                {/* Si está confirmada y faltan verificaciones, damos salida explícita para forzar sin bloquear operación */}
-                {r.estado === 'Confirmada' && (!documentoVerificado || !tarjetaRegistrada || !firmaDigital) && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    size="sm"
-                    onClick={() => handleCheckin({ force: true })}
-                    disabled={processing}
-                  >
-                    Forzar Check-in (sin verificaciones)
-                  </Button>
-                )}
                 <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
                   Cancelar Reserva
                 </Button>
