@@ -65,6 +65,8 @@ export default function Catalogos() {
     precio_base: '',
     precio_persona_extra: '0',
     amenidades: '',
+    publico: false,
+    fotos: '',
   });
 
   // Categorías Productos
@@ -150,6 +152,8 @@ export default function Catalogos() {
       precio_base: tipo.precio_base?.toString() || '',
       precio_persona_extra: tipo.precio_persona_extra?.toString() || '0',
       amenidades: Array.isArray(tipo.amenidades) ? tipo.amenidades.join(', ') : '',
+      publico: !!tipo.publico,
+      fotos: Array.isArray(tipo.fotos) ? tipo.fotos.join('\n') : '',
     });
     setModalTipoOpen(true);
   };
@@ -166,6 +170,8 @@ export default function Catalogos() {
         precio_base: parseFloat(formTipo.precio_base),
         precio_persona_extra: parseFloat(formTipo.precio_persona_extra) || 0,
         amenidades: formTipo.amenidades.split(',').map(a => a.trim()).filter(a => a),
+        publico: formTipo.publico,
+        fotos: formTipo.fotos.split('\n').map(s => s.trim()).filter(Boolean),
       };
 
       if (editingTipo) {
