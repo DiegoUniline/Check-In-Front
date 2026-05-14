@@ -233,6 +233,11 @@ export default function Clientes() {
   const dt = useDataTable<Cliente>(filteredClientes, accessors, { storageKey: 'clientes' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
+  const handleResetAll = () => {
+    setSearchQuery('');
+    dt.resetPersisted();
+  };
+
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
     try {
