@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Wrench, Clock, CheckCircle, AlertTriangle, Plus,
   User, Calendar, ArrowRight, RefreshCw
@@ -7,6 +7,10 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import {
   Select,
   SelectContent,
@@ -38,6 +42,7 @@ export default function Mantenimiento() {
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [filterEstado, setFilterEstado] = useState('all');
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
   
   const [empleados, setEmpleados] = useState<any[]>([]);
   
@@ -77,6 +82,51 @@ export default function Mantenimiento() {
   const filteredTickets = tickets.filter(t => 
     filterEstado === 'all' || t.estado === filterEstado
   );
+
+  const accessors = useMemo(() => ({
+    estado: (t: any) => t.estado || '',
+  }), []);
+  const dt = useDataTable<any>(filteredTickets, accessors);
+
+  const eliminarSeleccionados = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteTareaMantenimiento?.(id) ?? Promise.resolve()));
+      toast({ title: 'Tickets eliminados', description: `Se eliminaron ${ids.length} ticket(s).` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const cambiarEstadoBulk = async (estado: string) => {
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.updateEstadoMantenimiento(id, estado)));
+      toast({ title: 'Estado actualizado', description: `${ids.length} ticket(s) → ${estado}` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const exportarCsv = () => {
+    const rows = dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed;
+    exportToCsv('tickets_mantenimiento', rows, [
+      { key: 'habitacion', label: 'Habitación', accessor: (t) => getHabitacionNumero(t) },
+      { key: 'titulo', label: 'Título', accessor: (t) => t.titulo || '' },
+      { key: 'categoria', label: 'Categoría', accessor: (t) => t.categoria || '' },
+      { key: 'prioridad', label: 'Prioridad', accessor: (t) => t.prioridad || '' },
+      { key: 'estado', label: 'Estado', accessor: (t) => t.estado || '' },
+      { key: 'asignado', label: 'Asignado', accessor: (t) => t.asignado_nombre || '' },
+      { key: 'descripcion', label: 'Descripción', accessor: (t) => t.descripcion || '' },
+    ]);
+  };
 
   const stats = {
     abiertos: tickets.filter(t => t.estado === 'Abierto' || t.estado === 'Pendiente').length,
@@ -352,6 +402,21 @@ export default function Mantenimiento() {
       </div>
 
       {/* Tickets list */}
+      <BulkActionBar
+        count={dt.selectedCount}
+        onClear={dt.clearSelection}
+        onDelete={eliminarSeleccionados}
+        onExport={exportarCsv}
+        deleting={eliminandoBulk}
+        entityName="tickets"
+        extraActions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('EnProceso')}>Iniciar</Button>
+            <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Completada')}>Completar</Button>
+            <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Cerrado')}>Cerrar</Button>
+          </>
+        }
+      />
       {filteredTickets.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
@@ -361,11 +426,17 @@ export default function Mantenimiento() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredTickets.map(ticket => (
-            <Card key={ticket.id} className={getEstadoColor(ticket.estado)}>
+          {dt.processed.map(ticket => (
+            <Card key={ticket.id} className={cn(getEstadoColor(ticket.estado), dt.selected.has(ticket.id) && 'ring-2 ring-primary')}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
+                    <Checkbox
+                      checked={dt.selected.has(ticket.id)}
+                      onCheckedChange={() => dt.toggleRow(ticket.id)}
+                      aria-label="Seleccionar ticket"
+                      className="mt-1"
+                    />
                     <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-muted font-bold">
                       {getHabitacionNumero(ticket)}
                     </div>

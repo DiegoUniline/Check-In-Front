@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, Clock, CheckCircle, AlertTriangle, 
   User, Play, Check, Eye, RefreshCw, UserPlus
@@ -8,6 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import {
   Select,
   SelectContent,
@@ -37,6 +41,7 @@ export default function Limpieza() {
   const [filterPrioridad, setFilterPrioridad] = useState('all');
   const [asignarModal, setAsignarModal] = useState<{ open: boolean; tarea: any | null }>({ open: false, tarea: null });
   const [selectedEmpleado, setSelectedEmpleado] = useState('');
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -64,6 +69,50 @@ export default function Limpieza() {
     const matchPrioridad = filterPrioridad === 'all' || t.prioridad === filterPrioridad;
     return matchEstado && matchPrioridad;
   });
+
+  const accessors = useMemo(() => ({
+    estado: (t: any) => t.estado || '',
+  }), []);
+  const dt = useDataTable<any>(filteredTareas, accessors);
+
+  const eliminarSeleccionadas = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteTareaLimpieza?.(id) ?? Promise.resolve()));
+      toast({ title: 'Tareas eliminadas', description: `Se eliminaron ${ids.length} tarea(s).` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const cambiarEstadoBulk = async (estado: string) => {
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.updateEstadoLimpieza(id, estado)));
+      toast({ title: 'Estado actualizado', description: `${ids.length} tarea(s) → ${estado}` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const exportarCsv = () => {
+    const rows = dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed;
+    exportToCsv('tareas_limpieza', rows, [
+      { key: 'habitacion', label: 'Habitación', accessor: (t) => getHabitacionNumero(t) },
+      { key: 'tipo', label: 'Tipo', accessor: (t) => t.tipo || '' },
+      { key: 'prioridad', label: 'Prioridad', accessor: (t) => t.prioridad || '' },
+      { key: 'estado', label: 'Estado', accessor: (t) => t.estado || '' },
+      { key: 'asignado', label: 'Asignado', accessor: (t) => t.asignado_nombre || '' },
+      { key: 'notas', label: 'Notas', accessor: (t) => t.notas || '' },
+    ]);
+  };
 
   // Stats
   const stats = {
@@ -252,6 +301,21 @@ export default function Limpieza() {
       </div>
 
       {/* Task list */}
+      <BulkActionBar
+        count={dt.selectedCount}
+        onClear={dt.clearSelection}
+        onDelete={eliminarSeleccionadas}
+        onExport={exportarCsv}
+        deleting={eliminandoBulk}
+        entityName="tareas"
+        extraActions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('EnProceso')}>Iniciar</Button>
+            <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Completada')}>Completar</Button>
+            <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Verificada')}>Verificar</Button>
+          </>
+        }
+      />
       {filteredTareas.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
@@ -261,12 +325,20 @@ export default function Limpieza() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredTareas.map((tarea: any) => (
+          {dt.processed.map((tarea: any) => (
             <Card key={tarea.id} className={cn(
               "transition-all hover:shadow-md",
-              tarea.prioridad === 'Urgente' && "border-destructive/50"
+              tarea.prioridad === 'Urgente' && "border-destructive/50",
+              dt.selected.has(tarea.id) && "ring-2 ring-primary"
             )}>
               <CardContent className="p-4">
+                <div className="flex justify-end mb-2">
+                  <Checkbox
+                    checked={dt.selected.has(tarea.id)}
+                    onCheckedChange={() => dt.toggleRow(tarea.id)}
+                    aria-label="Seleccionar tarea"
+                  />
+                </div>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted font-bold text-lg">
