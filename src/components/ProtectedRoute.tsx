@@ -1,12 +1,14 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/useAuth';
+import { canAccess } from '@/lib/permissions';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  viewKey?: string;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+export function ProtectedRoute({ children, viewKey }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -22,6 +24,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (viewKey && !canAccess(viewKey, user?.rol)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

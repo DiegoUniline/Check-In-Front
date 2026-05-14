@@ -39,35 +39,36 @@ import {
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from "@/contexts/useAuth"; // Importante para detectar a Diego
+import { canAccess } from '@/lib/permissions';
 
 const mainNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Reservas', url: '/reservas', icon: CalendarDays },
-  { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble },
-  { title: 'Clientes', url: '/clientes', icon: Users },
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, viewKey: 'dashboard' },
+  { title: 'Reservas', url: '/reservas', icon: CalendarDays, viewKey: 'reservas' },
+  { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
+  { title: 'Clientes', url: '/clientes', icon: Users, viewKey: 'clientes' },
 ];
 
 const operationsNavItems = [
-  { title: 'Limpieza', url: '/limpieza', icon: Sparkles },
-  { title: 'Mantenimiento', url: '/mantenimiento', icon: Wrench },
+  { title: 'Limpieza', url: '/limpieza', icon: Sparkles, viewKey: 'limpieza' },
+  { title: 'Mantenimiento', url: '/mantenimiento', icon: Wrench, viewKey: 'mantenimiento' },
 ];
 
 const salesNavItems = [
-  { title: 'POS', url: '/pos', icon: ShoppingCart },
-  { title: 'Inventario', url: '/inventario', icon: Package },
-  { title: 'Compras', url: '/compras', icon: ShoppingBag },
-  { title: 'Gastos', url: '/gastos', icon: Receipt },
-  { title: 'Historial Ventas', url: '/historial', icon: History },
-  { title: 'Historial Reservas', url: '/historial-reservas', icon: FileText },
-  { title: 'Reportes', url: '/reportes', icon: BarChart3 },
+  { title: 'POS', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
+  { title: 'Inventario', url: '/inventario', icon: Package, viewKey: 'inventario' },
+  { title: 'Compras', url: '/compras', icon: ShoppingBag, viewKey: 'compras' },
+  { title: 'Gastos', url: '/gastos', icon: Receipt, viewKey: 'gastos' },
+  { title: 'Historial Ventas', url: '/historial', icon: History, viewKey: 'historial' },
+  { title: 'Historial Reservas', url: '/historial-reservas', icon: FileText, viewKey: 'historial-reservas' },
+  { title: 'Reportes', url: '/reportes', icon: BarChart3, viewKey: 'reportes' },
 ];
 
 const configNavItems = [
-  { title: 'Usuarios', url: '/usuarios', icon: UserCog },
-  { title: 'Permisos', url: '/permisos', icon: ShieldAlert },
-  { title: 'Turnos', url: '/turnos', icon: Clock },
-  { title: 'Catálogos', url: '/catalogos', icon: BookOpen },
-  { title: 'Configuración', url: '/configuracion', icon: Settings },
+  { title: 'Usuarios', url: '/usuarios', icon: UserCog, viewKey: 'usuarios' },
+  { title: 'Permisos', url: '/permisos', icon: ShieldAlert, viewKey: 'permisos' },
+  { title: 'Turnos', url: '/turnos', icon: Clock, viewKey: 'turnos' },
+  { title: 'Catálogos', url: '/catalogos', icon: BookOpen, viewKey: 'catalogos' },
+  { title: 'Configuración', url: '/configuracion', icon: Settings, viewKey: 'configuracion' },
 ];
 
 // Item especial para Diego
@@ -107,9 +108,12 @@ export function AppSidebar() {
   const occupancyPercent =
     totalHab > 0 ? Math.round((ocupadas / totalHab) * 100) : 0;
 
-  const renderNavItems = (items: typeof mainNavItems) => (
+  const renderNavItems = (items: { title: string; url: string; icon: any; viewKey?: string }[]) => {
+    const visible = items.filter(it => !it.viewKey || canAccess(it.viewKey, user?.rol));
+    if (visible.length === 0) return null;
+    return (
     <SidebarMenu>
-      {items.map((item) => {
+      {visible.map((item) => {
         const isActive = location.pathname === item.url || 
           (item.url !== '/dashboard' && location.pathname.startsWith(item.url));
         
@@ -135,7 +139,8 @@ export function AppSidebar() {
         );
       })}
     </SidebarMenu>
-  );
+    );
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r">
