@@ -1010,21 +1010,9 @@ export default function Catalogos() {
                   onCheckedChange={(v) => setFormTipo({ ...formTipo, publicar_web: v })}
                 />
               </div>
-              {formTipo.publicar_web && (
-                <div className="grid gap-2">
-                  <Label>Fotos del tipo de habitación</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Sube varias imágenes. Se convierten a WebP automáticamente para que no pesen. La primera se muestra como portada.
-                  </p>
-                  <MultiImageUpload
-                    bucket="habitacion-fotos"
-                    value={formTipo.fotos}
-                    onChange={(urls) => setFormTipo({ ...formTipo, fotos: urls })}
-                    folder="tipos"
-                    maxImages={10}
-                  />
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Las fotos se cargan por habitación individual desde la pantalla de <strong>Habitaciones</strong>.
+              </p>
             </div>
           </div>
           <DialogFooter>
