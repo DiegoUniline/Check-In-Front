@@ -414,6 +414,14 @@ const noches = differenceInDays(
         return;
       }
 
+      // Tarifa efectiva incluye el cargo por persona extra para que se refleje en el total
+      const tarifaConExtras = tarifaNoche + (formData.personasExtra * formData.cargoPersonaExtra);
+      const descuentoMonto = formData.descuentoTipo === 'Porcentaje'
+        ? (tarifaConExtras * noches * (Number(formData.descuentoValor) || 0)) / 100
+        : Number(formData.descuentoValor) || 0;
+      const notasCombinadas = [formData.solicitudesEspeciales, formData.notasInternas]
+        .filter(Boolean)
+        .join('\n---\n');
       const reservaData = {
         cliente_id: clienteId,
         habitacion_id: formData.habitacionId || null,
@@ -423,13 +431,11 @@ const noches = differenceInDays(
         hora_llegada: formData.horaLlegada || null,
         adultos: formData.adultos,
         ninos: formData.ninos,
-        personas_extra: formData.personasExtra,
-        cargo_persona_extra: formData.cargoPersonaExtra,
-        tarifa_noche: tarifaNoche,
-        descuento_tipo: formData.descuentoTipo === 'none' ? null : formData.descuentoTipo,
-        descuento_valor: formData.descuentoValor || 0,
+        noches,
+        tarifa_noche: tarifaConExtras,
+        descuento: descuentoMonto,
         solicitudes_especiales: formData.solicitudesEspeciales,
-        notas_internas: formData.notasInternas,
+        notas: notasCombinadas || null,
         origen,
       };
 
