@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Grid3X3, List, Search, Plus, 
   MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed, Pencil, Trash2
@@ -50,6 +50,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { SortHeader } from '@/components/datatable/SortHeader';
+import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
@@ -121,6 +127,59 @@ export default function Habitaciones() {
     const matchEstado = filterEstado === 'all' || h.estado_habitacion === filterEstado;
     return matchSearch && matchPiso && matchTipo && matchEstado;
   });
+
+  // ===== DataTable: selección, sort y filtros por columna =====
+  const accessors = useMemo(() => ({
+    numero: (h: any) => h.numero || '',
+    tipo: (h: any) => h.tipo_nombre || '',
+    piso: (h: any) => h.piso ?? '',
+    estado: (h: any) => h.estado_habitacion || '',
+    limpieza: (h: any) => h.estado_limpieza || '',
+    mantenimiento: (h: any) => h.estado_mantenimiento || '',
+  }), []);
+  const dt = useDataTable<any>(filteredHabitaciones, accessors);
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
+
+  const eliminarSeleccionadas = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteHabitacion(id)));
+      toast({ title: 'Habitaciones eliminadas', description: `Se eliminaron ${ids.length}.` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message || 'No se pudo eliminar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const exportarCsv = () => {
+    exportToCsv('habitaciones', dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed, [
+      { key: 'numero', label: 'Habitación', accessor: (h) => h.numero },
+      { key: 'tipo_nombre', label: 'Tipo', accessor: (h) => h.tipo_nombre },
+      { key: 'piso', label: 'Piso', accessor: (h) => h.piso },
+      { key: 'estado_habitacion', label: 'Estado', accessor: (h) => h.estado_habitacion },
+      { key: 'estado_limpieza', label: 'Limpieza', accessor: (h) => h.estado_limpieza },
+      { key: 'estado_mantenimiento', label: 'Mantenimiento', accessor: (h) => h.estado_mantenimiento },
+    ]);
+  };
+
+  const cambiarEstadoBulk = async (nuevo: string) => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.updateHabitacion(id, { estado_habitacion: nuevo })));
+      toast({ title: 'Estado actualizado', description: `${ids.length} habitación(es) → ${nuevo}` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'No se pudo actualizar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
 
   const getStatusColor = (hab: any) => {
     if (hab.estado_mantenimiento !== 'OK') return 'border-destructive bg-destructive/5';
@@ -348,22 +407,64 @@ export default function Habitaciones() {
       {/* VISTA TABLA (Por defecto) con FIX de desbordamiento */}
       {viewMode === 'list' && (
         <Card className="overflow-hidden">
+          <div className="p-3 border-b">
+            <BulkActionBar
+              count={dt.selectedCount}
+              onClear={dt.clearSelection}
+              onDelete={eliminarSeleccionadas}
+              onExport={exportarCsv}
+              deleting={eliminandoBulk}
+              entityName="habitaciones"
+              extraActions={
+                <>
+                  <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Disponible')} disabled={eliminandoBulk}>
+                    <DoorOpen className="h-4 w-4 mr-1" /> Disponible
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Bloqueada')} disabled={eliminandoBulk}>
+                    <DoorClosed className="h-4 w-4 mr-1" /> Bloquear
+                  </Button>
+                </>
+              }
+            />
+          </div>
           <div className="relative w-full overflow-x-auto">
             <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Habitación</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Piso</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Limpieza</TableHead>
-                  <TableHead>Mantenimiento</TableHead>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
+                      onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
+                    />
+                  </TableHead>
+                  <SortHeader label="Habitación" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Tipo" columnKey="tipo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Piso" columnKey="piso" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Limpieza" columnKey="limpieza" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Mantenimiento" columnKey="mantenimiento" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
                   <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+                <TableRow>
+                  <TableHead />
+                  <TableHead><ColumnFilterInput value={dt.filters.numero || ''} onChange={(v) => dt.setColumnFilter('numero', v)} placeholder="#" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.tipo || ''} onChange={(v) => dt.setColumnFilter('tipo', v)} placeholder="Tipo" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.piso || ''} onChange={(v) => dt.setColumnFilter('piso', v)} placeholder="Piso" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.estado || ''} onChange={(v) => dt.setColumnFilter('estado', v)} placeholder="Estado" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.limpieza || ''} onChange={(v) => dt.setColumnFilter('limpieza', v)} placeholder="Limpieza" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.mantenimiento || ''} onChange={(v) => dt.setColumnFilter('mantenimiento', v)} placeholder="Mant." /></TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredHabitaciones.map(hab => (
-                  <TableRow key={hab.id}>
+                {dt.processed.map(hab => (
+                  <TableRow key={hab.id} className={dt.selected.has(hab.id) ? 'bg-primary/5' : ''}>
+                    <TableCell>
+                      <Checkbox
+                        checked={dt.selected.has(hab.id)}
+                        onCheckedChange={() => dt.toggleRow(hab.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-bold text-lg">{hab.numero}</TableCell>
                     <TableCell>
                         <div className="flex flex-col">
@@ -410,6 +511,13 @@ export default function Habitaciones() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {dt.processed.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
+                      No hay habitaciones que coincidan
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>

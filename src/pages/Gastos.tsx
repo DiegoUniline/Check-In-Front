@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Receipt, Plus, Search, DollarSign,
   Tag, Building, Car, Utensils, Wrench, Package, Users,
@@ -35,6 +35,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { SortHeader } from '@/components/datatable/SortHeader';
+import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,6 +129,45 @@ export default function Gastos() {
     const matchCategoria = filterCategoria === 'all' || g.categoria === filterCategoria;
     return matchSearch && matchCategoria;
   });
+
+  // ===== DataTable: selección, sort y filtros por columna =====
+  const accessors = useMemo(() => ({
+    fecha: (g: any) => g.fecha || g.created_at || '',
+    categoria: (g: any) => g.categoria || '',
+    descripcion: (g: any) => g.descripcion || '',
+    proveedor: (g: any) => g.proveedor || '',
+    metodo: (g: any) => g.metodo_pago || g.metodoPago || '',
+    monto: (g: any) => Number(g.monto) || 0,
+  }), []);
+  const dt = useDataTable<any>(filteredGastos, accessors);
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
+
+  const eliminarSeleccionados = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteGasto(id)));
+      toast({ title: 'Gastos eliminados', description: `Se eliminaron ${ids.length}.` });
+      dt.clearSelection();
+      await cargarGastos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message || 'No se pudo eliminar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const exportarCsv = () => {
+    exportToCsv('gastos', dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed, [
+      { key: 'fecha', label: 'Fecha', accessor: (g) => g.fecha || g.created_at },
+      { key: 'categoria', label: 'Categoría', accessor: (g) => g.categoria },
+      { key: 'descripcion', label: 'Descripción', accessor: (g) => g.descripcion },
+      { key: 'proveedor', label: 'Proveedor', accessor: (g) => g.proveedor },
+      { key: 'metodo_pago', label: 'Método', accessor: (g) => g.metodo_pago },
+      { key: 'monto', label: 'Monto', accessor: (g) => g.monto },
+      { key: 'factura', label: 'Comprobante', accessor: (g) => g.factura },
+    ]);
+  };
 
   const totalMes = gastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
   const hoy = format(new Date(), 'yyyy-MM-dd');
@@ -366,25 +411,57 @@ export default function Gastos() {
       </div>
 
       <Card>
+        <div className="p-3 border-b">
+          <BulkActionBar
+            count={dt.selectedCount}
+            onClear={dt.clearSelection}
+            onDelete={eliminarSeleccionados}
+            onExport={exportarCsv}
+            deleting={eliminandoBulk}
+            entityName="gastos"
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Proveedor</TableHead>
-              <TableHead>Método</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
+                  onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
+                />
+              </TableHead>
+              <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Descripción" columnKey="descripcion" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Método" columnKey="metodo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Monto" columnKey="monto" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
               <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+            <TableRow>
+              <TableHead />
+              <TableHead><ColumnFilterInput value={dt.filters.fecha || ''} onChange={(v) => dt.setColumnFilter('fecha', v)} placeholder="YYYY-MM" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.categoria || ''} onChange={(v) => dt.setColumnFilter('categoria', v)} placeholder="Categoría" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.descripcion || ''} onChange={(v) => dt.setColumnFilter('descripcion', v)} placeholder="Texto" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.proveedor || ''} onChange={(v) => dt.setColumnFilter('proveedor', v)} placeholder="Proveedor" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.metodo || ''} onChange={(v) => dt.setColumnFilter('metodo', v)} placeholder="Método" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.monto || ''} onChange={(v) => dt.setColumnFilter('monto', v)} placeholder=">0" /></TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGastos.map(gasto => {
+            {dt.processed.map(gasto => {
               const cat = getCategoriaInfo(gasto.categoria);
               const Icon = cat.icon;
               const fecha = gasto.fecha || gasto.created_at;
               return (
-                <TableRow key={gasto.id}>
+                <TableRow key={gasto.id} className={dt.selected.has(gasto.id) ? 'bg-primary/5' : ''}>
+                  <TableCell>
+                    <Checkbox
+                      checked={dt.selected.has(gasto.id)}
+                      onCheckedChange={() => dt.toggleRow(gasto.id)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{fecha ? format(new Date(fecha), "d MMM", { locale: es }) : '-'}</p>
@@ -436,9 +513,9 @@ export default function Gastos() {
                 </TableRow>
               );
             })}
-            {filteredGastos.length === 0 && (
+            {dt.processed.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No hay gastos registrados
                 </TableCell>
               </TableRow>
