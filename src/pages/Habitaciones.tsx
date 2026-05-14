@@ -53,7 +53,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import { cn } from '@/lib/utils';
@@ -437,23 +437,13 @@ export default function Habitaciones() {
                       onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
                     />
                   </TableHead>
-                  <SortHeader label="Habitación" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                  <SortHeader label="Tipo" columnKey="tipo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                  <SortHeader label="Piso" columnKey="piso" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                  <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                  <SortHeader label="Limpieza" columnKey="limpieza" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                  <SortHeader label="Mantenimiento" columnKey="mantenimiento" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Habitación" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.numero} onFilterChange={(v) => dt.setColumnFilter('numero', v)} filterOptions={filteredHabitaciones.map((h: any) => h.numero)} />
+                  <SortHeader label="Tipo" columnKey="tipo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.tipo} onFilterChange={(v) => dt.setColumnFilter('tipo', v)} filterOptions={filteredHabitaciones.map((h: any) => h.tipo)} />
+                  <SortHeader label="Piso" columnKey="piso" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.piso} onFilterChange={(v) => dt.setColumnFilter('piso', v)} filterOptions={filteredHabitaciones.map((h: any) => h.piso)} />
+                  <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.estado} onFilterChange={(v) => dt.setColumnFilter('estado', v)} filterOptions={filteredHabitaciones.map((h: any) => h.estado_habitacion)} />
+                  <SortHeader label="Limpieza" columnKey="limpieza" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.limpieza} onFilterChange={(v) => dt.setColumnFilter('limpieza', v)} filterOptions={filteredHabitaciones.map((h: any) => h.estado_limpieza)} />
+                  <SortHeader label="Mantenimiento" columnKey="mantenimiento" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.mantenimiento} onFilterChange={(v) => dt.setColumnFilter('mantenimiento', v)} filterOptions={filteredHabitaciones.map((h: any) => h.estado_mantenimiento)} />
                   <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-                <TableRow>
-                  <TableHead />
-                  <TableHead><ColumnFilterInput value={dt.filters.numero || ''} onChange={(v) => dt.setColumnFilter('numero', v)} placeholder="#" /></TableHead>
-                  <TableHead><ColumnFilterInput value={dt.filters.tipo || ''} onChange={(v) => dt.setColumnFilter('tipo', v)} placeholder="Tipo" /></TableHead>
-                  <TableHead><ColumnFilterInput value={dt.filters.piso || ''} onChange={(v) => dt.setColumnFilter('piso', v)} placeholder="Piso" /></TableHead>
-                  <TableHead><ColumnFilterInput value={dt.filters.estado || ''} onChange={(v) => dt.setColumnFilter('estado', v)} placeholder="Estado" /></TableHead>
-                  <TableHead><ColumnFilterInput value={dt.filters.limpieza || ''} onChange={(v) => dt.setColumnFilter('limpieza', v)} placeholder="Limpieza" /></TableHead>
-                  <TableHead><ColumnFilterInput value={dt.filters.mantenimiento || ''} onChange={(v) => dt.setColumnFilter('mantenimiento', v)} placeholder="Mant." /></TableHead>
-                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
