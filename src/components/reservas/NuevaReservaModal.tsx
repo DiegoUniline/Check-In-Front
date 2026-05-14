@@ -131,7 +131,7 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => ({
   // El costo por persona extra debe venir de `tipos_habitacion.precio_persona_extra`,
   // no debe estar hardcodeado. Se autocompleta cuando el usuario selecciona el tipo.
   cargoPersonaExtra: 0,
-  tipoHabitacion: preload?.habitacion?.tipo_id || '',
+  tipoHabitacion: preload?.habitacion?.tipo_habitacion_id || preload?.habitacion?.tipo_id || '',
   habitacionId: preload?.habitacion?.id || '',
   clienteId: '',
   clienteData: null,
@@ -236,7 +236,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
       try {
         const data = await api.getHabitaciones({ estado_habitacion: 'Disponible' });
         setHabitacionesDisponibles(data.filter((h: any) => 
-          !formData.tipoHabitacion || h.tipo_id === formData.tipoHabitacion
+          !formData.tipoHabitacion || (h.tipo_habitacion_id || h.tipo_id) === formData.tipoHabitacion
         ));
       } catch (e) {
         console.error('Error:', e);
@@ -641,7 +641,7 @@ const noches = differenceInDays(
             <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles para {format(formData.fechaCheckin, 'd MMM', { locale: es })} - {format(formData.fechaCheckout, 'd MMM', { locale: es })}</p>
             <div className="grid gap-3 max-h-[400px] overflow-y-auto">
               {habitacionesDisponibles.map(hab => (
-                <Card key={hab.id} className={cn("cursor-pointer hover:border-primary transition-colors", formData.habitacionId === hab.id && "border-primary bg-primary/5")} onClick={() => setFormData({ ...formData, habitacionId: hab.id, tipoHabitacion: hab.tipo_id })}>
+                <Card key={hab.id} className={cn("cursor-pointer hover:border-primary transition-colors", formData.habitacionId === hab.id && "border-primary bg-primary/5")} onClick={() => setFormData({ ...formData, habitacionId: hab.id, tipoHabitacion: hab.tipo_habitacion_id || hab.tipo_id || formData.tipoHabitacion })}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
