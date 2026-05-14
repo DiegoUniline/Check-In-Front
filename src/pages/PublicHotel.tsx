@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Hotel as HotelIcon, MapPin, Phone, Mail, Users, BedDouble, CheckCircle2,
   Loader2, Star, Wifi, Wind, Tv, Coffee, Bath, Calendar as CalIcon, ChevronLeft, ChevronRight,
+  Maximize2, Images, Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, addDays, differenceInCalendarDays, eachDayOfInterval, parseISO } from 'date-fns';
@@ -369,69 +370,82 @@ export default function PublicHotel() {
             const idx = carruselIdx[h.id] || 0;
             const fotoActual = fotos[idx];
             const disponible = isHabDisponibleEnRango(h.id, range);
+            const precio = Number(t.precio_base) || 0;
+            const precioOriginal = Math.round(precio * 1.18);
+            const total = precio * Math.max(1, ns || 1);
             return (
-              <Card key={h.id} className="group overflow-hidden border-stone-200/70 bg-white rounded-2xl hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer" onClick={() => openBooking(h)}>
-                <div className="relative aspect-[4/3] bg-gradient-to-br from-stone-100 to-stone-200 overflow-hidden">
+              <Card key={h.id} className="group flex flex-col overflow-hidden border border-stone-200 bg-white rounded-xl hover:shadow-2xl transition-all duration-300">
+                <div className="relative aspect-[4/3] bg-gradient-to-br from-stone-100 to-stone-200 overflow-hidden cursor-pointer" onClick={() => openBooking(h)}>
                   {fotoActual ? (
-                    <img src={fotoActual} alt={`${t.nombre} ${h.numero}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <img src={fotoActual} alt={`${t.nombre} ${h.numero}`} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center"><BedDouble className="h-14 w-14 text-stone-300" /></div>
                   )}
                   {fotos.length > 1 && (
                     <>
                       <button onClick={(e) => { e.stopPropagation(); setCarruselIdx({ ...carruselIdx, [h.id]: (idx - 1 + fotos.length) % fotos.length }); }}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/85 hover:bg-white flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition">
-                        <ChevronLeft className="h-4 w-4" />
+                        className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/95 hover:bg-white flex items-center justify-center shadow-md text-blue-700 transition">
+                        <ChevronLeft className="h-5 w-5" />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); setCarruselIdx({ ...carruselIdx, [h.id]: (idx + 1) % fotos.length }); }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/85 hover:bg-white flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition">
-                        <ChevronRight className="h-4 w-4" />
+                        className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/95 hover:bg-white flex items-center justify-center shadow-md text-blue-700 transition">
+                        <ChevronRight className="h-5 w-5" />
                       </button>
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                        {fotos.map((_, i) => <span key={i} className={cn("h-1.5 w-1.5 rounded-full", i === idx ? "bg-white" : "bg-white/50")} />)}
+                      <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 bg-stone-900/75 text-white text-xs font-medium rounded-md px-2 py-1">
+                        <Images className="h-3.5 w-3.5" />{fotos.length}
                       </div>
                     </>
                   )}
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <Badge className="bg-white/95 text-stone-800 hover:bg-white shadow-sm">Hab. {h.numero}</Badge>
-                  </div>
-                  <div className="absolute top-3 right-3">
-                    {range?.from && range?.to ? (
-                      disponible
-                        ? <Badge className="bg-emerald-600 hover:bg-emerald-600 shadow">Disponible</Badge>
-                        : <Badge variant="destructive" className="shadow">Reservada</Badge>
-                    ) : null}
-                  </div>
+                  {range?.from && range?.to && !disponible && (
+                    <div className="absolute inset-0 bg-stone-900/55 flex items-center justify-center">
+                      <Badge variant="destructive" className="text-sm px-3 py-1.5 shadow-lg">Reservada en estas fechas</Badge>
+                    </div>
+                  )}
                 </div>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <div>
-                      <div className="text-xs uppercase tracking-wider text-amber-700 font-semibold">{t.nombre}</div>
-                      <h3 className="font-serif text-xl mt-0.5">Habitación {h.numero}</h3>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-serif text-2xl">${Number(t.precio_base).toLocaleString()}</div>
-                      <div className="text-[11px] text-stone-500 -mt-1">por noche</div>
-                    </div>
+                <CardContent className="p-5 flex-1 flex flex-col gap-3">
+                  <div>
+                    <h3 className="text-[17px] font-semibold text-stone-900 leading-snug">{t.nombre}</h3>
+                    <div className="text-xs text-stone-500 mt-0.5">Habitación {h.numero}{h.piso ? ` · Piso ${h.piso}` : ''}</div>
                   </div>
-                  {t.descripcion && <p className="text-sm text-stone-600 line-clamp-2">{t.descripcion}</p>}
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <span className="inline-flex items-center gap-1 text-xs text-stone-600 bg-stone-100 rounded-full px-2.5 py-1">
-                      <Users className="h-3 w-3" />Hasta {t.capacidad_maxima}
-                    </span>
+
+                  <ul className="text-[13px] text-stone-700 space-y-1.5">
+                    <li className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-stone-500 shrink-0" />
+                      Hasta {t.capacidad_maxima} {t.capacidad_maxima === 1 ? 'persona' : 'personas'}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <BedDouble className="h-4 w-4 text-stone-500 shrink-0" />
+                      {t.capacidad_adultos} adulto{t.capacidad_adultos !== 1 ? 's' : ''}
+                      {t.capacidad_ninos > 0 ? ` + ${t.capacidad_ninos} niño${t.capacidad_ninos !== 1 ? 's' : ''}` : ''}
+                    </li>
                     {(t.amenidades || []).slice(0, 3).map((a) => {
                       const Icon = amenityIcon(a);
                       return (
-                        <span key={a} className="inline-flex items-center gap-1 text-xs text-stone-600 bg-stone-100 rounded-full px-2.5 py-1">
-                          <Icon className="h-3 w-3" />{a}
-                        </span>
+                        <li key={a} className="flex items-center gap-2">
+                          <Icon className="h-4 w-4 text-stone-500 shrink-0" />{a}
+                        </li>
                       );
                     })}
                     {(t.amenidades?.length || 0) > 3 && (
-                      <span className="inline-flex items-center text-xs text-stone-500 px-1">+{(t.amenidades!.length - 3)}</span>
+                      <li className="text-xs text-blue-700 font-medium pl-6">+{(t.amenidades!.length - 3)} amenidades más</li>
                     )}
+                  </ul>
+
+                  <div className="text-[12px] text-emerald-700 font-medium flex items-center gap-1">
+                    100% reembolsable <Info className="h-3 w-3" />
                   </div>
-                  <Button className="w-full mt-2 bg-stone-900 hover:bg-stone-800 text-stone-50">Ver disponibilidad</Button>
+
+                  <div className="mt-auto pt-3 border-t border-stone-100 text-right">
+                    <div className="inline-block bg-emerald-700 text-white text-[11px] font-semibold rounded px-1.5 py-0.5 mb-1">15% de descuento</div>
+                    <div className="text-xs text-stone-400 line-through">${precioOriginal.toLocaleString()} MXN</div>
+                    <div className="text-2xl font-bold text-stone-900 leading-tight">${precio.toLocaleString()} <span className="text-sm font-medium text-stone-500">MXN</span></div>
+                    <div className="text-[11px] text-stone-500">por noche{ns > 1 ? ` · $${total.toLocaleString()} total` : ''}</div>
+                  </div>
+
+                  <Button onClick={() => openBooking(h)} disabled={range?.from && range?.to ? !disponible : false} className="w-full h-11 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md text-[15px] disabled:opacity-60">
+                    Reservar
+                  </Button>
+                  <div className="text-[11px] text-stone-500 text-center -mt-1">Aún no se te cobrará nada.</div>
                 </CardContent>
               </Card>
             );
