@@ -143,6 +143,12 @@ export default function Gastos() {
   const dt = useDataTable<any>(filteredGastos, accessors, { storageKey: 'gastos' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterCategoria('all');
+    dt.resetPersisted();
+  };
+
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
     try {

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, Clock, CheckCircle, AlertTriangle, 
-  User, Play, Check, Eye, RefreshCw, UserPlus
+  User, Play, Check, Eye, RefreshCw, UserPlus,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Package, Search, Plus, Edit, AlertTriangle,
-  ArrowUpDown, MoreVertical, RefreshCw, Trash2
+  ArrowUpDown, MoreVertical, RefreshCw, Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
