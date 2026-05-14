@@ -313,7 +313,22 @@ export default function Configuracion() {
 
         {/* Users */}
         <TabsContent value="usuarios">
-          {/* placeholder */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de Usuarios</CardTitle>
+              <CardDescription>Administra los usuarios del sistema</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center py-8 gap-4">
+              <Users className="h-12 w-12 text-muted-foreground" />
+              <p className="text-muted-foreground text-center">
+                Gestiona usuarios, roles y permisos desde el panel dedicado.
+              </p>
+              <Button onClick={() => navigate('/usuarios')}>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Ir a Gestión de Usuarios
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="reservas-online">
           <Card>
@@ -403,24 +418,6 @@ export default function Configuracion() {
                   Ve a <strong>Catálogos → Tipos de Habitación</strong> y activa "Publicar en web" en cada tipo que quieras ofrecer. También puedes excluir habitaciones individuales en la pantalla de <strong>Habitaciones</strong>.
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="usuarios-old" className="hidden">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestión de Usuarios</CardTitle>
-              <CardDescription>Administra los usuarios del sistema</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center py-8 gap-4">
-              <Users className="h-12 w-12 text-muted-foreground" />
-              <p className="text-muted-foreground text-center">
-                Gestiona usuarios, roles y permisos desde el panel dedicado.
-              </p>
-              <Button onClick={() => navigate('/usuarios')}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Ir a Gestión de Usuarios
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
