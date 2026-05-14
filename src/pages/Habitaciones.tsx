@@ -407,22 +407,64 @@ export default function Habitaciones() {
       {/* VISTA TABLA (Por defecto) con FIX de desbordamiento */}
       {viewMode === 'list' && (
         <Card className="overflow-hidden">
+          <div className="p-3 border-b">
+            <BulkActionBar
+              count={dt.selectedCount}
+              onClear={dt.clearSelection}
+              onDelete={eliminarSeleccionadas}
+              onExport={exportarCsv}
+              deleting={eliminandoBulk}
+              entityName="habitaciones"
+              extraActions={
+                <>
+                  <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Disponible')} disabled={eliminandoBulk}>
+                    <DoorOpen className="h-4 w-4 mr-1" /> Disponible
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Bloqueada')} disabled={eliminandoBulk}>
+                    <DoorClosed className="h-4 w-4 mr-1" /> Bloquear
+                  </Button>
+                </>
+              }
+            />
+          </div>
           <div className="relative w-full overflow-x-auto">
             <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Habitación</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Piso</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Limpieza</TableHead>
-                  <TableHead>Mantenimiento</TableHead>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
+                      onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
+                    />
+                  </TableHead>
+                  <SortHeader label="Habitación" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Tipo" columnKey="tipo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Piso" columnKey="piso" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Limpieza" columnKey="limpieza" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                  <SortHeader label="Mantenimiento" columnKey="mantenimiento" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
                   <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+                <TableRow>
+                  <TableHead />
+                  <TableHead><ColumnFilterInput value={dt.filters.numero || ''} onChange={(v) => dt.setColumnFilter('numero', v)} placeholder="#" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.tipo || ''} onChange={(v) => dt.setColumnFilter('tipo', v)} placeholder="Tipo" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.piso || ''} onChange={(v) => dt.setColumnFilter('piso', v)} placeholder="Piso" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.estado || ''} onChange={(v) => dt.setColumnFilter('estado', v)} placeholder="Estado" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.limpieza || ''} onChange={(v) => dt.setColumnFilter('limpieza', v)} placeholder="Limpieza" /></TableHead>
+                  <TableHead><ColumnFilterInput value={dt.filters.mantenimiento || ''} onChange={(v) => dt.setColumnFilter('mantenimiento', v)} placeholder="Mant." /></TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredHabitaciones.map(hab => (
-                  <TableRow key={hab.id}>
+                {dt.processed.map(hab => (
+                  <TableRow key={hab.id} className={dt.selected.has(hab.id) ? 'bg-primary/5' : ''}>
+                    <TableCell>
+                      <Checkbox
+                        checked={dt.selected.has(hab.id)}
+                        onCheckedChange={() => dt.toggleRow(hab.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-bold text-lg">{hab.numero}</TableCell>
                     <TableCell>
                         <div className="flex flex-col">
@@ -469,6 +511,13 @@ export default function Habitaciones() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {dt.processed.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
+                      No hay habitaciones que coincidan
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
