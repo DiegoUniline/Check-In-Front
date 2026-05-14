@@ -108,7 +108,7 @@ export function AppSidebar() {
   const occupancyPercent =
     totalHab > 0 ? Math.round((ocupadas / totalHab) * 100) : 0;
 
-  const renderNavItems = (items: typeof mainNavItems) => {
+  const renderNavItems = (items: { title: string; url: string; icon: any; viewKey?: string }[]) => {
     const visible = items.filter(it => !it.viewKey || canAccess(it.viewKey, user?.rol));
     if (visible.length === 0) return null;
     return (
