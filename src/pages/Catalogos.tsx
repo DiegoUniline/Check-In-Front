@@ -458,10 +458,16 @@ export default function Catalogos() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Tipos de Habitación</CardTitle>
-              <Button onClick={openNewTipo}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Tipo
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleResetTipos}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
+                <Button onClick={openNewTipo}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Tipo
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingTipos ? (
