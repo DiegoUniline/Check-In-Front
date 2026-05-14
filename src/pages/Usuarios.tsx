@@ -170,6 +170,12 @@ export default function Usuarios() {
   }), []);
   const dt = useDataTable<any>(filteredUsuarios, accessors, { storageKey: 'usuarios' });
 
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterRol('all');
+    dt.resetPersisted();
+  };
+
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
     try {

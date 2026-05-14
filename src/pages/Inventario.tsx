@@ -136,6 +136,12 @@ export default function Inventario() {
   }), []);
   const dt = useDataTable<any>(filteredProducts, accessors, { storageKey: 'inventario' });
 
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterCategoria('all');
+    dt.resetPersisted();
+  };
+
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
     try {

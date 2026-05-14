@@ -76,6 +76,12 @@ export default function Limpieza() {
   }), []);
   const dt = useDataTable<any>(filteredTareas, accessors);
 
+  const handleResetAll = () => {
+    setFilterEstado('all');
+    setFilterPrioridad('all');
+    dt.resetPersisted();
+  };
+
   const eliminarSeleccionadas = async () => {
     setEliminandoBulk(true);
     try {

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Wrench, Clock, CheckCircle, AlertTriangle, Plus,
-  User, Calendar, ArrowRight, RefreshCw
+  User, Calendar, ArrowRight, RefreshCw,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
