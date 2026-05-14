@@ -610,6 +610,7 @@ export type Database = {
         Row: {
           ciudad: string | null
           created_at: string | null
+          descripcion_publica: string | null
           direccion: string | null
           email: string | null
           estado: string | null
@@ -620,14 +621,21 @@ export type Database = {
           logo_url: string | null
           nombre: string
           pais: string | null
+          permite_reservas_online: boolean
+          porcentaje_anticipo: number
           razon_social: string | null
+          requiere_anticipo: boolean
           rfc: string | null
+          slug: string | null
           telefono: string | null
           updated_at: string | null
+          whatsapp_enabled: boolean
+          whatsapp_token: string | null
         }
         Insert: {
           ciudad?: string | null
           created_at?: string | null
+          descripcion_publica?: string | null
           direccion?: string | null
           email?: string | null
           estado?: string | null
@@ -638,14 +646,21 @@ export type Database = {
           logo_url?: string | null
           nombre: string
           pais?: string | null
+          permite_reservas_online?: boolean
+          porcentaje_anticipo?: number
           razon_social?: string | null
+          requiere_anticipo?: boolean
           rfc?: string | null
+          slug?: string | null
           telefono?: string | null
           updated_at?: string | null
+          whatsapp_enabled?: boolean
+          whatsapp_token?: string | null
         }
         Update: {
           ciudad?: string | null
           created_at?: string | null
+          descripcion_publica?: string | null
           direccion?: string | null
           email?: string | null
           estado?: string | null
@@ -656,10 +671,16 @@ export type Database = {
           logo_url?: string | null
           nombre?: string
           pais?: string | null
+          permite_reservas_online?: boolean
+          porcentaje_anticipo?: number
           razon_social?: string | null
+          requiere_anticipo?: boolean
           rfc?: string | null
+          slug?: string | null
           telefono?: string | null
           updated_at?: string | null
+          whatsapp_enabled?: boolean
+          whatsapp_token?: string | null
         }
         Relationships: []
       }
