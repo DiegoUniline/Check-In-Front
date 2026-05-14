@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Grid3X3, List, Search, Plus, 
-  MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed, Pencil, Trash2
+  MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed, Pencil, Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
