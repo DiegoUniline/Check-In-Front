@@ -313,6 +313,100 @@ export default function Configuracion() {
 
         {/* Users */}
         <TabsContent value="usuarios">
+          {/* placeholder */}
+        </TabsContent>
+        <TabsContent value="reservas-online">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5" /> Reservas en línea</CardTitle>
+              <CardDescription>Configura tu página pública para que los huéspedes reserven directo desde la web.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-md border p-4">
+                <div>
+                  <p className="font-medium">Activar reservas desde la web</p>
+                  <p className="text-sm text-muted-foreground">Tus huéspedes podrán reservar desde tu página pública. Las reservas aparecen al instante en el sistema.</p>
+                </div>
+                <Switch
+                  checked={!!hotelData.permiteReservasOnline}
+                  onCheckedChange={(v) => setHotelData({ ...hotelData, permiteReservasOnline: v })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Identificador de tu hotel (slug)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={hotelData.slug || ''}
+                    onChange={(e) => setHotelData({ ...hotelData, slug: e.target.value })}
+                    placeholder="mi-hotel"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const url = `${window.location.origin}/h/${hotelData.slug}`;
+                      navigator.clipboard.writeText(url);
+                      toast({ title: 'Enlace copiado', description: url });
+                    }}
+                    disabled={!hotelData.slug}
+                  >
+                    <Copy className="h-4 w-4 mr-1" /> Copiar URL
+                  </Button>
+                </div>
+                {hotelData.slug && (
+                  <p className="text-xs text-muted-foreground">
+                    URL pública: <a className="underline" href={`/h/${hotelData.slug}`} target="_blank" rel="noreferrer">{window.location.origin}/h/{hotelData.slug}</a>
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descripción pública del hotel</Label>
+                <Textarea
+                  rows={3}
+                  value={hotelData.descripcionPublica || ''}
+                  onChange={(e) => setHotelData({ ...hotelData, descripcionPublica: e.target.value })}
+                  placeholder="Bienvenido a nuestro hotel ubicado en..."
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between rounded-md border p-4">
+                <div>
+                  <p className="font-medium">Solicitar anticipo al reservar</p>
+                  <p className="text-sm text-muted-foreground">Mostrará al huésped el monto de anticipo. El cobro se coordina por separado con el hotel.</p>
+                </div>
+                <Switch
+                  checked={!!hotelData.requiereAnticipo}
+                  onCheckedChange={(v) => setHotelData({ ...hotelData, requiereAnticipo: v })}
+                />
+              </div>
+
+              {hotelData.requiereAnticipo && (
+                <div className="space-y-2 max-w-xs">
+                  <Label>Porcentaje de anticipo (%)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={hotelData.porcentajeAnticipo || 0}
+                    onChange={(e) => setHotelData({ ...hotelData, porcentajeAnticipo: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              )}
+
+              <div className="rounded-md border bg-muted/30 p-4 text-sm">
+                <p className="font-medium mb-1">¿Cómo elijo qué habitaciones se publican?</p>
+                <p className="text-muted-foreground">
+                  Ve a <strong>Catálogos → Tipos de Habitación</strong> y activa "Publicar en web" en cada tipo que quieras ofrecer. También puedes excluir habitaciones individuales en la pantalla de <strong>Habitaciones</strong>.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="usuarios-old" className="hidden">
           <Card>
             <CardHeader>
               <CardTitle>Gestión de Usuarios</CardTitle>
