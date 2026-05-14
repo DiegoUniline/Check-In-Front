@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   UserPlus, Search, MoreVertical, Edit, Trash2, 
   RefreshCw, Shield, Mail, Phone, Eye, EyeOff
@@ -49,6 +49,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { SortHeader } from '@/components/datatable/SortHeader';
+import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
@@ -109,6 +115,7 @@ export default function Usuarios() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; usuario: any | null }>({ open: false, usuario: null });
   const [showPassword, setShowPassword] = useState(false);
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -152,6 +159,54 @@ export default function Usuarios() {
     const matchRol = filterRol === 'all' || u.rol === filterRol;
     return matchSearch && matchRol;
   });
+
+  const accessors = useMemo(() => ({
+    nombre: (u: any) => `${u.nombre || ''} ${u.apellidoPaterno || u.apellido_paterno || ''}`.trim(),
+    email: (u: any) => u.email || '',
+    telefono: (u: any) => u.telefono || '',
+    rol: (u: any) => u.rol || '',
+    estado: (u: any) => (u.activo !== false ? 'Activo' : 'Inactivo'),
+  }), []);
+  const dt = useDataTable<any>(filteredUsuarios, accessors);
+
+  const eliminarSeleccionados = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected).filter(id => id !== currentUser?.id);
+      await Promise.all(ids.map(id => api.deleteUsuario(id)));
+      toast({ title: 'Usuarios eliminados', description: `Se eliminaron ${ids.length} usuario(s).` });
+      dt.clearSelection();
+      await cargarUsuarios();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const cambiarActivoBulk = async (activo: boolean) => {
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.updateUsuario(id, { activo })));
+      toast({ title: activo ? 'Usuarios activados' : 'Usuarios desactivados', description: `${ids.length} usuario(s).` });
+      dt.clearSelection();
+      await cargarUsuarios();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const exportarCsv = () => {
+    const rows = dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed;
+    exportToCsv('usuarios', rows, [
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'apellidoPaterno', label: 'Apellido', accessor: (u) => u.apellidoPaterno || u.apellido_paterno },
+      { key: 'email', label: 'Email' },
+      { key: 'telefono', label: 'Teléfono' },
+      { key: 'rol', label: 'Rol' },
+      { key: 'estado', label: 'Estado', accessor: (u) => (u.activo !== false ? 'Activo' : 'Inactivo') },
+    ]);
+  };
 
   const getRolInfo = (rolId: string) => {
     /*
@@ -360,22 +415,62 @@ export default function Usuarios() {
 
       {/* Users table */}
       <Card>
+        <div className="p-3 border-b">
+          <BulkActionBar
+            count={dt.selectedCount}
+            onClear={dt.clearSelection}
+            onDelete={eliminarSeleccionados}
+            onExport={exportarCsv}
+            deleting={eliminandoBulk}
+            entityName="usuarios"
+            extraActions={
+              <>
+                <Button variant="outline" size="sm" onClick={() => cambiarActivoBulk(true)}>Activar</Button>
+                <Button variant="outline" size="sm" onClick={() => cambiarActivoBulk(false)}>Desactivar</Button>
+              </>
+            }
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Usuario</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
+                  onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
+                  aria-label="Seleccionar todos"
+                />
+              </TableHead>
+              <SortHeader label="Usuario" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Email" columnKey="email" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Teléfono" columnKey="telefono" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Rol" columnKey="rol" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
               <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+            <TableRow>
+              <TableHead />
+              <TableHead><ColumnFilterInput value={dt.filters.nombre || ''} onChange={(v) => dt.setColumnFilter('nombre', v)} placeholder="Nombre" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.email || ''} onChange={(v) => dt.setColumnFilter('email', v)} placeholder="Email" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.telefono || ''} onChange={(v) => dt.setColumnFilter('telefono', v)} placeholder="Teléfono" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.rol || ''} onChange={(v) => dt.setColumnFilter('rol', v)} placeholder="Rol" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.estado || ''} onChange={(v) => dt.setColumnFilter('estado', v)} placeholder="Estado" /></TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsuarios.map(usuario => {
+            {dt.processed.map(usuario => {
               const rol = getRolInfo(usuario.rol);
               return (
-                <TableRow key={usuario.id}>
+                <TableRow key={usuario.id} className={dt.selected.has(usuario.id) ? 'bg-primary/5' : ''}>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={dt.selected.has(usuario.id)}
+                      onCheckedChange={() => dt.toggleRow(usuario.id)}
+                      aria-label="Seleccionar fila"
+                      disabled={usuario.id === currentUser?.id}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -443,9 +538,9 @@ export default function Usuarios() {
                 </TableRow>
               );
             })}
-            {filteredUsuarios.length === 0 && (
+            {dt.processed.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No hay usuarios registrados
                 </TableCell>
               </TableRow>
@@ -455,7 +550,7 @@ export default function Usuarios() {
       </Card>
 
       <p className="text-sm text-muted-foreground mt-4 text-center">
-        Mostrando {filteredUsuarios.length} de {usuarios.length} usuarios
+        Mostrando {dt.processed.length} de {usuarios.length} usuarios
       </p>
 
       {/* Modal Usuario */}
