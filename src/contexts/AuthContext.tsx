@@ -50,12 +50,20 @@ useEffect(() => {
           if (profile?.hotel_id) api.setHotelId(profile.hotel_id);
           else api.setHotelId(null);
 
+          const { data: roleRow } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .order('role', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
           const hydratedUser: User = {
             id: session.user.id,
             email: session.user.email || '',
             nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
             apellidoPaterno: profile?.apellido_paterno || '',
-            rol: 'Admin',
+            rol: (roleRow?.role as string) || 'Admin',
             hotelNombre: (profile as any)?.hotels?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
           };
 
@@ -122,12 +130,19 @@ useEffect(() => {
         .maybeSingle();
       if (profile?.hotel_id) api.setHotelId(profile.hotel_id);
       else api.setHotelId(null);
+      const { data: roleRow } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .order('role', { ascending: true })
+        .limit(1)
+        .maybeSingle();
       const u: User = {
         id: session.user.id,
         email: session.user.email || '',
         nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
         apellidoPaterno: profile?.apellido_paterno || '',
-        rol: 'Admin',
+        rol: (roleRow?.role as string) || 'Admin',
         hotelNombre: (profile as any)?.hotels?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
       };
       setUser(u);
