@@ -167,7 +167,7 @@ export default function Usuarios() {
     rol: (u: any) => u.rol || '',
     estado: (u: any) => (u.activo !== false ? 'Activo' : 'Inactivo'),
   }), []);
-  const dt = useDataTable<any>(filteredUsuarios, accessors);
+  const dt = useDataTable<any>(filteredUsuarios, accessors, { storageKey: 'usuarios' });
 
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);

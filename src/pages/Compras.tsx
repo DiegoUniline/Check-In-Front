@@ -125,7 +125,7 @@ export default function Compras() {
     estado: (o: any) => o.estado || '',
     total: (o: any) => Number(o.total || 0),
   }), []);
-  const dt = useDataTable<any>(filteredOrdenes, ordenAccessors);
+  const dt = useDataTable<any>(filteredOrdenes, ordenAccessors, { storageKey: 'compras-ordenes' });
 
   const eliminarSeleccionadas = async () => {
     setEliminandoBulk(true);
@@ -180,7 +180,7 @@ export default function Compras() {
     telefono: (p: any) => p.telefono || '',
     email: (p: any) => p.email || '',
   }), []);
-  const dtProv = useDataTable<any>(filteredProveedores, provAccessors);
+  const dtProv = useDataTable<any>(filteredProveedores, provAccessors, { storageKey: 'compras-proveedores' });
 
   const eliminarProveedoresSeleccionados = async () => {
     setEliminandoBulkProv(true);

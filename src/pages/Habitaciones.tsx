@@ -137,7 +137,7 @@ export default function Habitaciones() {
     limpieza: (h: any) => h.estado_limpieza || '',
     mantenimiento: (h: any) => h.estado_mantenimiento || '',
   }), []);
-  const dt = useDataTable<any>(filteredHabitaciones, accessors);
+  const dt = useDataTable<any>(filteredHabitaciones, accessors, { storageKey: 'habitaciones' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
   const eliminarSeleccionadas = async () => {
