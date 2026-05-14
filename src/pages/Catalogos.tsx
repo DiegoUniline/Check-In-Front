@@ -43,6 +43,7 @@ import { SortHeader } from '@/components/datatable/SortHeader';
 
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
+import { MultiImageUpload } from '@/components/ui/multi-image-upload';
 
 export default function Catalogos() {
   const { toast } = useToast();
@@ -66,7 +67,7 @@ export default function Catalogos() {
     precio_persona_extra: '0',
     amenidades: '',
     publico: false,
-    fotos: '',
+    fotos: [] as string[],
   });
 
   // Categorías Productos
@@ -137,7 +138,7 @@ export default function Catalogos() {
       precio_persona_extra: '0',
       amenidades: '',
       publico: false,
-      fotos: '',
+      fotos: [] as string[],
     });
     setModalTipoOpen(true);
   };
@@ -155,7 +156,7 @@ export default function Catalogos() {
       precio_persona_extra: tipo.precio_persona_extra?.toString() || '0',
       amenidades: Array.isArray(tipo.amenidades) ? tipo.amenidades.join(', ') : '',
       publico: !!tipo.publico,
-      fotos: Array.isArray(tipo.fotos) ? tipo.fotos.join('\n') : '',
+      fotos: Array.isArray(tipo.fotos) ? tipo.fotos : [],
     });
     setModalTipoOpen(true);
   };
@@ -173,7 +174,7 @@ export default function Catalogos() {
         precio_persona_extra: parseFloat(formTipo.precio_persona_extra) || 0,
         amenidades: formTipo.amenidades.split(',').map(a => a.trim()).filter(a => a),
         publico: formTipo.publico,
-        fotos: formTipo.fotos.split('\n').map(s => s.trim()).filter(Boolean),
+        fotos: formTipo.fotos,
       };
 
       if (editingTipo) {
@@ -965,12 +966,16 @@ export default function Catalogos() {
               </div>
               {formTipo.publico && (
                 <div className="grid gap-2">
-                  <Label>Fotos (una URL por línea)</Label>
-                  <Textarea
+                  <Label>Fotos del tipo de habitación</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Sube varias imágenes. Se convierten a WebP automáticamente para que no pesen. La primera se muestra como portada.
+                  </p>
+                  <MultiImageUpload
+                    bucket="habitacion-fotos"
                     value={formTipo.fotos}
-                    onChange={(e) => setFormTipo({ ...formTipo, fotos: e.target.value })}
-                    placeholder="https://...\nhttps://..."
-                    rows={3}
+                    onChange={(urls) => setFormTipo({ ...formTipo, fotos: urls })}
+                    folder="tipos"
+                    maxImages={10}
                   />
                 </div>
               )}
