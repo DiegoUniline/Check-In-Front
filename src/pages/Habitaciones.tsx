@@ -141,6 +141,14 @@ export default function Habitaciones() {
   const dt = useDataTable<any>(filteredHabitaciones, accessors, { storageKey: 'habitaciones' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterPiso('all');
+    setFilterTipo('all');
+    setFilterEstado('all');
+    dt.resetPersisted();
+  };
+
   const eliminarSeleccionadas = async () => {
     setEliminandoBulk(true);
     try {
