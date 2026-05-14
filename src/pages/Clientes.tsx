@@ -20,7 +20,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import {
