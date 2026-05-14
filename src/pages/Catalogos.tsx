@@ -518,6 +518,16 @@ export default function Catalogos() {
                     { key: 'capacidad_maxima', label: 'Capacidad' }, { key: 'precio_base', label: 'Precio' },
                   ])}
                   entityName="tipos"
+                  extraActions={
+                    <>
+                      <Button size="sm" variant="outline" className="text-emerald-600" onClick={() => bulkWebTipos(true)}>
+                        <Globe className="h-4 w-4 mr-1" /> Publicar web
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-destructive" onClick={() => bulkWebTipos(false)}>
+                        <GlobeLock className="h-4 w-4 mr-1" /> Ocultar web
+                      </Button>
+                    </>
+                  }
                 />
                 <Table>
                   <TableHeader>
@@ -531,6 +541,7 @@ export default function Catalogos() {
                       <SortHeader label="Precio Base" columnKey="precio" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} filterValue={dtTipos.filters.precio} onFilterChange={(v) => dtTipos.setColumnFilter('precio', v)} onValuesChange={(vs) => dtTipos.setColumnFilterValues('precio', vs)} />
                       <TableHead>Precio Extra</TableHead>
                       <TableHead>Amenidades</TableHead>
+                      <TableHead className="text-center">Web</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -559,6 +570,17 @@ export default function Catalogos() {
                             )}
                           </div>
                         </TableCell>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1.5">
+                            {tipo.publicar_web !== false
+                              ? <Globe className="h-3.5 w-3.5 text-emerald-600" />
+                              : <GlobeLock className="h-3.5 w-3.5 text-muted-foreground" />}
+                            <Switch
+                              checked={tipo.publicar_web !== false}
+                              onCheckedChange={(v) => toggleWebTipo(tipo, v)}
+                            />
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => openEditTipo(tipo)}>
                             <Pencil className="h-4 w-4" />
@@ -571,7 +593,7 @@ export default function Catalogos() {
                     ))}
                     {dtTipos.processed.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                           No hay tipos de habitación registrados
                         </TableCell>
                       </TableRow>
