@@ -65,6 +65,8 @@ export default function Catalogos() {
     precio_base: '',
     precio_persona_extra: '0',
     amenidades: '',
+    publico: false,
+    fotos: '',
   });
 
   // Categorías Productos
@@ -134,6 +136,8 @@ export default function Catalogos() {
       precio_base: '',
       precio_persona_extra: '0',
       amenidades: '',
+      publico: false,
+      fotos: '',
     });
     setModalTipoOpen(true);
   };
@@ -150,6 +154,8 @@ export default function Catalogos() {
       precio_base: tipo.precio_base?.toString() || '',
       precio_persona_extra: tipo.precio_persona_extra?.toString() || '0',
       amenidades: Array.isArray(tipo.amenidades) ? tipo.amenidades.join(', ') : '',
+      publico: !!tipo.publico,
+      fotos: Array.isArray(tipo.fotos) ? tipo.fotos.join('\n') : '',
     });
     setModalTipoOpen(true);
   };
@@ -166,6 +172,8 @@ export default function Catalogos() {
         precio_base: parseFloat(formTipo.precio_base),
         precio_persona_extra: parseFloat(formTipo.precio_persona_extra) || 0,
         amenidades: formTipo.amenidades.split(',').map(a => a.trim()).filter(a => a),
+        publico: formTipo.publico,
+        fotos: formTipo.fotos.split('\n').map(s => s.trim()).filter(Boolean),
       };
 
       if (editingTipo) {
@@ -943,6 +951,29 @@ export default function Catalogos() {
                 placeholder="WiFi, TV, A/C, Minibar, Vista al mar, Jacuzzi..."
                 rows={2}
               />
+            </div>
+            <div className="rounded-md border p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-semibold">Publicar en web de reservas</Label>
+                  <p className="text-xs text-muted-foreground">Permite que los huéspedes reserven este tipo desde tu página pública.</p>
+                </div>
+                <Switch
+                  checked={formTipo.publico}
+                  onCheckedChange={(v) => setFormTipo({ ...formTipo, publico: v })}
+                />
+              </div>
+              {formTipo.publico && (
+                <div className="grid gap-2">
+                  <Label>Fotos (una URL por línea)</Label>
+                  <Textarea
+                    value={formTipo.fotos}
+                    onChange={(e) => setFormTipo({ ...formTipo, fotos: e.target.value })}
+                    placeholder="https://...\nhttps://..."
+                    rows={3}
+                  />
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

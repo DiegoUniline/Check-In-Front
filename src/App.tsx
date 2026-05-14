@@ -34,6 +34,8 @@ import AdminPlataforma from "./pages/AdminPlataforma";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Landing from "./pages/Landing";
+import PublicHotel from "./pages/PublicHotel";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +65,8 @@ const AppRoutes = () => (
     <Route path="/signup" element={<Signup />} />
     <Route path="/forgot-password" element={<ForgotPassword />} />
     <Route path="/reset-password" element={<ResetPassword />} />
-    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    <Route path="/" element={<Landing />} />
+    <Route path="/h/:slug" element={<PublicHotel />} />
     <Route
       path="/admin-plataforma"
       element={

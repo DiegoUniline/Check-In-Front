@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Settings, Hotel, Users, CreditCard, Bell, 
-  Palette, Shield, Save, Building2, ExternalLink, ListChecks
+  Palette, Shield, Save, Building2, ExternalLink, ListChecks, Globe, Copy
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,11 @@ const emptyHotel = {
   horaCheckin: '15:00',
   horaCheckout: '12:00',
   estrellas: 3,
+  slug: '',
+  descripcionPublica: '',
+  permiteReservasOnline: false,
+  requiereAnticipo: false,
+  porcentajeAnticipo: 30,
 };
 
 export default function Configuracion() {
@@ -65,6 +70,11 @@ export default function Configuracion() {
       horaCheckin: h.hora_checkin ?? hotelData.horaCheckin,
       horaCheckout: h.hora_checkout ?? hotelData.horaCheckout,
       estrellas: Number(h.estrellas ?? hotelData.estrellas ?? 3),
+      slug: h.slug ?? hotelData.slug ?? '',
+      descripcionPublica: h.descripcion_publica ?? hotelData.descripcionPublica ?? '',
+      permiteReservasOnline: !!(h.permite_reservas_online ?? hotelData.permiteReservasOnline),
+      requiereAnticipo: !!(h.requiere_anticipo ?? hotelData.requiereAnticipo),
+      porcentajeAnticipo: Number(h.porcentaje_anticipo ?? hotelData.porcentajeAnticipo ?? 30),
     };
   };
 
@@ -83,6 +93,11 @@ export default function Configuracion() {
       hora_checkin: ui.horaCheckin,
       hora_checkout: ui.horaCheckout,
       estrellas: Number(ui.estrellas) || 3,
+      slug: (ui.slug || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || null,
+      descripcion_publica: ui.descripcionPublica || null,
+      permite_reservas_online: !!ui.permiteReservasOnline,
+      requiere_anticipo: !!ui.requiereAnticipo,
+      porcentaje_anticipo: Number(ui.porcentajeAnticipo) || 0,
     };
   };
 
@@ -135,9 +150,12 @@ export default function Configuracion() {
       subtitle="Ajustes del sistema y preferencias"
     >
       <Tabs defaultValue="hotel" className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-6 w-full max-w-3xl">
+        <TabsList className="grid grid-cols-2 md:grid-cols-7 w-full max-w-4xl">
           <TabsTrigger value="hotel">
             <Hotel className="mr-2 h-4 w-4" /> Hotel
+          </TabsTrigger>
+          <TabsTrigger value="reservas-online">
+            <Globe className="mr-2 h-4 w-4" /> Reservas Web
           </TabsTrigger>
           <TabsTrigger value="usuarios">
             <Users className="mr-2 h-4 w-4" /> Usuarios
@@ -309,6 +327,97 @@ export default function Configuracion() {
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Ir a Gestión de Usuarios
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="reservas-online">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5" /> Reservas en línea</CardTitle>
+              <CardDescription>Configura tu página pública para que los huéspedes reserven directo desde la web.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-md border p-4">
+                <div>
+                  <p className="font-medium">Activar reservas desde la web</p>
+                  <p className="text-sm text-muted-foreground">Tus huéspedes podrán reservar desde tu página pública. Las reservas aparecen al instante en el sistema.</p>
+                </div>
+                <Switch
+                  checked={!!hotelData.permiteReservasOnline}
+                  onCheckedChange={(v) => setHotelData({ ...hotelData, permiteReservasOnline: v })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Identificador de tu hotel (slug)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={hotelData.slug || ''}
+                    onChange={(e) => setHotelData({ ...hotelData, slug: e.target.value })}
+                    placeholder="mi-hotel"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const url = `${window.location.origin}/h/${hotelData.slug}`;
+                      navigator.clipboard.writeText(url);
+                      toast({ title: 'Enlace copiado', description: url });
+                    }}
+                    disabled={!hotelData.slug}
+                  >
+                    <Copy className="h-4 w-4 mr-1" /> Copiar URL
+                  </Button>
+                </div>
+                {hotelData.slug && (
+                  <p className="text-xs text-muted-foreground">
+                    URL pública: <a className="underline" href={`/h/${hotelData.slug}`} target="_blank" rel="noreferrer">{window.location.origin}/h/{hotelData.slug}</a>
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descripción pública del hotel</Label>
+                <Textarea
+                  rows={3}
+                  value={hotelData.descripcionPublica || ''}
+                  onChange={(e) => setHotelData({ ...hotelData, descripcionPublica: e.target.value })}
+                  placeholder="Bienvenido a nuestro hotel ubicado en..."
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between rounded-md border p-4">
+                <div>
+                  <p className="font-medium">Solicitar anticipo al reservar</p>
+                  <p className="text-sm text-muted-foreground">Mostrará al huésped el monto de anticipo. El cobro se coordina por separado con el hotel.</p>
+                </div>
+                <Switch
+                  checked={!!hotelData.requiereAnticipo}
+                  onCheckedChange={(v) => setHotelData({ ...hotelData, requiereAnticipo: v })}
+                />
+              </div>
+
+              {hotelData.requiereAnticipo && (
+                <div className="space-y-2 max-w-xs">
+                  <Label>Porcentaje de anticipo (%)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={hotelData.porcentajeAnticipo || 0}
+                    onChange={(e) => setHotelData({ ...hotelData, porcentajeAnticipo: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              )}
+
+              <div className="rounded-md border bg-muted/30 p-4 text-sm">
+                <p className="font-medium mb-1">¿Cómo elijo qué habitaciones se publican?</p>
+                <p className="text-muted-foreground">
+                  Ve a <strong>Catálogos → Tipos de Habitación</strong> y activa "Publicar en web" en cada tipo que quieras ofrecer. También puedes excluir habitaciones individuales en la pantalla de <strong>Habitaciones</strong>.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
