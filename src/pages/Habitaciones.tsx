@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   Grid3X3, List, Search, Plus, 
   MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed, Pencil, Trash2,
-  RotateCcw
+  RotateCcw, Globe, GlobeLock
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -189,6 +189,41 @@ export default function Habitaciones() {
       toast({ title: 'Error', description: err.message || 'No se pudo actualizar', variant: 'destructive' });
     } finally {
       setEliminandoBulk(false);
+    }
+  };
+
+  const cambiarWebBulk = async (excluida: boolean) => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.updateHabitacion(id, { excluida_publica: excluida })));
+      toast({
+        title: excluida ? 'Excluidas de la web' : 'Publicadas en la web',
+        description: `${ids.length} habitación(es) actualizada(s)`,
+      });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'No se pudo actualizar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const toggleWebSingle = async (hab: any) => {
+    const nuevoExcluida = !hab.excluida_publica;
+    // Optimista
+    setHabitaciones(prev => prev.map(h => h.id === hab.id ? { ...h, excluida_publica: nuevoExcluida } : h));
+    try {
+      await api.updateHabitacion(hab.id, { excluida_publica: nuevoExcluida });
+      toast({
+        title: nuevoExcluida ? 'Excluida de la web' : 'Publicada en la web',
+        description: `Habitación ${hab.numero}`,
+      });
+    } catch (err: any) {
+      // Revertir
+      setHabitaciones(prev => prev.map(h => h.id === hab.id ? { ...h, excluida_publica: !nuevoExcluida } : h));
+      toast({ title: 'Error', description: err.message || 'No se pudo actualizar', variant: 'destructive' });
     }
   };
 
