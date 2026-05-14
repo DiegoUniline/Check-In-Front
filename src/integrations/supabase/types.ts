@@ -195,11 +195,13 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          detalle: Json | null
           estado: string | null
           fecha: string | null
           hotel_id: string
           id: string
           impuesto: number | null
+          impuestos: number
           notas: string | null
           numero_orden: string | null
           proveedor_id: string | null
@@ -210,11 +212,13 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          detalle?: Json | null
           estado?: string | null
           fecha?: string | null
           hotel_id: string
           id?: string
           impuesto?: number | null
+          impuestos?: number
           notas?: string | null
           numero_orden?: string | null
           proveedor_id?: string | null
@@ -225,11 +229,13 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string | null
+          detalle?: Json | null
           estado?: string | null
           fecha?: string | null
           hotel_id?: string
           id?: string
           impuesto?: number | null
+          impuestos?: number
           notas?: string | null
           numero_orden?: string | null
           proveedor_id?: string | null
@@ -343,6 +349,7 @@ export type Database = {
           hotel_id: string
           id: string
           nombre: string
+          requiere_devolucion: boolean
           stock: number | null
         }
         Insert: {
@@ -353,6 +360,7 @@ export type Database = {
           hotel_id: string
           id?: string
           nombre: string
+          requiere_devolucion?: boolean
           stock?: number | null
         }
         Update: {
@@ -363,6 +371,7 @@ export type Database = {
           hotel_id?: string
           id?: string
           nombre?: string
+          requiere_devolucion?: boolean
           stock?: number | null
         }
         Relationships: [
@@ -436,12 +445,14 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           descripcion: string | null
+          factura: string | null
           fecha: string | null
           hotel_id: string
           id: string
           metodo_pago: string | null
           monto: number
           notas: string | null
+          proveedor: string | null
           proveedor_id: string | null
           proveedor_nombre: string | null
         }
@@ -451,12 +462,14 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           descripcion?: string | null
+          factura?: string | null
           fecha?: string | null
           hotel_id: string
           id?: string
           metodo_pago?: string | null
           monto: number
           notas?: string | null
+          proveedor?: string | null
           proveedor_id?: string | null
           proveedor_nombre?: string | null
         }
@@ -466,12 +479,14 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           descripcion?: string | null
+          factura?: string | null
           fecha?: string | null
           hotel_id?: string
           id?: string
           metodo_pago?: string | null
           monto?: number
           notas?: string | null
+          proveedor?: string | null
           proveedor_id?: string | null
           proveedor_nombre?: string | null
         }
@@ -1127,6 +1142,7 @@ export type Database = {
         Row: {
           asignado_a: string | null
           asignado_nombre: string | null
+          categoria: string | null
           costo_estimado: number | null
           costo_real: number | null
           created_at: string | null
@@ -1146,6 +1162,7 @@ export type Database = {
         Insert: {
           asignado_a?: string | null
           asignado_nombre?: string | null
+          categoria?: string | null
           costo_estimado?: number | null
           costo_real?: number | null
           created_at?: string | null
@@ -1165,6 +1182,7 @@ export type Database = {
         Update: {
           asignado_a?: string | null
           asignado_nombre?: string | null
+          categoria?: string | null
           costo_estimado?: number | null
           costo_real?: number | null
           created_at?: string | null
@@ -1321,11 +1339,14 @@ export type Database = {
           cliente_nombre: string | null
           created_at: string | null
           created_by: string | null
+          detalle: Json | null
           fecha: string | null
+          folio: string | null
           habitacion_id: string | null
           hotel_id: string
           id: string
           impuesto: number | null
+          impuestos: number
           metodo_pago: string | null
           notas: string | null
           numero_venta: string | null
@@ -1337,11 +1358,14 @@ export type Database = {
           cliente_nombre?: string | null
           created_at?: string | null
           created_by?: string | null
+          detalle?: Json | null
           fecha?: string | null
+          folio?: string | null
           habitacion_id?: string | null
           hotel_id: string
           id?: string
           impuesto?: number | null
+          impuestos?: number
           metodo_pago?: string | null
           notas?: string | null
           numero_venta?: string | null
@@ -1353,11 +1377,14 @@ export type Database = {
           cliente_nombre?: string | null
           created_at?: string | null
           created_by?: string | null
+          detalle?: Json | null
           fecha?: string | null
+          folio?: string | null
           habitacion_id?: string | null
           hotel_id?: string
           id?: string
           impuesto?: number | null
+          impuestos?: number
           metodo_pago?: string | null
           notas?: string | null
           numero_venta?: string | null
