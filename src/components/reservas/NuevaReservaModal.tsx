@@ -425,7 +425,7 @@ const noches = differenceInDays(
       const reservaData = {
         cliente_id: clienteId,
         habitacion_id: formData.habitacionId || null,
-        tipo_habitacion_id: formData.tipoHabitacion,
+        tipo_habitacion_id: formData.tipoHabitacion || null,
         fecha_checkin: format(formData.fechaCheckin, 'yyyy-MM-dd'),
         fecha_checkout: format(formData.fechaCheckout, 'yyyy-MM-dd'),
         hora_llegada: formData.horaLlegada || null,
