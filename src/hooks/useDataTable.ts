@@ -19,7 +19,8 @@ export function useDataTable<T extends { id: string }>(
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  // Filtros: cada columna puede tener `text` (búsqueda libre) y/o `values` (multi-select de valores exactos).
+  const [filters, setFilters] = useState<Record<string, { text?: string; values?: string[] }>>({});
 
   const toggleRow = (id: string) =>
     setSelected(prev => {
@@ -51,23 +52,37 @@ export function useDataTable<T extends { id: string }>(
   };
 
   const setColumnFilter = (key: string, value: string) =>
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(prev => ({ ...prev, [key]: { ...prev[key], text: value } }));
+
+  const setColumnFilterValues = (key: string, values: string[]) =>
+    setFilters(prev => ({ ...prev, [key]: { ...prev[key], values } }));
 
   const clearFilters = () => setFilters({});
 
   const processed = useMemo(() => {
     let out = rows;
 
-    // Filtros por columna
-    const activeFilters = Object.entries(filters).filter(([, v]) => v && v.trim() !== '');
+    // Filtros por columna (texto + multi-select)
+    const activeFilters = Object.entries(filters).filter(([, v]) => {
+      if (!v) return false;
+      const hasText = v.text && v.text.trim() !== '';
+      const hasValues = Array.isArray(v.values) && v.values.length > 0;
+      return hasText || hasValues;
+    });
     if (activeFilters.length > 0) {
       out = out.filter(row =>
-        activeFilters.every(([key, val]) => {
+        activeFilters.every(([key, f]) => {
           const acc = accessors[key];
           if (!acc) return true;
           const cell = acc(row);
-          if (cell == null) return false;
-          return String(cell).toLowerCase().includes(val.toLowerCase());
+          const cellStr = cell == null ? '' : String(cell);
+          if (f.text && f.text.trim() !== '') {
+            if (!cellStr.toLowerCase().includes(f.text.toLowerCase())) return false;
+          }
+          if (Array.isArray(f.values) && f.values.length > 0) {
+            if (!f.values.includes(cellStr.trim())) return false;
+          }
+          return true;
         })
       );
     }
@@ -130,6 +145,7 @@ export function useDataTable<T extends { id: string }>(
     // filtros
     filters,
     setColumnFilter,
+    setColumnFilterValues,
     clearFilters,
   };
 }

@@ -375,12 +375,12 @@ export default function Inventario() {
                   aria-label="Seleccionar todos"
                 />
               </TableHead>
-              <SortHeader label="Código" columnKey="codigo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.codigo} onFilterChange={(v) => dt.setColumnFilter('codigo', v)} filterOptions={filteredProducts.map((p: any) => p.codigo)} />
-              <SortHeader label="Producto" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.nombre} onFilterChange={(v) => dt.setColumnFilter('nombre', v)} filterOptions={filteredProducts.map((p: any) => p.nombre)} />
-              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.categoria} onFilterChange={(v) => dt.setColumnFilter('categoria', v)} filterOptions={filteredProducts.map((p: any) => p.categoria)} />
-              <SortHeader label="Precio" columnKey="precio" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.precio} onFilterChange={(v) => dt.setColumnFilter('precio', v)} />
-              <SortHeader label="Stock" columnKey="stock" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.stock} onFilterChange={(v) => dt.setColumnFilter('stock', v)} />
-              <SortHeader label="Valor" columnKey="valor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.valor} onFilterChange={(v) => dt.setColumnFilter('valor', v)} />
+              <SortHeader label="Código" columnKey="codigo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.codigo} onFilterChange={(v) => dt.setColumnFilter('codigo', v)} onValuesChange={(vs) => dt.setColumnFilterValues('codigo', vs)} filterOptions={filteredProducts.map((p: any) => p.codigo)} />
+              <SortHeader label="Producto" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.nombre} onFilterChange={(v) => dt.setColumnFilter('nombre', v)} onValuesChange={(vs) => dt.setColumnFilterValues('nombre', vs)} filterOptions={filteredProducts.map((p: any) => p.nombre)} />
+              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.categoria} onFilterChange={(v) => dt.setColumnFilter('categoria', v)} onValuesChange={(vs) => dt.setColumnFilterValues('categoria', vs)} filterOptions={filteredProducts.map((p: any) => p.categoria)} />
+              <SortHeader label="Precio" columnKey="precio" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.precio} onFilterChange={(v) => dt.setColumnFilter('precio', v)} onValuesChange={(vs) => dt.setColumnFilterValues('precio', vs)} />
+              <SortHeader label="Stock" columnKey="stock" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.stock} onFilterChange={(v) => dt.setColumnFilter('stock', v)} onValuesChange={(vs) => dt.setColumnFilterValues('stock', vs)} />
+              <SortHeader label="Valor" columnKey="valor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.valor} onFilterChange={(v) => dt.setColumnFilter('valor', v)} onValuesChange={(vs) => dt.setColumnFilterValues('valor', vs)} />
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>

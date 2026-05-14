@@ -554,12 +554,12 @@ export default function Compras() {
                         aria-label="Seleccionar todas"
                       />
                     </TableHead>
-                    <SortHeader label="Orden" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.numero} onFilterChange={(v) => dt.setColumnFilter('numero', v)} filterOptions={filteredOrdenes.map((o: any) => o.numero || o.codigo)} />
-                    <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.proveedor} onFilterChange={(v) => dt.setColumnFilter('proveedor', v)} filterOptions={filteredOrdenes.map((o: any) => o.proveedor?.nombre || o.proveedor_nombre)} />
-                    <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.fecha} onFilterChange={(v) => dt.setColumnFilter('fecha', v)} filterOptions={filteredOrdenes.map((o: any) => o.fecha)} />
+                    <SortHeader label="Orden" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.numero} onFilterChange={(v) => dt.setColumnFilter('numero', v)} onValuesChange={(vs) => dt.setColumnFilterValues('numero', vs)} filterOptions={filteredOrdenes.map((o: any) => o.numero || o.codigo)} />
+                    <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.proveedor} onFilterChange={(v) => dt.setColumnFilter('proveedor', v)} onValuesChange={(vs) => dt.setColumnFilterValues('proveedor', vs)} filterOptions={filteredOrdenes.map((o: any) => o.proveedor?.nombre || o.proveedor_nombre)} />
+                    <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.fecha} onFilterChange={(v) => dt.setColumnFilter('fecha', v)} onValuesChange={(vs) => dt.setColumnFilterValues('fecha', vs)} filterOptions={filteredOrdenes.map((o: any) => o.fecha)} />
                     <TableHead>Items</TableHead>
-                    <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.estado} onFilterChange={(v) => dt.setColumnFilter('estado', v)} filterOptions={filteredOrdenes.map((o: any) => o.estado)} />
-                    <SortHeader label="Total" columnKey="total" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.total} onFilterChange={(v) => dt.setColumnFilter('total', v)} />
+                    <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.estado} onFilterChange={(v) => dt.setColumnFilter('estado', v)} onValuesChange={(vs) => dt.setColumnFilterValues('estado', vs)} filterOptions={filteredOrdenes.map((o: any) => o.estado)} />
+                    <SortHeader label="Total" columnKey="total" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.total} onFilterChange={(v) => dt.setColumnFilter('total', v)} onValuesChange={(vs) => dt.setColumnFilterValues('total', vs)} />
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>

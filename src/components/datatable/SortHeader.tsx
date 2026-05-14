@@ -1,10 +1,14 @@
+import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Filter, X } from 'lucide-react';
 import { TableHead } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import type { SortDir } from '@/hooks/useDataTable';
+
+export type ColumnFilterValue = { text?: string; values?: string[] } | undefined;
 
 interface SortHeaderProps {
   label: string;
@@ -15,8 +19,9 @@ interface SortHeaderProps {
   className?: string;
   align?: 'left' | 'right' | 'center';
   // Filtro opcional integrado en el header
-  filterValue?: string;
+  filterValue?: ColumnFilterValue;
   onFilterChange?: (v: string) => void;
+  onValuesChange?: (values: string[]) => void;
   filterOptions?: Array<string | number | null | undefined>;
   filterPlaceholder?: string;
 }
@@ -31,24 +36,62 @@ export function SortHeader({
   align = 'left',
   filterValue,
   onFilterChange,
+  onValuesChange,
   filterOptions,
   filterPlaceholder,
 }: SortHeaderProps) {
   const active = sortKey === columnKey && sortDir;
   const Icon = active ? (sortDir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
-  const hasFilter = !!onFilterChange;
-  const filterActive = hasFilter && !!filterValue && filterValue.trim() !== '';
+  const hasFilter = !!onFilterChange || !!onValuesChange;
+  const textVal = filterValue?.text || '';
+  const selectedValues = filterValue?.values || [];
+  const filterActive =
+    hasFilter && ((textVal.trim() !== '') || selectedValues.length > 0);
 
-  // Valores únicos para mostrar como chips
-  const uniqueValues = hasFilter && filterOptions
-    ? Array.from(
-        new Set(
-          filterOptions
-            .map(v => (v == null ? '' : String(v).trim()))
-            .filter(v => v !== '')
-        )
-      ).sort((a, b) => a.localeCompare(b, 'es', { numeric: true })).slice(0, 50)
-    : [];
+  const [search, setSearch] = useState('');
+
+  // Valores únicos
+  const uniqueValues = useMemo(() => {
+    if (!filterOptions) return [] as string[];
+    return Array.from(
+      new Set(
+        filterOptions
+          .map(v => (v == null ? '' : String(v).trim()))
+          .filter(v => v !== '')
+      )
+    ).sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+  }, [filterOptions]);
+
+  const visibleValues = useMemo(() => {
+    if (!search.trim()) return uniqueValues;
+    const q = search.toLowerCase();
+    return uniqueValues.filter(v => v.toLowerCase().includes(q));
+  }, [uniqueValues, search]);
+
+  const supportsMulti = !!onValuesChange;
+  const allSelected =
+    supportsMulti && uniqueValues.length > 0 && uniqueValues.every(v => selectedValues.includes(v));
+  const someSelected = supportsMulti && selectedValues.length > 0 && !allSelected;
+
+  const toggleValue = (v: string) => {
+    if (!onValuesChange) return;
+    if (selectedValues.includes(v)) {
+      onValuesChange(selectedValues.filter(x => x !== v));
+    } else {
+      onValuesChange([...selectedValues, v]);
+    }
+  };
+
+  const toggleAll = () => {
+    if (!onValuesChange) return;
+    onValuesChange(allSelected ? [] : uniqueValues);
+  };
+
+  const clearAll = () => {
+    onFilterChange?.('');
+    onValuesChange?.([]);
+    setSearch('');
+  };
 
   return (
     <TableHead className={cn('whitespace-nowrap', className)}>
@@ -91,9 +134,15 @@ export function SortHeader({
               <div className="flex items-center gap-1">
                 <Input
                   autoFocus
-                  value={filterValue || ''}
-                  onChange={(e) => onFilterChange?.(e.target.value)}
-                  placeholder={filterPlaceholder || `Filtrar ${label.toLowerCase()}`}
+                  value={supportsMulti ? search : textVal}
+                  onChange={(e) => {
+                    if (supportsMulti) setSearch(e.target.value);
+                    else onFilterChange?.(e.target.value);
+                  }}
+                  placeholder={
+                    filterPlaceholder ||
+                    (supportsMulti ? `Buscar ${label.toLowerCase()}` : `Filtrar ${label.toLowerCase()}`)
+                  }
                   className="h-8 text-xs"
                 />
                 {filterActive && (
@@ -102,20 +151,61 @@ export function SortHeader({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 shrink-0"
-                    onClick={() => onFilterChange?.('')}
+                    onClick={clearAll}
                     aria-label="Limpiar filtro"
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 )}
               </div>
-              {uniqueValues.length > 0 && (
+              {supportsMulti && uniqueValues.length > 0 && (
+                <div className="border-t pt-2 space-y-1">
+                  <label className="flex items-center gap-2 px-1 py-1 rounded hover:bg-muted cursor-pointer">
+                    <Checkbox
+                      checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                      onCheckedChange={toggleAll}
+                    />
+                    <span className="text-xs font-medium">
+                      {allSelected ? 'Quitar todos' : 'Seleccionar todos'}
+                    </span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">
+                      {selectedValues.length}/{uniqueValues.length}
+                    </span>
+                  </label>
+                  <div className="max-h-56 overflow-y-auto space-y-0.5">
+                    {visibleValues.map(v => {
+                      const checked = selectedValues.includes(v);
+                      return (
+                        <label
+                          key={v}
+                          className={cn(
+                            'flex items-center gap-2 px-1 py-1 rounded text-xs cursor-pointer hover:bg-muted',
+                            checked && 'bg-primary/5'
+                          )}
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => toggleValue(v)}
+                          />
+                          <span className="truncate">{v}</span>
+                        </label>
+                      );
+                    })}
+                    {visibleValues.length === 0 && (
+                      <div className="text-xs text-muted-foreground px-1 py-2 text-center">
+                        Sin coincidencias
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {!supportsMulti && uniqueValues.length > 0 && (
                 <div className="max-h-48 overflow-y-auto space-y-0.5 border-t pt-2">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground px-1 pb-1">
                     Valores
                   </div>
-                  {uniqueValues.map(v => {
-                    const selected = filterValue === v;
+                  {uniqueValues.slice(0, 50).map(v => {
+                    const selected = textVal === v;
                     return (
                       <button
                         key={v}
