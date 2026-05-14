@@ -654,7 +654,11 @@ class ApiClient {
   createSuscripcion = async (_data: any): Promise<any> => ({});
   extenderSuscripcion = async (_id: string, _dias = 30): Promise<any> => ({});
   eliminarSuscripcion = async (_id: string): Promise<any> => ({});
-  getHotelesSaas = async (): Promise<any> => { const { data } = await supabase.from('hotels').select('*'); return data || []; };
+  getHotelesSaas = async (): Promise<any> => {
+    const { data } = await supabase.from('hotels').select('*');
+    // Cada hotel pertenece a su propia "cuenta" (relación 1:1 en este modelo)
+    return (data || []).map((h: any) => ({ ...h, cuenta_id: h.id }));
+  };
   createHotelSaas = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('hotels').insert(data).select().single(); if (error) throw error; return r; };
   registrarHotelFull = async (_data: any): Promise<any> => ({});
   asignarHotelACuenta = async (_data: any): Promise<any> => ({});
