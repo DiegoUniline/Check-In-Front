@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { 
   Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone, UserPlus, Check
 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -445,6 +447,9 @@ export default function AdminPlataforma() {
           <p className="text-xs text-slate-400">Gestión de Clientes y Suscripciones</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
+          <Button variant="outline" asChild>
+            <Link to="/dashboard"><ArrowLeft className="w-4 h-4 mr-2" /> Volver al Panel</Link>
+          </Button>
           <Input placeholder="Buscar cliente..." className="bg-white" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
           <Button onClick={() => setModalCliente(true)}><Plus className="w-4 h-4 mr-2" /> Nuevo Cliente</Button>
         </div>
