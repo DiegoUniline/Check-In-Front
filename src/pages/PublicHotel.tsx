@@ -101,6 +101,8 @@ export default function PublicHotel() {
       ]);
       setTipos((tps || []) as any);
       setHabitaciones((hbs || []) as any);
+      // eslint-disable-next-line no-console
+      console.log('[PublicHotel] loaded', { tipos: (tps || []).length, habitaciones: (hbs || []).length });
       setLoading(false);
     })();
   }, [slug]);
