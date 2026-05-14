@@ -413,6 +413,10 @@ export default function Usuarios() {
           <Button variant="outline" size="icon" onClick={cargarUsuarios}>
             <RefreshCw className="h-4 w-4" />
           </Button>
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
+          </Button>
         </div>
         <Button onClick={openNewModal}>
           <UserPlus className="mr-2 h-4 w-4" />

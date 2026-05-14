@@ -410,6 +410,10 @@ export default function Gastos() {
           <Button variant="outline" size="icon" onClick={cargarGastos}>
             <RefreshCw className="h-4 w-4" />
           </Button>
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
+          </Button>
         </div>
         <Button onClick={() => setIsNewGastoOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
