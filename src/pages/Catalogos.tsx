@@ -210,6 +210,30 @@ export default function Catalogos() {
     }
   };
 
+  const toggleWebTipo = async (tipo: any, value: boolean) => {
+    setTiposHabitacion(prev => prev.map(t => t.id === tipo.id ? { ...t, publicar_web: value } : t));
+    try {
+      await api.updateTipoHabitacion(tipo.id, { publicar_web: value });
+      toast({ title: value ? 'Publicado en web' : 'Oculto de la web', description: tipo.nombre });
+    } catch (e: any) {
+      setTiposHabitacion(prev => prev.map(t => t.id === tipo.id ? { ...t, publicar_web: !value } : t));
+      toast({ title: 'Error', description: e?.message || 'No se pudo cambiar', variant: 'destructive' });
+    }
+  };
+
+  const bulkWebTipos = async (value: boolean) => {
+    const ids = Array.from(dtTipos.selected);
+    if (!ids.length) return;
+    try {
+      await Promise.all(ids.map(id => api.updateTipoHabitacion(id, { publicar_web: value })));
+      toast({ title: value ? 'Publicados en web' : 'Ocultos de la web', description: `${ids.length} tipo(s)` });
+      dtTipos.clearSelection();
+      cargarTiposHabitacion();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudo aplicar', variant: 'destructive' });
+    }
+  };
+
   // ========== CATEGORÍAS PRODUCTOS ==========
   const cargarCategorias = async () => {
     try {
