@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   Receipt, Plus, Search, DollarSign,
   Tag, Building, Car, Utensils, Wrench, Package, Users,
-  TrendingDown, FileText, MoreVertical, Eye, Trash2, RefreshCw, Edit
+  TrendingDown, FileText, MoreVertical, Eye, Trash2, RefreshCw, Edit,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
