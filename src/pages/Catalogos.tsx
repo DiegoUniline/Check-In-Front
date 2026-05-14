@@ -136,6 +136,8 @@ export default function Catalogos() {
       precio_base: '',
       precio_persona_extra: '0',
       amenidades: '',
+      publico: false,
+      fotos: '',
     });
     setModalTipoOpen(true);
   };
