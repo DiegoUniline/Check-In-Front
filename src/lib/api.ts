@@ -647,13 +647,53 @@ class ApiClient {
   createCuenta = async (_data: any): Promise<any> => ({});
   updateCuenta = async (_id: string, _data: any): Promise<any> => ({});
   deleteCuenta = async (_id: string): Promise<any> => ({});
-  getPlanes = async (): Promise<any> => [];
-  createPlan = async (_data: any): Promise<any> => ({});
-  updatePlan = async (_id: string, _data: any): Promise<any> => ({});
-  getSuscripcionesGlobales = async (): Promise<any> => [];
-  createSuscripcion = async (_data: any): Promise<any> => ({});
-  extenderSuscripcion = async (_id: string, _dias = 30): Promise<any> => ({});
-  eliminarSuscripcion = async (_id: string): Promise<any> => ({});
+  getPlanes = async (): Promise<any> => {
+    const { data } = await supabase.from('planes' as any).select('*').order('orden', { ascending: true });
+    return data || [];
+  };
+  createPlan = async (data: any): Promise<any> => {
+    const { data: r, error } = await supabase.from('planes' as any).insert(data).select().single();
+    if (error) throw error; return r;
+  };
+  updatePlan = async (id: string, data: any): Promise<any> => {
+    const { data: r, error } = await supabase.from('planes' as any).update(data).eq('id', id).select().single();
+    if (error) throw error; return r;
+  };
+  deletePlan = async (id: string): Promise<any> => {
+    const { error } = await supabase.from('planes' as any).delete().eq('id', id);
+    if (error) throw error; return {};
+  };
+  getSuscripcionesGlobales = async (): Promise<any> => {
+    const [{ data: subs }, { data: planes }] = await Promise.all([
+      supabase.from('suscripciones' as any).select('*'),
+      supabase.from('planes' as any).select('id,nombre'),
+    ]);
+    const today = new Date();
+    return ((subs as any[]) || []).map((s: any) => {
+      const plan = ((planes as any[]) || []).find((p: any) => p.id === s.plan_id);
+      const fin = new Date(s.fecha_fin);
+      const dias = Math.ceil((fin.getTime() - today.getTime()) / 86400000);
+      return { ...s, plan_nombre: plan?.nombre || '—', dias_restantes: dias };
+    });
+  };
+  createSuscripcion = async (data: any): Promise<any> => {
+    const { data: r, error } = await supabase.from('suscripciones' as any).insert({
+      hotel_id: data.hotel_id, plan_id: data.plan_id,
+      fecha_inicio: data.fecha_inicio, fecha_fin: data.fecha_fin,
+    }).select().single();
+    if (error) throw error; return r;
+  };
+  extenderSuscripcion = async (id: string, dias = 30): Promise<any> => {
+    const { data: cur } = await supabase.from('suscripciones' as any).select('fecha_fin').eq('id', id).maybeSingle();
+    const base = cur ? new Date((cur as any).fecha_fin) : new Date();
+    base.setDate(base.getDate() + dias);
+    const { error } = await supabase.from('suscripciones' as any).update({ fecha_fin: base.toISOString().slice(0,10) }).eq('id', id);
+    if (error) throw error; return {};
+  };
+  eliminarSuscripcion = async (id: string): Promise<any> => {
+    const { error } = await supabase.from('suscripciones' as any).delete().eq('id', id);
+    if (error) throw error; return {};
+  };
   getHotelesSaas = async (): Promise<any> => {
     const { data } = await supabase.from('hotels').select('*');
     // Cada hotel pertenece a su propia "cuenta" (relación 1:1 en este modelo)
