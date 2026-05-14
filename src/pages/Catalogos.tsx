@@ -637,10 +637,16 @@ export default function Catalogos() {
                   Items que se entregan al huésped durante su estancia (llaves, controles, toallas, etc.)
                 </p>
               </div>
-              <Button onClick={openNewEntregable}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Entregable
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleResetEnt}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
+                <Button onClick={openNewEntregable}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Entregable
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingEntregables ? (
