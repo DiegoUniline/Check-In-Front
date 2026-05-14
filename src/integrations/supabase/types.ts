@@ -19,42 +19,54 @@ export type Database = {
           cantidad: number | null
           concepto: string
           concepto_cargo_id: string | null
+          concepto_id: string | null
           created_at: string | null
           fecha: string | null
           habitacion_id: string | null
           hotel_id: string
           id: string
+          impuesto: number
           notas: string | null
           precio_unitario: number | null
+          producto_id: string | null
           reserva_id: string | null
+          subtotal: number
           total: number | null
         }
         Insert: {
           cantidad?: number | null
           concepto: string
           concepto_cargo_id?: string | null
+          concepto_id?: string | null
           created_at?: string | null
           fecha?: string | null
           habitacion_id?: string | null
           hotel_id: string
           id?: string
+          impuesto?: number
           notas?: string | null
           precio_unitario?: number | null
+          producto_id?: string | null
           reserva_id?: string | null
+          subtotal?: number
           total?: number | null
         }
         Update: {
           cantidad?: number | null
           concepto?: string
           concepto_cargo_id?: string | null
+          concepto_id?: string | null
           created_at?: string | null
           fecha?: string | null
           habitacion_id?: string | null
           hotel_id?: string
           id?: string
+          impuesto?: number
           notas?: string | null
           precio_unitario?: number | null
+          producto_id?: string | null
           reserva_id?: string | null
+          subtotal?: number
           total?: number | null
         }
         Relationships: [
@@ -122,6 +134,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      checklist_items: {
+        Row: {
+          activo: boolean
+          created_at: string
+          hotel_id: string
+          id: string
+          nombre: string
+          orden: number
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          hotel_id: string
+          id?: string
+          nombre: string
+          orden?: number
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          orden?: number
+          tipo?: string
+        }
+        Relationships: []
       }
       clientes: {
         Row: {
@@ -714,6 +756,7 @@ export type Database = {
       }
       pagos: {
         Row: {
+          concepto: string | null
           created_at: string | null
           fecha: string | null
           hotel_id: string
@@ -727,6 +770,7 @@ export type Database = {
           tipo: string | null
         }
         Insert: {
+          concepto?: string | null
           created_at?: string | null
           fecha?: string | null
           hotel_id: string
@@ -740,6 +784,7 @@ export type Database = {
           tipo?: string | null
         }
         Update: {
+          concepto?: string | null
           created_at?: string | null
           fecha?: string | null
           hotel_id?: string
