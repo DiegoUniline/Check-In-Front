@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   Receipt, Plus, Search, DollarSign,
   Tag, Building, Car, Utensils, Wrench, Package, Users,
-  TrendingDown, FileText, MoreVertical, Eye, Trash2, RefreshCw, Edit
+  TrendingDown, FileText, MoreVertical, Eye, Trash2, RefreshCw, Edit,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -141,6 +142,12 @@ export default function Gastos() {
   }), []);
   const dt = useDataTable<any>(filteredGastos, accessors, { storageKey: 'gastos' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
+
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterCategoria('all');
+    dt.resetPersisted();
+  };
 
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
@@ -402,6 +409,10 @@ export default function Gastos() {
           </Select>
           <Button variant="outline" size="icon" onClick={cargarGastos}>
             <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
           </Button>
         </div>
         <Button onClick={() => setIsNewGastoOpen(true)}>

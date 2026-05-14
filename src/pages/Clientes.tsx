@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Search, Plus, Star, Mail, Phone, 
-  MoreVertical, Eye, Edit, History, Award, X, Trash2
+  MoreVertical, Eye, Edit, History, Award, X, Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -232,6 +233,11 @@ export default function Clientes() {
   const dt = useDataTable<Cliente>(filteredClientes, accessors, { storageKey: 'clientes' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
+  const handleResetAll = () => {
+    setSearchQuery('');
+    dt.resetPersisted();
+  };
+
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
     try {
@@ -348,14 +354,20 @@ export default function Clientes() {
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar por nombre, email o teléfono..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="flex items-center gap-2 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar por nombre, email o teléfono..."
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
+          </Button>
         </div>
         <Button onClick={handleNuevoCliente}>
           <Plus className="mr-2 h-4 w-4" />

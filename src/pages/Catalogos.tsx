@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard } from 'lucide-react';
+import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -406,6 +406,11 @@ export default function Catalogos() {
   }), []);
   const dtMet = useDataTable<any>(metodosPago, metAcc, { storageKey: 'catalogos-metodos' });
 
+  const handleResetTipos = () => dtTipos.resetPersisted();
+  const handleResetCats = () => dtCats.resetPersisted();
+  const handleResetEnt = () => dtEnt.resetPersisted();
+  const handleResetMet = () => dtMet.resetPersisted();
+
   const bulkDelete = async (ids: string[], deleter: (id: string) => Promise<any>, label: string, reload: () => void, clear: () => void) => {
     try {
       await Promise.all(ids.map(id => deleter(id)));
@@ -453,10 +458,16 @@ export default function Catalogos() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Tipos de Habitación</CardTitle>
-              <Button onClick={openNewTipo}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Tipo
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleResetTipos}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
+                <Button onClick={openNewTipo}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Tipo
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingTipos ? (
@@ -545,10 +556,16 @@ export default function Catalogos() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Categorías de Productos</CardTitle>
-              <Button onClick={() => setModalCatOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva Categoría
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleResetCats}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
+                <Button onClick={() => setModalCatOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva Categoría
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingCategorias ? (
@@ -620,10 +637,16 @@ export default function Catalogos() {
                   Items que se entregan al huésped durante su estancia (llaves, controles, toallas, etc.)
                 </p>
               </div>
-              <Button onClick={openNewEntregable}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Entregable
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleResetEnt}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
+                <Button onClick={openNewEntregable}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Entregable
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingEntregables ? (
@@ -727,10 +750,16 @@ export default function Catalogos() {
                   Define los métodos de cobro que usa tu hotel. Aparecerán al registrar pagos en Check-in, Check-out, Reservas y POS.
                 </p>
               </div>
-              <Button onClick={openNewMetodo}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Método
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleResetMet}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
+                <Button onClick={openNewMetodo}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Método
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingMetodos ? (

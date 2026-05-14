@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, Clock, CheckCircle, AlertTriangle, 
-  User, Play, Check, Eye, RefreshCw, UserPlus
+  User, Play, Check, Eye, RefreshCw, UserPlus,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,12 @@ export default function Limpieza() {
     estado: (t: any) => t.estado || '',
   }), []);
   const dt = useDataTable<any>(filteredTareas, accessors);
+
+  const handleResetAll = () => {
+    setFilterEstado('all');
+    setFilterPrioridad('all');
+    dt.resetPersisted();
+  };
 
   const eliminarSeleccionadas = async () => {
     setEliminandoBulk(true);
@@ -297,6 +304,10 @@ export default function Limpieza() {
 
         <Button variant="outline" size="icon" onClick={cargarDatos}>
           <RefreshCw className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleResetAll}>
+          <RotateCcw className="h-4 w-4 mr-1" />
+          Restablecer
         </Button>
       </div>
 

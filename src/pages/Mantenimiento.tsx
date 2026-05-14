@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Wrench, Clock, CheckCircle, AlertTriangle, Plus,
-  User, Calendar, ArrowRight, RefreshCw
+  User, Calendar, ArrowRight, RefreshCw,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,11 @@ export default function Mantenimiento() {
     estado: (t: any) => t.estado || '',
   }), []);
   const dt = useDataTable<any>(filteredTickets, accessors);
+
+  const handleResetAll = () => {
+    setFilterEstado('all');
+    dt.resetPersisted();
+  };
 
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
@@ -291,6 +297,10 @@ export default function Mantenimiento() {
           
           <Button variant="outline" size="icon" onClick={cargarDatos}>
             <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
           </Button>
         </div>
 

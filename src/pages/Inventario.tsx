@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Package, Search, Plus, Edit, AlertTriangle,
-  ArrowUpDown, MoreVertical, RefreshCw, Trash2
+  ArrowUpDown, MoreVertical, RefreshCw, Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -134,6 +135,12 @@ export default function Inventario() {
     valor: (p: any) => Number(p.precio_venta || 0) * Number(p.stock_actual || 0),
   }), []);
   const dt = useDataTable<any>(filteredProducts, accessors, { storageKey: 'inventario' });
+
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterCategoria('all');
+    dt.resetPersisted();
+  };
 
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
@@ -321,6 +328,10 @@ export default function Inventario() {
           </Select>
           <Button variant="outline" size="icon" onClick={cargarDatos}>
             <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
           </Button>
         </div>
         <Button onClick={openNewModal}>

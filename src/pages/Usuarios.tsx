@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   UserPlus, Search, MoreVertical, Edit, Trash2, 
-  RefreshCw, Shield, Mail, Phone, Eye, EyeOff
+  RefreshCw, Shield, Mail, Phone, Eye, EyeOff,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -168,6 +169,12 @@ export default function Usuarios() {
     estado: (u: any) => (u.activo !== false ? 'Activo' : 'Inactivo'),
   }), []);
   const dt = useDataTable<any>(filteredUsuarios, accessors, { storageKey: 'usuarios' });
+
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterRol('all');
+    dt.resetPersisted();
+  };
 
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
@@ -405,6 +412,10 @@ export default function Usuarios() {
           </Select>
           <Button variant="outline" size="icon" onClick={cargarUsuarios}>
             <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
           </Button>
         </div>
         <Button onClick={openNewModal}>

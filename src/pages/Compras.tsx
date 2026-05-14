@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   ShoppingBag, Plus, Search, Package, Truck, 
   Calendar, DollarSign, CheckCircle2, Clock, AlertCircle,
-  MoreVertical, Eye, FileText, Building, RefreshCw, X
+  MoreVertical, Eye, FileText, Building, RefreshCw, X,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -126,6 +127,17 @@ export default function Compras() {
     total: (o: any) => Number(o.total || 0),
   }), []);
   const dt = useDataTable<any>(filteredOrdenes, ordenAccessors, { storageKey: 'compras-ordenes' });
+
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterEstado('all');
+    dt.resetPersisted();
+  };
+
+  const handleResetAllProv = () => {
+    setProvSearch('');
+    dtProv.resetPersisted();
+  };
 
   const eliminarSeleccionadas = async () => {
     setEliminandoBulk(true);
@@ -455,6 +467,10 @@ export default function Compras() {
                 <Button variant="outline" size="icon" onClick={cargarDatos} className="shrink-0">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
+                <Button variant="outline" size="sm" onClick={handleResetAll}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
               </div>
             </div>
             <Button onClick={() => setIsNewOrderOpen(true)} className="w-full sm:w-auto justify-center">
@@ -663,10 +679,16 @@ export default function Compras() {
 
         <TabsContent value="proveedores">
           <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2 flex-1">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar proveedor..." className="pl-9" value={provSearch} onChange={(e) => setProvSearch(e.target.value)} />
             </div>
+            <Button variant="outline" size="sm" onClick={handleResetAllProv}>
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Restablecer
+            </Button>
+          </div>
             <Button onClick={() => setIsNewProveedorOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Proveedor

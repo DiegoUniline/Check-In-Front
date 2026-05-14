@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Grid3X3, List, Search, Plus, 
-  MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed, Pencil, Trash2
+  MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed, Pencil, Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -139,6 +140,14 @@ export default function Habitaciones() {
   }), []);
   const dt = useDataTable<any>(filteredHabitaciones, accessors, { storageKey: 'habitaciones' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
+
+  const handleResetAll = () => {
+    setSearchQuery('');
+    setFilterPiso('all');
+    setFilterTipo('all');
+    setFilterEstado('all');
+    dt.resetPersisted();
+  };
 
   const eliminarSeleccionadas = async () => {
     setEliminandoBulk(true);
@@ -366,6 +375,11 @@ export default function Habitaciones() {
               <SelectItem value="Bloqueada">Bloqueada</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
+          </Button>
         </div>
 
         <div className="flex items-center gap-2 justify-between sm:justify-end">
