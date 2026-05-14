@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BedDouble, DoorOpen, Sparkles, Wrench } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PublicLinkBanner } from '@/components/PublicLinkBanner';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { CheckInsCard } from '@/components/dashboard/CheckInsCard';
 import { VentasDiaCard } from '@/components/dashboard/VentasDiaCard';
@@ -156,6 +157,9 @@ export default function Dashboard() {
       title="Panel Principal" 
       subtitle="Resumen de operaciones del hotel"
     >
+      <div className="mb-6">
+        <PublicLinkBanner />
+      </div>
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <KPICard
