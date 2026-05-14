@@ -88,6 +88,7 @@ export default function Habitaciones() {
     estado_habitacion: 'Disponible',
     estado_limpieza: 'Limpia',
     estado_mantenimiento: 'OK',
+    excluida_publica: false,
   });
 
   // Loading flags para evitar doble-click
@@ -242,6 +243,7 @@ export default function Habitaciones() {
       estado_habitacion: 'Disponible',
       estado_limpieza: 'Limpia',
       estado_mantenimiento: 'OK',
+      excluida_publica: false,
     });
     setModalOpen(true);
   };
@@ -255,6 +257,7 @@ export default function Habitaciones() {
       estado_habitacion: hab.estado_habitacion || 'Disponible',
       estado_limpieza: hab.estado_limpieza || 'Limpia',
       estado_mantenimiento: hab.estado_mantenimiento || 'OK',
+      excluida_publica: !!hab.excluida_publica,
     });
     setModalOpen(true);
   };
@@ -639,6 +642,16 @@ export default function Habitaciones() {
                   <SelectItem value="Bloqueada">Bloqueada</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label className="font-medium">Excluir de reservas online</Label>
+                <p className="text-xs text-muted-foreground">Esta habitación no se ofrecerá en la página pública aunque su tipo esté publicado.</p>
+              </div>
+              <Switch
+                checked={formData.excluida_publica}
+                onCheckedChange={(v) => setFormData({ ...formData, excluida_publica: v })}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">
