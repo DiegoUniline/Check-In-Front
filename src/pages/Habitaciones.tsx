@@ -128,6 +128,59 @@ export default function Habitaciones() {
     return matchSearch && matchPiso && matchTipo && matchEstado;
   });
 
+  // ===== DataTable: selección, sort y filtros por columna =====
+  const accessors = useMemo(() => ({
+    numero: (h: any) => h.numero || '',
+    tipo: (h: any) => h.tipo_nombre || '',
+    piso: (h: any) => h.piso ?? '',
+    estado: (h: any) => h.estado_habitacion || '',
+    limpieza: (h: any) => h.estado_limpieza || '',
+    mantenimiento: (h: any) => h.estado_mantenimiento || '',
+  }), []);
+  const dt = useDataTable<any>(filteredHabitaciones, accessors);
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
+
+  const eliminarSeleccionadas = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.deleteHabitacion(id)));
+      toast({ title: 'Habitaciones eliminadas', description: `Se eliminaron ${ids.length}.` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error al eliminar', description: err.message || 'No se pudo eliminar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const exportarCsv = () => {
+    exportToCsv('habitaciones', dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed, [
+      { key: 'numero', label: 'Habitación', accessor: (h) => h.numero },
+      { key: 'tipo_nombre', label: 'Tipo', accessor: (h) => h.tipo_nombre },
+      { key: 'piso', label: 'Piso', accessor: (h) => h.piso },
+      { key: 'estado_habitacion', label: 'Estado', accessor: (h) => h.estado_habitacion },
+      { key: 'estado_limpieza', label: 'Limpieza', accessor: (h) => h.estado_limpieza },
+      { key: 'estado_mantenimiento', label: 'Mantenimiento', accessor: (h) => h.estado_mantenimiento },
+    ]);
+  };
+
+  const cambiarEstadoBulk = async (nuevo: string) => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.updateHabitacion(id, { estado_habitacion: nuevo })));
+      toast({ title: 'Estado actualizado', description: `${ids.length} habitación(es) → ${nuevo}` });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'No se pudo actualizar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
   const getStatusColor = (hab: any) => {
     if (hab.estado_mantenimiento !== 'OK') return 'border-destructive bg-destructive/5';
     if (hab.estado_limpieza !== 'Limpia') return 'border-info bg-info/5';
