@@ -1229,18 +1229,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Hacer Check-in</>}
                 </Button>
 
-                {/* Si está confirmada y faltan verificaciones, damos salida explícita para forzar sin bloquear operación */}
-                {r.estado === 'Confirmada' && (!documentoVerificado || !tarjetaRegistrada || !firmaDigital) && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    size="sm"
-                    onClick={() => handleCheckin({ force: true })}
-                    disabled={processing}
-                  >
-                    Forzar Check-in (sin verificaciones)
-                  </Button>
-                )}
                 <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
                   Cancelar Reserva
                 </Button>
