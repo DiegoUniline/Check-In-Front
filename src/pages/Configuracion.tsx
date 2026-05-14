@@ -335,7 +335,6 @@ export default function Configuracion() {
           </Card>
         </TabsContent>
         <TabsContent value="reservas-online">
-          <TabsContent value="whatsapp" forceMount={false}></TabsContent>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5" /> Reservas en línea</CardTitle>
