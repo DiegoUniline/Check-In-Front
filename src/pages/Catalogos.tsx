@@ -750,10 +750,16 @@ export default function Catalogos() {
                   Define los métodos de cobro que usa tu hotel. Aparecerán al registrar pagos en Check-in, Check-out, Reservas y POS.
                 </p>
               </div>
-              <Button onClick={openNewMetodo}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Método
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleResetMet}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
+                <Button onClick={openNewMetodo}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Método
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingMetodos ? (
