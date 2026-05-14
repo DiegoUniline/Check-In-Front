@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard } from 'lucide-react';
+import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
