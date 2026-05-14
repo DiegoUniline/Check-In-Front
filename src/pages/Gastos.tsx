@@ -38,7 +38,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import {
@@ -430,22 +430,17 @@ export default function Gastos() {
                   onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
                 />
               </TableHead>
-              <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-              <SortHeader label="Descripción" columnKey="descripcion" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-              <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-              <SortHeader label="Método" columnKey="metodo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-              <SortHeader label="Monto" columnKey="monto" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
+              <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.fecha} onFilterChange={(v) => dt.setColumnFilter('fecha', v)} filterOptions={filteredGastos.map((g: any) => g.fecha)} />
+              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.categoria} onFilterChange={(v) => dt.setColumnFilter('categoria', v)} filterOptions={filteredGastos.map((g: any) => g.categoria)} />
+              <SortHeader label="Descripción" columnKey="descripcion" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.descripcion} onFilterChange={(v) => dt.setColumnFilter('descripcion', v)} filterOptions={filteredGastos.map((g: any) => g.descripcion)} />
+              <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.proveedor} onFilterChange={(v) => dt.setColumnFilter('proveedor', v)} filterOptions={filteredGastos.map((g: any) => g.proveedor)} />
+              <SortHeader label="Método" columnKey="metodo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.metodo} onFilterChange={(v) => dt.setColumnFilter('metodo', v)} filterOptions={filteredGastos.map((g: any) => g.metodo_pago)} />
+              <SortHeader label="Monto" columnKey="monto" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.monto} onFilterChange={(v) => dt.setColumnFilter('monto', v)} />
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
             <TableRow>
               <TableHead />
-              <TableHead><ColumnFilterInput value={dt.filters.fecha || ''} onChange={(v) => dt.setColumnFilter('fecha', v)} placeholder="YYYY-MM" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.categoria || ''} onChange={(v) => dt.setColumnFilter('categoria', v)} placeholder="Categoría" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.descripcion || ''} onChange={(v) => dt.setColumnFilter('descripcion', v)} placeholder="Texto" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.proveedor || ''} onChange={(v) => dt.setColumnFilter('proveedor', v)} placeholder="Proveedor" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.metodo || ''} onChange={(v) => dt.setColumnFilter('metodo', v)} placeholder="Método" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.monto || ''} onChange={(v) => dt.setColumnFilter('monto', v)} placeholder=">0" /></TableHead>
+
               <TableHead />
             </TableRow>
           </TableHeader>
