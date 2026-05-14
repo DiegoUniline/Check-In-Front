@@ -91,6 +91,7 @@ export default function Habitaciones() {
     estado_limpieza: 'Limpia',
     estado_mantenimiento: 'OK',
     excluida_publica: false,
+    fotos: [] as string[],
   });
 
   // Loading flags para evitar doble-click
