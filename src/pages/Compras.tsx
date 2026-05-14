@@ -467,6 +467,10 @@ export default function Compras() {
                 <Button variant="outline" size="icon" onClick={cargarDatos} className="shrink-0">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
+                <Button variant="outline" size="sm" onClick={handleResetAll}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
               </div>
             </div>
             <Button onClick={() => setIsNewOrderOpen(true)} className="w-full sm:w-auto justify-center">
