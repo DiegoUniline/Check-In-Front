@@ -74,8 +74,7 @@ export default function PublicHotel() {
   const [notFound, setNotFound] = useState(false);
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [tipos, setTipos] = useState<Tipo[]>([]);
-  const [habitacionesByTipo, setHabitacionesByTipo] = useState<Record<string, number>>({});
-  const [fotosPorTipo, setFotosPorTipo] = useState<Record<string, string[]>>({});
+  const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [reservasOcupacion, setReservasOcupacion] = useState<any[]>([]);
 
   const [checkin, setCheckin] = useState(todayISO(1));
@@ -102,15 +101,10 @@ export default function PublicHotel() {
 
       const [{ data: tps }, { data: hbs }] = await Promise.all([
         (supabase.from('tipos_habitacion') as any).select('*').eq('hotel_id', h.id).eq('publicar_web', true),
-        (supabase.from('habitaciones') as any).select('id, tipo_habitacion_id, excluida_publica').eq('hotel_id', h.id).eq('excluida_publica', false),
+        (supabase.from('habitaciones') as any).select('id, numero, tipo_habitacion_id, excluida_publica, fotos').eq('hotel_id', h.id).eq('excluida_publica', false),
       ]);
       setTipos((tps || []) as any);
-      const counts: Record<string, number> = {};
-      (hbs || []).forEach((r: any) => {
-        if (!r.tipo_habitacion_id) return;
-        counts[r.tipo_habitacion_id] = (counts[r.tipo_habitacion_id] || 0) + 1;
-      });
-      setHabitacionesByTipo(counts);
+      setHabitaciones(hbs || []);
       setLoading(false);
     })();
   }, [slug]);
@@ -121,7 +115,7 @@ export default function PublicHotel() {
     const load = async () => {
       const { data } = await supabase
         .from('reservas')
-        .select('id, tipo_habitacion_id, fecha_checkin, fecha_checkout, estado')
+        .select('id, habitacion_id, tipo_habitacion_id, fecha_checkin, fecha_checkout, estado')
         .eq('hotel_id', hotel.id)
         .in('estado', ['Pendiente', 'Confirmada', 'CheckIn'])
         .lt('fecha_checkin', checkout)
@@ -135,19 +129,40 @@ export default function PublicHotel() {
     return () => { supabase.removeChannel(ch); };
   }, [hotel, checkin, checkout]);
 
-  const ocupadasPorTipo = useMemo(() => {
-    const m: Record<string, number> = {};
-    reservasOcupacion.forEach((r: any) => {
-      if (!r.tipo_habitacion_id) return;
-      m[r.tipo_habitacion_id] = (m[r.tipo_habitacion_id] || 0) + 1;
+  const habitacionesOcupadas = useMemo(() => {
+    const s = new Set<string>();
+    reservasOcupacion.forEach((r: any) => { if (r.habitacion_id) s.add(r.habitacion_id); });
+    return s;
+  }, [reservasOcupacion]);
+
+  const habitacionesPorTipo = useMemo(() => {
+    const m: Record<string, any[]> = {};
+    habitaciones.forEach((h: any) => {
+      if (!h.tipo_habitacion_id) return;
+      (m[h.tipo_habitacion_id] ||= []).push(h);
     });
     return m;
-  }, [reservasOcupacion]);
+  }, [habitaciones]);
+
+  const fotosPorTipo = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    habitaciones.forEach((h: any) => {
+      if (!h.tipo_habitacion_id || !h.fotos?.length) return;
+      (m[h.tipo_habitacion_id] ||= []).push(...h.fotos);
+    });
+    return m;
+  }, [habitaciones]);
 
   const ns = nights(checkin, checkout);
 
   const handleBookSubmit = async () => {
     if (!hotel || !bookingTipo) return;
+    const candidatas = (habitacionesPorTipo[bookingTipo.id] || []).filter((h: any) => !habitacionesOcupadas.has(h.id));
+    const habitacionAsignada = candidatas[0];
+    if (!habitacionAsignada) {
+      toast({ title: 'Sin disponibilidad', description: 'Esa habitación ya fue tomada. Intenta con otra.', variant: 'destructive' });
+      return;
+    }
     if (!form.nombre.trim() || !form.email.trim() || !form.telefono.trim()) {
       toast({ title: 'Faltan datos', description: 'Nombre, email y teléfono son requeridos.', variant: 'destructive' });
       return;
@@ -186,6 +201,7 @@ export default function PublicHotel() {
         hotel_id: hotel.id,
         numero_reserva: numero,
         cliente_id: cliente.id,
+        habitacion_id: habitacionAsignada.id,
         tipo_habitacion_id: bookingTipo.id,
         fecha_checkin: checkin,
         fecha_checkout: checkout,
@@ -297,12 +313,11 @@ export default function PublicHotel() {
           </CardContent></Card>
         )}
         {tipos.map((t) => {
-          const totalDelTipo = habitacionesByTipo[t.id] || 0;
-          const ocupadas = ocupadasPorTipo[t.id] || 0;
-          const disponibles = Math.max(0, totalDelTipo - ocupadas);
+          const habsDelTipo = habitacionesPorTipo[t.id] || [];
+          const disponibles = habsDelTipo.filter((h: any) => !habitacionesOcupadas.has(h.id)).length;
           const capacidadOk = adultos + ninos <= t.capacidad_maxima;
           const puedeReservar = ns > 0 && disponibles > 0 && capacidadOk;
-          const foto = t.fotos?.[0];
+          const foto = fotosPorTipo[t.id]?.[0] ?? t.fotos?.[0];
           return (
             <Card key={t.id} className="overflow-hidden">
               <div className="grid md:grid-cols-3 gap-0">
