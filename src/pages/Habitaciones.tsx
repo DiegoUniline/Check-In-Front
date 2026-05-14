@@ -375,6 +375,11 @@ export default function Habitaciones() {
               <SelectItem value="Bloqueada">Bloqueada</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button variant="outline" size="sm" onClick={handleResetAll}>
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Restablecer
+          </Button>
         </div>
 
         <div className="flex items-center gap-2 justify-between sm:justify-end">
