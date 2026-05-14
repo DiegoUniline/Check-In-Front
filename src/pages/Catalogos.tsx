@@ -556,10 +556,16 @@ export default function Catalogos() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Categorías de Productos</CardTitle>
-              <Button onClick={() => setModalCatOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva Categoría
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleResetCats}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Restablecer
+                </Button>
+                <Button onClick={() => setModalCatOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva Categoría
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingCategorias ? (
