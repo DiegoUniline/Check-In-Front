@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   Grid3X3, List, Search, Plus, 
   MoreVertical, Sparkles, Wrench, DoorOpen, DoorClosed, Pencil, Trash2,
-  RotateCcw
+  RotateCcw, Globe, GlobeLock
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -189,6 +189,41 @@ export default function Habitaciones() {
       toast({ title: 'Error', description: err.message || 'No se pudo actualizar', variant: 'destructive' });
     } finally {
       setEliminandoBulk(false);
+    }
+  };
+
+  const cambiarWebBulk = async (excluida: boolean) => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      await Promise.all(ids.map(id => api.updateHabitacion(id, { excluida_publica: excluida })));
+      toast({
+        title: excluida ? 'Excluidas de la web' : 'Publicadas en la web',
+        description: `${ids.length} habitación(es) actualizada(s)`,
+      });
+      dt.clearSelection();
+      await cargarDatos();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'No se pudo actualizar', variant: 'destructive' });
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const toggleWebSingle = async (hab: any) => {
+    const nuevoExcluida = !hab.excluida_publica;
+    // Optimista
+    setHabitaciones(prev => prev.map(h => h.id === hab.id ? { ...h, excluida_publica: nuevoExcluida } : h));
+    try {
+      await api.updateHabitacion(hab.id, { excluida_publica: nuevoExcluida });
+      toast({
+        title: nuevoExcluida ? 'Excluida de la web' : 'Publicada en la web',
+        description: `Habitación ${hab.numero}`,
+      });
+    } catch (err: any) {
+      // Revertir
+      setHabitaciones(prev => prev.map(h => h.id === hab.id ? { ...h, excluida_publica: !nuevoExcluida } : h));
+      toast({ title: 'Error', description: err.message || 'No se pudo actualizar', variant: 'destructive' });
     }
   };
 
@@ -441,6 +476,12 @@ export default function Habitaciones() {
                   <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Bloqueada')} disabled={eliminandoBulk}>
                     <DoorClosed className="h-4 w-4 mr-1" /> Bloquear
                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => cambiarWebBulk(false)} disabled={eliminandoBulk}>
+                    <Globe className="h-4 w-4 mr-1 text-success" /> Publicar web
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => cambiarWebBulk(true)} disabled={eliminandoBulk}>
+                    <GlobeLock className="h-4 w-4 mr-1 text-destructive" /> Excluir web
+                  </Button>
                 </>
               }
             />
@@ -461,6 +502,7 @@ export default function Habitaciones() {
                   <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.estado} onFilterChange={(v) => dt.setColumnFilter('estado', v)} onValuesChange={(vs) => dt.setColumnFilterValues('estado', vs)} filterOptions={filteredHabitaciones.map((h: any) => h.estado_habitacion)} />
                   <SortHeader label="Limpieza" columnKey="limpieza" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.limpieza} onFilterChange={(v) => dt.setColumnFilter('limpieza', v)} onValuesChange={(vs) => dt.setColumnFilterValues('limpieza', vs)} filterOptions={filteredHabitaciones.map((h: any) => h.estado_limpieza)} />
                   <SortHeader label="Mantenimiento" columnKey="mantenimiento" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.mantenimiento} onFilterChange={(v) => dt.setColumnFilter('mantenimiento', v)} onValuesChange={(vs) => dt.setColumnFilterValues('mantenimiento', vs)} filterOptions={filteredHabitaciones.map((h: any) => h.estado_mantenimiento)} />
+                  <TableHead className="text-center">Web</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -492,6 +534,18 @@ export default function Habitaciones() {
                         {hab.estado_mantenimiento}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Switch
+                          checked={!hab.excluida_publica}
+                          onCheckedChange={() => toggleWebSingle(hab)}
+                          aria-label="Publicada en la web"
+                        />
+                        {hab.excluida_publica
+                          ? <GlobeLock className="h-4 w-4 text-muted-foreground" />
+                          : <Globe className="h-4 w-4 text-success" />}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -521,7 +575,7 @@ export default function Habitaciones() {
                 ))}
                 {dt.processed.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
                       No hay habitaciones que coincidan
                     </TableCell>
                   </TableRow>
