@@ -468,6 +468,28 @@ class ApiClient {
     if (error) throw error; return { ok: true };
   };
 
+  // ------- Checklist Items (Check-in / Check-out) -------
+  getChecklistItems = async (params?: { tipo?: 'checkin' | 'checkout'; soloActivos?: boolean }): Promise<any[]> => {
+    let q = (supabase as any).from('checklist_items').select('*').eq('hotel_id', this.hid()).order('orden').order('created_at');
+    if (params?.tipo) q = q.eq('tipo', params.tipo);
+    if (params?.soloActivos) q = q.eq('activo', true);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  };
+  createChecklistItem = async (data: any): Promise<any> => {
+    const { data: r, error } = await (supabase as any).from('checklist_items').insert({ ...data, hotel_id: this.hid() }).select().single();
+    if (error) throw error; return r;
+  };
+  updateChecklistItem = async (id: string, data: any): Promise<any> => {
+    const { data: r, error } = await (supabase as any).from('checklist_items').update(data).eq('id', id).select().single();
+    if (error) throw error; return r;
+  };
+  deleteChecklistItem = async (id: string): Promise<any> => {
+    const { error } = await (supabase as any).from('checklist_items').delete().eq('id', id);
+    if (error) throw error; return { ok: true };
+  };
+
   // ------- Entregables -------
   getEntregables = async (): Promise<any> => { const { data } = await supabase.from('entregables').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
   createEntregable = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('entregables').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
