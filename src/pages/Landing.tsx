@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import {
   Hotel, BedDouble, Calendar, ShieldCheck, Sparkles, ArrowRight,
   Users, Wrench, Sparkle, ShoppingCart, Package, BarChart3,
-  ClipboardCheck, DollarSign, Globe, Clock, Check, Star,
+  ClipboardCheck, DollarSign, Globe, Clock, Check, Star, MessageCircle, Phone,
 } from 'lucide-react';
 
 /**
