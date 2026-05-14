@@ -816,6 +816,75 @@ export default function AdminPlataforma() {
           </div>
         </div>
       )}
+
+      {/* Modal Plan */}
+      {modalPlan.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+              <h2 className="font-bold">{modalPlan.plan ? 'Editar Plan' : 'Nuevo Plan'}</h2>
+              <button onClick={() => setModalPlan({ open: false, plan: null })}><X size={20} /></button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-500">Nombre *</label>
+                <Input value={formPlan.nombre} onChange={e => setFormPlan({...formPlan, nombre: e.target.value})} placeholder="Ej: Profesional" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500">Descripción</label>
+                <Input value={formPlan.descripcion} onChange={e => setFormPlan({...formPlan, descripcion: e.target.value})} placeholder="Para hoteles en crecimiento" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Costo mensual (MXN)</label>
+                  <Input type="number" value={formPlan.costo_mensual} onChange={e => setFormPlan({...formPlan, costo_mensual: Number(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Costo anual (MXN)</label>
+                  <Input type="number" value={formPlan.costo_anual} onChange={e => setFormPlan({...formPlan, costo_anual: Number(e.target.value)})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Hoteles</label>
+                  <Input type="number" value={formPlan.limite_hoteles} onChange={e => setFormPlan({...formPlan, limite_hoteles: Number(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Habitaciones</label>
+                  <Input type="number" value={formPlan.limite_habitaciones_por_hotel} onChange={e => setFormPlan({...formPlan, limite_habitaciones_por_hotel: Number(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Usuarios</label>
+                  <Input type="number" value={formPlan.limite_usuarios} onChange={e => setFormPlan({...formPlan, limite_usuarios: Number(e.target.value)})} />
+                </div>
+              </div>
+              <p className="text-xs text-slate-400">Usa 999 para "ilimitado"</p>
+              <div>
+                <label className="text-xs font-bold text-slate-500">Características (una por línea)</label>
+                <textarea
+                  className="w-full border rounded-md p-2 text-sm min-h-[120px]"
+                  value={formPlan.features}
+                  onChange={e => setFormPlan({...formPlan, features: e.target.value})}
+                  placeholder={'Reservas ilimitadas\nWhatsApp integrado\nReportes avanzados'}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Orden</label>
+                  <Input type="number" value={formPlan.orden} onChange={e => setFormPlan({...formPlan, orden: Number(e.target.value)})} />
+                </div>
+                <div className="flex items-end gap-2">
+                  <input type="checkbox" id="plan-activo" checked={formPlan.activo} onChange={e => setFormPlan({...formPlan, activo: e.target.checked})} />
+                  <label htmlFor="plan-activo" className="text-sm">Activo</label>
+                </div>
+              </div>
+              <Button className="w-full" onClick={() => guardarPlan.mutate()} disabled={guardarPlan.isPending || !formPlan.nombre}>
+                {guardarPlan.isPending ? 'Guardando...' : (modalPlan.plan ? 'Guardar Cambios' : 'Crear Plan')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
