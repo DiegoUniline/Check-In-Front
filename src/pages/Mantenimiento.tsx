@@ -90,6 +90,11 @@ export default function Mantenimiento() {
   }), []);
   const dt = useDataTable<any>(filteredTickets, accessors);
 
+  const handleResetAll = () => {
+    setFilterEstado('all');
+    dt.resetPersisted();
+  };
+
   const eliminarSeleccionados = async () => {
     setEliminandoBulk(true);
     try {
