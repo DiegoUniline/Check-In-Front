@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useDataTable } from '@/hooks/useDataTable';
+import { SortHeader } from '@/components/datatable/SortHeader';
+import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+import { BulkActionBar } from '@/components/datatable/BulkActionBar';
+import { exportToCsv } from '@/lib/exportCsv';
 
 export default function Catalogos() {
   const { toast } = useToast();
@@ -378,6 +384,48 @@ export default function Catalogos() {
     }
   };
 
+  // ===== DataTable kits para los 4 catálogos =====
+  const tipoAcc = useMemo(() => ({
+    codigo: (t: any) => t.codigo || '', nombre: (t: any) => t.nombre || '',
+    capacidad: (t: any) => Number(t.capacidad_maxima || 0),
+    precio: (t: any) => Number(t.precio_base || 0),
+  }), []);
+  const dtTipos = useDataTable<any>(tiposHabitacion, tipoAcc);
+  const catAcc = useMemo(() => ({ nombre: (c: any) => c.nombre || '', descripcion: (c: any) => c.descripcion || '' }), []);
+  const dtCats = useDataTable<any>(categorias, catAcc);
+  const entAcc = useMemo(() => ({
+    nombre: (e: any) => e.nombre || '', descripcion: (e: any) => e.descripcion || '',
+    devolucion: (e: any) => (e.requiere_devolucion ? 'Sí' : 'No'),
+    costo: (e: any) => Number(e.costo_reposicion || 0),
+    estado: (e: any) => (e.activo !== false ? 'Activo' : 'Inactivo'),
+  }), []);
+  const dtEnt = useDataTable<any>(entregables, entAcc);
+  const metAcc = useMemo(() => ({
+    orden: (m: any) => Number(m.orden || 0), nombre: (m: any) => m.nombre || '',
+    tipo: (m: any) => m.tipo || '', estado: (m: any) => (m.activo ? 'Activo' : 'Inactivo'),
+  }), []);
+  const dtMet = useDataTable<any>(metodosPago, metAcc);
+
+  const bulkDelete = async (ids: string[], deleter: (id: string) => Promise<any>, label: string, reload: () => void, clear: () => void) => {
+    try {
+      await Promise.all(ids.map(id => deleter(id)));
+      toast({ title: `${label} eliminados`, description: `Se eliminaron ${ids.length} registro(s).` });
+      clear(); reload();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const bulkActivar = async (ids: string[], activo: boolean, updater: (id: string, p: any) => Promise<any>, reload: () => void, clear: () => void) => {
+    try {
+      await Promise.all(ids.map(id => updater(id, { activo })));
+      toast({ title: activo ? 'Activados' : 'Desactivados', description: `${ids.length} registro(s)` });
+      clear(); reload();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <MainLayout title="Catálogos" subtitle="Administración de catálogos del sistema">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -416,21 +464,44 @@ export default function Catalogos() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (
+                <>
+                <BulkActionBar
+                  count={dtTipos.selectedCount}
+                  onClear={dtTipos.clearSelection}
+                  onDelete={() => bulkDelete(Array.from(dtTipos.selected), api.deleteTipoHabitacion, 'Tipos', cargarTiposHabitacion, dtTipos.clearSelection)}
+                  onExport={() => exportToCsv('tipos_habitacion', dtTipos.selectedRows.length ? dtTipos.selectedRows : dtTipos.processed, [
+                    { key: 'codigo', label: 'Código' }, { key: 'nombre', label: 'Nombre' },
+                    { key: 'capacidad_maxima', label: 'Capacidad' }, { key: 'precio_base', label: 'Precio' },
+                  ])}
+                  entityName="tipos"
+                />
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Código</TableHead>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Capacidad</TableHead>
-                      <TableHead>Precio Base</TableHead>
+                      <TableHead className="w-[40px]">
+                        <Checkbox checked={dtTipos.allVisibleSelected ? true : dtTipos.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtTipos.toggleSelectAllVisible(!!v)} />
+                      </TableHead>
+                      <SortHeader label="Código" columnKey="codigo" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} />
+                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} />
+                      <SortHeader label="Capacidad" columnKey="capacidad" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} />
+                      <SortHeader label="Precio Base" columnKey="precio" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} />
                       <TableHead>Precio Extra</TableHead>
                       <TableHead>Amenidades</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
+                    <TableRow>
+                      <TableHead />
+                      <TableHead><ColumnFilterInput value={dtTipos.filters.codigo || ''} onChange={(v) => dtTipos.setColumnFilter('codigo', v)} placeholder="Código" /></TableHead>
+                      <TableHead><ColumnFilterInput value={dtTipos.filters.nombre || ''} onChange={(v) => dtTipos.setColumnFilter('nombre', v)} placeholder="Nombre" /></TableHead>
+                      <TableHead /><TableHead /><TableHead /><TableHead /><TableHead />
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tiposHabitacion.map(tipo => (
-                      <TableRow key={tipo.id}>
+                    {dtTipos.processed.map(tipo => (
+                      <TableRow key={tipo.id} className={dtTipos.selected.has(tipo.id) ? 'bg-primary/5' : ''}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox checked={dtTipos.selected.has(tipo.id)} onCheckedChange={() => dtTipos.toggleRow(tipo.id)} />
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">{tipo.codigo}</Badge>
                         </TableCell>
@@ -460,15 +531,16 @@ export default function Catalogos() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {tiposHabitacion.length === 0 && (
+                    {dtTipos.processed.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                           No hay tipos de habitación registrados
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+                </>
               )}
             </CardContent>
           </Card>
@@ -490,17 +562,39 @@ export default function Catalogos() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (
+                <>
+                <BulkActionBar
+                  count={dtCats.selectedCount}
+                  onClear={dtCats.clearSelection}
+                  onDelete={() => bulkDelete(Array.from(dtCats.selected), (id) => api.deleteCategoria?.(id) ?? Promise.resolve(), 'Categorías', cargarCategorias, dtCats.clearSelection)}
+                  onExport={() => exportToCsv('categorias_producto', dtCats.selectedRows.length ? dtCats.selectedRows : dtCats.processed, [
+                    { key: 'nombre', label: 'Nombre' }, { key: 'descripcion', label: 'Descripción' },
+                  ])}
+                  entityName="categorías"
+                />
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Descripción</TableHead>
+                      <TableHead className="w-[40px]">
+                        <Checkbox checked={dtCats.allVisibleSelected ? true : dtCats.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtCats.toggleSelectAllVisible(!!v)} />
+                      </TableHead>
+                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtCats.sortKey} sortDir={dtCats.sortDir} onSort={dtCats.toggleSort} />
+                      <SortHeader label="Descripción" columnKey="descripcion" sortKey={dtCats.sortKey} sortDir={dtCats.sortDir} onSort={dtCats.toggleSort} />
                       <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                    <TableRow>
+                      <TableHead />
+                      <TableHead><ColumnFilterInput value={dtCats.filters.nombre || ''} onChange={(v) => dtCats.setColumnFilter('nombre', v)} placeholder="Nombre" /></TableHead>
+                      <TableHead><ColumnFilterInput value={dtCats.filters.descripcion || ''} onChange={(v) => dtCats.setColumnFilter('descripcion', v)} placeholder="Descripción" /></TableHead>
+                      <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categorias.map(cat => (
-                      <TableRow key={cat.id}>
+                    {dtCats.processed.map(cat => (
+                      <TableRow key={cat.id} className={dtCats.selected.has(cat.id) ? 'bg-primary/5' : ''}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox checked={dtCats.selected.has(cat.id)} onCheckedChange={() => dtCats.toggleRow(cat.id)} />
+                        </TableCell>
                         <TableCell className="font-medium">{cat.nombre}</TableCell>
                         <TableCell>{cat.descripcion || '-'}</TableCell>
                         <TableCell className="text-right">
@@ -513,15 +607,16 @@ export default function Catalogos() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {categorias.length === 0 && (
+                    {dtCats.processed.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                           No hay categorías registradas
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+                </>
               )}
             </CardContent>
           </Card>
@@ -548,20 +643,44 @@ export default function Catalogos() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (
+                <>
+                <BulkActionBar
+                  count={dtEnt.selectedCount}
+                  onClear={dtEnt.clearSelection}
+                  onDelete={() => bulkDelete(Array.from(dtEnt.selected), (id) => api.deleteEntregable?.(id) ?? Promise.resolve(), 'Entregables', cargarEntregables, dtEnt.clearSelection)}
+                  onExport={() => exportToCsv('entregables', dtEnt.selectedRows.length ? dtEnt.selectedRows : dtEnt.processed, [
+                    { key: 'nombre', label: 'Nombre' }, { key: 'descripcion', label: 'Descripción' },
+                    { key: 'requiere_devolucion', label: 'Devolución', accessor: (e) => e.requiere_devolucion ? 'Sí' : 'No' },
+                    { key: 'costo_reposicion', label: 'Costo' }, { key: 'activo', label: 'Activo', accessor: (e) => e.activo !== false ? 'Sí' : 'No' },
+                  ])}
+                  entityName="entregables"
+                  extraActions={
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => bulkActivar(Array.from(dtEnt.selected), true, (id, p) => api.updateEntregable?.(id, p) ?? Promise.resolve(), cargarEntregables, dtEnt.clearSelection)}>Activar</Button>
+                      <Button variant="outline" size="sm" onClick={() => bulkActivar(Array.from(dtEnt.selected), false, (id, p) => api.updateEntregable?.(id, p) ?? Promise.resolve(), cargarEntregables, dtEnt.clearSelection)}>Desactivar</Button>
+                    </>
+                  }
+                />
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead>Requiere Devolución</TableHead>
-                      <TableHead>Costo Reposición</TableHead>
-                      <TableHead>Estado</TableHead>
+                      <TableHead className="w-[40px]">
+                        <Checkbox checked={dtEnt.allVisibleSelected ? true : dtEnt.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtEnt.toggleSelectAllVisible(!!v)} />
+                      </TableHead>
+                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
+                      <SortHeader label="Descripción" columnKey="descripcion" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
+                      <SortHeader label="Requiere Devolución" columnKey="devolucion" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
+                      <SortHeader label="Costo Reposición" columnKey="costo" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
+                      <SortHeader label="Estado" columnKey="estado" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {entregables.map(ent => (
-                      <TableRow key={ent.id} className={!ent.activo ? 'opacity-50' : ''}>
+                    {dtEnt.processed.map(ent => (
+                      <TableRow key={ent.id} className={`${!ent.activo ? 'opacity-50' : ''} ${dtEnt.selected.has(ent.id) ? 'bg-primary/5' : ''}`}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox checked={dtEnt.selected.has(ent.id)} onCheckedChange={() => dtEnt.toggleRow(ent.id)} />
+                        </TableCell>
                         <TableCell className="font-medium">{ent.nombre}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{ent.descripcion || '-'}</TableCell>
                         <TableCell>
@@ -595,15 +714,16 @@ export default function Catalogos() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {entregables.length === 0 && (
+                    {dtEnt.processed.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           No hay entregables registrados
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+                </>
               )}
             </CardContent>
           </Card>
@@ -630,19 +750,42 @@ export default function Catalogos() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (
+                <>
+                <BulkActionBar
+                  count={dtMet.selectedCount}
+                  onClear={dtMet.clearSelection}
+                  onDelete={() => bulkDelete(Array.from(dtMet.selected), api.deleteMetodoPago, 'Métodos', cargarMetodosPago, dtMet.clearSelection)}
+                  onExport={() => exportToCsv('metodos_pago', dtMet.selectedRows.length ? dtMet.selectedRows : dtMet.processed, [
+                    { key: 'orden', label: 'Orden' }, { key: 'nombre', label: 'Nombre' },
+                    { key: 'tipo', label: 'Tipo' }, { key: 'activo', label: 'Activo', accessor: (m) => m.activo ? 'Sí' : 'No' },
+                  ])}
+                  entityName="métodos"
+                  extraActions={
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => bulkActivar(Array.from(dtMet.selected), true, api.updateMetodoPago, cargarMetodosPago, dtMet.clearSelection)}>Activar</Button>
+                      <Button variant="outline" size="sm" onClick={() => bulkActivar(Array.from(dtMet.selected), false, api.updateMetodoPago, cargarMetodosPago, dtMet.clearSelection)}>Desactivar</Button>
+                    </>
+                  }
+                />
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Orden</TableHead>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Estado</TableHead>
+                      <TableHead className="w-[40px]">
+                        <Checkbox checked={dtMet.allVisibleSelected ? true : dtMet.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtMet.toggleSelectAllVisible(!!v)} />
+                      </TableHead>
+                      <SortHeader label="Orden" columnKey="orden" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} />
+                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} />
+                      <SortHeader label="Tipo" columnKey="tipo" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} />
+                      <SortHeader label="Estado" columnKey="estado" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} />
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {metodosPago.map((m) => (
-                      <TableRow key={m.id}>
+                    {dtMet.processed.map((m) => (
+                      <TableRow key={m.id} className={dtMet.selected.has(m.id) ? 'bg-primary/5' : ''}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox checked={dtMet.selected.has(m.id)} onCheckedChange={() => dtMet.toggleRow(m.id)} />
+                        </TableCell>
                         <TableCell className="text-muted-foreground">{m.orden ?? 0}</TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
@@ -671,15 +814,16 @@ export default function Catalogos() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {metodosPago.length === 0 && (
+                    {dtMet.processed.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           No hay métodos de pago. Crea uno para empezar.
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+                </>
               )}
             </CardContent>
           </Card>
