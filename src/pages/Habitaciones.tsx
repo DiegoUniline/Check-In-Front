@@ -60,6 +60,7 @@ import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { MultiImageUpload } from '@/components/ui/multi-image-upload';
 import api from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
