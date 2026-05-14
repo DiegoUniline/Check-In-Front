@@ -841,6 +841,51 @@ export type Database = {
           },
         ]
       }
+      planes: {
+        Row: {
+          activo: boolean
+          costo_anual: number
+          costo_mensual: number
+          created_at: string
+          descripcion: string | null
+          features: Json
+          id: string
+          limite_habitaciones_por_hotel: number
+          limite_hoteles: number
+          limite_usuarios: number
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activo?: boolean
+          costo_anual?: number
+          costo_mensual?: number
+          created_at?: string
+          descripcion?: string | null
+          features?: Json
+          id?: string
+          limite_habitaciones_por_hotel?: number
+          limite_hoteles?: number
+          limite_usuarios?: number
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activo?: boolean
+          costo_anual?: number
+          costo_mensual?: number
+          created_at?: string
+          descripcion?: string | null
+          features?: Json
+          id?: string
+          limite_habitaciones_por_hotel?: number
+          limite_hoteles?: number
+          limite_usuarios?: number
+          nombre?: string
+          orden?: number
+        }
+        Relationships: []
+      }
       productos: {
         Row: {
           activo: boolean | null
@@ -1146,6 +1191,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suscripciones: {
+        Row: {
+          created_at: string
+          estado: string
+          fecha_fin: string
+          fecha_inicio: string
+          hotel_id: string
+          id: string
+          plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          estado?: string
+          fecha_fin: string
+          fecha_inicio?: string
+          hotel_id: string
+          id?: string
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          estado?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          hotel_id?: string
+          id?: string
+          plan_id?: string
+        }
+        Relationships: []
       }
       tareas_limpieza: {
         Row: {
