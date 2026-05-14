@@ -556,6 +556,7 @@ export type Database = {
           estado_limpieza: string | null
           estado_mantenimiento: string | null
           excluida_publica: boolean
+          fotos: string[]
           hotel_id: string
           id: string
           notas: string | null
@@ -570,6 +571,7 @@ export type Database = {
           estado_limpieza?: string | null
           estado_mantenimiento?: string | null
           excluida_publica?: boolean
+          fotos?: string[]
           hotel_id: string
           id?: string
           notas?: string | null
@@ -584,6 +586,7 @@ export type Database = {
           estado_limpieza?: string | null
           estado_mantenimiento?: string | null
           excluida_publica?: boolean
+          fotos?: string[]
           hotel_id?: string
           id?: string
           notas?: string | null
