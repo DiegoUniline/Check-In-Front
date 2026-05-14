@@ -46,13 +46,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   
   // Check-in
-  const [documentoVerificado, setDocumentoVerificado] = useState(false);
-  const [tarjetaRegistrada, setTarjetaRegistrada] = useState(false);
-  const [firmaDigital, setFirmaDigital] = useState(false);
-  
-  // Check-out
-  const [habitacionInspeccionada, setHabitacionInspeccionada] = useState(false);
-  const [llaveDevuelta, setLlaveDevuelta] = useState(false);
+  // Checklists configurables por hotel
+  const [checklistCheckin, setChecklistCheckin] = useState<any[]>([]);
+  const [checklistCheckout, setChecklistCheckout] = useState<any[]>([]);
+  const [marcadosCheckin, setMarcadosCheckin] = useState<Record<string, boolean>>({});
+  const [marcadosCheckout, setMarcadosCheckout] = useState<Record<string, boolean>>({});
   
   // Pagos
   const [montoAbono, setMontoAbono] = useState('');
@@ -85,13 +83,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       cargarConceptos();
       cargarEntregables();
       cargarHabitaciones();
+      cargarChecklists();
       // Reset estados
       setEditMode(false);
-      setDocumentoVerificado(false);
-      setTarjetaRegistrada(false);
-      setFirmaDigital(false);
-      setHabitacionInspeccionada(false);
-      setLlaveDevuelta(false);
+      setMarcadosCheckin({});
+      setMarcadosCheckout({});
       setDevolucionExpandidaId(null);
     }
   }, [open, reservaInicial?.id]);
@@ -145,6 +141,21 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       setHabitaciones(data);
     } catch (error) {
       console.error('Error cargando habitaciones:', error);
+    }
+  };
+
+  const cargarChecklists = async () => {
+    try {
+      const [ci, co] = await Promise.all([
+        api.getChecklistItems?.({ tipo: 'checkin', soloActivos: true }) || [],
+        api.getChecklistItems?.({ tipo: 'checkout', soloActivos: true }) || [],
+      ]);
+      setChecklistCheckin(ci);
+      setChecklistCheckout(co);
+    } catch (error) {
+      console.error('Error cargando checklists:', error);
+      setChecklistCheckin([]);
+      setChecklistCheckout([]);
     }
   };
 
