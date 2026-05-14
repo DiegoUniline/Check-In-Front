@@ -426,6 +426,10 @@ export default function Configuracion() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="whatsapp">
+          <WhatsAppConfig />
+        </TabsContent>
+
         {/* Checklists */}
         <TabsContent value="checklists">
           <ChecklistConfig />
