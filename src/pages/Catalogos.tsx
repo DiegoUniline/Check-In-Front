@@ -952,6 +952,29 @@ export default function Catalogos() {
                 rows={2}
               />
             </div>
+            <div className="rounded-md border p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-semibold">Publicar en web de reservas</Label>
+                  <p className="text-xs text-muted-foreground">Permite que los huéspedes reserven este tipo desde tu página pública.</p>
+                </div>
+                <Switch
+                  checked={formTipo.publico}
+                  onCheckedChange={(v) => setFormTipo({ ...formTipo, publico: v })}
+                />
+              </div>
+              {formTipo.publico && (
+                <div className="grid gap-2">
+                  <Label>Fotos (una URL por línea)</Label>
+                  <Textarea
+                    value={formTipo.fotos}
+                    onChange={(e) => setFormTipo({ ...formTipo, fotos: e.target.value })}
+                    placeholder="https://...\nhttps://..."
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalTipoOpen(false)}>Cancelar</Button>
