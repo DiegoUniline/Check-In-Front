@@ -6,7 +6,7 @@ import {
   BedDouble, CreditCard, Clock, MapPin, Phone, Mail,
   FileText, DollarSign, X, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, AlertCircle, LogIn, LogOut,
-  User, Globe, Wallet
+  User, Globe, Wallet, Trash2
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,17 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -45,6 +56,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function HistorialReservas() {
   const { toast } = useToast();
@@ -67,6 +79,11 @@ export default function HistorialReservas() {
   const [modalDetalleOpen, setModalDetalleOpen] = useState(false);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [detalleCompleto, setDetalleCompleto] = useState<any>(null);
+
+  // Selección múltiple
+  const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
+  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     cargarReservas();
@@ -116,6 +133,55 @@ export default function HistorialReservas() {
     setPagina(1);
   };
 
+  const toggleSeleccion = (id: string) => {
+    setSeleccionadas(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSeleccionarTodasPagina = (checked: boolean) => {
+    setSeleccionadas(prev => {
+      const next = new Set(prev);
+      reservasPaginadas.forEach(r => {
+        if (checked) next.add(r.id);
+        else next.delete(r.id);
+      });
+      return next;
+    });
+  };
+
+  const limpiarSeleccion = () => setSeleccionadas(new Set());
+
+  const eliminarSeleccionadas = async () => {
+    if (seleccionadas.size === 0) return;
+    setEliminando(true);
+    try {
+      const ids = Array.from(seleccionadas);
+      // Limpiar dependencias primero (cargos / pagos asociados)
+      await supabase.from('cargos').delete().in('reserva_id', ids);
+      await supabase.from('pagos').delete().in('reserva_id', ids);
+      const { error } = await supabase.from('reservas').delete().in('id', ids);
+      if (error) throw error;
+      toast({
+        title: 'Reservas eliminadas',
+        description: `Se eliminaron ${ids.length} reserva(s).`,
+      });
+      limpiarSeleccion();
+      setConfirmarBorrado(false);
+      await cargarReservas();
+    } catch (err: any) {
+      toast({
+        title: 'Error al eliminar',
+        description: err.message || 'No se pudieron eliminar las reservas.',
+        variant: 'destructive',
+      });
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   // Filtrar por búsqueda local
   const reservasFiltradas = reservas.filter(r => {
     if (!busqueda) return true;
@@ -133,6 +199,12 @@ export default function HistorialReservas() {
   // Paginación logic
   const totalPaginas = Math.ceil(reservasFiltradas.length / porPagina);
   const reservasPaginadas = reservasFiltradas.slice((pagina - 1) * porPagina, pagina * porPagina);
+
+  const todasPaginaSeleccionadas =
+    reservasPaginadas.length > 0 &&
+    reservasPaginadas.every(r => seleccionadas.has(r.id));
+  const algunaPaginaSeleccionada =
+    reservasPaginadas.some(r => seleccionadas.has(r.id)) && !todasPaginaSeleccionadas;
 
   const getEstadoBadge = (estado: string) => {
     const config: Record<string, { color: string; icon: any }> = {
@@ -349,6 +421,25 @@ export default function HistorialReservas() {
               <Download className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Exportar</span>
             </Button>
           </div>
+          {seleccionadas.size > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-3 p-2 rounded-md bg-primary/10 border border-primary/20">
+              <span className="text-sm font-medium">
+                {seleccionadas.size} reserva(s) seleccionada(s)
+              </span>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={limpiarSeleccion}>
+                  Limpiar
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmarBorrado(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                </Button>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -362,6 +453,19 @@ export default function HistorialReservas() {
                 <Table className="min-w-[800px]">
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={
+                            todasPaginaSeleccionadas
+                              ? true
+                              : algunaPaginaSeleccionada
+                              ? 'indeterminate'
+                              : false
+                          }
+                          onCheckedChange={(v) => toggleSeleccionarTodasPagina(!!v)}
+                          aria-label="Seleccionar todas"
+                        />
+                      </TableHead>
                       <TableHead className="w-[100px]"># Reserva</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Hab.</TableHead>
@@ -378,9 +482,16 @@ export default function HistorialReservas() {
                     {reservasPaginadas.map(reserva => (
                       <TableRow 
                         key={reserva.id} 
-                        className="cursor-pointer hover:bg-muted/50"
+                        className={`cursor-pointer hover:bg-muted/50 ${seleccionadas.has(reserva.id) ? 'bg-primary/5' : ''}`}
                         onClick={() => abrirDetalle(reserva)}
                       >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={seleccionadas.has(reserva.id)}
+                            onCheckedChange={() => toggleSeleccion(reserva.id)}
+                            aria-label={`Seleccionar reserva ${reserva.numero_reserva}`}
+                          />
+                        </TableCell>
                         <TableCell>
                           <span className="font-mono font-medium text-primary text-sm">
                             #{reserva.numero_reserva || reserva.id?.slice(0, 6)}
@@ -425,7 +536,7 @@ export default function HistorialReservas() {
                     ))}
                     {reservasPaginadas.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
+                        <TableCell colSpan={11} className="text-center text-muted-foreground py-12">
                           No se encontraron reservas
                         </TableCell>
                       </TableRow>
@@ -849,6 +960,28 @@ export default function HistorialReservas() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirmación de eliminación masiva */}
+      <AlertDialog open={confirmarBorrado} onOpenChange={setConfirmarBorrado}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar {seleccionadas.size} reserva(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán también los cargos y pagos asociados a estas reservas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={eliminando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); eliminarSeleccionadas(); }}
+              disabled={eliminando}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {eliminando ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
