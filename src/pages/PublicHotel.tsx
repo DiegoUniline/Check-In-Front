@@ -100,7 +100,7 @@ export default function PublicHotel() {
       setHotel(h as any);
 
       const [{ data: tps }, { data: hbs }] = await Promise.all([
-        (supabase.from('tipos_habitacion') as any).select('*').eq('hotel_id', h.id).eq('publico', true),
+        (supabase.from('tipos_habitacion') as any).select('*').eq('hotel_id', h.id).eq('publicar_web', true),
         (supabase.from('habitaciones') as any).select('id, tipo_habitacion_id, excluida_publica').eq('hotel_id', h.id).eq('excluida_publica', false),
       ]);
       setTipos((tps || []) as any);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw, Globe, GlobeLock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +66,7 @@ export default function Catalogos() {
     precio_base: '',
     precio_persona_extra: '0',
     amenidades: '',
-    publico: false,
+    publicar_web: true,
     fotos: [] as string[],
   });
 
@@ -137,7 +137,7 @@ export default function Catalogos() {
       precio_base: '',
       precio_persona_extra: '0',
       amenidades: '',
-      publico: false,
+      publicar_web: true,
       fotos: [] as string[],
     });
     setModalTipoOpen(true);
@@ -155,7 +155,7 @@ export default function Catalogos() {
       precio_base: tipo.precio_base?.toString() || '',
       precio_persona_extra: tipo.precio_persona_extra?.toString() || '0',
       amenidades: Array.isArray(tipo.amenidades) ? tipo.amenidades.join(', ') : '',
-      publico: !!tipo.publico,
+      publicar_web: tipo.publicar_web !== false,
       fotos: Array.isArray(tipo.fotos) ? tipo.fotos : [],
     });
     setModalTipoOpen(true);
@@ -173,7 +173,7 @@ export default function Catalogos() {
         precio_base: parseFloat(formTipo.precio_base),
         precio_persona_extra: parseFloat(formTipo.precio_persona_extra) || 0,
         amenidades: formTipo.amenidades.split(',').map(a => a.trim()).filter(a => a),
-        publico: formTipo.publico,
+        publicar_web: formTipo.publicar_web,
         fotos: formTipo.fotos,
       };
 
@@ -207,6 +207,30 @@ export default function Catalogos() {
       cargarTiposHabitacion();
     } catch (error) {
       toast({ title: 'Error', description: 'No se pudo eliminar', variant: 'destructive' });
+    }
+  };
+
+  const toggleWebTipo = async (tipo: any, value: boolean) => {
+    setTiposHabitacion(prev => prev.map(t => t.id === tipo.id ? { ...t, publicar_web: value } : t));
+    try {
+      await api.updateTipoHabitacion(tipo.id, { publicar_web: value });
+      toast({ title: value ? 'Publicado en web' : 'Oculto de la web', description: tipo.nombre });
+    } catch (e: any) {
+      setTiposHabitacion(prev => prev.map(t => t.id === tipo.id ? { ...t, publicar_web: !value } : t));
+      toast({ title: 'Error', description: e?.message || 'No se pudo cambiar', variant: 'destructive' });
+    }
+  };
+
+  const bulkWebTipos = async (value: boolean) => {
+    const ids = Array.from(dtTipos.selected);
+    if (!ids.length) return;
+    try {
+      await Promise.all(ids.map(id => api.updateTipoHabitacion(id, { publicar_web: value })));
+      toast({ title: value ? 'Publicados en web' : 'Ocultos de la web', description: `${ids.length} tipo(s)` });
+      dtTipos.clearSelection();
+      cargarTiposHabitacion();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudo aplicar', variant: 'destructive' });
     }
   };
 
@@ -494,6 +518,16 @@ export default function Catalogos() {
                     { key: 'capacidad_maxima', label: 'Capacidad' }, { key: 'precio_base', label: 'Precio' },
                   ])}
                   entityName="tipos"
+                  extraActions={
+                    <>
+                      <Button size="sm" variant="outline" className="text-emerald-600" onClick={() => bulkWebTipos(true)}>
+                        <Globe className="h-4 w-4 mr-1" /> Publicar web
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-destructive" onClick={() => bulkWebTipos(false)}>
+                        <GlobeLock className="h-4 w-4 mr-1" /> Ocultar web
+                      </Button>
+                    </>
+                  }
                 />
                 <Table>
                   <TableHeader>
@@ -507,6 +541,7 @@ export default function Catalogos() {
                       <SortHeader label="Precio Base" columnKey="precio" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} filterValue={dtTipos.filters.precio} onFilterChange={(v) => dtTipos.setColumnFilter('precio', v)} onValuesChange={(vs) => dtTipos.setColumnFilterValues('precio', vs)} />
                       <TableHead>Precio Extra</TableHead>
                       <TableHead>Amenidades</TableHead>
+                      <TableHead className="text-center">Web</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -535,6 +570,17 @@ export default function Catalogos() {
                             )}
                           </div>
                         </TableCell>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1.5">
+                            {tipo.publicar_web !== false
+                              ? <Globe className="h-3.5 w-3.5 text-emerald-600" />
+                              : <GlobeLock className="h-3.5 w-3.5 text-muted-foreground" />}
+                            <Switch
+                              checked={tipo.publicar_web !== false}
+                              onCheckedChange={(v) => toggleWebTipo(tipo, v)}
+                            />
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => openEditTipo(tipo)}>
                             <Pencil className="h-4 w-4" />
@@ -547,7 +593,7 @@ export default function Catalogos() {
                     ))}
                     {dtTipos.processed.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                           No hay tipos de habitación registrados
                         </TableCell>
                       </TableRow>
@@ -960,11 +1006,11 @@ export default function Catalogos() {
                   <p className="text-xs text-muted-foreground">Permite que los huéspedes reserven este tipo desde tu página pública.</p>
                 </div>
                 <Switch
-                  checked={formTipo.publico}
-                  onCheckedChange={(v) => setFormTipo({ ...formTipo, publico: v })}
+                  checked={formTipo.publicar_web}
+                  onCheckedChange={(v) => setFormTipo({ ...formTipo, publicar_web: v })}
                 />
               </div>
-              {formTipo.publico && (
+              {formTipo.publicar_web && (
                 <div className="grid gap-2">
                   <Label>Fotos del tipo de habitación</Label>
                   <p className="text-xs text-muted-foreground">
