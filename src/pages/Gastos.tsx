@@ -411,25 +411,57 @@ export default function Gastos() {
       </div>
 
       <Card>
+        <div className="p-3 border-b">
+          <BulkActionBar
+            count={dt.selectedCount}
+            onClear={dt.clearSelection}
+            onDelete={eliminarSeleccionados}
+            onExport={exportarCsv}
+            deleting={eliminandoBulk}
+            entityName="gastos"
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Proveedor</TableHead>
-              <TableHead>Método</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
+                  onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
+                />
+              </TableHead>
+              <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Descripción" columnKey="descripcion" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Método" columnKey="metodo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+              <SortHeader label="Monto" columnKey="monto" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
               <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+            <TableRow>
+              <TableHead />
+              <TableHead><ColumnFilterInput value={dt.filters.fecha || ''} onChange={(v) => dt.setColumnFilter('fecha', v)} placeholder="YYYY-MM" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.categoria || ''} onChange={(v) => dt.setColumnFilter('categoria', v)} placeholder="Categoría" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.descripcion || ''} onChange={(v) => dt.setColumnFilter('descripcion', v)} placeholder="Texto" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.proveedor || ''} onChange={(v) => dt.setColumnFilter('proveedor', v)} placeholder="Proveedor" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.metodo || ''} onChange={(v) => dt.setColumnFilter('metodo', v)} placeholder="Método" /></TableHead>
+              <TableHead><ColumnFilterInput value={dt.filters.monto || ''} onChange={(v) => dt.setColumnFilter('monto', v)} placeholder=">0" /></TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGastos.map(gasto => {
+            {dt.processed.map(gasto => {
               const cat = getCategoriaInfo(gasto.categoria);
               const Icon = cat.icon;
               const fecha = gasto.fecha || gasto.created_at;
               return (
-                <TableRow key={gasto.id}>
+                <TableRow key={gasto.id} className={dt.selected.has(gasto.id) ? 'bg-primary/5' : ''}>
+                  <TableCell>
+                    <Checkbox
+                      checked={dt.selected.has(gasto.id)}
+                      onCheckedChange={() => dt.toggleRow(gasto.id)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{fecha ? format(new Date(fecha), "d MMM", { locale: es }) : '-'}</p>
@@ -481,9 +513,9 @@ export default function Gastos() {
                 </TableRow>
               );
             })}
-            {filteredGastos.length === 0 && (
+            {dt.processed.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No hay gastos registrados
                 </TableCell>
               </TableRow>
