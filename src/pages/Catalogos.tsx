@@ -40,7 +40,7 @@ import api from '@/lib/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 
@@ -481,19 +481,13 @@ export default function Catalogos() {
                       <TableHead className="w-[40px]">
                         <Checkbox checked={dtTipos.allVisibleSelected ? true : dtTipos.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtTipos.toggleSelectAllVisible(!!v)} />
                       </TableHead>
-                      <SortHeader label="Código" columnKey="codigo" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} />
-                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} />
-                      <SortHeader label="Capacidad" columnKey="capacidad" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} />
-                      <SortHeader label="Precio Base" columnKey="precio" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} />
+                      <SortHeader label="Código" columnKey="codigo" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} filterValue={dtTipos.filters.codigo} onFilterChange={(v) => dtTipos.setColumnFilter('codigo', v)} filterOptions={tiposHabitacion.map((t: any) => t.codigo)} />
+                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} filterValue={dtTipos.filters.nombre} onFilterChange={(v) => dtTipos.setColumnFilter('nombre', v)} filterOptions={tiposHabitacion.map((t: any) => t.nombre)} />
+                      <SortHeader label="Capacidad" columnKey="capacidad" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} filterValue={dtTipos.filters.capacidad} onFilterChange={(v) => dtTipos.setColumnFilter('capacidad', v)} />
+                      <SortHeader label="Precio Base" columnKey="precio" sortKey={dtTipos.sortKey} sortDir={dtTipos.sortDir} onSort={dtTipos.toggleSort} filterValue={dtTipos.filters.precio} onFilterChange={(v) => dtTipos.setColumnFilter('precio', v)} />
                       <TableHead>Precio Extra</TableHead>
                       <TableHead>Amenidades</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                    <TableRow>
-                      <TableHead />
-                      <TableHead><ColumnFilterInput value={dtTipos.filters.codigo || ''} onChange={(v) => dtTipos.setColumnFilter('codigo', v)} placeholder="Código" /></TableHead>
-                      <TableHead><ColumnFilterInput value={dtTipos.filters.nombre || ''} onChange={(v) => dtTipos.setColumnFilter('nombre', v)} placeholder="Nombre" /></TableHead>
-                      <TableHead /><TableHead /><TableHead /><TableHead /><TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -578,15 +572,9 @@ export default function Catalogos() {
                       <TableHead className="w-[40px]">
                         <Checkbox checked={dtCats.allVisibleSelected ? true : dtCats.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtCats.toggleSelectAllVisible(!!v)} />
                       </TableHead>
-                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtCats.sortKey} sortDir={dtCats.sortDir} onSort={dtCats.toggleSort} />
-                      <SortHeader label="Descripción" columnKey="descripcion" sortKey={dtCats.sortKey} sortDir={dtCats.sortDir} onSort={dtCats.toggleSort} />
+                       <SortHeader label="Nombre" columnKey="nombre" sortKey={dtCats.sortKey} sortDir={dtCats.sortDir} onSort={dtCats.toggleSort} filterValue={dtCats.filters.nombre} onFilterChange={(v) => dtCats.setColumnFilter('nombre', v)} filterOptions={categorias.map((c: any) => c.nombre)} />
+                       <SortHeader label="Descripción" columnKey="descripcion" sortKey={dtCats.sortKey} sortDir={dtCats.sortDir} onSort={dtCats.toggleSort} filterValue={dtCats.filters.descripcion} onFilterChange={(v) => dtCats.setColumnFilter('descripcion', v)} filterOptions={categorias.map((c: any) => c.descripcion)} />
                       <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                    <TableRow>
-                      <TableHead />
-                      <TableHead><ColumnFilterInput value={dtCats.filters.nombre || ''} onChange={(v) => dtCats.setColumnFilter('nombre', v)} placeholder="Nombre" /></TableHead>
-                      <TableHead><ColumnFilterInput value={dtCats.filters.descripcion || ''} onChange={(v) => dtCats.setColumnFilter('descripcion', v)} placeholder="Descripción" /></TableHead>
-                      <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -667,11 +655,11 @@ export default function Catalogos() {
                       <TableHead className="w-[40px]">
                         <Checkbox checked={dtEnt.allVisibleSelected ? true : dtEnt.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtEnt.toggleSelectAllVisible(!!v)} />
                       </TableHead>
-                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
-                      <SortHeader label="Descripción" columnKey="descripcion" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
-                      <SortHeader label="Requiere Devolución" columnKey="devolucion" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
-                      <SortHeader label="Costo Reposición" columnKey="costo" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
-                      <SortHeader label="Estado" columnKey="estado" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} />
+                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} filterValue={dtEnt.filters.nombre} onFilterChange={(v) => dtEnt.setColumnFilter('nombre', v)} filterOptions={entregables.map((e: any) => e.nombre)} />
+                      <SortHeader label="Descripción" columnKey="descripcion" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} filterValue={dtEnt.filters.descripcion} onFilterChange={(v) => dtEnt.setColumnFilter('descripcion', v)} filterOptions={entregables.map((e: any) => e.descripcion)} />
+                      <SortHeader label="Requiere Devolución" columnKey="devolucion" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} filterValue={dtEnt.filters.devolucion} onFilterChange={(v) => dtEnt.setColumnFilter('devolucion', v)} filterOptions={['Sí', 'No']} />
+                      <SortHeader label="Costo Reposición" columnKey="costo" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} filterValue={dtEnt.filters.costo} onFilterChange={(v) => dtEnt.setColumnFilter('costo', v)} />
+                      <SortHeader label="Estado" columnKey="estado" sortKey={dtEnt.sortKey} sortDir={dtEnt.sortDir} onSort={dtEnt.toggleSort} filterValue={dtEnt.filters.estado} onFilterChange={(v) => dtEnt.setColumnFilter('estado', v)} filterOptions={['Activo', 'Inactivo']} />
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -773,10 +761,10 @@ export default function Catalogos() {
                       <TableHead className="w-[40px]">
                         <Checkbox checked={dtMet.allVisibleSelected ? true : dtMet.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtMet.toggleSelectAllVisible(!!v)} />
                       </TableHead>
-                      <SortHeader label="Orden" columnKey="orden" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} />
-                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} />
-                      <SortHeader label="Tipo" columnKey="tipo" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} />
-                      <SortHeader label="Estado" columnKey="estado" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} />
+                      <SortHeader label="Orden" columnKey="orden" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} filterValue={dtMet.filters.orden} onFilterChange={(v) => dtMet.setColumnFilter('orden', v)} />
+                      <SortHeader label="Nombre" columnKey="nombre" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} filterValue={dtMet.filters.nombre} onFilterChange={(v) => dtMet.setColumnFilter('nombre', v)} filterOptions={metodosPago.map((m: any) => m.nombre)} />
+                      <SortHeader label="Tipo" columnKey="tipo" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} filterValue={dtMet.filters.tipo} onFilterChange={(v) => dtMet.setColumnFilter('tipo', v)} filterOptions={metodosPago.map((m: any) => m.tipo)} />
+                      <SortHeader label="Estado" columnKey="estado" sortKey={dtMet.sortKey} sortDir={dtMet.sortDir} onSort={dtMet.toggleSort} filterValue={dtMet.filters.estado} onFilterChange={(v) => dtMet.setColumnFilter('estado', v)} filterOptions={['Activo', 'Inactivo']} />
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>

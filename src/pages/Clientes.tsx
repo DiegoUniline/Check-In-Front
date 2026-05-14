@@ -20,7 +20,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import {
@@ -386,21 +386,12 @@ export default function Clientes() {
                     aria-label="Seleccionar todos"
                   />
                 </TableHead>
-                <SortHeader label="Cliente" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                <SortHeader label="Contacto" columnKey="email" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                <SortHeader label="Estancias" columnKey="estancias" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="center" />
-                <SortHeader label="Registro" columnKey="registro" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                <SortHeader label="Lealtad" columnKey="lealtad" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                <SortHeader label="Cliente" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.nombre} onFilterChange={(v) => dt.setColumnFilter('nombre', v)} filterOptions={filteredClientes.map(c => `${c.nombre} ${c.apellido_paterno || ''}`.trim())} />
+                <SortHeader label="Contacto" columnKey="email" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.email} onFilterChange={(v) => dt.setColumnFilter('email', v)} filterOptions={filteredClientes.map(c => c.email || c.telefono || '')} />
+                <SortHeader label="Estancias" columnKey="estancias" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="center" filterValue={dt.filters.estancias} onFilterChange={(v) => dt.setColumnFilter('estancias', v)} filterOptions={filteredClientes.map(c => String(c.total_estancias || 0))} />
+                <SortHeader label="Registro" columnKey="registro" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.registro} onFilterChange={(v) => dt.setColumnFilter('registro', v)} filterOptions={filteredClientes.map(c => c.created_at || '')} />
+                <SortHeader label="Lealtad" columnKey="lealtad" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.lealtad} onFilterChange={(v) => dt.setColumnFilter('lealtad', v)} filterOptions={filteredClientes.map(c => c.es_vip ? 'VIP' : 'Regular')} />
                 <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-              <TableRow>
-                <TableHead />
-                <TableHead><ColumnFilterInput value={dt.filters.nombre || ''} onChange={(v) => dt.setColumnFilter('nombre', v)} placeholder="Filtrar nombre" /></TableHead>
-                <TableHead><ColumnFilterInput value={dt.filters.email || ''} onChange={(v) => dt.setColumnFilter('email', v)} placeholder="Filtrar email/tel" /></TableHead>
-                <TableHead><ColumnFilterInput value={dt.filters.estancias || ''} onChange={(v) => dt.setColumnFilter('estancias', v)} placeholder="#" /></TableHead>
-                <TableHead><ColumnFilterInput value={dt.filters.registro || ''} onChange={(v) => dt.setColumnFilter('registro', v)} placeholder="Fecha" /></TableHead>
-                <TableHead><ColumnFilterInput value={dt.filters.lealtad || ''} onChange={(v) => dt.setColumnFilter('lealtad', v)} placeholder="Nivel" /></TableHead>
-                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>

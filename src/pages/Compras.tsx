@@ -30,7 +30,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import {
@@ -554,23 +554,13 @@ export default function Compras() {
                         aria-label="Seleccionar todas"
                       />
                     </TableHead>
-                    <SortHeader label="Orden" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                    <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                    <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
+                    <SortHeader label="Orden" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.numero} onFilterChange={(v) => dt.setColumnFilter('numero', v)} filterOptions={filteredOrdenes.map((o: any) => o.numero || o.codigo)} />
+                    <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.proveedor} onFilterChange={(v) => dt.setColumnFilter('proveedor', v)} filterOptions={filteredOrdenes.map((o: any) => o.proveedor?.nombre || o.proveedor_nombre)} />
+                    <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.fecha} onFilterChange={(v) => dt.setColumnFilter('fecha', v)} filterOptions={filteredOrdenes.map((o: any) => o.fecha)} />
                     <TableHead>Items</TableHead>
-                    <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-                    <SortHeader label="Total" columnKey="total" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
+                    <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.estado} onFilterChange={(v) => dt.setColumnFilter('estado', v)} filterOptions={filteredOrdenes.map((o: any) => o.estado)} />
+                    <SortHeader label="Total" columnKey="total" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.total} onFilterChange={(v) => dt.setColumnFilter('total', v)} />
                     <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                  <TableRow>
-                    <TableHead />
-                    <TableHead><ColumnFilterInput value={dt.filters.numero || ''} onChange={(v) => dt.setColumnFilter('numero', v)} placeholder="Orden" /></TableHead>
-                    <TableHead><ColumnFilterInput value={dt.filters.proveedor || ''} onChange={(v) => dt.setColumnFilter('proveedor', v)} placeholder="Proveedor" /></TableHead>
-                    <TableHead><ColumnFilterInput value={dt.filters.fecha || ''} onChange={(v) => dt.setColumnFilter('fecha', v)} placeholder="Fecha" /></TableHead>
-                    <TableHead />
-                    <TableHead><ColumnFilterInput value={dt.filters.estado || ''} onChange={(v) => dt.setColumnFilter('estado', v)} placeholder="Estado" /></TableHead>
-                    <TableHead><ColumnFilterInput value={dt.filters.total || ''} onChange={(v) => dt.setColumnFilter('total', v)} placeholder="$" /></TableHead>
-                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -20,7 +20,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-import { ColumnFilterInput } from '@/components/datatable/ColumnFilterInput';
+
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import {
@@ -375,23 +375,13 @@ export default function Inventario() {
                   aria-label="Seleccionar todos"
                 />
               </TableHead>
-              <SortHeader label="Código" columnKey="codigo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-              <SortHeader label="Producto" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} />
-              <SortHeader label="Precio" columnKey="precio" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
-              <SortHeader label="Stock" columnKey="stock" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
-              <SortHeader label="Valor" columnKey="valor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" />
+              <SortHeader label="Código" columnKey="codigo" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.codigo} onFilterChange={(v) => dt.setColumnFilter('codigo', v)} filterOptions={filteredProducts.map((p: any) => p.codigo)} />
+              <SortHeader label="Producto" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.nombre} onFilterChange={(v) => dt.setColumnFilter('nombre', v)} filterOptions={filteredProducts.map((p: any) => p.nombre)} />
+              <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.categoria} onFilterChange={(v) => dt.setColumnFilter('categoria', v)} filterOptions={filteredProducts.map((p: any) => p.categoria)} />
+              <SortHeader label="Precio" columnKey="precio" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.precio} onFilterChange={(v) => dt.setColumnFilter('precio', v)} />
+              <SortHeader label="Stock" columnKey="stock" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.stock} onFilterChange={(v) => dt.setColumnFilter('stock', v)} />
+              <SortHeader label="Valor" columnKey="valor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.valor} onFilterChange={(v) => dt.setColumnFilter('valor', v)} />
               <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-            <TableRow>
-              <TableHead />
-              <TableHead><ColumnFilterInput value={dt.filters.codigo || ''} onChange={(v) => dt.setColumnFilter('codigo', v)} placeholder="Código" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.nombre || ''} onChange={(v) => dt.setColumnFilter('nombre', v)} placeholder="Producto" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.categoria || ''} onChange={(v) => dt.setColumnFilter('categoria', v)} placeholder="Categoría" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.precio || ''} onChange={(v) => dt.setColumnFilter('precio', v)} placeholder="$" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.stock || ''} onChange={(v) => dt.setColumnFilter('stock', v)} placeholder="#" /></TableHead>
-              <TableHead><ColumnFilterInput value={dt.filters.valor || ''} onChange={(v) => dt.setColumnFilter('valor', v)} placeholder="$" /></TableHead>
-              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
