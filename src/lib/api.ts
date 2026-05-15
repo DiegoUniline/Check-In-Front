@@ -187,7 +187,7 @@ class ApiClient {
     const ocupadas = habList.filter((h: any) => h.estado_habitacion === 'Ocupada').length;
     const disponibles = habList.filter((h: any) => h.estado_habitacion === 'Disponible').length;
     const mantenimiento = habList.filter((h: any) => h.estado_habitacion === 'Mantenimiento').length;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     const reservasHoy = (reservas.data || []).filter((r: any) => r.fecha_checkin === today).length;
     const ingresosHoy = (reservas.data || []).filter((r: any) => r.fecha_checkin === today).reduce((s: number, r: any) => s + Number(r.total || 0), 0);
     return {
@@ -203,7 +203,7 @@ class ApiClient {
   getDashboardCheckinsHoy = () => this.getCheckinsHoy();
   getDashboardCheckoutsHoy = () => this.getCheckoutsHoy();
   getDashboardVentasHoy = async (): Promise<any> => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     const { data } = await supabase.from('ventas').select('total').eq('hotel_id', this.hid()).gte('fecha', today);
     const total = (data || []).reduce((s: number, v: any) => s + Number(v.total || 0), 0);
     return { total, count: (data || []).length };
@@ -358,7 +358,7 @@ class ApiClient {
     };
   };
   getCheckinsHoy = async (): Promise<any> => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkin', today).eq('checkin_realizado', false).or('origen.neq.Web,estado.neq.Pendiente');
     return (data || []).map((r: any) => ({
       ...r,
@@ -367,7 +367,7 @@ class ApiClient {
     }));
   };
   getCheckoutsHoy = async (): Promise<any> => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false).or('origen.neq.Web,estado.neq.Pendiente');
     return (data || []).map((r: any) => ({
       ...r,
@@ -546,7 +546,7 @@ class ApiClient {
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
   };
   getTareasLimpiezaHoy = async (): Promise<any> => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     const { data } = await supabase.from('tareas_limpieza').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha', today);
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
   };
