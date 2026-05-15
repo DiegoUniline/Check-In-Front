@@ -1005,9 +1005,8 @@ export default function Compras() {
       </Dialog>
 
       {/* Detalle Modal */}
-      <Dialog open={detalleModal.open} onOpenChange={(open) => setDetalleModal({ open, orden: open ? detalleModal.orden : null })}>
-        {/* Modal responsive (móvil): ancho casi completo + scroll vertical */}
-        <DialogContent className="max-w-xl max-h-[88vh] overflow-y-auto">
+      <Dialog open={detalleModal.open} onOpenChange={(open) => { setDetalleModal({ open, orden: open ? detalleModal.orden : null }); if (!open) setPagosOrden([]); }}>
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -1087,6 +1086,97 @@ export default function Compras() {
                   </div>
                 </>
               )}
+
+              {/* Pagos al proveedor */}
+              <Separator />
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-primary" /> Pagos al proveedor
+                  </p>
+                  {(() => {
+                    const total = Number(detalleModal.orden.total || 0);
+                    const saldo = Math.max(0, total - totalPagadoOrden);
+                    return (
+                      <div className="text-xs text-right">
+                        <div>Pagado: <span className="font-semibold text-emerald-600">${totalPagadoOrden.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                        <div>Saldo: <span className={cn('font-semibold', saldo > 0 ? 'text-amber-600' : 'text-emerald-600')}>${saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {pagosOrden.length > 0 && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Método</TableHead>
+                        <TableHead>Referencia</TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pagosOrden.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="text-sm">{format(new Date(p.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
+                          <TableCell><Badge variant="secondary">{p.metodo_pago}</Badge></TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{p.referencia || '—'}</TableCell>
+                          <TableCell className="text-right font-medium">${Number(p.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" onClick={() => handleEliminarPago(p.id)} aria-label="Eliminar pago">
+                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+
+                {/* Form rápido para registrar pago */}
+                <div className="mt-3 rounded-lg border bg-muted/20 p-3 grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                  <div className="sm:col-span-3">
+                    <Label className="text-xs">Monto</Label>
+                    <Input
+                      type="number" inputMode="decimal" min="0" placeholder="0.00"
+                      value={nuevoPago.monto}
+                      onChange={(e) => setNuevoPago(p => ({ ...p, monto: e.target.value }))}
+                    />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <Label className="text-xs">Método</Label>
+                    <Select value={nuevoPago.metodo_pago} onValueChange={(v) => setNuevoPago(p => ({ ...p, metodo_pago: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Efectivo">Efectivo</SelectItem>
+                        <SelectItem value="Transferencia">Transferencia</SelectItem>
+                        <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                        <SelectItem value="Cheque">Cheque</SelectItem>
+                        <SelectItem value="Otro">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-4">
+                    <Label className="text-xs">Referencia (opcional)</Label>
+                    <Input
+                      placeholder="Folio, # transferencia..."
+                      value={nuevoPago.referencia}
+                      onChange={(e) => setNuevoPago(p => ({ ...p, referencia: e.target.value }))}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Button
+                      onClick={handleRegistrarPago}
+                      disabled={guardandoPago || !nuevoPago.monto}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Pagar
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
