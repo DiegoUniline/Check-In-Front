@@ -61,6 +61,7 @@ const operationsNavItems = [
 
 const salesNavItems = [
   { title: 'POS', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
+  { title: 'Productos', url: '/productos', icon: Package, viewKey: 'inventario' },
   { title: 'Inventario', url: '/inventario', icon: Package, viewKey: 'inventario' },
   { title: 'Compras', url: '/compras', icon: ShoppingBag, viewKey: 'compras' },
   { title: 'Proveedores', url: '/proveedores', icon: Truck, viewKey: 'proveedores' },
