@@ -704,6 +704,75 @@ class ApiClient {
   asignarHotelACuenta = async (_data: any): Promise<any> => ({});
   getMiSuscripcion = async (_params?: any): Promise<any> => ({ activa: true, plan: 'Demo', vence: '2099-12-31' });
 
+  // ------- Reservas Online (web pública) -------
+  getReservasOnlinePendientes = async (): Promise<any[]> => {
+    const { data, error } = await supabase
+      .from('reservas')
+      .select('*, cliente:clientes(nombre, apellido_paterno, email, telefono), tipo:tipos_habitacion(nombre)')
+      .eq('hotel_id', this.hid())
+      .eq('origen', 'Web')
+      .eq('estado', 'Pendiente')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map((r: any) => ({
+      ...r,
+      cliente_nombre: [r.cliente?.nombre, r.cliente?.apellido_paterno].filter(Boolean).join(' '),
+      cliente_email: r.cliente?.email,
+      cliente_telefono: r.cliente?.telefono,
+      tipo_nombre: r.tipo?.nombre,
+    }));
+  };
+  contarReservasOnlinePendientes = async (): Promise<number> => {
+    const { count } = await supabase
+      .from('reservas')
+      .select('id', { count: 'exact', head: true })
+      .eq('hotel_id', this.hid())
+      .eq('origen', 'Web')
+      .eq('estado', 'Pendiente');
+    return count || 0;
+  };
+  confirmarReservaOnline = async (id: string): Promise<any> => {
+    const { error } = await supabase
+      .from('reservas')
+      .update({ estado: 'Confirmada', revisada_at: new Date().toISOString() } as any)
+      .eq('id', id);
+    if (error) throw error;
+    return {};
+  };
+  rechazarReservaOnline = async (id: string, motivo?: string): Promise<any> => {
+    const { error } = await supabase
+      .from('reservas')
+      .update({ estado: 'Cancelada', revisada_at: new Date().toISOString(), notas_internas: motivo || 'Rechazada por hotel' } as any)
+      .eq('id', id);
+    if (error) throw error;
+    return {};
+  };
+
+  // ------- Métricas plataforma (SuperAdmin) -------
+  getMetricasPlataforma = async (): Promise<any> => {
+    const { data, error } = await supabase.from('v_metricas_plataforma' as any).select('*').maybeSingle();
+    if (error) throw error;
+    return data || {};
+  };
+
+  // ------- Suspender/reactivar hotel -------
+  suspenderHotel = async (id: string, motivo?: string): Promise<any> => {
+    const { error } = await supabase
+      .from('hotels')
+      .update({ activo_plataforma: false, suspendido_motivo: motivo || null, suspendido_at: new Date().toISOString() } as any)
+      .eq('id', id);
+    if (error) throw error;
+    return {};
+  };
+  reactivarHotel = async (id: string): Promise<any> => {
+    const { error } = await supabase
+      .from('hotels')
+      .update({ activo_plataforma: true, suspendido_motivo: null, suspendido_at: null } as any)
+      .eq('id', id);
+    if (error) throw error;
+    return {};
+  };
+
   // ------- Usuarios -------
   getUsuarios = async (): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('hotel_id', this.hid()); return (data || []).map((u: any) => ({ ...u, rol: 'Recepcion' })); };
   getUsuario = async (id: string): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle(); return data; };
