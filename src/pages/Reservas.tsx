@@ -5,7 +5,8 @@ import { es } from 'date-fns/locale';
 import { 
   ChevronLeft, ChevronRight, Plus, Search, 
   CalendarDays, BedDouble, Users, RefreshCw, Calendar,
-  LogIn, LogOut, Clock, ArrowRight, X
+  LogIn, LogOut, Clock, ArrowRight, X, Eye, History,
+  CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +84,8 @@ export default function Reservas() {
   const [tabActiva, setTabActiva] = useState<'recepcion' | 'checkin' | 'checkout' | 'reservas'>('recepcion');
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
+  const [busquedaHistorico, setBusquedaHistorico] = useState('');
+  const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
 
   const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
 
