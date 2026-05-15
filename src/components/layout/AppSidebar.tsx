@@ -18,11 +18,14 @@ import {
   UserCog,
   FileText,
   ShieldAlert,
-  ShieldCheck // Icono para Diego
+  ShieldCheck, // Icono para Diego
+  Inbox
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import {
   Sidebar,
   SidebarContent,
@@ -44,6 +47,7 @@ import { canAccess } from '@/lib/permissions';
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, viewKey: 'dashboard' },
   { title: 'Reservas', url: '/reservas', icon: CalendarDays, viewKey: 'reservas' },
+  { title: 'Reservas Online', url: '/reservas-online', icon: Inbox, viewKey: 'reservas', badgeKey: 'reservas-online' },
   { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
   { title: 'Clientes', url: '/clientes', icon: Users, viewKey: 'clientes' },
 ];
@@ -85,6 +89,13 @@ export function AppSidebar() {
   const [ocupadas, setOcupadas] = useState(0);
   const [totalHab, setTotalHab] = useState(0);
 
+  const { data: pendientesOnline = 0, refetch: refetchPendientes } = useQuery({
+    queryKey: ['reservas-online-count'],
+    queryFn: api.contarReservasOnlinePendientes,
+    refetchInterval: 60_000,
+  });
+  useRealtimeSync('reservas', () => refetchPendientes());
+
   useEffect(() => {
     const cargarOcupacion = async () => {
       try {
@@ -117,7 +128,7 @@ export function AppSidebar() {
   const occupancyPercent =
     totalHab > 0 ? Math.round((ocupadas / totalHab) * 100) : 0;
 
-  const renderNavItems = (items: { title: string; url: string; icon: any; viewKey?: string }[]) => {
+  const renderNavItems = (items: { title: string; url: string; icon: any; viewKey?: string; badgeKey?: string }[]) => {
     const visible = items.filter(it => !it.viewKey || canAccess(it.viewKey, user?.rol));
     if (visible.length === 0) return null;
     return (
@@ -125,7 +136,7 @@ export function AppSidebar() {
       {visible.map((item) => {
         const isActive = location.pathname === item.url || 
           (item.url !== '/dashboard' && location.pathname.startsWith(item.url));
-        
+        const badgeValue = item.badgeKey === 'reservas-online' ? pendientesOnline : 0;
         return (
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton asChild isActive={isActive}>
@@ -141,7 +152,15 @@ export function AppSidebar() {
                 )}
               >
                 <item.icon className={cn("h-5 w-5 shrink-0", item.url === '/admin-plataforma' && "text-blue-600")} />
-                {!collapsed && <span>{item.title}</span>}
+                {!collapsed && <span className="flex-1">{item.title}</span>}
+                {!collapsed && badgeValue > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold">
+                    {badgeValue}
+                  </span>
+                )}
+                {collapsed && badgeValue > 0 && (
+                  <span className="absolute top-1 right-1 inline-flex items-center justify-center w-2 h-2 rounded-full bg-yellow-400" />
+                )}
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
