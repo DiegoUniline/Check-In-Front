@@ -5,13 +5,25 @@ import { crearNotificacion } from '@/lib/notificaciones';
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const IVA_RATE = 0.16;
 
-// Fecha local YYYY-MM-DD (evita off-by-one por zona horaria al usar toISOString())
+// Zona horaria del hotel activo (cacheada). Se actualiza al cargar el hotel.
+let HOTEL_TZ: string = 'America/Mexico_City';
+export const setHotelTimezone = (tz?: string | null) => {
+  if (tz && typeof tz === 'string') HOTEL_TZ = tz;
+};
+export const getHotelTimezone = () => HOTEL_TZ;
+
+// Fecha "hoy" YYYY-MM-DD en la zona horaria del hotel (no en UTC ni en la del navegador).
 const todayLocal = (): string => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  try {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: HOTEL_TZ,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    });
+    return fmt.format(new Date()); // en-CA -> YYYY-MM-DD
+  } catch {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
 };
 
 class ApiClient {
