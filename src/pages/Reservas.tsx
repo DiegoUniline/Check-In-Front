@@ -259,40 +259,8 @@ export default function Reservas() {
           </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={tabActiva} onValueChange={(v) => setTabActiva(v as typeof tabActiva)}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 max-w-3xl h-auto">
-            <TabsTrigger value="recepcion">
-              <BedDouble className="h-4 w-4 mr-1.5" />
-              Recepción
-            </TabsTrigger>
-            <TabsTrigger value="checkin" className="gap-1.5">
-              <LogIn className="h-4 w-4" />
-              <span>Check-In</span>
-              {llegadasHoy > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold tabular-nums">
-                  {llegadasHoy}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="checkout" className="gap-1.5">
-              <LogOut className="h-4 w-4" />
-              <span>Check-Out</span>
-              {salidasHoy > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold tabular-nums">
-                  {salidasHoy}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="reservas">
-              <CalendarDays className="h-4 w-4 mr-1.5" />
-              Timeline
-            </TabsTrigger>
-            <TabsTrigger value="historico">
-              <History className="h-4 w-4 mr-1.5" />
-              Histórico
-            </TabsTrigger>
-          </TabsList>
+        {/* Vistas seleccionables desde el sidebar */}
+        <Tabs value={tabActiva}>
 
           {/* TAB RECEPCIÓN: Cards por habitación */}
           <TabsContent value="recepcion" className="space-y-3 mt-3">
