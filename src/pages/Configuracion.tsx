@@ -70,6 +70,7 @@ export default function Configuracion() {
       email: h.email ?? hotelData.email,
       horaCheckin: h.hora_checkin ?? hotelData.horaCheckin,
       horaCheckout: h.hora_checkout ?? hotelData.horaCheckout,
+      timezone: h.timezone ?? hotelData.timezone ?? 'America/Mexico_City',
       estrellas: Number(h.estrellas ?? hotelData.estrellas ?? 3),
       slug: h.slug ?? hotelData.slug ?? '',
       descripcionPublica: h.descripcion_publica ?? hotelData.descripcionPublica ?? '',
@@ -105,6 +106,7 @@ export default function Configuracion() {
       email: ui.email,
       hora_checkin: ui.horaCheckin,
       hora_checkout: ui.horaCheckout,
+      timezone: ui.timezone || 'America/Mexico_City',
       estrellas: Number(ui.estrellas) || 3,
       slug,
       descripcion_publica: ui.descripcionPublica || null,
@@ -321,6 +323,52 @@ export default function Configuracion() {
                       onChange={(e) => setHotelData({...hotelData, horaCheckout: e.target.value})}
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Zona horaria</Label>
+                  <select
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={hotelData.timezone || 'America/Mexico_City'}
+                    onChange={(e) => setHotelData({ ...hotelData, timezone: e.target.value })}
+                  >
+                    <optgroup label="México y Centroamérica">
+                      <option value="America/Mexico_City">México (Ciudad de México) — UTC-6</option>
+                      <option value="America/Cancun">México (Cancún) — UTC-5</option>
+                      <option value="America/Tijuana">México (Tijuana) — UTC-8</option>
+                      <option value="America/Hermosillo">México (Hermosillo) — UTC-7</option>
+                      <option value="America/Guatemala">Guatemala — UTC-6</option>
+                      <option value="America/Tegucigalpa">Honduras — UTC-6</option>
+                      <option value="America/El_Salvador">El Salvador — UTC-6</option>
+                      <option value="America/Managua">Nicaragua — UTC-6</option>
+                      <option value="America/Costa_Rica">Costa Rica — UTC-6</option>
+                      <option value="America/Panama">Panamá — UTC-5</option>
+                      <option value="America/Belize">Belice — UTC-6</option>
+                    </optgroup>
+                    <optgroup label="Caribe">
+                      <option value="America/Havana">Cuba — UTC-5</option>
+                      <option value="America/Santo_Domingo">Rep. Dominicana — UTC-4</option>
+                      <option value="America/Puerto_Rico">Puerto Rico — UTC-4</option>
+                    </optgroup>
+                    <optgroup label="Sudamérica">
+                      <option value="America/Bogota">Colombia — UTC-5</option>
+                      <option value="America/Caracas">Venezuela — UTC-4</option>
+                      <option value="America/Lima">Perú — UTC-5</option>
+                      <option value="America/Quito">Ecuador — UTC-5</option>
+                      <option value="America/La_Paz">Bolivia — UTC-4</option>
+                      <option value="America/Santiago">Chile — UTC-4/-3</option>
+                      <option value="America/Argentina/Buenos_Aires">Argentina — UTC-3</option>
+                      <option value="America/Asuncion">Paraguay — UTC-4/-3</option>
+                      <option value="America/Montevideo">Uruguay — UTC-3</option>
+                      <option value="America/Sao_Paulo">Brasil (São Paulo) — UTC-3</option>
+                    </optgroup>
+                    <optgroup label="Europa">
+                      <option value="Europe/Madrid">España (Península) — UTC+1/+2</option>
+                      <option value="Atlantic/Canary">España (Canarias) — UTC+0/+1</option>
+                    </optgroup>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Define la zona horaria del hotel. Determina qué día se considera "hoy" para check-ins, check-outs y reportes.
+                  </p>
                 </div>
               </CardContent>
             </Card>

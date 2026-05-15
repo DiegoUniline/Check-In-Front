@@ -43,12 +43,14 @@ useEffect(() => {
 
           const { data: profile } = await supabase
             .from('profiles')
-            .select('*, hotels(nombre)')
+            .select('*, hotels(nombre, timezone)')
             .eq('id', session.user.id)
             .maybeSingle();
 
           if (profile?.hotel_id) api.setHotelId(profile.hotel_id);
           else api.setHotelId(null);
+          const tz = (profile as any)?.hotels?.timezone;
+          if (tz) (await import('@/lib/api')).setHotelTimezone(tz);
 
           const { data: roleRow } = await supabase
             .from('user_roles')
@@ -125,11 +127,13 @@ useEffect(() => {
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*, hotels(nombre)')
+        .select('*, hotels(nombre, timezone)')
         .eq('id', session.user.id)
         .maybeSingle();
       if (profile?.hotel_id) api.setHotelId(profile.hotel_id);
       else api.setHotelId(null);
+      const tz2 = (profile as any)?.hotels?.timezone;
+      if (tz2) (await import('@/lib/api')).setHotelTimezone(tz2);
       const { data: roleRow } = await supabase
         .from('user_roles')
         .select('role')
