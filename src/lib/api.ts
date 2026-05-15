@@ -773,6 +773,54 @@ class ApiClient {
     return {};
   };
 
+  // ------- Selector de hotel para SuperAdmin -------
+  setHotelActivo = async (hotelId: string | null): Promise<any> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No autenticado');
+    const { error } = await supabase
+      .from('profiles')
+      .update({ hotel_activo_id: hotelId } as any)
+      .eq('id', user.id);
+    if (error) throw error;
+    this.setHotelId(hotelId);
+    return {};
+  };
+
+  // ------- Permisos por hotel (en BD) -------
+  getPermisosHotel = async (hotelId?: string): Promise<Record<string, string[]>> => {
+    const hid = hotelId || this.hid();
+    if (!hid) return {};
+    const { data, error } = await supabase
+      .from('permisos_hotel' as any)
+      .select('rol, modulo, permitido')
+      .eq('hotel_id', hid);
+    if (error) throw error;
+    const matrix: Record<string, string[]> = {};
+    for (const r of (data as any[]) || []) {
+      if (!r.permitido) continue;
+      if (!matrix[r.modulo]) matrix[r.modulo] = [];
+      if (!matrix[r.modulo].includes(r.rol)) matrix[r.modulo].push(r.rol);
+    }
+    return matrix;
+  };
+  savePermisosHotel = async (matrix: Record<string, string[]>, hotelId?: string): Promise<any> => {
+    const hid = hotelId || this.hid();
+    if (!hid) throw new Error('Hotel no definido');
+    const rows: any[] = [];
+    const todosRoles = ['Admin', 'Gerente', 'Recepcion', 'Housekeeping', 'Mantenimiento'];
+    for (const [modulo, roles] of Object.entries(matrix)) {
+      for (const rol of todosRoles) {
+        rows.push({ hotel_id: hid, rol, modulo, permitido: rol === 'Admin' || (roles || []).includes(rol) });
+      }
+    }
+    // upsert por (hotel_id, rol, modulo)
+    const { error } = await supabase
+      .from('permisos_hotel' as any)
+      .upsert(rows, { onConflict: 'hotel_id,rol,modulo' });
+    if (error) throw error;
+    return {};
+  };
+
   // ------- Usuarios -------
   getUsuarios = async (): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('hotel_id', this.hid()); return (data || []).map((u: any) => ({ ...u, rol: 'Recepcion' })); };
   getUsuario = async (id: string): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle(); return data; };
