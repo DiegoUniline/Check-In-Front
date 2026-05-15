@@ -482,6 +482,42 @@ export default function AdminPlataforma() {
       </div>
 
       <Tabs defaultValue="cuentas" className="space-y-6">
+        {/* Métricas globales */}
+        {metricas && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-slate-500"><Building2 className="w-3 h-3" /> Hoteles</div>
+              <div className="text-2xl font-black mt-1">{metricas.total_hoteles ?? 0}</div>
+              <div className="text-[10px] text-green-600">{metricas.hoteles_activos ?? 0} activos</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-slate-500"><DollarSign className="w-3 h-3" /> MRR</div>
+              <div className="text-2xl font-black mt-1">${Number(metricas.mrr || 0).toLocaleString('es-MX')}</div>
+              <div className="text-[10px] text-slate-400">mensual recurrente</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-slate-500"><Check className="w-3 h-3" /> Suscripciones</div>
+              <div className="text-2xl font-black mt-1">{metricas.suscripciones_activas ?? 0}</div>
+              <div className="text-[10px] text-slate-400">activas</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-yellow-600"><AlertTriangle className="w-3 h-3" /> Por vencer</div>
+              <div className="text-2xl font-black mt-1 text-yellow-600">{metricas.por_vencer_7d ?? 0}</div>
+              <div className="text-[10px] text-slate-400">en 7 días</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-red-600"><AlertTriangle className="w-3 h-3" /> Vencidas</div>
+              <div className="text-2xl font-black mt-1 text-red-600">{metricas.vencidas ?? 0}</div>
+              <div className="text-[10px] text-slate-400">requieren acción</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-slate-500"><TrendingUp className="w-3 h-3" /> Reservas mes</div>
+              <div className="text-2xl font-black mt-1">{metricas.reservas_mes ?? 0}</div>
+              <div className="text-[10px] text-slate-400">{metricas.total_usuarios ?? 0} usuarios</div>
+            </div>
+          </div>
+        )}
+
         <TabsList>
           <TabsTrigger value="cuentas">Clientes</TabsTrigger>
           <TabsTrigger value="planes">Planes</TabsTrigger>
