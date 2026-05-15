@@ -60,7 +60,7 @@ import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { ComboboxCreatable, ComboboxOption } from '@/components/ui/combobox-creatable';
 
-export default function Inventario() {
+export default function Productos() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('all');
@@ -259,7 +259,7 @@ export default function Inventario() {
 
   if (loading) {
     return (
-      <MainLayout title="Inventario" subtitle="Cargando...">
+      <MainLayout title="Productos" subtitle="Cargando...">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -269,8 +269,8 @@ export default function Inventario() {
 
   return (
     <MainLayout 
-      title="Inventario" 
-      subtitle="Control de stock y productos"
+      title="Productos" 
+      subtitle="Catálogo de productos"
     >
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
