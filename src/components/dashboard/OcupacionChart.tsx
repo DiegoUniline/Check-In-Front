@@ -1,18 +1,13 @@
-import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const generateOcupacionSemanal = () => {
-  const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-  return dias.map((dia, index) => ({
-    dia,
-    ocupacion: Math.floor(Math.random() * 30) + 60 + (index >= 4 ? 15 : 0), // Fines de semana más altos
-    proyeccion: Math.floor(Math.random() * 20) + 70,
-  }));
-};
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export function OcupacionChart() {
-  const data = useMemo(() => generateOcupacionSemanal(), []);
+  const { data = [] } = useQuery({
+    queryKey: ['dashboard-ocupacion-semanal'],
+    queryFn: () => api.getDashboardOcupacionSemanal(),
+  });
 
   return (
     <Card>
