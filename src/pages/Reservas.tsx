@@ -89,6 +89,10 @@ export default function Reservas() {
     : 'recepcion';
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
+  const [desdeCheckin, setDesdeCheckin] = useState('');
+  const [hastaCheckin, setHastaCheckin] = useState('');
+  const [desdeCheckout, setDesdeCheckout] = useState('');
+  const [hastaCheckout, setHastaCheckout] = useState('');
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
   const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
 
