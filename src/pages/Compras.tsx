@@ -3,7 +3,7 @@ import {
   ShoppingBag, Plus, Search, Package, Truck, 
   Calendar, DollarSign, CheckCircle2, Clock, AlertCircle,
   MoreVertical, Eye, FileText, Building, RefreshCw, X,
-  RotateCcw
+  RotateCcw, Trash2, Wallet, Receipt
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -78,6 +78,9 @@ export default function Compras() {
   ]);
   const [notas, setNotas] = useState('');
   const [detalleModal, setDetalleModal] = useState<{ open: boolean; orden: any | null }>({ open: false, orden: null });
+  const [pagosOrden, setPagosOrden] = useState<any[]>([]);
+  const [nuevoPago, setNuevoPago] = useState<{ monto: string; metodo_pago: string; referencia: string; notas: string }>({ monto: '', metodo_pago: 'Efectivo', referencia: '', notas: '' });
+  const [guardandoPago, setGuardandoPago] = useState(false);
   const [isNewProveedorOpen, setIsNewProveedorOpen] = useState(false);
   const [newProveedor, setNewProveedor] = useState({ nombre: '', rfc: '', contacto: '', telefono: '', email: '' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
@@ -308,8 +311,64 @@ export default function Compras() {
     try {
       const detalles = await api.getCompra(orden.id);
       setDetalleModal({ open: true, orden: detalles });
+      try {
+        const pagos = await api.getPagosCompra(orden.id);
+        setPagosOrden(pagos);
+      } catch { setPagosOrden([]); }
     } catch {
       setDetalleModal({ open: true, orden });
+      setPagosOrden([]);
+    }
+  };
+
+  const totalPagadoOrden = useMemo(
+    () => pagosOrden.reduce((s, p) => s + (Number(p.monto) || 0), 0),
+    [pagosOrden]
+  );
+
+  const handleRegistrarPago = async () => {
+    if (!detalleModal.orden) return;
+    const monto = parseFloat(nuevoPago.monto);
+    if (!monto || monto <= 0) {
+      toast({ title: 'Monto inválido', variant: 'destructive' });
+      return;
+    }
+    setGuardandoPago(true);
+    try {
+      await api.createPagoCompra({
+        compra_id: detalleModal.orden.id,
+        monto,
+        metodo_pago: nuevoPago.metodo_pago,
+        referencia: nuevoPago.referencia,
+        notas: nuevoPago.notas,
+      });
+      const pagos = await api.getPagosCompra(detalleModal.orden.id);
+      setPagosOrden(pagos);
+      const total = Number(detalleModal.orden.total || 0);
+      const pagado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
+      // Si queda saldado y no estaba marcada, sugerimos cambiar a Recibida (pagada)
+      if (pagado >= total && detalleModal.orden.estado !== 'Recibida') {
+        try { await api.updateEstadoCompra(detalleModal.orden.id, 'Recibida'); } catch {}
+      }
+      setNuevoPago({ monto: '', metodo_pago: 'Efectivo', referencia: '', notas: '' });
+      toast({ title: 'Pago registrado' });
+      cargarDatos();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setGuardandoPago(false);
+    }
+  };
+
+  const handleEliminarPago = async (pagoId: string) => {
+    if (!detalleModal.orden) return;
+    try {
+      await api.deletePagoCompra(pagoId);
+      const pagos = await api.getPagosCompra(detalleModal.orden.id);
+      setPagosOrden(pagos);
+      toast({ title: 'Pago eliminado' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
   };
 
@@ -742,174 +801,212 @@ export default function Compras() {
         </TabsContent>
       </Tabs>
 
-      {/* New Order Dialog */}
+      {/* New Order Dialog — rediseñado tipo Odoo: ancho, dos columnas, totales en vivo */}
       <Dialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen}>
-        {/* Modal responsive (móvil): ancho casi completo + scroll vertical */}
-        <DialogContent className="max-w-xl max-h-[88vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5" />
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] overflow-y-auto p-0">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <ShoppingBag className="h-5 w-5 text-primary" />
               Nueva Orden de Compra
             </DialogTitle>
             <DialogDescription>
-              Complete la información de la orden de compra
+              Captura los productos y revisa el resumen antes de crear la orden.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Proveedor *</Label>
-              <ComboboxCreatable
-                options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
-                value={selectedProveedor}
-                onValueChange={setSelectedProveedor}
-                onCreate={async (nombre) => {
-                  try {
-                    const newProv = await api.createProveedor({ nombre });
-                    setProveedores([...proveedores, newProv]);
-                    toast({ title: 'Proveedor creado' });
-                    return { value: newProv.id, label: newProv.nombre };
-                  } catch (e: any) {
-                    toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                  }
-                }}
-                placeholder="Seleccionar proveedor..."
-                searchPlaceholder="Buscar o crear proveedor..."
-                createLabel="Crear proveedor"
-              />
-            </div>
 
-            <Separator />
+          {(() => {
+            const subtotal = orderItems.reduce(
+              (s, it) => s + (parseFloat(it.cantidad || '0') * parseFloat(it.precio || '0') || 0),
+              0
+            );
+            const impuestos = subtotal * 0.16;
+            const total = subtotal + impuestos;
+            const productoOptions: ComboboxOption[] = productos.map(p => ({ value: p.id, label: p.nombre }));
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
+                {/* Columna principal */}
+                <div className="lg:col-span-2 p-6 space-y-5 border-r">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Proveedor *</Label>
+                      <ComboboxCreatable
+                        options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
+                        value={selectedProveedor}
+                        onValueChange={setSelectedProveedor}
+                        onCreate={async (nombre) => {
+                          try {
+                            const newProv = await api.createProveedor({ nombre });
+                            setProveedores([...proveedores, newProv]);
+                            toast({ title: 'Proveedor creado' });
+                            return { value: newProv.id, label: newProv.nombre };
+                          } catch (e: any) {
+                            toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                          }
+                        }}
+                        placeholder="Seleccionar proveedor..."
+                        searchPlaceholder="Buscar o crear proveedor..."
+                        createLabel="Crear proveedor"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha</Label>
+                      <Input value={format(new Date(), 'dd/MM/yyyy', { locale: es })} disabled className="bg-muted/40" />
+                    </div>
+                  </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Productos</Label>
-                <Button variant="outline" size="sm" onClick={handleAddItem} className="shrink-0">
-                  <Plus className="h-4 w-4 mr-1" /> Agregar
-                </Button>
-              </div>
-              
-              <div className="space-y-2">
-                {orderItems.map((item, idx) => {
-                  const productoOptions: ComboboxOption[] = productos.map(p => ({
-                    value: p.id,
-                    label: p.nombre
-                  }));
-
-                  return (
-                    /*
-                      Layout responsivo para cada renglón:
-                      - Móvil: apilado (Producto / Cantidad+Precio / eliminar)
-                      - >= sm: grilla 12 columnas (como antes, pero con anchos seguros)
-                      Relacionado con `Check-In-Front/src/pages/Compras.tsx` (Modal "Nueva Orden de Compra").
-                    */
-                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-                      <div className="sm:col-span-6 min-w-0">
-                        <p className="sm:hidden text-xs text-muted-foreground mb-1">Producto</p>
-                        <ComboboxCreatable
-                          options={productoOptions}
-                          value={item.producto_id}
-                          onValueChange={(val) => {
-                            const newItems = [...orderItems];
-                            const prod = productos.find(p => p.id === val);
-                            newItems[idx].producto_id = val;
-                            newItems[idx].producto_nombre = prod?.nombre || val;
-                            if (prod?.precio_compra) {
-                              newItems[idx].precio = String(prod.precio_compra);
-                            }
-                            setOrderItems(newItems);
-                          }}
-                          onCreate={async (nombre) => {
-                            try {
-                              const newProd = await api.createProducto({ nombre, stock_actual: 0 });
-                              setProductos([...productos, newProd]);
-                              toast({ title: 'Producto creado' });
-                              return { value: newProd.id, label: newProd.nombre };
-                            } catch (e: any) {
-                              toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                            }
-                          }}
-                          placeholder="Seleccionar producto..."
-                          searchPlaceholder="Buscar o crear producto..."
-                          createLabel="Crear producto"
-                        />
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="bg-muted/40 px-3 py-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <Package className="h-4 w-4 text-primary" /> Productos
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2 sm:contents">
-                        <div className="sm:col-span-2">
-                          <p className="sm:hidden text-xs text-muted-foreground mb-1">Cantidad</p>
-                          <Input 
-                            placeholder="Cant." 
-                            type="number"
-                            inputMode="decimal"
-                            className="w-full sm:col-span-2"
-                            value={item.cantidad}
-                            onChange={(e) => {
-                              const newItems = [...orderItems];
-                              newItems[idx].cantidad = e.target.value;
-                              setOrderItems(newItems);
-                            }}
-                          />
-                        </div>
-                        <div className="sm:col-span-3">
-                          <p className="sm:hidden text-xs text-muted-foreground mb-1">Precio</p>
-                          <Input 
-                            placeholder="Precio" 
-                            type="number"
-                            inputMode="decimal"
-                            className="w-full sm:col-span-3"
-                            value={item.precio}
-                            onChange={(e) => {
-                              const newItems = [...orderItems];
-                              newItems[idx].precio = e.target.value;
-                              setOrderItems(newItems);
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="sm:col-span-1 justify-self-end"
-                        onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
-                        disabled={orderItems.length === 1}
-                        aria-label="Eliminar producto"
-                      >
-                        <X className="h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={handleAddItem}>
+                        <Plus className="h-4 w-4 mr-1" /> Agregar línea
                       </Button>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[220px]">Producto</TableHead>
+                            <TableHead className="w-24 text-center">Cant.</TableHead>
+                            <TableHead className="w-32 text-right">Precio Unit.</TableHead>
+                            <TableHead className="w-32 text-right">Subtotal</TableHead>
+                            <TableHead className="w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {orderItems.map((item, idx) => {
+                            const lineSub = (parseFloat(item.cantidad || '0') * parseFloat(item.precio || '0')) || 0;
+                            return (
+                              <TableRow key={idx}>
+                                <TableCell>
+                                  <ComboboxCreatable
+                                    options={productoOptions}
+                                    value={item.producto_id}
+                                    onValueChange={(val) => {
+                                      const newItems = [...orderItems];
+                                      const prod = productos.find(p => p.id === val);
+                                      newItems[idx].producto_id = val;
+                                      newItems[idx].producto_nombre = prod?.nombre || val;
+                                      if (prod?.precio_compra) newItems[idx].precio = String(prod.precio_compra);
+                                      if (!newItems[idx].cantidad) newItems[idx].cantidad = '1';
+                                      setOrderItems(newItems);
+                                    }}
+                                    onCreate={async (nombre) => {
+                                      try {
+                                        const newProd = await api.createProducto({ nombre, stock_actual: 0 });
+                                        setProductos([...productos, newProd]);
+                                        toast({ title: 'Producto creado' });
+                                        return { value: newProd.id, label: newProd.nombre };
+                                      } catch (e: any) {
+                                        toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                                      }
+                                    }}
+                                    placeholder="Seleccionar producto..."
+                                    searchPlaceholder="Buscar o crear producto..."
+                                    createLabel="Crear producto"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number" inputMode="decimal" min="0"
+                                    className="text-center h-9"
+                                    value={item.cantidad}
+                                    onChange={(e) => {
+                                      const n = [...orderItems]; n[idx].cantidad = e.target.value; setOrderItems(n);
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number" inputMode="decimal" min="0"
+                                    className="text-right h-9"
+                                    value={item.precio}
+                                    onChange={(e) => {
+                                      const n = [...orderItems]; n[idx].precio = e.target.value; setOrderItems(n);
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  ${lineSub.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost" size="icon"
+                                    onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
+                                    disabled={orderItems.length === 1}
+                                    aria-label="Eliminar línea"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
 
-            <div className="space-y-2">
-              <Label>Notas</Label>
-              <Textarea 
-                placeholder="Notas adicionales para el proveedor..."
-                value={notas}
-                onChange={(e) => setNotas(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            {/* Footer responsivo: botones full-width en móvil */}
-            <div className="flex flex-col-reverse sm:flex-row gap-2 w-full">
-              <Button variant="outline" onClick={() => setIsNewOrderOpen(false)} className="w-full sm:w-auto">
-                Cancelar
-              </Button>
-              <Button onClick={handleCreateOrder} className="w-full sm:w-auto">
-                Crear Orden
-              </Button>
-            </div>
-          </DialogFooter>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notas / términos</Label>
+                    <Textarea
+                      rows={3}
+                      placeholder="Condiciones de pago, instrucciones de entrega, etc."
+                      value={notas}
+                      onChange={(e) => setNotas(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Sidebar resumen */}
+                <div className="p-6 bg-muted/20 space-y-4">
+                  <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                    <Receipt className="h-4 w-4" /> Resumen
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Líneas</span>
+                      <span className="font-medium">{orderItems.filter(i => i.producto_nombre && i.cantidad && i.precio).length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-medium">${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">IVA (16%)</span>
+                      <span className="font-medium">${impuestos.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between text-base">
+                      <span className="font-semibold">Total</span>
+                      <span className="font-bold text-primary">${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border bg-background p-3 text-xs text-muted-foreground space-y-1">
+                    <p><strong className="text-foreground">Estado inicial:</strong> Pendiente.</p>
+                    <p>Podrás registrar los <strong className="text-foreground">pagos al proveedor</strong> desde el detalle una vez creada la orden.</p>
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Button onClick={handleCreateOrder} size="lg" className="w-full">
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Crear Orden
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsNewOrderOpen(false)} className="w-full">
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
       {/* Detalle Modal */}
-      <Dialog open={detalleModal.open} onOpenChange={(open) => setDetalleModal({ open, orden: open ? detalleModal.orden : null })}>
-        {/* Modal responsive (móvil): ancho casi completo + scroll vertical */}
-        <DialogContent className="max-w-xl max-h-[88vh] overflow-y-auto">
+      <Dialog open={detalleModal.open} onOpenChange={(open) => { setDetalleModal({ open, orden: open ? detalleModal.orden : null }); if (!open) setPagosOrden([]); }}>
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -989,6 +1086,97 @@ export default function Compras() {
                   </div>
                 </>
               )}
+
+              {/* Pagos al proveedor */}
+              <Separator />
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-primary" /> Pagos al proveedor
+                  </p>
+                  {(() => {
+                    const total = Number(detalleModal.orden.total || 0);
+                    const saldo = Math.max(0, total - totalPagadoOrden);
+                    return (
+                      <div className="text-xs text-right">
+                        <div>Pagado: <span className="font-semibold text-emerald-600">${totalPagadoOrden.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                        <div>Saldo: <span className={cn('font-semibold', saldo > 0 ? 'text-amber-600' : 'text-emerald-600')}>${saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {pagosOrden.length > 0 && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Método</TableHead>
+                        <TableHead>Referencia</TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pagosOrden.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="text-sm">{format(new Date(p.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
+                          <TableCell><Badge variant="secondary">{p.metodo_pago}</Badge></TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{p.referencia || '—'}</TableCell>
+                          <TableCell className="text-right font-medium">${Number(p.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" onClick={() => handleEliminarPago(p.id)} aria-label="Eliminar pago">
+                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+
+                {/* Form rápido para registrar pago */}
+                <div className="mt-3 rounded-lg border bg-muted/20 p-3 grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                  <div className="sm:col-span-3">
+                    <Label className="text-xs">Monto</Label>
+                    <Input
+                      type="number" inputMode="decimal" min="0" placeholder="0.00"
+                      value={nuevoPago.monto}
+                      onChange={(e) => setNuevoPago(p => ({ ...p, monto: e.target.value }))}
+                    />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <Label className="text-xs">Método</Label>
+                    <Select value={nuevoPago.metodo_pago} onValueChange={(v) => setNuevoPago(p => ({ ...p, metodo_pago: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Efectivo">Efectivo</SelectItem>
+                        <SelectItem value="Transferencia">Transferencia</SelectItem>
+                        <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                        <SelectItem value="Cheque">Cheque</SelectItem>
+                        <SelectItem value="Otro">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-4">
+                    <Label className="text-xs">Referencia (opcional)</Label>
+                    <Input
+                      placeholder="Folio, # transferencia..."
+                      value={nuevoPago.referencia}
+                      onChange={(e) => setNuevoPago(p => ({ ...p, referencia: e.target.value }))}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Button
+                      onClick={handleRegistrarPago}
+                      disabled={guardandoPago || !nuevoPago.monto}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Pagar
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>

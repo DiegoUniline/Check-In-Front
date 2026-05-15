@@ -652,10 +652,61 @@ class ApiClient {
   // ------- Compras -------
   getCompras = async (_params?: any): Promise<any> => { const { data } = await supabase.from('compras').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
   getCompra = async (id: string): Promise<any> => { const { data } = await supabase.from('compras').select('*, compras_detalle(*)').eq('id', id).maybeSingle(); return data; };
-  createCompra = async (data: any): Promise<any> => { const { detalles, ...header } = data; const { data: r, error } = await supabase.from('compras').insert({ ...header, hotel_id: this.hid() }).select().single(); if (error) throw error; if (Array.isArray(detalles) && detalles.length) { await supabase.from('compras_detalle').insert(detalles.map((d: any) => ({ ...d, compra_id: r.id }))); } return r; };
+  createCompra = async (data: any): Promise<any> => {
+    // Acepta tanto `detalles` como `detalle` para compatibilidad.
+    const { detalles, detalle, ...header } = data;
+    const items = (detalles ?? detalle) as any[] | undefined;
+    const { data: r, error } = await supabase.from('compras').insert({ ...header, hotel_id: this.hid() }).select().single();
+    if (error) throw error;
+    if (Array.isArray(items) && items.length) {
+      const rows = items.map((d: any) => ({
+        compra_id: r.id,
+        producto_id: d.producto_id ?? null,
+        producto_nombre: d.producto_nombre ?? null,
+        cantidad: Number(d.cantidad) || 0,
+        precio_unitario: Number(d.precio_unitario) || 0,
+        total: (Number(d.cantidad) || 0) * (Number(d.precio_unitario) || 0),
+      }));
+      await supabase.from('compras_detalle').insert(rows);
+    }
+    return r;
+  };
   updateCompra = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('compras').update(data).eq('id', id).select().single(); if (error) throw error; return r; };
   updateEstadoCompra = async (id: string, estado: string): Promise<any> => { const { data: r, error } = await supabase.from('compras').update({ estado }).eq('id', id).select().single(); if (error) throw error; return r; };
   deleteCompra = async (id: string): Promise<any> => { const { error } = await supabase.from('compras').delete().eq('id', id); if (error) throw error; return { ok: true }; };
+
+  // ------- Pagos a Proveedores (compras) -------
+  getPagosCompra = async (compraId: string): Promise<any[]> => {
+    const { data, error } = await supabase
+      .from('pagos_compras' as any)
+      .select('*')
+      .eq('compra_id', compraId)
+      .order('fecha', { ascending: false });
+    if (error) throw error;
+    return (data as any[]) || [];
+  };
+  createPagoCompra = async (data: { compra_id: string; monto: number; metodo_pago?: string; referencia?: string; notas?: string; fecha?: string; }): Promise<any> => {
+    const { data: r, error } = await supabase
+      .from('pagos_compras' as any)
+      .insert({
+        hotel_id: this.hid(),
+        compra_id: data.compra_id,
+        monto: Number(data.monto),
+        metodo_pago: data.metodo_pago || 'Efectivo',
+        referencia: data.referencia || null,
+        notas: data.notas || null,
+        fecha: data.fecha || new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return r;
+  };
+  deletePagoCompra = async (id: string): Promise<any> => {
+    const { error } = await supabase.from('pagos_compras' as any).delete().eq('id', id);
+    if (error) throw error;
+    return { ok: true };
+  };
 
   // ------- Ventas -------
   getVentas = async (_params?: any): Promise<any> => { const { data } = await supabase.from('ventas').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
