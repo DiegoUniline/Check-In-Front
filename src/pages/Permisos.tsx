@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Shield, Save, RotateCcw, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,13 +15,26 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
   ROLES, VIEWS, RoleId, PermissionMatrix,
-  loadPermissions, savePermissions, resetPermissions,
+  loadPermissions, savePermissions, resetPermissions, DEFAULT_PERMISSIONS,
 } from '@/lib/permissions';
 
 export default function Permisos() {
   const { toast } = useToast();
   const [matrix, setMatrix] = useState<PermissionMatrix>(() => loadPermissions());
   const [search, setSearch] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Cargar desde BD al montar
+  useQuery({
+    queryKey: ['permisos-hotel'],
+    queryFn: async () => {
+      const remote = await api.getPermisosHotel().catch(() => ({}));
+      const merged = { ...DEFAULT_PERMISSIONS, ...remote } as PermissionMatrix;
+      setMatrix(merged);
+      savePermissions(merged); // cache local
+      return merged;
+    },
+  });
 
   const groups = useMemo(() => {
     const filtered = VIEWS.filter(v =>
@@ -50,9 +65,17 @@ export default function Permisos() {
     }));
   };
 
-  const handleSave = () => {
-    savePermissions(matrix);
-    toast({ title: 'Permisos guardados', description: 'Los cambios se aplicarán al recargar la sesión.' });
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.savePermisosHotel(matrix);
+      savePermissions(matrix);
+      toast({ title: 'Permisos guardados', description: 'Sincronizados con la base de datos.' });
+    } catch (e: any) {
+      toast({ title: 'Error al guardar', description: e?.message || 'Intenta de nuevo', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -79,7 +102,7 @@ export default function Permisos() {
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="mr-2 h-4 w-4" /> Restaurar
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={saving}>
             <Save className="mr-2 h-4 w-4" /> Guardar Cambios
           </Button>
         </div>
