@@ -45,6 +45,7 @@ export const VIEWS: ViewDef[] = [
   { key: 'catalogos', label: 'Catálogos', group: 'Sistema', path: '/catalogos' },
   { key: 'configuracion', label: 'Configuración', group: 'Sistema', path: '/configuracion' },
   { key: 'permisos', label: 'Permisos', group: 'Sistema', path: '/permisos' },
+  { key: 'auditoria', label: 'Auditoría', group: 'Sistema', path: '/auditoria' },
 
   // Tabs de Catálogos
   { key: 'catalogos.conceptos', label: 'Conceptos de cargo', group: 'Tabs · Catálogos', parent: 'catalogos' },
@@ -95,6 +96,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   catalogos: ['Admin', 'Gerente'],
   configuracion: ['Admin'],
   permisos: ['Admin'],
+  auditoria: ['Admin', 'Gerente'],
 
   'catalogos.conceptos': ['Admin', 'Gerente'],
   'catalogos.categorias': ['Admin', 'Gerente'],
