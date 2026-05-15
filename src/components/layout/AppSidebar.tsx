@@ -21,7 +21,6 @@ import {
   ShieldCheck, // Icono para Diego
   Inbox,
   ScrollText
-  ,LineChart as LineChartIcon
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -67,7 +66,6 @@ const salesNavItems = [
   { title: 'Historial Ventas', url: '/historial', icon: History, viewKey: 'historial' },
   { title: 'Historial Reservas', url: '/historial-reservas', icon: FileText, viewKey: 'historial-reservas' },
   { title: 'Reportes', url: '/reportes', icon: BarChart3, viewKey: 'reportes' },
-  { title: 'Gerencia', url: '/gerencia', icon: LineChartIcon, viewKey: 'gerencia' },
 ];
 
 const configNavItems = [
