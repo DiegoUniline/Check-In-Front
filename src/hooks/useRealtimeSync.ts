@@ -16,9 +16,8 @@ export function useRealtimeSync(
     const channel = supabase
       .channel(`rt-${table}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
-        // @ts-expect-error - postgres_changes types
-        'postgres_changes',
-        { event, schema: 'public', table },
+        'postgres_changes' as never,
+        { event, schema: 'public', table } as never,
         () => onChange()
       )
       .subscribe();
