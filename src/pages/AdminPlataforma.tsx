@@ -407,9 +407,32 @@ export default function AdminPlataforma() {
                           <div>
                             <h5 className="font-bold flex items-center gap-2">
                               <Hotel className="w-4 h-4" /> {hotel.nombre}
+                              {hotel.activo_plataforma === false && (
+                                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">SUSPENDIDO</span>
+                              )}
                             </h5>
                             <p className="text-xs text-slate-500">{hotel.ciudad}</p>
                           </div>
+                          {hotel.activo_plataforma === false ? (
+                            <Button size="sm" variant="ghost" className="text-green-600 h-7 px-2"
+                              title="Reactivar"
+                              onClick={(e) => { e.stopPropagation(); reactivar.mutate(hotel.id); }}>
+                              <PlayCircle className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="ghost" className="text-red-500 h-7 px-2"
+                              title="Suspender"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const motivo = prompt('Motivo de la suspensión (opcional):') || '';
+                                if (motivo === null) return;
+                                if (confirm(`¿Suspender el hotel "${hotel.nombre}"? El acceso quedará bloqueado.`)) {
+                                  suspender.mutate({ id: hotel.id, motivo });
+                                }
+                              }}>
+                              <PauseCircle className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                         
                         {suscripcion ? (
