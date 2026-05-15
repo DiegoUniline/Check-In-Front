@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ShoppingBag, Plus, Search, Package, Truck, 
   Calendar, DollarSign, CheckCircle2, Clock, AlertCircle,
   MoreVertical, Eye, FileText, Building, RefreshCw, X,
-  RotateCcw, Trash2, Wallet, Receipt
+  RotateCcw, Trash2, Wallet, Receipt, ArrowLeft
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -86,6 +86,21 @@ export default function Compras() {
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
   const [provSearch, setProvSearch] = useState('');
   const [eliminandoBulkProv, setEliminandoBulkProv] = useState(false);
+
+  // Refs para navegación tipo Odoo: Tab al final de la última línea = nueva línea
+  const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
+  const pendingFocusIdx = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (pendingFocusIdx.current != null) {
+      const row = rowRefs.current[pendingFocusIdx.current];
+      const target = row?.querySelector<HTMLElement>(
+        'button[role="combobox"], [role="combobox"], input, button'
+      );
+      target?.focus();
+      pendingFocusIdx.current = null;
+    }
+  }, [orderItems.length]);
 
   useEffect(() => {
     cargarDatos();
