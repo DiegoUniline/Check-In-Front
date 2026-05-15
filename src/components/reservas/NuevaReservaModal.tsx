@@ -548,7 +548,7 @@ const noches = differenceInDays(
               </Card>
             )}
 
-            <div className={cn("grid gap-4", origen === 'Recepcion' ? "grid-cols-2" : "grid-cols-3")}>
+            <div className={cn("grid gap-4", origen === 'Recepcion' ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3")}>
               <div className="space-y-2">
                 <Label>Check-in</Label>
                 <Popover>
@@ -789,7 +789,7 @@ const noches = differenceInDays(
         {/* STEP 4 - CONFIRMACIÓN */}
         {step === 4 && (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="col-span-3 space-y-4">
+            <div className="lg:col-span-3 space-y-4">
               {/* Resumen de reserva */}
               <Card>
                 <CardContent className="p-4">
@@ -1003,7 +1003,7 @@ const noches = differenceInDays(
             </div>
 
             {/* COLUMNA DERECHA - TOTALES Y PAGOS */}
-            <div className="col-span-2">
+            <div className="lg:col-span-2">
               <Card className="bg-primary text-primary-foreground sticky top-0">
                 <CardContent className="p-4 space-y-4">
                   <p className="font-bold text-lg">Resumen de Cuenta</p>
