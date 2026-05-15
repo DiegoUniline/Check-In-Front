@@ -26,6 +26,7 @@ import api from '@/lib/api';
 import { ChecklistConfig } from '@/components/configuracion/ChecklistConfig';
 import { WhatsAppConfig } from '@/components/configuracion/WhatsAppConfig';
 import { SaveButton, isDirty } from '@/components/ui/save-button';
+import { useUnsavedChanges } from '@/contexts/UnsavedChangesContext';
 
 const emptyHotel = {
   nombre: '',
@@ -167,6 +168,7 @@ export default function Configuracion() {
     () => isDirty(hotelInitial, hotelData),
     [hotelInitial, hotelData]
   );
+  useUnsavedChanges(hotelDirty && !loadingHotel);
 
   return (
     <MainLayout 
