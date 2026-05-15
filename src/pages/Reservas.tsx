@@ -89,10 +89,11 @@ export default function Reservas() {
     : 'recepcion';
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
-  const [desdeCheckin, setDesdeCheckin] = useState('');
-  const [hastaCheckin, setHastaCheckin] = useState('');
-  const [desdeCheckout, setDesdeCheckout] = useState('');
-  const [hastaCheckout, setHastaCheckout] = useState('');
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const [desdeCheckin, setDesdeCheckin] = useState(hoyISO);
+  const [hastaCheckin, setHastaCheckin] = useState(hoyISO);
+  const [desdeCheckout, setDesdeCheckout] = useState(hoyISO);
+  const [hastaCheckout, setHastaCheckout] = useState(hoyISO);
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
   const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
 
@@ -754,7 +755,6 @@ function CheckInOutPanel({
     : 'No hay check-outs pendientes en el rango seleccionado.';
 
   const fechaCampo = esCheckin ? 'fecha_checkin' : 'fecha_checkout';
-  const hoyStr = new Date().toISOString().slice(0, 10);
 
   const filtrados = data.filter((r: any) => {
     const f = r[fechaCampo];
@@ -839,14 +839,6 @@ function CheckInOutPanel({
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Hasta</label>
           <Input type="date" value={hasta} onChange={(e) => onHastaChange(e.target.value)} className="h-9 text-sm w-[150px]" />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9"
-          onClick={() => { onDesdeChange(hoyStr); onHastaChange(hoyStr); }}
-        >
-          Hoy
-        </Button>
         {(desde || hasta) && (
           <Button
             variant="ghost"
