@@ -387,6 +387,23 @@ export default function Compras() {
     }
   };
 
+  const handleEliminarOrden = async (orden: any) => {
+    if (!orden?.id) return;
+    if (!confirm(`¿Eliminar la orden ${orden.numero_orden || ''}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await api.deleteCompra(orden.id);
+      toast({ title: 'Orden eliminada' });
+      // Si estábamos viendo el detalle de esta orden, volver al listado.
+      if (detalleModal.orden?.id === orden.id) {
+        setDetalleModal({ open: false, orden: null });
+        setPagosOrden([]);
+      }
+      cargarDatos();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
+  };
+
   const handleCrearProveedor = async () => {
     /*
       Crear proveedor desde Compras (modal).
@@ -434,6 +451,7 @@ export default function Compras() {
       title="Órdenes de Compra" 
       subtitle="Gestión de compras a proveedores"
     >
+      {detalleModal.open && detalleModal.orden ? null : (
       <Tabs defaultValue="ordenes">
         {/*
           Tabs responsivas: evitamos overflow horizontal global (en este caso son solo 2 pestañas).
@@ -962,6 +980,12 @@ export default function Compras() {
                               <DropdownMenuItem>
                                 <FileText className="mr-2 h-4 w-4" /> Generar PDF
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleEliminarOrden(orden)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -1046,21 +1070,30 @@ export default function Compras() {
           </div>
         </TabsContent>
       </Tabs>
+      )}
 
 
-      {/* Detalle Modal */}
-      <Dialog open={detalleModal.open} onOpenChange={(open) => { setDetalleModal({ open, orden: open ? detalleModal.orden : null }); if (!open) setPagosOrden([]); }}>
-        <DialogContent className="max-w-3xl w-[95vw] max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Detalle de Orden {detalleModal.orden?.numero || detalleModal.orden?.codigo || ''}
-            </DialogTitle>
-            <DialogDescription>
-              Información completa de la orden de compra
-            </DialogDescription>
-          </DialogHeader>
-          {detalleModal.orden && (
+      {/* Detalle inline (vista completa, no modal) */}
+      {detalleModal.open && detalleModal.orden && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={() => { setDetalleModal({ open: false, orden: null }); setPagosOrden([]); }}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div>
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Orden {detalleModal.orden.numero_orden || detalleModal.orden.numero || detalleModal.orden.codigo || ''}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">Información completa de la orden de compra</p>
+                </div>
+              </div>
+              <Button variant="destructive" size="sm" onClick={() => handleEliminarOrden(detalleModal.orden)}>
+                <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+              </Button>
+            </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1222,9 +1255,9 @@ export default function Compras() {
                 </div>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Nuevo Proveedor Dialog */}
       <Dialog open={isNewProveedorOpen} onOpenChange={setIsNewProveedorOpen}>
