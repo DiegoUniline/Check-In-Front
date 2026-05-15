@@ -762,6 +762,36 @@ class ApiClient {
         total: (Number(d.cantidad) || 0) * (Number(d.precio_unitario) || 0),
       }));
       await supabase.from('compras_detalle').insert(rows);
+      // Incrementar stock de productos comprados y registrar movimientos
+      const idsProd = items.map((d: any) => d.producto_id).filter(Boolean);
+      if (idsProd.length) {
+        const { data: prods } = await supabase
+          .from('productos')
+          .select('id, stock_actual')
+          .in('id', idsProd);
+        const stockMap: Record<string, number> = {};
+        (prods || []).forEach((p: any) => { stockMap[p.id] = Number(p.stock_actual) || 0; });
+        const movs: any[] = [];
+        for (const d of items) {
+          if (!d.producto_id) continue;
+          const cant = Number(d.cantidad) || 0;
+          if (!cant) continue;
+          const anterior = stockMap[d.producto_id] ?? 0;
+          const nuevo = anterior + cant;
+          stockMap[d.producto_id] = nuevo;
+          await supabase.from('productos').update({ stock_actual: nuevo }).eq('id', d.producto_id);
+          movs.push({
+            producto_id: d.producto_id,
+            tipo: 'Entrada',
+            cantidad: cant,
+            stock_anterior: anterior,
+            stock_nuevo: nuevo,
+            motivo: 'Compra',
+            referencia: numero_orden,
+          });
+        }
+        if (movs.length) await supabase.from('movimientos_inventario').insert(movs);
+      }
     }
     return r;
   };
