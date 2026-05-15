@@ -858,8 +858,8 @@ const noches = differenceInDays(
               <Card>
                 <CardContent className="p-4 space-y-3">
                   <Label className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Cargos Extras</Label>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
+                  <div className="flex flex-wrap gap-2">
+                    <div className="flex-1 min-w-[160px]">
                       <ComboboxCreatable
                         options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
                         value={cargoConcepto}
@@ -874,8 +874,8 @@ const noches = differenceInDays(
                         createLabel="Crear"
                       />
                     </div>
-                    <Input className="w-20" type="number" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
-                    <Input className="w-28" type="number" placeholder="$" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
+                    <Input className="w-16 sm:w-20" type="number" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+                    <Input className="w-24 sm:w-28" type="number" placeholder="$" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
                     <Button onClick={handleAgregarCargo} disabled={!cargoConcepto}><Plus className="h-4 w-4" /></Button>
                   </div>
                   {formData.cargos.map(c => (
