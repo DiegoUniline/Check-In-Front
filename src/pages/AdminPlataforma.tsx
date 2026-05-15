@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone, UserPlus, Check
+  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone, UserPlus, Check,
+  TrendingUp, Building2, AlertTriangle, DollarSign, PauseCircle, PlayCircle
 } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -84,6 +85,31 @@ export default function AdminPlataforma() {
   const { data: planes = [] } = useQuery({ 
     queryKey: ['saas-planes'], 
     queryFn: api.getPlanes 
+  });
+
+  const { data: metricas } = useQuery({
+    queryKey: ['metricas-plataforma'],
+    queryFn: api.getMetricasPlataforma,
+    refetchInterval: 60_000,
+  });
+
+  const suspender = useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo?: string }) => api.suspenderHotel(id, motivo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-hoteles'] });
+      queryClient.invalidateQueries({ queryKey: ['metricas-plataforma'] });
+      toast.success('Hotel suspendido');
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const reactivar = useMutation({
+    mutationFn: (id: string) => api.reactivarHotel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-hoteles'] });
+      queryClient.invalidateQueries({ queryKey: ['metricas-plataforma'] });
+      toast.success('Hotel reactivado');
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   // --- MUTACIONES ---
