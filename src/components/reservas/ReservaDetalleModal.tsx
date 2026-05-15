@@ -595,7 +595,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
         {/* Form inline expandible */}
         {estaExpandido && (
           <div className="border-t bg-muted/30 p-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs text-muted-foreground">Cantidad entregada</Label>
                 <Input value={cantEntregada} disabled className="bg-muted h-9" />
@@ -747,7 +747,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
           </Card>
         )}
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <div className="col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5">
@@ -771,7 +771,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" /> Estancia</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-4 gap-4">
+                  <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <Label className="text-muted-foreground text-xs">Check-in</Label>
                       <p className="font-medium">{format(fechaCheckin, "EEE d MMM yyyy", { locale: es })}</p>
@@ -859,7 +859,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </Card>
 
                 {(r.solicitudes_especiales || r.notas_internas) && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {r.solicitudes_especiales && (
                       <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
                         <CardContent className="p-4">
@@ -968,7 +968,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{r.cliente_email || 'Sin email'}</span>
@@ -988,7 +988,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">Agregar Cargo</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Select value={cargoConcepto} onValueChange={(v) => {
                           setCargoConcepto(v);
                           const c = conceptosCargo.find(x => x.id === v);
@@ -1003,7 +1003,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                             ))}
                           </SelectContent>
                         </Select>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <Input type="number" placeholder="Cantidad" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
                           <Input type="number" placeholder="Precio" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
                         </div>

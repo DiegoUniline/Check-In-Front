@@ -588,7 +588,7 @@ const noches = differenceInDays(
               )}
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Adultos</Label>
                 <Select value={formData.adultos.toString()} onValueChange={(v) => setFormData({ ...formData, adultos: parseInt(v) })}>
@@ -740,7 +740,7 @@ const noches = differenceInDays(
                 <Button variant="ghost" size="sm" onClick={() => setCrearNuevoCliente(false)}>
                   <ChevronLeft className="mr-1 h-4 w-4" /> Buscar existente
                 </Button>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre *</Label>
                     <Input value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
@@ -754,7 +754,7 @@ const noches = differenceInDays(
                     <Input value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Teléfono *</Label>
                     <Input value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
@@ -764,7 +764,7 @@ const noches = differenceInDays(
                     <Input type="email" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Tipo documento</Label>
                     <Select value={formData.nuevoCliente.tipo_documento} onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}>
@@ -788,7 +788,7 @@ const noches = differenceInDays(
 
         {/* STEP 4 - CONFIRMACIÓN */}
         {step === 4 && (
-          <div className="grid grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="col-span-3 space-y-4">
               {/* Resumen de reserva */}
               <Card>
@@ -806,7 +806,7 @@ const noches = differenceInDays(
                     </Badge>
                   </div>
                   <Separator className="my-3" />
-                  <div className="grid grid-cols-4 gap-3 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div><p className="text-muted-foreground">Check-in</p><p className="font-medium">{format(formData.fechaCheckin, 'd MMM yyyy', { locale: es })}</p></div>
                     <div><p className="text-muted-foreground">Check-out</p><p className="font-medium">{format(formData.fechaCheckout, 'd MMM yyyy', { locale: es })}</p></div>
                     <div><p className="text-muted-foreground">Noches</p><p className="font-medium">{noches}</p></div>
@@ -826,7 +826,7 @@ const noches = differenceInDays(
               </Card>
 
               {/* Notas */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Solicitudes especiales</Label>
                   <Textarea rows={2} value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto..." />
@@ -842,7 +842,7 @@ const noches = differenceInDays(
                 <Card>
                   <CardContent className="p-4">
                     <Label className="flex items-center gap-2 mb-3"><Package className="h-4 w-4" /> Entregables</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {entregables.map(ent => (
                         <div key={ent.id} className="flex items-center space-x-2">
                           <Checkbox id={ent.id} checked={formData.entregablesSeleccionados.includes(ent.id)} onCheckedChange={() => toggleEntregable(ent.id)} />
