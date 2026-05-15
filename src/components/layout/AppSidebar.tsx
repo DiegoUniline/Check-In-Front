@@ -52,6 +52,10 @@ import { canAccess } from '@/lib/permissions';
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, viewKey: 'dashboard' },
   { title: 'Reservas', url: '/reservas', icon: CalendarDays, viewKey: 'reservas' },
+  { title: 'Check-In Hoy', url: '/reservas/checkin', icon: LogIn, viewKey: 'reservas' },
+  { title: 'Check-Out Hoy', url: '/reservas/checkout', icon: LogOut, viewKey: 'reservas' },
+  { title: 'Timeline', url: '/reservas/timeline', icon: CalendarDays, viewKey: 'reservas' },
+  { title: 'Histórico Reservas', url: '/reservas/historico', icon: History, viewKey: 'reservas' },
   { title: 'Reservas Online', url: '/reservas-online', icon: Inbox, viewKey: 'reservas', badgeKey: 'reservas-online' },
   { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
   { title: 'Clientes', url: '/clientes', icon: Users, viewKey: 'clientes' },
