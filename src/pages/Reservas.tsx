@@ -28,6 +28,7 @@ import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { PublicLinkBanner } from '@/components/PublicLinkBanner';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
@@ -84,6 +85,10 @@ export default function Reservas() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  // Realtime: refresca cuando cambian reservas o estados de habitación
+  useRealtimeSync('reservas', () => cargarDatos());
+  useRealtimeSync('habitaciones', () => cargarDatos());
 
   const cargarDatos = async () => {
     setLoading(true);
