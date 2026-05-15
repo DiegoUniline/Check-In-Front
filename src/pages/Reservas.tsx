@@ -333,7 +333,7 @@ export default function Reservas() {
           </TabsContent>
 
           {/* TAB RESERVAS: Timeline existente */}
-          <TabsContent value="reservas" className="space-y-3 mt-3">
+          <TabsContent value="timeline" className="space-y-3 mt-3">
             <Card>
           <CardContent className="p-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
