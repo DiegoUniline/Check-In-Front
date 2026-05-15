@@ -18,6 +18,7 @@ import Limpieza from "./pages/Limpieza";
 import Mantenimiento from "./pages/Mantenimiento";
 import POS from "./pages/POS";
 import Inventario from "./pages/Inventario";
+import Productos from "./pages/Productos";
 import Reportes from "./pages/Reportes";
 import Configuracion from "./pages/Configuracion";
 import CheckIn from "./pages/CheckIn";
@@ -150,6 +151,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="inventario">
           <Inventario />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/productos"
+      element={
+        <ProtectedRoute viewKey="inventario">
+          <Productos />
         </ProtectedRoute>
       }
     />
