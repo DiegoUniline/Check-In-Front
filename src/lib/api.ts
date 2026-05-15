@@ -656,12 +656,68 @@ class ApiClient {
     const { data: prod } = await supabase.from('productos').select('stock_actual').eq('id', id).maybeSingle();
     const stockAnterior = Number(prod?.stock_actual || 0);
     const cantidad = Number(data.cantidad || 0);
-    const stockNuevo = data.tipo === 'Salida' ? stockAnterior - cantidad : stockAnterior + cantidad;
+    const tipo = String(data.tipo || '').toLowerCase();
+    const stockNuevo = tipo === 'salida' ? stockAnterior - cantidad : stockAnterior + cantidad;
     await supabase.from('productos').update({ stock_actual: stockNuevo }).eq('id', id);
-    const { data: m, error } = await supabase.from('movimientos_inventario').insert({ producto_id: id, ...data, stock_anterior: stockAnterior, stock_nuevo: stockNuevo }).select().single();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: m, error } = await supabase.from('movimientos_inventario').insert({
+      producto_id: id,
+      ...data,
+      stock_anterior: stockAnterior,
+      stock_nuevo: stockNuevo,
+      usuario_id: user?.id ?? null,
+    }).select().single();
     if (error) throw error; return m;
   };
   getMovimientosProducto = async (id: string): Promise<any> => { const { data } = await supabase.from('movimientos_inventario').select('*').eq('producto_id', id).order('created_at', { ascending: false }); return data || []; };
+  // Lista todos los movimientos del hotel actual (a través de productos)
+  getMovimientosInventario = async (limit = 200): Promise<any[]> => {
+    const { data: prods } = await supabase.from('productos').select('id, nombre, codigo').eq('hotel_id', this.hid());
+    const ids = (prods || []).map((p: any) => p.id);
+    if (!ids.length) return [];
+    const map: Record<string, any> = {};
+    (prods || []).forEach((p: any) => { map[p.id] = p; });
+    const { data, error } = await supabase
+      .from('movimientos_inventario')
+      .select('*')
+      .in('producto_id', ids)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    const userIds = Array.from(new Set((data || []).map((m: any) => m.usuario_id).filter(Boolean)));
+    let users: Record<string, string> = {};
+    if (userIds.length) {
+      const { data: profs } = await supabase.from('profiles').select('id, nombre, email').in('id', userIds);
+      (profs || []).forEach((p: any) => { users[p.id] = p.nombre || p.email || p.id; });
+    }
+    return (data || []).map((m: any) => ({
+      ...m,
+      producto_nombre: map[m.producto_id]?.nombre,
+      producto_codigo: map[m.producto_id]?.codigo,
+      usuario_nombre: m.usuario_id ? users[m.usuario_id] || m.usuario_id : null,
+    }));
+  };
+  // Ajusta el stock a un valor absoluto y registra el movimiento
+  ajustarStockAbsoluto = async (productoId: string, stockReal: number, motivo?: string): Promise<any> => {
+    const { data: prod } = await supabase.from('productos').select('stock_actual').eq('id', productoId).maybeSingle();
+    const anterior = Number(prod?.stock_actual || 0);
+    const nuevo = Number(stockReal) || 0;
+    const diff = nuevo - anterior;
+    if (diff === 0) return null;
+    await supabase.from('productos').update({ stock_actual: nuevo }).eq('id', productoId);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: m, error } = await supabase.from('movimientos_inventario').insert({
+      producto_id: productoId,
+      tipo: diff > 0 ? 'Entrada' : 'Salida',
+      cantidad: Math.abs(diff),
+      stock_anterior: anterior,
+      stock_nuevo: nuevo,
+      motivo: motivo || 'Ajuste de stock',
+      usuario_id: user?.id ?? null,
+    }).select().single();
+    if (error) throw error;
+    return m;
+  };
 
   // ------- Gastos -------
   getGastos = async (params?: Record<string, string>): Promise<any> => {
