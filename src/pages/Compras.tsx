@@ -78,6 +78,9 @@ export default function Compras() {
   ]);
   const [notas, setNotas] = useState('');
   const [detalleModal, setDetalleModal] = useState<{ open: boolean; orden: any | null }>({ open: false, orden: null });
+  const [pagosOrden, setPagosOrden] = useState<any[]>([]);
+  const [nuevoPago, setNuevoPago] = useState<{ monto: string; metodo_pago: string; referencia: string; notas: string }>({ monto: '', metodo_pago: 'Efectivo', referencia: '', notas: '' });
+  const [guardandoPago, setGuardandoPago] = useState(false);
   const [isNewProveedorOpen, setIsNewProveedorOpen] = useState(false);
   const [newProveedor, setNewProveedor] = useState({ nombre: '', rfc: '', contacto: '', telefono: '', email: '' });
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
@@ -308,8 +311,64 @@ export default function Compras() {
     try {
       const detalles = await api.getCompra(orden.id);
       setDetalleModal({ open: true, orden: detalles });
+      try {
+        const pagos = await api.getPagosCompra(orden.id);
+        setPagosOrden(pagos);
+      } catch { setPagosOrden([]); }
     } catch {
       setDetalleModal({ open: true, orden });
+      setPagosOrden([]);
+    }
+  };
+
+  const totalPagadoOrden = useMemo(
+    () => pagosOrden.reduce((s, p) => s + (Number(p.monto) || 0), 0),
+    [pagosOrden]
+  );
+
+  const handleRegistrarPago = async () => {
+    if (!detalleModal.orden) return;
+    const monto = parseFloat(nuevoPago.monto);
+    if (!monto || monto <= 0) {
+      toast({ title: 'Monto inválido', variant: 'destructive' });
+      return;
+    }
+    setGuardandoPago(true);
+    try {
+      await api.createPagoCompra({
+        compra_id: detalleModal.orden.id,
+        monto,
+        metodo_pago: nuevoPago.metodo_pago,
+        referencia: nuevoPago.referencia,
+        notas: nuevoPago.notas,
+      });
+      const pagos = await api.getPagosCompra(detalleModal.orden.id);
+      setPagosOrden(pagos);
+      const total = Number(detalleModal.orden.total || 0);
+      const pagado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
+      // Si queda saldado y no estaba marcada, sugerimos cambiar a Recibida (pagada)
+      if (pagado >= total && detalleModal.orden.estado !== 'Recibida') {
+        try { await api.updateEstadoCompra(detalleModal.orden.id, 'Recibida'); } catch {}
+      }
+      setNuevoPago({ monto: '', metodo_pago: 'Efectivo', referencia: '', notas: '' });
+      toast({ title: 'Pago registrado' });
+      cargarDatos();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setGuardandoPago(false);
+    }
+  };
+
+  const handleEliminarPago = async (pagoId: string) => {
+    if (!detalleModal.orden) return;
+    try {
+      await api.deletePagoCompra(pagoId);
+      const pagos = await api.getPagosCompra(detalleModal.orden.id);
+      setPagosOrden(pagos);
+      toast({ title: 'Pago eliminado' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
   };
 
