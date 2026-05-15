@@ -697,7 +697,39 @@ class ApiClient {
     // Acepta tanto `detalles` como `detalle` para compatibilidad.
     const { detalles, detalle, ...header } = data;
     const items = (detalles ?? detalle) as any[] | undefined;
-    const { data: r, error } = await supabase.from('compras').insert({ ...header, hotel_id: this.hid() }).select().single();
+    const hotel_id = this.hid();
+
+    // Resolver nombre del proveedor si solo viene el id
+    let proveedor_nombre = header.proveedor_nombre as string | undefined;
+    if (!proveedor_nombre && header.proveedor_id) {
+      const { data: prov } = await supabase
+        .from('proveedores')
+        .select('nombre')
+        .eq('id', header.proveedor_id)
+        .maybeSingle();
+      proveedor_nombre = prov?.nombre;
+    }
+
+    // Generar folio secuencial OC-000001 por hotel si no viene
+    let numero_orden = header.numero_orden as string | undefined;
+    if (!numero_orden) {
+      const { data: ult } = await supabase
+        .from('compras')
+        .select('numero_orden')
+        .eq('hotel_id', hotel_id)
+        .like('numero_orden', 'OC-%')
+        .order('numero_orden', { ascending: false })
+        .limit(1);
+      const ultimo = ult?.[0]?.numero_orden as string | undefined;
+      const ultimoNum = ultimo ? parseInt(ultimo.replace(/\D/g, ''), 10) || 0 : 0;
+      numero_orden = `OC-${String(ultimoNum + 1).padStart(6, '0')}`;
+    }
+
+    const { data: r, error } = await supabase
+      .from('compras')
+      .insert({ ...header, proveedor_nombre, numero_orden, hotel_id })
+      .select()
+      .single();
     if (error) throw error;
     if (Array.isArray(items) && items.length) {
       const rows = items.map((d: any) => ({
