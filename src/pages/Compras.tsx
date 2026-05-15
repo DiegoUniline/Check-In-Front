@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ShoppingBag, Plus, Search, Package, Truck, 
   Calendar, DollarSign, CheckCircle2, Clock, AlertCircle,
   MoreVertical, Eye, FileText, Building, RefreshCw, X,
-  RotateCcw, Trash2, Wallet, Receipt
+  RotateCcw, Trash2, Wallet, Receipt, ArrowLeft
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -86,6 +86,21 @@ export default function Compras() {
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
   const [provSearch, setProvSearch] = useState('');
   const [eliminandoBulkProv, setEliminandoBulkProv] = useState(false);
+
+  // Refs para navegación tipo Odoo: Tab al final de la última línea = nueva línea
+  const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
+  const pendingFocusIdx = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (pendingFocusIdx.current != null) {
+      const row = rowRefs.current[pendingFocusIdx.current];
+      const target = row?.querySelector<HTMLElement>(
+        'button[role="combobox"], [role="combobox"], input, button'
+      );
+      target?.focus();
+      pendingFocusIdx.current = null;
+    }
+  }, [orderItems.length]);
 
   useEffect(() => {
     cargarDatos();
@@ -433,6 +448,235 @@ export default function Compras() {
         </div>
 
         <TabsContent value="ordenes">
+          {isNewOrderOpen ? (() => {
+            const subtotal = orderItems.reduce(
+              (s, it) => s + (parseFloat(it.cantidad || '0') * parseFloat(it.precio || '0') || 0),
+              0
+            );
+            const impuestos = subtotal * 0.16;
+            const total = subtotal + impuestos;
+            const productoOptions: ComboboxOption[] = productos.map(p => ({ value: p.id, label: p.nombre }));
+            return (
+              <div className="space-y-4">
+                {/* Barra superior tipo Odoo */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setIsNewOrderOpen(false)}>
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Órdenes
+                    </Button>
+                    <span className="text-muted-foreground">/</span>
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <ShoppingBag className="h-5 w-5 text-primary" /> Nueva Orden
+                    </h2>
+                    <Badge variant="secondary">Borrador</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setIsNewOrderOpen(false)}>Descartar</Button>
+                    <Button onClick={handleCreateOrder}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Guardar
+                    </Button>
+                  </div>
+                </div>
+
+                <Card>
+                  <CardContent className="p-6 space-y-6">
+                    {/* Cabecera editable */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Proveedor *</Label>
+                        <ComboboxCreatable
+                          options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
+                          value={selectedProveedor}
+                          onValueChange={setSelectedProveedor}
+                          onCreate={async (nombre) => {
+                            try {
+                              const newProv = await api.createProveedor({ nombre });
+                              setProveedores([...proveedores, newProv]);
+                              toast({ title: 'Proveedor creado' });
+                              return { value: newProv.id, label: newProv.nombre };
+                            } catch (e: any) {
+                              toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                            }
+                          }}
+                          placeholder="Seleccionar proveedor..."
+                          searchPlaceholder="Buscar o crear proveedor..."
+                          createLabel="Crear proveedor"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de orden</Label>
+                        <Input value={format(new Date(), 'dd/MM/yyyy', { locale: es })} disabled className="bg-muted/40" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado inicial</Label>
+                        <Input value="Pendiente" disabled className="bg-muted/40" />
+                      </div>
+                    </div>
+
+                    {/* Líneas tipo Odoo */}
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="bg-muted/40 px-3 py-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <Package className="h-4 w-4 text-primary" /> Líneas de la orden
+                        </div>
+                        <span className="text-xs text-muted-foreground hidden sm:block">
+                          Tip: presiona <kbd className="px-1.5 py-0.5 rounded border bg-background">Tab</kbd> al final de una línea para agregar otra
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="min-w-[260px]">Producto</TableHead>
+                              <TableHead className="w-24 text-center">Cant.</TableHead>
+                              <TableHead className="w-32 text-right">Precio Unit.</TableHead>
+                              <TableHead className="w-32 text-right">Subtotal</TableHead>
+                              <TableHead className="w-10"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {orderItems.map((item, idx) => {
+                              const lineSub = (parseFloat(item.cantidad || '0') * parseFloat(item.precio || '0')) || 0;
+                              const isLast = idx === orderItems.length - 1;
+                              return (
+                                <TableRow key={idx} ref={(el) => (rowRefs.current[idx] = el)}>
+                                  <TableCell>
+                                    <ComboboxCreatable
+                                      options={productoOptions}
+                                      value={item.producto_id}
+                                      onValueChange={(val) => {
+                                        const newItems = [...orderItems];
+                                        const prod = productos.find(p => p.id === val);
+                                        newItems[idx].producto_id = val;
+                                        newItems[idx].producto_nombre = prod?.nombre || val;
+                                        if (prod?.precio_compra) newItems[idx].precio = String(prod.precio_compra);
+                                        if (!newItems[idx].cantidad) newItems[idx].cantidad = '1';
+                                        setOrderItems(newItems);
+                                      }}
+                                      onCreate={async (nombre) => {
+                                        try {
+                                          const newProd = await api.createProducto({ nombre, stock_actual: 0 });
+                                          setProductos([...productos, newProd]);
+                                          toast({ title: 'Producto creado' });
+                                          return { value: newProd.id, label: newProd.nombre };
+                                        } catch (e: any) {
+                                          toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                                        }
+                                      }}
+                                      placeholder="Seleccionar producto..."
+                                      searchPlaceholder="Buscar o crear producto..."
+                                      createLabel="Crear producto"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      type="number" inputMode="decimal" min="0"
+                                      className="text-center h-9"
+                                      value={item.cantidad}
+                                      onChange={(e) => {
+                                        const n = [...orderItems]; n[idx].cantidad = e.target.value; setOrderItems(n);
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      type="number" inputMode="decimal" min="0"
+                                      className="text-right h-9"
+                                      value={item.precio}
+                                      onChange={(e) => {
+                                        const n = [...orderItems]; n[idx].precio = e.target.value; setOrderItems(n);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Tab' && !e.shiftKey && isLast) {
+                                          const cur = orderItems[idx];
+                                          if (cur.producto_nombre && cur.cantidad && cur.precio) {
+                                            e.preventDefault();
+                                            pendingFocusIdx.current = orderItems.length;
+                                            setOrderItems([
+                                              ...orderItems,
+                                              { producto_id: '', producto_nombre: '', cantidad: '', precio: '' },
+                                            ]);
+                                          }
+                                        }
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          const cur = orderItems[idx];
+                                          if (cur.producto_nombre && cur.cantidad && cur.precio && isLast) {
+                                            pendingFocusIdx.current = orderItems.length;
+                                            setOrderItems([
+                                              ...orderItems,
+                                              { producto_id: '', producto_nombre: '', cantidad: '', precio: '' },
+                                            ]);
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium">
+                                    ${lineSub.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button
+                                      variant="ghost" size="icon"
+                                      onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
+                                      disabled={orderItems.length === 1}
+                                      aria-label="Eliminar línea"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="px-3 py-2 border-t bg-muted/20">
+                        <Button variant="ghost" size="sm" onClick={handleAddItem}>
+                          <Plus className="h-4 w-4 mr-1" /> Agregar línea
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Notas + Totales */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2 space-y-1.5">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notas / términos</Label>
+                        <Textarea
+                          rows={4}
+                          placeholder="Condiciones de pago, instrucciones de entrega, etc."
+                          value={notas}
+                          onChange={(e) => setNotas(e.target.value)}
+                        />
+                      </div>
+                      <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm h-fit">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Líneas</span>
+                          <span className="font-medium">{orderItems.filter(i => i.producto_nombre && i.cantidad && i.precio).length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Subtotal</span>
+                          <span className="font-medium">${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">IVA (16%)</span>
+                          <span className="font-medium">${impuestos.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between text-base">
+                          <span className="font-semibold">Total</span>
+                          <span className="font-bold text-primary">${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <Button onClick={handleCreateOrder} size="lg" className="w-full mt-2">
+                          <CheckCircle2 className="h-4 w-4 mr-2" /> Guardar orden
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })() : (<>
           {/*
             En tablets (ej. iPad ~820px) 4 columnas recortan el contenido.
             Usamos 2 columnas hasta `lg` para evitar cortes.
@@ -734,6 +978,7 @@ export default function Compras() {
               </Table>
             </div>
           </Card>
+          </>)}
         </TabsContent>
 
         <TabsContent value="proveedores">
@@ -801,208 +1046,6 @@ export default function Compras() {
         </TabsContent>
       </Tabs>
 
-      {/* New Order Dialog — rediseñado tipo Odoo: ancho, dos columnas, totales en vivo */}
-      <Dialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen}>
-        <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] overflow-y-auto p-0">
-          <DialogHeader className="px-6 pt-6 pb-3 border-b">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <ShoppingBag className="h-5 w-5 text-primary" />
-              Nueva Orden de Compra
-            </DialogTitle>
-            <DialogDescription>
-              Captura los productos y revisa el resumen antes de crear la orden.
-            </DialogDescription>
-          </DialogHeader>
-
-          {(() => {
-            const subtotal = orderItems.reduce(
-              (s, it) => s + (parseFloat(it.cantidad || '0') * parseFloat(it.precio || '0') || 0),
-              0
-            );
-            const impuestos = subtotal * 0.16;
-            const total = subtotal + impuestos;
-            const productoOptions: ComboboxOption[] = productos.map(p => ({ value: p.id, label: p.nombre }));
-            return (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
-                {/* Columna principal */}
-                <div className="lg:col-span-2 p-6 space-y-5 border-r">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Proveedor *</Label>
-                      <ComboboxCreatable
-                        options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
-                        value={selectedProveedor}
-                        onValueChange={setSelectedProveedor}
-                        onCreate={async (nombre) => {
-                          try {
-                            const newProv = await api.createProveedor({ nombre });
-                            setProveedores([...proveedores, newProv]);
-                            toast({ title: 'Proveedor creado' });
-                            return { value: newProv.id, label: newProv.nombre };
-                          } catch (e: any) {
-                            toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                          }
-                        }}
-                        placeholder="Seleccionar proveedor..."
-                        searchPlaceholder="Buscar o crear proveedor..."
-                        createLabel="Crear proveedor"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha</Label>
-                      <Input value={format(new Date(), 'dd/MM/yyyy', { locale: es })} disabled className="bg-muted/40" />
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="bg-muted/40 px-3 py-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-semibold">
-                        <Package className="h-4 w-4 text-primary" /> Productos
-                      </div>
-                      <Button variant="outline" size="sm" onClick={handleAddItem}>
-                        <Plus className="h-4 w-4 mr-1" /> Agregar línea
-                      </Button>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="min-w-[220px]">Producto</TableHead>
-                            <TableHead className="w-24 text-center">Cant.</TableHead>
-                            <TableHead className="w-32 text-right">Precio Unit.</TableHead>
-                            <TableHead className="w-32 text-right">Subtotal</TableHead>
-                            <TableHead className="w-10"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {orderItems.map((item, idx) => {
-                            const lineSub = (parseFloat(item.cantidad || '0') * parseFloat(item.precio || '0')) || 0;
-                            return (
-                              <TableRow key={idx}>
-                                <TableCell>
-                                  <ComboboxCreatable
-                                    options={productoOptions}
-                                    value={item.producto_id}
-                                    onValueChange={(val) => {
-                                      const newItems = [...orderItems];
-                                      const prod = productos.find(p => p.id === val);
-                                      newItems[idx].producto_id = val;
-                                      newItems[idx].producto_nombre = prod?.nombre || val;
-                                      if (prod?.precio_compra) newItems[idx].precio = String(prod.precio_compra);
-                                      if (!newItems[idx].cantidad) newItems[idx].cantidad = '1';
-                                      setOrderItems(newItems);
-                                    }}
-                                    onCreate={async (nombre) => {
-                                      try {
-                                        const newProd = await api.createProducto({ nombre, stock_actual: 0 });
-                                        setProductos([...productos, newProd]);
-                                        toast({ title: 'Producto creado' });
-                                        return { value: newProd.id, label: newProd.nombre };
-                                      } catch (e: any) {
-                                        toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                                      }
-                                    }}
-                                    placeholder="Seleccionar producto..."
-                                    searchPlaceholder="Buscar o crear producto..."
-                                    createLabel="Crear producto"
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Input
-                                    type="number" inputMode="decimal" min="0"
-                                    className="text-center h-9"
-                                    value={item.cantidad}
-                                    onChange={(e) => {
-                                      const n = [...orderItems]; n[idx].cantidad = e.target.value; setOrderItems(n);
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Input
-                                    type="number" inputMode="decimal" min="0"
-                                    className="text-right h-9"
-                                    value={item.precio}
-                                    onChange={(e) => {
-                                      const n = [...orderItems]; n[idx].precio = e.target.value; setOrderItems(n);
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell className="text-right font-medium">
-                                  ${lineSub.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    variant="ghost" size="icon"
-                                    onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
-                                    disabled={orderItems.length === 1}
-                                    aria-label="Eliminar línea"
-                                  >
-                                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notas / términos</Label>
-                    <Textarea
-                      rows={3}
-                      placeholder="Condiciones de pago, instrucciones de entrega, etc."
-                      value={notas}
-                      onChange={(e) => setNotas(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Sidebar resumen */}
-                <div className="p-6 bg-muted/20 space-y-4">
-                  <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                    <Receipt className="h-4 w-4" /> Resumen
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Líneas</span>
-                      <span className="font-medium">{orderItems.filter(i => i.producto_nombre && i.cantidad && i.precio).length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-medium">${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">IVA (16%)</span>
-                      <span className="font-medium">${impuestos.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between text-base">
-                      <span className="font-semibold">Total</span>
-                      <span className="font-bold text-primary">${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-md border bg-background p-3 text-xs text-muted-foreground space-y-1">
-                    <p><strong className="text-foreground">Estado inicial:</strong> Pendiente.</p>
-                    <p>Podrás registrar los <strong className="text-foreground">pagos al proveedor</strong> desde el detalle una vez creada la orden.</p>
-                  </div>
-
-                  <div className="flex flex-col gap-2 pt-2">
-                    <Button onClick={handleCreateOrder} size="lg" className="w-full">
-                      <CheckCircle2 className="h-4 w-4 mr-2" /> Crear Orden
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsNewOrderOpen(false)} className="w-full">
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
 
       {/* Detalle Modal */}
       <Dialog open={detalleModal.open} onOpenChange={(open) => { setDetalleModal({ open, orden: open ? detalleModal.orden : null }); if (!open) setPagosOrden([]); }}>
