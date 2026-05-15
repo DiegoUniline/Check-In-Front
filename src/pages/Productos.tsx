@@ -390,8 +390,6 @@ export default function Productos() {
               <SortHeader label="Producto" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.nombre} onFilterChange={(v) => dt.setColumnFilter('nombre', v)} onValuesChange={(vs) => dt.setColumnFilterValues('nombre', vs)} filterOptions={filteredProducts.map((p: any) => p.nombre)} />
               <SortHeader label="Categoría" columnKey="categoria" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.categoria} onFilterChange={(v) => dt.setColumnFilter('categoria', v)} onValuesChange={(vs) => dt.setColumnFilterValues('categoria', vs)} filterOptions={filteredProducts.map((p: any) => p.categoria)} />
               <SortHeader label="Precio" columnKey="precio" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.precio} onFilterChange={(v) => dt.setColumnFilter('precio', v)} onValuesChange={(vs) => dt.setColumnFilterValues('precio', vs)} />
-              <SortHeader label="Stock" columnKey="stock" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.stock} onFilterChange={(v) => dt.setColumnFilter('stock', v)} onValuesChange={(vs) => dt.setColumnFilterValues('stock', vs)} />
-              <SortHeader label="Valor" columnKey="valor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.valor} onFilterChange={(v) => dt.setColumnFilter('valor', v)} onValuesChange={(vs) => dt.setColumnFilterValues('valor', vs)} />
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -412,18 +410,6 @@ export default function Productos() {
                 </TableCell>
                 <TableCell className="text-right">${Number(producto.precio_venta || 0).toLocaleString()}</TableCell>
                 <TableCell className="text-right">
-                  <span className={cn(
-                    "font-medium",
-                    (producto.stock_actual || 0) < (producto.stock_minimo || 20) && "text-warning",
-                    (producto.stock_actual || 0) < 10 && "text-destructive"
-                  )}>
-                    {producto.stock_actual || 0}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  ${((producto.precio_venta || 0) * (producto.stock_actual || 0)).toLocaleString()}
-                </TableCell>
-                <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -431,12 +417,6 @@ export default function Productos() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => {
-                        setAjusteModal({ open: true, producto });
-                        setAjusteData({ tipo: 'entrada', cantidad: '', motivo: '' });
-                      }}>
-                        <ArrowUpDown className="mr-2 h-4 w-4" /> Ajustar stock
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => openEditModal(producto)}>
                         <Edit className="mr-2 h-4 w-4" /> Editar
                       </DropdownMenuItem>
@@ -450,7 +430,7 @@ export default function Productos() {
             ))}
             {dt.processed.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No hay productos registrados
                 </TableCell>
               </TableRow>
@@ -512,7 +492,7 @@ export default function Productos() {
                 placeholder="Nombre del producto"
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Precio *</Label>
                 <Input
@@ -520,14 +500,6 @@ export default function Productos() {
                   value={formData.precio_venta}
                   onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
                   placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Stock Actual</Label>
-                <Input
-                  type="number"
-                  value={formData.stock_actual}
-                  onChange={(e) => setFormData({ ...formData, stock_actual: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
