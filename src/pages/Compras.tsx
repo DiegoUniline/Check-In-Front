@@ -387,6 +387,23 @@ export default function Compras() {
     }
   };
 
+  const handleEliminarOrden = async (orden: any) => {
+    if (!orden?.id) return;
+    if (!confirm(`¿Eliminar la orden ${orden.numero_orden || ''}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await api.deleteCompra(orden.id);
+      toast({ title: 'Orden eliminada' });
+      // Si estábamos viendo el detalle de esta orden, volver al listado.
+      if (detalleModal.orden?.id === orden.id) {
+        setDetalleModal({ open: false, orden: null });
+        setPagosOrden([]);
+      }
+      cargarDatos();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
+  };
+
   const handleCrearProveedor = async () => {
     /*
       Crear proveedor desde Compras (modal).
