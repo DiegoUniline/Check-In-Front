@@ -18,6 +18,7 @@ import {
   Hotel as HotelIcon, MapPin, Phone, Mail, Users, BedDouble, CheckCircle2,
   Loader2, Star, Wifi, Wind, Tv, Coffee, Bath, Calendar as CalIcon, ChevronLeft, ChevronRight,
   Maximize2, Images, Info,
+  CalendarCheck, BookOpenCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, addDays, differenceInCalendarDays, eachDayOfInterval, parseISO } from 'date-fns';
@@ -458,10 +459,27 @@ export default function PublicHotel() {
                     <div className="text-[11px] text-stone-500">por noche{ns > 1 ? ` · $${total.toLocaleString()} total` : ''}</div>
                   </div>
 
-                  <Button onClick={() => openBooking(h)} disabled={range?.from && range?.to ? !disponible : false} className="w-full h-11 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md text-[15px] disabled:opacity-60">
-                    Reservar
-                  </Button>
-                  <div className="text-[11px] text-stone-500 text-center -mt-1">Aún no se te cobrará nada.</div>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <Button
+                      onClick={() => openBooking(h)}
+                      variant="outline"
+                      className="h-11 border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800 font-semibold rounded-md text-[14px]"
+                    >
+                      <CalendarCheck className="h-4 w-4 mr-1.5" />
+                      Ver disponibilidad
+                    </Button>
+                    <Button
+                      onClick={() => openBooking(h)}
+                      disabled={range?.from && range?.to ? !disponible : false}
+                      className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md text-[14px] disabled:opacity-60"
+                    >
+                      <BookOpenCheck className="h-4 w-4 mr-1.5" />
+                      Reservar
+                    </Button>
+                  </div>
+                  <div className="text-[11px] text-stone-500 text-center -mt-1">
+                    Elige fechas para confirmar disponibilidad. Aún no se te cobrará nada.
+                  </div>
                 </CardContent>
               </Card>
             );
