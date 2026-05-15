@@ -850,6 +850,36 @@ export type Database = {
           },
         ]
       }
+      permisos_hotel: {
+        Row: {
+          created_at: string
+          hotel_id: string
+          id: string
+          modulo: string
+          permitido: boolean
+          rol: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hotel_id: string
+          id?: string
+          modulo: string
+          permitido?: boolean
+          rol: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hotel_id?: string
+          id?: string
+          modulo?: string
+          permitido?: boolean
+          rol?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       planes: {
         Row: {
           activo: boolean
@@ -975,6 +1005,7 @@ export type Database = {
           created_at: string | null
           email: string | null
           foto_url: string | null
+          hotel_activo_id: string | null
           hotel_id: string | null
           id: string
           nombre: string
@@ -988,6 +1019,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           foto_url?: string | null
+          hotel_activo_id?: string | null
           hotel_id?: string | null
           id: string
           nombre: string
@@ -1001,6 +1033,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           foto_url?: string | null
+          hotel_activo_id?: string | null
           hotel_id?: string | null
           id?: string
           nombre?: string
