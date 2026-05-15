@@ -755,7 +755,6 @@ function CheckInOutPanel({
     : 'No hay check-outs pendientes en el rango seleccionado.';
 
   const fechaCampo = esCheckin ? 'fecha_checkin' : 'fecha_checkout';
-  const hoyStr = new Date().toISOString().slice(0, 10);
 
   const filtrados = data.filter((r: any) => {
     const f = r[fechaCampo];
