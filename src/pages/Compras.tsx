@@ -287,6 +287,7 @@ export default function Compras() {
   try {
     const detalle = validItems.map(i => ({
       producto_id: i.producto_id || null,
+      producto_nombre: i.producto_nombre || null,
       cantidad: parseFloat(i.cantidad),
       precio_unitario: parseFloat(i.precio)
     }));
