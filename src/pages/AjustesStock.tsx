@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Save, RefreshCw, AlertTriangle, History, Search } from 'lucide-react';
+import { Save, RefreshCw, AlertTriangle, Search } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 export default function AjustesStock() {
   const { toast } = useToast();
   const [productos, setProductos] = useState<any[]>([]);
-  const [movimientos, setMovimientos] = useState<any[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [motivo, setMotivo] = useState('');
   const [search, setSearch] = useState('');
@@ -24,9 +23,8 @@ export default function AjustesStock() {
   const cargar = async () => {
     setLoading(true);
     try {
-      const [prods, movs] = await Promise.all([api.getProductos(), api.getMovimientosInventario(100)]);
+      const prods = await api.getProductos();
       setProductos(Array.isArray(prods) ? prods : []);
-      setMovimientos(Array.isArray(movs) ? movs : []);
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally { setLoading(false); }
@@ -203,26 +201,6 @@ export default function AjustesStock() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><History className="h-4 w-4" />Movimientos recientes</CardTitle></CardHeader>
-            <CardContent className="space-y-2 max-h-[420px] overflow-y-auto">
-              {movimientos.map(m => (
-                <div key={m.id} className="text-xs border-b pb-2">
-                  <div className="flex justify-between">
-                    <span className="font-medium">{m.producto_nombre || m.producto_id}</span>
-                    <Badge variant={m.tipo === 'Entrada' ? 'default' : 'destructive'} className="text-[10px]">{m.tipo} {m.cantidad}</Badge>
-                  </div>
-                  <div className="text-muted-foreground">
-                    {m.stock_anterior} → {m.stock_nuevo} · {m.motivo || '—'}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {new Date(m.created_at).toLocaleString()} · {m.usuario_nombre || 'Sistema'}
-                  </div>
-                </div>
-              ))}
-              {!movimientos.length && <p className="text-muted-foreground text-xs">Sin movimientos registrados.</p>}
-            </CardContent>
-          </Card>
         </div>
       </div>
     </MainLayout>
