@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      auditoria: {
+        Row: {
+          accion: string
+          created_at: string
+          datos_antes: Json | null
+          datos_despues: Json | null
+          descripcion: string | null
+          entidad: string
+          entidad_id: string | null
+          hotel_id: string
+          id: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          datos_antes?: Json | null
+          datos_despues?: Json | null
+          descripcion?: string | null
+          entidad: string
+          entidad_id?: string | null
+          hotel_id: string
+          id?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          datos_antes?: Json | null
+          datos_despues?: Json | null
+          descripcion?: string | null
+          entidad?: string
+          entidad_id?: string | null
+          hotel_id?: string
+          id?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cargos: {
         Row: {
           cantidad: number | null
