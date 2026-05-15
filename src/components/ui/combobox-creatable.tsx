@@ -33,6 +33,8 @@ interface ComboboxCreatableProps {
   createLabel?: string;
   disabled?: boolean;
   className?: string;
+  /** Abrir el popover al recibir foco (útil para edición tipo grilla/Odoo) */
+  autoOpenOnFocus?: boolean;
 }
 
 export function ComboboxCreatable({
@@ -46,6 +48,7 @@ export function ComboboxCreatable({
   createLabel = "Crear",
   disabled = false,
   className,
+  autoOpenOnFocus = false,
 }: ComboboxCreatableProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -92,6 +95,9 @@ export function ComboboxCreatable({
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
           disabled={disabled}
+          onFocus={() => {
+            if (autoOpenOnFocus && !open) setOpen(true);
+          }}
         >
           {selectedOption ? selectedOption.label : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
