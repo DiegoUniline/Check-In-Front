@@ -287,6 +287,7 @@ export default function Compras() {
   try {
     const detalle = validItems.map(i => ({
       producto_id: i.producto_id || null,
+      producto_nombre: i.producto_nombre || null,
       cantidad: parseFloat(i.cantidad),
       precio_unitario: parseFloat(i.precio)
     }));
@@ -1095,34 +1096,60 @@ export default function Compras() {
               </Button>
             </div>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Proveedor</p>
-                  <p className="font-medium">{detalleModal.orden.proveedor?.nombre || detalleModal.orden.proveedor_nombre || '-'}</p>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Metadata: 2 columnas en desktop */}
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-lg border bg-muted/20">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Proveedor</p>
+                    <p className="font-semibold">{detalleModal.orden.proveedor?.nombre || detalleModal.orden.proveedor_nombre || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Fecha</p>
+                    <p className="font-semibold">
+                      {detalleModal.orden.fecha || detalleModal.orden.created_at
+                        ? format(new Date(detalleModal.orden.fecha || detalleModal.orden.created_at), "d MMM yyyy", { locale: es })
+                        : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Estado</p>
+                    <Badge className={getEstadoColor(detalleModal.orden.estado)}>{detalleModal.orden.estado}</Badge>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Estado</p>
-                  <Badge className={getEstadoColor(detalleModal.orden.estado)}>{detalleModal.orden.estado}</Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Fecha</p>
-                  <p className="font-medium">
-                    {detalleModal.orden.fecha || detalleModal.orden.created_at
-                      ? format(new Date(detalleModal.orden.fecha || detalleModal.orden.created_at), "d MMMM yyyy", { locale: es })
-                      : '-'}
-                  </p>
-                </div>
-                <div>
-                  {/*
-                    Desglose financiero para evitar confusión "dos totales" (ej. subtotal de items vs total con impuestos).
-                    Relacionado con `check-in-back/src/routes/compras.js` (campos: subtotal, impuestos, total) y consumido por `GET /api/compras/:id`.
-                  */}
-                  <p className="text-sm text-muted-foreground">Subtotal</p>
-                  <p className="font-medium">${Number(detalleModal.orden.subtotal || 0).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground mt-2">Impuestos</p>
-                  <p className="font-medium">${Number(detalleModal.orden.impuestos || 0).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground mt-2">Total</p>
-                  <p className="font-bold text-lg">${Number(detalleModal.orden.total || 0).toLocaleString()}</p>
+                {/* Totales financieros */}
+                <div className="p-4 rounded-lg border bg-card">
+                  <div className="flex items-center justify-between text-sm py-1">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">${Number(detalleModal.orden.subtotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm py-1">
+                    <span className="text-muted-foreground">Impuestos</span>
+                    <span className="font-medium">${Number(detalleModal.orden.impuestos || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <Separator className="my-2" />
+                  <div className="flex items-center justify-between py-1">
+                    <span className="font-semibold">Total</span>
+                    <span className="text-xl font-bold text-primary">${Number(detalleModal.orden.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {(() => {
+                    const total = Number(detalleModal.orden.total || 0);
+                    const saldo = Math.max(0, total - totalPagadoOrden);
+                    return (
+                      <>
+                        <Separator className="my-2" />
+                        <div className="flex items-center justify-between text-sm py-0.5">
+                          <span className="text-muted-foreground">Pagado</span>
+                          <span className="font-semibold text-emerald-600">${totalPagadoOrden.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm py-0.5">
+                          <span className="text-muted-foreground">Saldo</span>
+                          <span className={cn('font-semibold', saldo > 0 ? 'text-amber-600' : 'text-emerald-600')}>
+                            ${saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               <Separator />

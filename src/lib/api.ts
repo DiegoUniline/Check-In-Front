@@ -741,10 +741,22 @@ class ApiClient {
       .single();
     if (error) throw error;
     if (Array.isArray(items) && items.length) {
+      // Resolver nombres faltantes consultando productos
+      const idsSinNombre = items
+        .filter((d: any) => !d.producto_nombre && d.producto_id)
+        .map((d: any) => d.producto_id);
+      let nombresMap: Record<string, string> = {};
+      if (idsSinNombre.length) {
+        const { data: prods } = await supabase
+          .from('productos')
+          .select('id, nombre')
+          .in('id', idsSinNombre);
+        (prods || []).forEach((p: any) => { nombresMap[p.id] = p.nombre; });
+      }
       const rows = items.map((d: any) => ({
         compra_id: r.id,
         producto_id: d.producto_id ?? null,
-        producto_nombre: d.producto_nombre ?? null,
+        producto_nombre: d.producto_nombre ?? (d.producto_id ? nombresMap[d.producto_id] : null) ?? null,
         cantidad: Number(d.cantidad) || 0,
         precio_unitario: Number(d.precio_unitario) || 0,
         total: (Number(d.cantidad) || 0) * (Number(d.precio_unitario) || 0),
