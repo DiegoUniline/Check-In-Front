@@ -566,6 +566,7 @@ export default function Compras() {
                                       placeholder="Seleccionar producto..."
                                       searchPlaceholder="Buscar o crear producto..."
                                       createLabel="Crear producto"
+                                      autoOpenOnFocus
                                     />
                                   </TableCell>
                                   <TableCell>
