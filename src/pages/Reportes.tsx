@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
@@ -28,10 +29,10 @@ const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov'
 type Filtros = {
   desde: Date;
   hasta: Date;
-  habitacionId: string;     // 'all' o id
-  tipoId: string;           // 'all' o id
-  usuarioId: string;        // 'all' o id
-  origen: string;           // 'all' | 'Web' | 'Reserva' | 'Walk-in' ...
+  habitacionIds: string[];  // [] = todas
+  tipoIds: string[];        // [] = todos
+  usuarioIds: string[];     // [] = todos
+  origenes: string[];       // [] = todos
 };
 
 const PRESETS = [
@@ -50,10 +51,10 @@ export default function Reportes() {
 
   const [filtros, setFiltros] = useState<Filtros>(() => ({
     ...PRESETS[1].fn(),
-    habitacionId: 'all',
-    tipoId: 'all',
-    usuarioId: 'all',
-    origen: 'all',
+    habitacionIds: [],
+    tipoIds: [],
+    usuarioIds: [],
+    origenes: [],
   }));
 
   // Catálogos para filtros
@@ -112,10 +113,10 @@ export default function Reportes() {
     return reservas.filter((r: any) => {
       const f = new Date(r.fecha_checkin);
       if (f < filtros.desde || f > filtros.hasta) return false;
-      if (filtros.habitacionId !== 'all' && r.habitacion_id !== filtros.habitacionId) return false;
-      if (filtros.tipoId !== 'all' && r.tipo_habitacion_id !== filtros.tipoId) return false;
-      if (filtros.usuarioId !== 'all' && r.created_by !== filtros.usuarioId) return false;
-      if (filtros.origen !== 'all' && r.origen !== filtros.origen) return false;
+      if (filtros.habitacionIds.length && !filtros.habitacionIds.includes(r.habitacion_id)) return false;
+      if (filtros.tipoIds.length && !filtros.tipoIds.includes(r.tipo_habitacion_id)) return false;
+      if (filtros.usuarioIds.length && !filtros.usuarioIds.includes(r.created_by)) return false;
+      if (filtros.origenes.length && !filtros.origenes.includes(r.origen || 'Reserva')) return false;
       return true;
     });
   }, [reservas, filtros]);
@@ -123,9 +124,8 @@ export default function Reportes() {
   const reservaIdsFiltradas = useMemo(() => new Set(reservasFiltradas.map((r) => r.id)), [reservasFiltradas]);
 
   const pagosFiltrados = useMemo(() => {
-    if (filtros.habitacionId === 'all' && filtros.tipoId === 'all' && filtros.usuarioId === 'all' && filtros.origen === 'all') {
-      return pagos;
-    }
+    const sinFiltros = !filtros.habitacionIds.length && !filtros.tipoIds.length && !filtros.usuarioIds.length && !filtros.origenes.length;
+    if (sinFiltros) return pagos;
     return pagos.filter((p: any) => !p.reserva_id || reservaIdsFiltradas.has(p.reserva_id));
   }, [pagos, reservaIdsFiltradas, filtros]);
 
@@ -291,47 +291,45 @@ export default function Reportes() {
             </SelectContent>
           </Select>
 
-          <Select value={filtros.tipoId} onValueChange={(v) => setFiltros((f) => ({ ...f, tipoId: v }))}>
-            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los tipos</SelectItem>
-              {tipos.map((t) => (<SelectItem key={t.id} value={t.id}>{t.nombre}</SelectItem>))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={tipos.map((t) => ({ value: t.id, label: t.nombre }))}
+            values={filtros.tipoIds}
+            onChange={(v) => setFiltros((f) => ({ ...f, tipoIds: v }))}
+            allLabel="Todos los tipos"
+          />
 
-          <Select value={filtros.habitacionId} onValueChange={(v) => setFiltros((f) => ({ ...f, habitacionId: v }))}>
-            <SelectTrigger><SelectValue placeholder="Habitación" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las habs.</SelectItem>
-              {habitaciones.map((h) => (<SelectItem key={h.id} value={h.id}>Hab. {h.numero}</SelectItem>))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={habitaciones.map((h) => ({ value: h.id, label: `Hab. ${h.numero}` }))}
+            values={filtros.habitacionIds}
+            onChange={(v) => setFiltros((f) => ({ ...f, habitacionIds: v }))}
+            allLabel="Todas las habs."
+          />
 
-          <Select value={filtros.usuarioId} onValueChange={(v) => setFiltros((f) => ({ ...f, usuarioId: v }))}>
-            <SelectTrigger><SelectValue placeholder="Usuario" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los usuarios</SelectItem>
-              {usuarios.map((u) => (<SelectItem key={u.id} value={u.id}>{`${u.nombre || ''} ${u.apellido_paterno || ''}`.trim() || u.email}</SelectItem>))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={usuarios.map((u) => ({ value: u.id, label: `${u.nombre || ''} ${u.apellido_paterno || ''}`.trim() || u.email }))}
+            values={filtros.usuarioIds}
+            onChange={(v) => setFiltros((f) => ({ ...f, usuarioIds: v }))}
+            allLabel="Todos los usuarios"
+          />
 
-          <Select value={filtros.origen} onValueChange={(v) => setFiltros((f) => ({ ...f, origen: v }))}>
-            <SelectTrigger><SelectValue placeholder="Origen" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los orígenes</SelectItem>
-              <SelectItem value="Reserva">Reserva</SelectItem>
-              <SelectItem value="Web">Web</SelectItem>
-              <SelectItem value="Walk-in">Walk-in</SelectItem>
-              <SelectItem value="OTA">OTA</SelectItem>
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={[
+              { value: 'Reserva', label: 'Reserva' },
+              { value: 'Web', label: 'Web' },
+              { value: 'Walk-in', label: 'Walk-in' },
+              { value: 'OTA', label: 'OTA' },
+            ]}
+            values={filtros.origenes}
+            onChange={(v) => setFiltros((f) => ({ ...f, origenes: v }))}
+            allLabel="Todos los orígenes"
+          />
         </CardContent>
         <CardContent className="p-4 pt-0 flex justify-between items-center">
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            {filtros.tipoId !== 'all' && <Badge variant="secondary">Tipo: {tipos.find((t) => t.id === filtros.tipoId)?.nombre}</Badge>}
-            {filtros.habitacionId !== 'all' && <Badge variant="secondary">Hab: {habitaciones.find((h) => h.id === filtros.habitacionId)?.numero}</Badge>}
-            {filtros.usuarioId !== 'all' && <Badge variant="secondary">Usuario filtrado</Badge>}
-            {filtros.origen !== 'all' && <Badge variant="secondary">Origen: {filtros.origen}</Badge>}
+            {filtros.tipoIds.length > 0 && <Badge variant="secondary">{filtros.tipoIds.length} tipo(s)</Badge>}
+            {filtros.habitacionIds.length > 0 && <Badge variant="secondary">{filtros.habitacionIds.length} habitación(es)</Badge>}
+            {filtros.usuarioIds.length > 0 && <Badge variant="secondary">{filtros.usuarioIds.length} usuario(s)</Badge>}
+            {filtros.origenes.length > 0 && <Badge variant="secondary">{filtros.origenes.length} origen(es)</Badge>}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={cargar} disabled={loading}>
