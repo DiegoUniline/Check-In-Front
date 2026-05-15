@@ -176,7 +176,7 @@ export default function CheckIn() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nombre</Label>
                   <Input
@@ -192,7 +192,7 @@ export default function CheckIn() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Documento de Identidad</Label>
                   <Input
@@ -237,7 +237,7 @@ export default function CheckIn() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground text-sm">Tipo de Habitación</Label>
                   <p className="font-medium">{reserva.tipo_habitacion_nombre || reserva.tipo_habitacion?.nombre || 'N/A'}</p>

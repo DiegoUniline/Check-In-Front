@@ -408,7 +408,7 @@ const handleGuardarCambios = async () => {
 
           {/* TAB DETALLE */}
           <TabsContent value="detalle" className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Info Habitación y Fechas */}
               <Card>
                 <CardHeader className="pb-2">
@@ -467,7 +467,7 @@ const handleGuardarCambios = async () => {
             {/* Fechas */}
             <Card>
               <CardContent className="pt-4">
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <Label className="text-muted-foreground text-xs">Check-in</Label>
                     <p className="font-medium">{format(fechaCheckin, 'd MMM yyyy', { locale: es })}</p>
