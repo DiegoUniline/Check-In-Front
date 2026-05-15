@@ -811,7 +811,7 @@ export default function Compras() {
             <div className="block lg:hidden">
               <div className="divide-y">
                 {filteredOrdenes.map((orden) => {
-                  const numero = orden.numero || orden.codigo || `OC-${orden.id}`;
+                  const numero = orden.numero_orden || orden.numero || orden.codigo || `OC-${orden.id}`;
                   const provNombre = orden.proveedor?.nombre || orden.proveedor_nombre || '-';
                   const fecha = orden.fecha || orden.created_at;
                   const itemsCount = orden.items?.length || orden.items_count || 0;
@@ -904,7 +904,7 @@ export default function Compras() {
                 </TableHeader>
                 <TableBody>
                   {dt.processed.map(orden => {
-                    const numero = orden.numero || orden.codigo || `OC-${orden.id}`;
+                    const numero = orden.numero_orden || orden.numero || orden.codigo || `OC-${orden.id}`;
                     const provNombre = orden.proveedor?.nombre || orden.proveedor_nombre || '-';
                     const provContacto = orden.proveedor?.contacto || orden.proveedor_contacto || '';
                     const fecha = orden.fecha || orden.created_at;
