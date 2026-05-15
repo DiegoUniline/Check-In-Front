@@ -1,6 +1,10 @@
-import { Bell, Search, Sun, Moon, Menu, LogOut, User, Settings } from 'lucide-react';
+import { Bell, Search, Sun, Moon, Menu, LogOut, User, Settings, Hotel } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +25,29 @@ interface HeaderProps {
 
 export function Header({ title, subtitle }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { toggleSidebar } = useSidebar();
+  const queryClient = useQueryClient();
+  const isSuperAdmin = user?.email === 'diego.leon@uniline.mx' || user?.rol === 'SuperAdmin';
+
+  const { data: hoteles = [] } = useQuery({
+    queryKey: ['superadmin-hoteles'],
+    queryFn: api.getHotelesSaas,
+    enabled: isSuperAdmin,
+  });
+
+  const hotelActivoId = (typeof window !== 'undefined' ? localStorage.getItem('hotel_id') : null) || '';
+
+  const handleHotelChange = async (hotelId: string) => {
+    try {
+      await api.setHotelActivo(hotelId);
+      await refreshUser();
+      await queryClient.invalidateQueries();
+      toast.success('Hotel cambiado');
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo cambiar de hotel');
+    }
+  };
 
   const getInitials = (nombre: string, apellido?: string) => {
     const first = nombre?.charAt(0) || '';
@@ -66,6 +91,23 @@ export function Header({ title, subtitle }: HeaderProps) {
 
       {/* Right section */}
       <div className="flex items-center gap-2">
+        {/* Selector de hotel para SuperAdmin */}
+        {isSuperAdmin && hoteles.length > 0 && (
+          <div className="hidden md:flex items-center gap-2 mr-2">
+            <Hotel className="h-4 w-4 text-blue-600" />
+            <Select value={hotelActivoId} onValueChange={handleHotelChange}>
+              <SelectTrigger className="w-[220px] h-9 border-blue-300 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100">
+                <SelectValue placeholder="Seleccionar hotel..." />
+              </SelectTrigger>
+              <SelectContent>
+                {hoteles.map((h: any) => (
+                  <SelectItem key={h.id} value={h.id}>{h.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Theme toggle */}
         <Button
           variant="ghost"
