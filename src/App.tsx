@@ -31,6 +31,7 @@ import Catalogos from "./pages/Catalogos";
 import Usuarios from "./pages/Usuarios";
 import Permisos from "./pages/Permisos";
 import AdminPlataforma from "./pages/AdminPlataforma";
+import ReservasOnline from "./pages/ReservasOnline";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -90,6 +91,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="reservas">
           <Reservas />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/reservas-online"
+      element={
+        <ProtectedRoute viewKey="reservas">
+          <ReservasOnline />
         </ProtectedRoute>
       }
     />

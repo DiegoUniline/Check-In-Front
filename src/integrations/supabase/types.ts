@@ -614,6 +614,7 @@ export type Database = {
       }
       hotels: {
         Row: {
+          activo_plataforma: boolean
           ciudad: string | null
           created_at: string | null
           descripcion_publica: string | null
@@ -633,12 +634,15 @@ export type Database = {
           requiere_anticipo: boolean
           rfc: string | null
           slug: string | null
+          suspendido_at: string | null
+          suspendido_motivo: string | null
           telefono: string | null
           updated_at: string | null
           whatsapp_enabled: boolean
           whatsapp_token: string | null
         }
         Insert: {
+          activo_plataforma?: boolean
           ciudad?: string | null
           created_at?: string | null
           descripcion_publica?: string | null
@@ -658,12 +662,15 @@ export type Database = {
           requiere_anticipo?: boolean
           rfc?: string | null
           slug?: string | null
+          suspendido_at?: string | null
+          suspendido_motivo?: string | null
           telefono?: string | null
           updated_at?: string | null
           whatsapp_enabled?: boolean
           whatsapp_token?: string | null
         }
         Update: {
+          activo_plataforma?: boolean
           ciudad?: string | null
           created_at?: string | null
           descripcion_publica?: string | null
@@ -683,6 +690,8 @@ export type Database = {
           requiere_anticipo?: boolean
           rfc?: string | null
           slug?: string | null
+          suspendido_at?: string | null
+          suspendido_motivo?: string | null
           telefono?: string | null
           updated_at?: string | null
           whatsapp_enabled?: boolean
@@ -1691,7 +1700,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_metricas_plataforma: {
+        Row: {
+          hoteles_activos: number | null
+          mrr: number | null
+          por_vencer_7d: number | null
+          reservas_mes: number | null
+          suscripciones_activas: number | null
+          total_hoteles: number | null
+          total_usuarios: number | null
+          vencidas: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       current_hotel_id: { Args: never; Returns: string }

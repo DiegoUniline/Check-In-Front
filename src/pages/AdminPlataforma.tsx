@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone, UserPlus, Check
+  Plus, Package, Trash2, X, ChevronDown, ChevronRight, Hotel, Edit, User, Mail, Phone, UserPlus, Check,
+  TrendingUp, Building2, AlertTriangle, DollarSign, PauseCircle, PlayCircle
 } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -84,6 +85,31 @@ export default function AdminPlataforma() {
   const { data: planes = [] } = useQuery({ 
     queryKey: ['saas-planes'], 
     queryFn: api.getPlanes 
+  });
+
+  const { data: metricas } = useQuery({
+    queryKey: ['metricas-plataforma'],
+    queryFn: api.getMetricasPlataforma,
+    refetchInterval: 60_000,
+  });
+
+  const suspender = useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo?: string }) => api.suspenderHotel(id, motivo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-hoteles'] });
+      queryClient.invalidateQueries({ queryKey: ['metricas-plataforma'] });
+      toast.success('Hotel suspendido');
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const reactivar = useMutation({
+    mutationFn: (id: string) => api.reactivarHotel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-hoteles'] });
+      queryClient.invalidateQueries({ queryKey: ['metricas-plataforma'] });
+      toast.success('Hotel reactivado');
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   // --- MUTACIONES ---
@@ -381,9 +407,32 @@ export default function AdminPlataforma() {
                           <div>
                             <h5 className="font-bold flex items-center gap-2">
                               <Hotel className="w-4 h-4" /> {hotel.nombre}
+                              {hotel.activo_plataforma === false && (
+                                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">SUSPENDIDO</span>
+                              )}
                             </h5>
                             <p className="text-xs text-slate-500">{hotel.ciudad}</p>
                           </div>
+                          {hotel.activo_plataforma === false ? (
+                            <Button size="sm" variant="ghost" className="text-green-600 h-7 px-2"
+                              title="Reactivar"
+                              onClick={(e) => { e.stopPropagation(); reactivar.mutate(hotel.id); }}>
+                              <PlayCircle className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="ghost" className="text-red-500 h-7 px-2"
+                              title="Suspender"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const motivo = prompt('Motivo de la suspensión (opcional):') || '';
+                                if (motivo === null) return;
+                                if (confirm(`¿Suspender el hotel "${hotel.nombre}"? El acceso quedará bloqueado.`)) {
+                                  suspender.mutate({ id: hotel.id, motivo });
+                                }
+                              }}>
+                              <PauseCircle className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                         
                         {suscripcion ? (
@@ -456,6 +505,42 @@ export default function AdminPlataforma() {
       </div>
 
       <Tabs defaultValue="cuentas" className="space-y-6">
+        {/* Métricas globales */}
+        {metricas && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-slate-500"><Building2 className="w-3 h-3" /> Hoteles</div>
+              <div className="text-2xl font-black mt-1">{metricas.total_hoteles ?? 0}</div>
+              <div className="text-[10px] text-green-600">{metricas.hoteles_activos ?? 0} activos</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-slate-500"><DollarSign className="w-3 h-3" /> MRR</div>
+              <div className="text-2xl font-black mt-1">${Number(metricas.mrr || 0).toLocaleString('es-MX')}</div>
+              <div className="text-[10px] text-slate-400">mensual recurrente</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-slate-500"><Check className="w-3 h-3" /> Suscripciones</div>
+              <div className="text-2xl font-black mt-1">{metricas.suscripciones_activas ?? 0}</div>
+              <div className="text-[10px] text-slate-400">activas</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-yellow-600"><AlertTriangle className="w-3 h-3" /> Por vencer</div>
+              <div className="text-2xl font-black mt-1 text-yellow-600">{metricas.por_vencer_7d ?? 0}</div>
+              <div className="text-[10px] text-slate-400">en 7 días</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-red-600"><AlertTriangle className="w-3 h-3" /> Vencidas</div>
+              <div className="text-2xl font-black mt-1 text-red-600">{metricas.vencidas ?? 0}</div>
+              <div className="text-[10px] text-slate-400">requieren acción</div>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs text-slate-500"><TrendingUp className="w-3 h-3" /> Reservas mes</div>
+              <div className="text-2xl font-black mt-1">{metricas.reservas_mes ?? 0}</div>
+              <div className="text-[10px] text-slate-400">{metricas.total_usuarios ?? 0} usuarios</div>
+            </div>
+          </div>
+        )}
+
         <TabsList>
           <TabsTrigger value="cuentas">Clientes</TabsTrigger>
           <TabsTrigger value="planes">Planes</TabsTrigger>
