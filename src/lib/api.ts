@@ -242,6 +242,47 @@ class ApiClient {
     return { total, count: (data || []).length };
   };
 
+  getDashboardOcupacionSemanal = async (): Promise<any> => {
+    const hotel_id = this.hid();
+    const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const today = new Date();
+    // Lunes de esta semana (semana lun-dom)
+    const dow = today.getDay(); // 0=Dom..6=Sab
+    const offsetToMon = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + offsetToMon);
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const [{ data: habs }, { data: reservas }] = await Promise.all([
+      supabase.from('habitaciones').select('id').eq('hotel_id', hotel_id),
+      supabase
+        .from('reservas')
+        .select('fecha_checkin, fecha_checkout, estado')
+        .eq('hotel_id', hotel_id)
+        .lte('fecha_checkin', fmt(sunday))
+        .gte('fecha_checkout', fmt(monday)),
+    ]);
+    const total = (habs || []).length || 1;
+    const result: { dia: string; ocupacion: number }[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const ds = fmt(d);
+      const ocupadas = (reservas || []).filter((r: any) => {
+        if (r.estado === 'Cancelada') return false;
+        return r.fecha_checkin <= ds && r.fecha_checkout > ds;
+      }).length;
+      result.push({
+        dia: dias[d.getDay()],
+        ocupacion: total ? Math.round((ocupadas / total) * 100) : 0,
+      });
+    }
+    return result;
+  };
+
   // ------- Habitaciones -------
   getHabitaciones = async (params?: Record<string, string>): Promise<any> => {
     let q = supabase.from('habitaciones').select('*, tipos_habitacion(*)').eq('hotel_id', this.hid()).order('numero');
