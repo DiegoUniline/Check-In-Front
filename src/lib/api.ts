@@ -692,7 +692,16 @@ class ApiClient {
 
   // ------- Compras -------
   getCompras = async (_params?: any): Promise<any> => { const { data } = await supabase.from('compras').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
-  getCompra = async (id: string): Promise<any> => { const { data } = await supabase.from('compras').select('*, compras_detalle(*)').eq('id', id).maybeSingle(); return data; };
+  getCompra = async (id: string): Promise<any> => {
+    const { data } = await supabase
+      .from('compras')
+      .select('*, compras_detalle(*)')
+      .eq('id', id)
+      .maybeSingle();
+    if (!data) return data;
+    const detalle = (data as any).compras_detalle ?? [];
+    return { ...(data as any), detalle };
+  };
   createCompra = async (data: any): Promise<any> => {
     // Acepta tanto `detalles` como `detalle` para compatibilidad.
     const { detalles, detalle, ...header } = data;
