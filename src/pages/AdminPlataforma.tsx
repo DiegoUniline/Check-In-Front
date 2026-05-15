@@ -12,9 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminPlataforma() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   
   const [busqueda, setBusqueda] = useState('');
   const [modalCliente, setModalCliente] = useState(false);
@@ -380,7 +382,11 @@ export default function AdminPlataforma() {
                 <Edit className="w-4 h-4" />
               </Button>
               <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600" title="Eliminar"
-                onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar cliente y todos sus datos?')) eliminarCliente.mutate(cliente.id); }}>
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const ok = await confirm({ title: 'Eliminar cliente', description: '¿Eliminar cliente y todos sus datos?', confirmText: 'Eliminar', destructive: true });
+                  if (ok) eliminarCliente.mutate(cliente.id);
+                }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -422,13 +428,17 @@ export default function AdminPlataforma() {
                           ) : (
                             <Button size="sm" variant="ghost" className="text-red-500 h-7 px-2"
                               title="Suspender"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
                                 const motivo = prompt('Motivo de la suspensión (opcional):') || '';
                                 if (motivo === null) return;
-                                if (confirm(`¿Suspender el hotel "${hotel.nombre}"? El acceso quedará bloqueado.`)) {
-                                  suspender.mutate({ id: hotel.id, motivo });
-                                }
+                                const ok = await confirm({
+                                  title: 'Suspender hotel',
+                                  description: `¿Suspender el hotel "${hotel.nombre}"? El acceso quedará bloqueado.`,
+                                  confirmText: 'Suspender',
+                                  destructive: true,
+                                });
+                                if (ok) suspender.mutate({ id: hotel.id, motivo });
                               }}>
                               <PauseCircle className="w-4 h-4" />
                             </Button>
@@ -460,7 +470,10 @@ export default function AdminPlataforma() {
                                 +30 días
                               </Button>
                               <Button size="sm" variant="destructive" className="text-xs" 
-                                onClick={() => { if(confirm('¿Eliminar suscripción?')) eliminarSuscripcion.mutate(suscripcion.id); }}>
+                                onClick={async () => {
+                                  const ok = await confirm({ title: 'Eliminar suscripción', description: '¿Eliminar suscripción?', confirmText: 'Eliminar', destructive: true });
+                                  if (ok) eliminarSuscripcion.mutate(suscripcion.id);
+                                }}>
                                 <Trash2 className="w-3 h-3" />
                               </Button>
                             </div>
@@ -585,7 +598,10 @@ export default function AdminPlataforma() {
                       <Edit className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="sm" className="text-red-500"
-                      onClick={() => { if (confirm(`¿Eliminar plan "${p.nombre}"?`)) eliminarPlan.mutate(p.id); }}>
+                      onClick={async () => {
+                        const ok = await confirm({ title: 'Eliminar plan', description: `¿Eliminar plan "${p.nombre}"?`, confirmText: 'Eliminar', destructive: true });
+                        if (ok) eliminarPlan.mutate(p.id);
+                      }}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
