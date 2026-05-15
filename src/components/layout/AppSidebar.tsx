@@ -63,6 +63,7 @@ const salesNavItems = [
   { title: 'POS', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
   { title: 'Productos', url: '/productos', icon: Package, viewKey: 'inventario' },
   { title: 'Inventario', url: '/inventario', icon: Package, viewKey: 'inventario' },
+  { title: 'Ajustes de Stock', url: '/ajustes-stock', icon: ArrowUpDown, viewKey: 'inventario' },
   { title: 'Compras', url: '/compras', icon: ShoppingBag, viewKey: 'compras' },
   { title: 'Proveedores', url: '/proveedores', icon: Truck, viewKey: 'proveedores' },
   { title: 'Gastos', url: '/gastos', icon: Receipt, viewKey: 'gastos' },
