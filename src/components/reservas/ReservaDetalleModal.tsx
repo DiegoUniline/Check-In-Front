@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/hooks/useConfirm';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
@@ -34,6 +35,7 @@ interface ReservaDetalleModalProps {
 
 export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicial, onUpdate }: ReservaDetalleModalProps) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState('resumen');
   const [processing, setProcessing] = useState(false);
   const [reserva, setReserva] = useState<any>(null);
@@ -490,7 +492,13 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   };
 
   const handleCancelar = async () => {
-    if (!confirm('¿Seguro que desea cancelar esta reserva?')) return;
+    const ok = await confirm({
+      title: 'Cancelar reserva',
+      description: '¿Seguro que desea cancelar esta reserva?',
+      confirmText: 'Sí, cancelar',
+      destructive: true,
+    });
+    if (!ok) return;
     
     setProcessing(true);
     try {
