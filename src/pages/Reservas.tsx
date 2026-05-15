@@ -81,7 +81,7 @@ export default function Reservas() {
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
   const [modalDetalle, setModalDetalle] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
-  const [tabActiva, setTabActiva] = useState<'recepcion' | 'checkin' | 'checkout' | 'reservas'>('recepcion');
+  const [tabActiva, setTabActiva] = useState<'recepcion' | 'checkin' | 'checkout' | 'reservas' | 'historico'>('recepcion');
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
@@ -255,8 +255,8 @@ export default function Reservas() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={tabActiva} onValueChange={(v) => setTabActiva(v as 'recepcion' | 'reservas')}>
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+        <Tabs value={tabActiva} onValueChange={(v) => setTabActiva(v as typeof tabActiva)}>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 max-w-3xl h-auto">
             <TabsTrigger value="recepcion">
               <BedDouble className="h-4 w-4 mr-1.5" />
               Recepción
@@ -282,6 +282,10 @@ export default function Reservas() {
             <TabsTrigger value="reservas">
               <CalendarDays className="h-4 w-4 mr-1.5" />
               Timeline
+            </TabsTrigger>
+            <TabsTrigger value="historico">
+              <History className="h-4 w-4 mr-1.5" />
+              Histórico
             </TabsTrigger>
           </TabsList>
 
