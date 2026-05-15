@@ -327,6 +327,8 @@ class ApiClient {
   getReservas = async (params?: Record<string, string>): Promise<any> => {
     let q = supabase.from('reservas').select('*, clientes(*), habitaciones(numero, tipos_habitacion(nombre)), tipos_habitacion(nombre)').eq('hotel_id', this.hid()).order('fecha_checkin', { ascending: false });
     if (params?.estado) q = q.eq('estado', params.estado);
+    // Excluir reservas online aún pendientes de aprobación
+    q = q.or('origen.neq.Web,estado.neq.Pendiente');
     const { data, error } = await q;
     if (error) throw error;
     return (data || []).map((r: any) => ({
@@ -348,7 +350,7 @@ class ApiClient {
   };
   getCheckinsHoy = async (): Promise<any> => {
     const today = new Date().toISOString().slice(0, 10);
-    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkin', today).eq('checkin_realizado', false);
+    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkin', today).eq('checkin_realizado', false).or('origen.neq.Web,estado.neq.Pendiente');
     return (data || []).map((r: any) => ({
       ...r,
       cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
@@ -357,7 +359,7 @@ class ApiClient {
   };
   getCheckoutsHoy = async (): Promise<any> => {
     const today = new Date().toISOString().slice(0, 10);
-    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false);
+    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false).or('origen.neq.Web,estado.neq.Pendiente');
     return (data || []).map((r: any) => ({
       ...r,
       cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
