@@ -840,14 +840,6 @@ function CheckInOutPanel({
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Hasta</label>
           <Input type="date" value={hasta} onChange={(e) => onHastaChange(e.target.value)} className="h-9 text-sm w-[150px]" />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9"
-          onClick={() => { onDesdeChange(hoyStr); onHastaChange(hoyStr); }}
-        >
-          Hoy
-        </Button>
         {(desde || hasta) && (
           <Button
             variant="ghost"
