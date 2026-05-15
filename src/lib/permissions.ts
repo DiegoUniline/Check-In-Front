@@ -38,7 +38,6 @@ export const VIEWS: ViewDef[] = [
   { key: 'historial', label: 'Historial Ventas', group: 'Ventas', path: '/historial' },
   { key: 'historial-reservas', label: 'Historial Reservas', group: 'Ventas', path: '/historial-reservas' },
   { key: 'reportes', label: 'Reportes', group: 'Ventas', path: '/reportes' },
-  { key: 'gerencia', label: 'Gerencia', group: 'Ventas', path: '/gerencia' },
 
   // Sistema
   { key: 'usuarios', label: 'Usuarios', group: 'Sistema', path: '/usuarios' },
@@ -91,7 +90,6 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   historial: ['Admin', 'Gerente'],
   'historial-reservas': ['Admin', 'Gerente', 'Recepcion'],
   reportes: ['Admin', 'Gerente'],
-  gerencia: ['Admin', 'Gerente'],
 
   usuarios: ['Admin'],
   turnos: ['Admin', 'Gerente'],
