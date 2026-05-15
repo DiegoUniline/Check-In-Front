@@ -18,6 +18,7 @@ import {
   loadPermissions, savePermissions, resetPermissions, DEFAULT_PERMISSIONS,
 } from '@/lib/permissions';
 import { SaveButton, isDirty } from '@/components/ui/save-button';
+import { useUnsavedChanges } from '@/contexts/UnsavedChangesContext';
 
 export default function Permisos() {
   const { toast } = useToast();
@@ -89,6 +90,7 @@ export default function Permisos() {
   };
 
   const dirty = useMemo(() => isDirty(initialMatrix, matrix), [initialMatrix, matrix]);
+  useUnsavedChanges(dirty);
 
   return (
     <MainLayout

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { UnsavedChangesProvider } from "@/contexts/UnsavedChangesContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Login from "./pages/Login";
@@ -266,9 +267,11 @@ const App = () => (
       <BrowserRouter basename={ROUTER_BASENAME}>
         <AuthProvider>
           <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <AppRoutes />
+            <UnsavedChangesProvider>
+              <Toaster />
+              <Sonner />
+              <AppRoutes />
+            </UnsavedChangesProvider>
           </TooltipProvider>
         </AuthProvider>
       </BrowserRouter>
