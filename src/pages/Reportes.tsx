@@ -1,565 +1,528 @@
-import { useState, useEffect } from 'react';
-import { 
-  BarChart3, TrendingUp, TrendingDown, DollarSign, 
-  Users, BedDouble, Calendar, Download, FileText, RefreshCw
+import { useEffect, useMemo, useState } from 'react';
+import { format, subDays, subMonths, startOfMonth } from 'date-fns';
+import { es } from 'date-fns/locale';
+import {
+  CalendarIcon, Download, RefreshCw, DollarSign, BedDouble, Users, BarChart3,
+  TrendingUp, TrendingDown, Percent,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar, LineChart, Line,
+  PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { exportarReportePDF } from '@/lib/pdfExport';
 
-// Colores para gráficos
-const CHART_COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--info))',
-  'hsl(var(--warning))',
-  'hsl(var(--success))',
-  'hsl(var(--destructive))',
+const COLORS = ['hsl(var(--primary))', 'hsl(var(--info))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+type Filtros = {
+  desde: Date;
+  hasta: Date;
+  habitacionId: string;     // 'all' o id
+  tipoId: string;           // 'all' o id
+  usuarioId: string;        // 'all' o id
+  origen: string;           // 'all' | 'Web' | 'Reserva' | 'Walk-in' ...
+};
+
+const PRESETS = [
+  { id: '7d',  label: 'Últimos 7 días',   fn: () => ({ desde: subDays(new Date(), 7),  hasta: new Date() }) },
+  { id: '30d', label: 'Últimos 30 días',  fn: () => ({ desde: subDays(new Date(), 30), hasta: new Date() }) },
+  { id: 'mes', label: 'Este mes',         fn: () => ({ desde: startOfMonth(new Date()), hasta: new Date() }) },
+  { id: '3m',  label: 'Últimos 3 meses',  fn: () => ({ desde: subMonths(new Date(), 3), hasta: new Date() }) },
+  { id: '12m', label: 'Últimos 12 meses', fn: () => ({ desde: subMonths(new Date(), 12), hasta: new Date() }) },
+  { id: 'ytd', label: 'Año actual',       fn: () => ({ desde: new Date(new Date().getFullYear(), 0, 1), hasta: new Date() }) },
 ];
 
 export default function Reportes() {
   const { toast } = useToast();
-  const [periodo, setPeriodo] = useState('mes');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('general');
-  
-  // Stats
-  const [stats, setStats] = useState({
-    ingresos: 0,
-    ocupacion: 0,
-    huespedes: 0,
-    adr: 0,
-    ingresosChange: 0,
-    ocupacionChange: 0,
-    huespedesChange: 0,
-    adrChange: 0,
-  });
-  
-  // Chart data
-  const [revenueData, setRevenueData] = useState<any[]>([]);
-  const [occupancyData, setOccupancyData] = useState<any[]>([]);
-  const [sourceData, setSourceData] = useState<any[]>([]);
-  const [roomTypeData, setRoomTypeData] = useState<any[]>([]);
-  const [historicoData, setHistoricoData] = useState<any[]>([]);
+  const [tab, setTab] = useState('resumen');
+
+  const [filtros, setFiltros] = useState<Filtros>(() => ({
+    ...PRESETS[1].fn(),
+    habitacionId: 'all',
+    tipoId: 'all',
+    usuarioId: 'all',
+    origen: 'all',
+  }));
+
+  // Catálogos para filtros
+  const [habitaciones, setHabitaciones] = useState<any[]>([]);
+  const [tipos, setTipos] = useState<any[]>([]);
+  const [usuarios, setUsuarios] = useState<any[]>([]);
+
+  // Datos crudos
+  const [pagos, setPagos] = useState<any[]>([]);
+  const [pagosPrev, setPagosPrev] = useState<any[]>([]);
+  const [gastos, setGastos] = useState<any[]>([]);
+  const [reservas, setReservas] = useState<any[]>([]);
 
   useEffect(() => {
-    cargarDatos();
-  }, [periodo]);
+    Promise.all([
+      api.getHabitaciones().catch(() => []),
+      api.getTiposHabitacion().catch(() => []),
+      api.getUsuarios().catch(() => []),
+    ]).then(([h, t, u]) => {
+      setHabitaciones(Array.isArray(h) ? h : []);
+      setTipos(Array.isArray(t) ? t : []);
+      setUsuarios(Array.isArray(u) ? u : []);
+    });
+  }, []);
 
-  const cargarDatos = async () => {
+  useEffect(() => { cargar(); /* eslint-disable-next-line */ }, [filtros.desde, filtros.hasta]);
+
+  const cargar = async () => {
     setLoading(true);
     try {
-      // Get date range based on periodo
-      const now = new Date();
-      let fechaDesde: Date;
-      let fechaHasta = now;
-      
-      switch (periodo) {
-        case 'semana':
-          fechaDesde = subDays(now, 7);
-          break;
-        case 'mes':
-          fechaDesde = startOfMonth(now);
-          break;
-        case 'trimestre':
-          fechaDesde = subMonths(now, 3);
-          break;
-        case 'año':
-          fechaDesde = new Date(now.getFullYear(), 0, 1);
-          break;
-        default:
-          fechaDesde = startOfMonth(now);
-      }
-      // Período anterior para comparativa
-      const diffDays = Math.max(1, Math.ceil((fechaHasta.getTime() - fechaDesde.getTime()) / 86400000));
-      const prevHasta = subDays(fechaDesde, 1);
-      const prevDesde = subDays(prevHasta, diffDays);
-
-      // Cargar datos del dashboard y estadísticas (incluyendo período anterior)
-      const [dashStats, tiposHab, gastos, pagos, reservas, pagosPrev] = await Promise.all([
-        api.getDashboardStats().catch(() => ({})),
-        api.getTiposHabitacion().catch(() => []),
-        api.getGastos({ fecha_desde: format(fechaDesde, 'yyyy-MM-dd'), fecha_hasta: format(fechaHasta, 'yyyy-MM-dd') }).catch(() => []),
-        api.getPagos({ fecha_desde: format(fechaDesde, 'yyyy-MM-dd'), fecha_hasta: format(fechaHasta, 'yyyy-MM-dd') }).catch(() => []),
+      const desdeStr = format(filtros.desde, 'yyyy-MM-dd');
+      const hastaStr = format(filtros.hasta, 'yyyy-MM-dd');
+      const diff = Math.max(1, Math.ceil((filtros.hasta.getTime() - filtros.desde.getTime()) / 86400000));
+      const prevHasta = subDays(filtros.desde, 1);
+      const prevDesde = subDays(prevHasta, diff);
+      const [p, g, r, pp] = await Promise.all([
+        api.getPagos({ fecha_desde: desdeStr, fecha_hasta: hastaStr }).catch(() => []),
+        api.getGastos({ fecha_desde: desdeStr, fecha_hasta: hastaStr }).catch(() => []),
         api.getReservas().catch(() => []),
         api.getPagos({ fecha_desde: format(prevDesde, 'yyyy-MM-dd'), fecha_hasta: format(prevHasta, 'yyyy-MM-dd') }).catch(() => []),
       ]);
-
-      // Calculate stats
-      const totalIngresos = Array.isArray(pagos) ? pagos.reduce((sum, p) => sum + (Number(p.monto) || 0), 0) : 0;
-      const totalGastos = Array.isArray(gastos) ? gastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0) : 0;
-      const ocupacionActual = dashStats?.ocupacion || dashStats?.porcentaje_ocupacion || 0;
-      const totalReservas = Array.isArray(reservas) ? reservas.length : 0;
-
-      const totalIngresosPrev = Array.isArray(pagosPrev) ? pagosPrev.reduce((s, p) => s + (Number(p.monto) || 0), 0) : 0;
-      const reservasPeriodo = Array.isArray(reservas)
-        ? reservas.filter((r: any) => {
-            const d = new Date(r.fecha_checkin);
-            return d >= fechaDesde && d <= fechaHasta;
-          }).length
-        : 0;
-      const reservasPrev = Array.isArray(reservas)
-        ? reservas.filter((r: any) => {
-            const d = new Date(r.fecha_checkin);
-            return d >= prevDesde && d <= prevHasta;
-          }).length
-        : 0;
-
-      const pct = (curr: number, prev: number) =>
-        prev <= 0 ? (curr > 0 ? 100 : 0) : Math.round(((curr - prev) / prev) * 100);
-
-      setStats({
-        ingresos: totalIngresos,
-        ocupacion: Math.round(ocupacionActual),
-        huespedes: dashStats?.huespedes_actuales || totalReservas,
-        adr: totalReservas > 0 ? Math.round(totalIngresos / totalReservas) : 0,
-        ingresosChange: pct(totalIngresos, totalIngresosPrev),
-        ocupacionChange: 0,
-        huespedesChange: pct(reservasPeriodo, reservasPrev),
-        adrChange: pct(
-          reservasPeriodo > 0 ? totalIngresos / reservasPeriodo : 0,
-          reservasPrev > 0 ? totalIngresosPrev / reservasPrev : 0,
-        ),
-      });
-
-      // Generate revenue chart data
-      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      const revenueChartData = [];
-      for (let i = 5; i >= 0; i--) {
-        const d = subMonths(now, i);
-        const monthPagos = Array.isArray(pagos) ? pagos.filter((p: any) => {
-          const pDate = new Date(p.fecha || p.created_at);
-          return pDate.getMonth() === d.getMonth() && pDate.getFullYear() === d.getFullYear();
-        }) : [];
-        const monthGastos = Array.isArray(gastos) ? gastos.filter((g: any) => {
-          const gDate = new Date(g.fecha || g.created_at);
-          return gDate.getMonth() === d.getMonth() && gDate.getFullYear() === d.getFullYear();
-        }) : [];
-        
-        revenueChartData.push({
-          mes: monthNames[d.getMonth()],
-          ingresos: monthPagos.reduce((sum: number, p: any) => sum + (Number(p.monto) || 0), 0),
-          gastos: monthGastos.reduce((sum: number, g: any) => sum + (Number(g.monto) || 0), 0),
-        });
-      }
-      setRevenueData(revenueChartData);
-
-      // Histórico 12 meses: ingresos, ADR, ocupación estimada
-      const totalHab = Array.isArray(tiposHab) && tiposHab.length
-        ? tiposHab.reduce((s: number, t: any) => s + (Number(t.cantidad_habitaciones) || 1), 0)
-        : (dashStats?.total_habitaciones || 1);
-      const hist: any[] = [];
-      for (let i = 11; i >= 0; i--) {
-        const d = subMonths(now, i);
-        const mPagos = Array.isArray(pagos) ? pagos.filter((p: any) => {
-          const pd = new Date(p.fecha || p.created_at);
-          return pd.getMonth() === d.getMonth() && pd.getFullYear() === d.getFullYear();
-        }) : [];
-        const mReservas = Array.isArray(reservas) ? reservas.filter((r: any) => {
-          const rd = new Date(r.fecha_checkin);
-          return rd.getMonth() === d.getMonth() && rd.getFullYear() === d.getFullYear();
-        }) : [];
-        const ingresos = mPagos.reduce((s: number, p: any) => s + (Number(p.monto) || 0), 0);
-        const noches = mReservas.reduce((s: number, r: any) => s + (Number(r.noches) || 1), 0);
-        const diasMes = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-        const adr = mReservas.length > 0 ? Math.round(ingresos / mReservas.length) : 0;
-        const ocup = totalHab > 0 ? Math.min(100, Math.round((noches / (totalHab * diasMes)) * 100)) : 0;
-        const revpar = totalHab > 0 ? Math.round(ingresos / (totalHab * diasMes)) : 0;
-        hist.push({ mes: monthNames[d.getMonth()], ingresos, adr, ocup, revpar });
-      }
-      setHistoricoData(hist);
-
-      // Occupancy by day of week
-      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-      const occupancyChartData = dayNames.map((dia) => {
-        const reservasDia = Array.isArray(reservas)
-          ? reservas.filter((r: any) => {
-              const f = new Date(r.fecha_checkin);
-              return f.getDay() === dayNames.indexOf(dia);
-            }).length
-          : 0;
-        return { dia, ocupacion: reservasDia };
-      });
-      setOccupancyData(occupancyChartData);
-
-      // Source data calculado desde reservas reales (campo origen)
-      if (Array.isArray(reservas) && reservas.length > 0) {
-        const origenes: Record<string, number> = {};
-        reservas.forEach((r: any) => {
-          const o = r.origen || 'Directo';
-          origenes[o] = (origenes[o] || 0) + 1;
-        });
-        const total = reservas.length;
-        setSourceData(
-          Object.entries(origenes).map(([name, count], i) => ({
-            name,
-            value: Math.round((count / total) * 100),
-            color: CHART_COLORS[i % CHART_COLORS.length],
-          }))
-        );
-      } else {
-        setSourceData([]);
-      }
-
-      // Room type performance
-      if (Array.isArray(tiposHab) && tiposHab.length > 0) {
-        const roomData = tiposHab.map((tipo: any) => {
-          const tipoReservas = Array.isArray(reservas) 
-            ? reservas.filter((r: any) => r.tipo_habitacion_id === tipo.id || r.tipo_habitacion === tipo.nombre).length 
-            : 0;
-          return {
-            tipo: tipo.nombre,
-            reservas: tipoReservas,
-            ingresos: tipoReservas * (Number(tipo.precio_base) || 1000),
-          };
-        });
-        setRoomTypeData(roomData);
-      }
-    } catch (error) {
-      console.error('Error cargando reportes:', error);
-      toast({ title: 'Error', description: 'No se pudieron cargar los reportes', variant: 'destructive' });
+      setPagos(Array.isArray(p) ? p : []);
+      setGastos(Array.isArray(g) ? g : []);
+      setReservas(Array.isArray(r) ? r : []);
+      setPagosPrev(Array.isArray(pp) ? pp : []);
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExport = () => {
-    try {
-      const periodoLabel = ({ semana: 'Última semana', mes: 'Este mes', trimestre: 'Trimestre', año: 'Este año' } as any)[periodo] || periodo;
-      exportarReportePDF({
-        titulo: 'Reporte de Operación',
-        subtitulo: 'Resumen financiero y de ocupación',
-        periodo: periodoLabel,
-        kpis: [
-          { label: 'Ingresos', value: `$${stats.ingresos.toLocaleString()}` },
-          { label: 'Ocupación', value: `${stats.ocupacion}%` },
-          { label: 'Huéspedes', value: String(stats.huespedes) },
-          { label: 'ADR', value: `$${stats.adr.toLocaleString()}` },
-        ],
-        tablas: [
-          {
-            title: 'Ingresos vs Gastos por mes',
-            head: ['Mes', 'Ingresos', 'Gastos', 'Utilidad'],
-            rows: revenueData.map((r) => [
-              r.mes,
-              `$${Number(r.ingresos).toLocaleString()}`,
-              `$${Number(r.gastos).toLocaleString()}`,
-              `$${(Number(r.ingresos) - Number(r.gastos)).toLocaleString()}`,
-            ]),
-          },
-          {
-            title: 'Histórico 12 meses (KPIs)',
-            head: ['Mes', 'Ingresos', 'ADR', 'Ocupación %', 'RevPAR'],
-            rows: historicoData.map((h) => [
-              h.mes,
-              `$${Number(h.ingresos).toLocaleString()}`,
-              `$${Number(h.adr).toLocaleString()}`,
-              `${h.ocup}%`,
-              `$${Number(h.revpar).toLocaleString()}`,
-            ]),
-          },
-          {
-            title: 'Rendimiento por tipo de habitación',
-            head: ['Tipo', 'Reservas', 'Ingresos'],
-            rows: roomTypeData.map((r) => [r.tipo, r.reservas, `$${Number(r.ingresos).toLocaleString()}`]),
-          },
-        ],
-      });
-      toast({ title: 'PDF generado', description: 'Se descargó el reporte' });
-    } catch (e: any) {
-      toast({ title: 'Error', description: e?.message || 'No se pudo generar el PDF', variant: 'destructive' });
+  // Aplica filtros (habitación, tipo, usuario, origen) sobre reservas y derivados
+  const reservasFiltradas = useMemo(() => {
+    return reservas.filter((r: any) => {
+      const f = new Date(r.fecha_checkin);
+      if (f < filtros.desde || f > filtros.hasta) return false;
+      if (filtros.habitacionId !== 'all' && r.habitacion_id !== filtros.habitacionId) return false;
+      if (filtros.tipoId !== 'all' && r.tipo_habitacion_id !== filtros.tipoId) return false;
+      if (filtros.usuarioId !== 'all' && r.created_by !== filtros.usuarioId) return false;
+      if (filtros.origen !== 'all' && r.origen !== filtros.origen) return false;
+      return true;
+    });
+  }, [reservas, filtros]);
+
+  const reservaIdsFiltradas = useMemo(() => new Set(reservasFiltradas.map((r) => r.id)), [reservasFiltradas]);
+
+  const pagosFiltrados = useMemo(() => {
+    if (filtros.habitacionId === 'all' && filtros.tipoId === 'all' && filtros.usuarioId === 'all' && filtros.origen === 'all') {
+      return pagos;
     }
+    return pagos.filter((p: any) => !p.reserva_id || reservaIdsFiltradas.has(p.reserva_id));
+  }, [pagos, reservaIdsFiltradas, filtros]);
+
+  // KPIs
+  const totalIngresos = useMemo(() => pagosFiltrados.reduce((s, p) => s + (Number(p.monto) || 0), 0), [pagosFiltrados]);
+  const totalGastos   = useMemo(() => gastos.reduce((s, g) => s + (Number(g.monto) || 0), 0), [gastos]);
+  const totalIngresosPrev = useMemo(() => pagosPrev.reduce((s, p) => s + (Number(p.monto) || 0), 0), [pagosPrev]);
+  const totalReservas = reservasFiltradas.length;
+  const utilidad = totalIngresos - totalGastos;
+
+  const totalHab = habitaciones.length || 1;
+  const dias = Math.max(1, Math.ceil((filtros.hasta.getTime() - filtros.desde.getTime()) / 86400000));
+  const noches = reservasFiltradas.reduce((s, r: any) => s + (Number(r.noches) || 1), 0);
+  const ocupacion = Math.min(100, Math.round((noches / (totalHab * dias)) * 100));
+  const adr = totalReservas > 0 ? Math.round(totalIngresos / totalReservas) : 0;
+  const revpar = totalHab > 0 ? Math.round(totalIngresos / (totalHab * dias)) : 0;
+
+  const pct = (c: number, p: number) => (p <= 0 ? (c > 0 ? 100 : 0) : Math.round(((c - p) / p) * 100));
+  const cambioIngresos = pct(totalIngresos, totalIngresosPrev);
+
+  // Series temporales (auto-resolución: día si <=60d, mes si >60d)
+  const useMensual = dias > 60;
+  const serieTemporal = useMemo(() => {
+    if (!useMensual) {
+      const buckets: Record<string, { label: string; ingresos: number; gastos: number; reservas: number }> = {};
+      for (let i = 0; i <= dias; i++) {
+        const d = subDays(filtros.hasta, dias - i);
+        const key = format(d, 'yyyy-MM-dd');
+        buckets[key] = { label: format(d, 'dd MMM', { locale: es }), ingresos: 0, gastos: 0, reservas: 0 };
+      }
+      pagosFiltrados.forEach((p) => {
+        const k = format(new Date(p.fecha || p.created_at), 'yyyy-MM-dd');
+        if (buckets[k]) buckets[k].ingresos += Number(p.monto) || 0;
+      });
+      gastos.forEach((g) => {
+        const k = format(new Date(g.fecha || g.created_at), 'yyyy-MM-dd');
+        if (buckets[k]) buckets[k].gastos += Number(g.monto) || 0;
+      });
+      reservasFiltradas.forEach((r) => {
+        const k = format(new Date(r.fecha_checkin), 'yyyy-MM-dd');
+        if (buckets[k]) buckets[k].reservas += 1;
+      });
+      return Object.values(buckets);
+    }
+    const meses = Math.ceil(dias / 30);
+    const buckets: any[] = [];
+    for (let i = meses; i >= 0; i--) {
+      const d = subMonths(filtros.hasta, i);
+      buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: `${MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`, ingresos: 0, gastos: 0, reservas: 0 });
+    }
+    const idx = (d: Date) => buckets.findIndex((b) => b.key === `${d.getFullYear()}-${d.getMonth()}`);
+    pagosFiltrados.forEach((p) => { const i = idx(new Date(p.fecha || p.created_at)); if (i >= 0) buckets[i].ingresos += Number(p.monto) || 0; });
+    gastos.forEach((g) => { const i = idx(new Date(g.fecha || g.created_at)); if (i >= 0) buckets[i].gastos += Number(g.monto) || 0; });
+    reservasFiltradas.forEach((r) => { const i = idx(new Date(r.fecha_checkin)); if (i >= 0) buckets[i].reservas += 1; });
+    return buckets;
+  }, [pagosFiltrados, gastos, reservasFiltradas, filtros, dias, useMensual]);
+
+  // Distribución por origen
+  const porOrigen = useMemo(() => {
+    const m: Record<string, number> = {};
+    reservasFiltradas.forEach((r) => { const o = r.origen || 'Directo'; m[o] = (m[o] || 0) + 1; });
+    const total = reservasFiltradas.length || 1;
+    return Object.entries(m).map(([name, count], i) => ({ name, value: Math.round((count / total) * 100), count, color: COLORS[i % COLORS.length] }));
+  }, [reservasFiltradas]);
+
+  // Por tipo de habitación
+  const porTipo = useMemo(() => {
+    return tipos.map((t) => {
+      const rs = reservasFiltradas.filter((r) => r.tipo_habitacion_id === t.id);
+      const ing = rs.reduce((s, r: any) => s + (Number(r.total) || 0), 0);
+      return { tipo: t.nombre, reservas: rs.length, ingresos: ing };
+    }).filter((x) => x.reservas > 0 || x.ingresos > 0);
+  }, [tipos, reservasFiltradas]);
+
+  // Por habitación (top 10)
+  const porHabitacion = useMemo(() => {
+    const m: Record<string, { numero: string; reservas: number; ingresos: number }> = {};
+    reservasFiltradas.forEach((r: any) => {
+      const h = habitaciones.find((x) => x.id === r.habitacion_id);
+      const numero = h?.numero || r.habitacion_id || '—';
+      if (!m[numero]) m[numero] = { numero, reservas: 0, ingresos: 0 };
+      m[numero].reservas += 1;
+      m[numero].ingresos += Number(r.total) || 0;
+    });
+    return Object.values(m).sort((a, b) => b.ingresos - a.ingresos).slice(0, 10);
+  }, [reservasFiltradas, habitaciones]);
+
+  // Por usuario
+  const porUsuario = useMemo(() => {
+    const m: Record<string, { nombre: string; reservas: number; ingresos: number }> = {};
+    reservasFiltradas.forEach((r: any) => {
+      const u = usuarios.find((x) => x.id === r.created_by);
+      const nombre = u ? `${u.nombre || ''} ${u.apellido_paterno || ''}`.trim() || u.email : 'Sistema';
+      if (!m[nombre]) m[nombre] = { nombre, reservas: 0, ingresos: 0 };
+      m[nombre].reservas += 1;
+      m[nombre].ingresos += Number(r.total) || 0;
+    });
+    return Object.values(m).sort((a, b) => b.ingresos - a.ingresos);
+  }, [reservasFiltradas, usuarios]);
+
+  const setPreset = (id: string) => {
+    const p = PRESETS.find((x) => x.id === id);
+    if (p) setFiltros((f) => ({ ...f, ...p.fn() }));
+  };
+
+  const exportar = () => {
+    exportarReportePDF({
+      titulo: 'Reporte Ejecutivo',
+      subtitulo: 'Resumen financiero, ocupación y operación',
+      periodo: `${format(filtros.desde, 'dd MMM yyyy', { locale: es })} – ${format(filtros.hasta, 'dd MMM yyyy', { locale: es })}`,
+      kpis: [
+        { label: 'Ingresos', value: `$${totalIngresos.toLocaleString()}` },
+        { label: 'Gastos', value: `$${totalGastos.toLocaleString()}` },
+        { label: 'Utilidad', value: `$${utilidad.toLocaleString()}` },
+        { label: 'Ocupación', value: `${ocupacion}%` },
+        { label: 'ADR', value: `$${adr.toLocaleString()}` },
+        { label: 'RevPAR', value: `$${revpar.toLocaleString()}` },
+      ],
+      tablas: [
+        { title: 'Por origen', head: ['Origen', 'Reservas', '%'], rows: porOrigen.map((o) => [o.name, o.count, `${o.value}%`]) },
+        { title: 'Por tipo de habitación', head: ['Tipo', 'Reservas', 'Ingresos'], rows: porTipo.map((t) => [t.tipo, t.reservas, `$${t.ingresos.toLocaleString()}`]) },
+        { title: 'Top habitaciones', head: ['Habitación', 'Reservas', 'Ingresos'], rows: porHabitacion.map((h) => [h.numero, h.reservas, `$${h.ingresos.toLocaleString()}`]) },
+        { title: 'Por usuario', head: ['Usuario', 'Reservas', 'Ingresos'], rows: porUsuario.map((u) => [u.nombre, u.reservas, `$${u.ingresos.toLocaleString()}`]) },
+      ],
+    });
+    toast({ title: 'PDF generado' });
   };
 
   return (
-    <MainLayout 
-      title="Reportes" 
-      subtitle="Estadísticas y análisis del hotel"
-    >
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="ocupacion">Ocupación</TabsTrigger>
-            <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
-          </TabsList>
-        </Tabs>
+    <MainLayout title="Reportes" subtitle="Dashboard ejecutivo · KPIs y análisis con filtros">
+      {/* Toolbar de filtros */}
+      <Card className="mb-6">
+        <CardContent className="p-4 grid gap-3 md:grid-cols-2 lg:grid-cols-7">
+          <div className="lg:col-span-2 flex gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="flex-1 justify-start font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(filtros.desde, 'dd MMM yy', { locale: es })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={filtros.desde} onSelect={(d) => d && setFiltros((f) => ({ ...f, desde: d }))} className={cn('p-3 pointer-events-auto')} />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="flex-1 justify-start font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(filtros.hasta, 'dd MMM yy', { locale: es })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={filtros.hasta} onSelect={(d) => d && setFiltros((f) => ({ ...f, hasta: d }))} className={cn('p-3 pointer-events-auto')} />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Select value={periodo} onValueChange={setPeriodo}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
+          <Select onValueChange={setPreset}>
+            <SelectTrigger><SelectValue placeholder="Presets" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="semana">Esta semana</SelectItem>
-              <SelectItem value="mes">Este mes</SelectItem>
-              <SelectItem value="trimestre">Trimestre</SelectItem>
-              <SelectItem value="año">Este año</SelectItem>
+              {PRESETS.map((p) => (<SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={cargarDatos} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Exportar
-          </Button>
-        </div>
-      </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ingresos Totales</p>
-                <p className="text-2xl font-bold">${stats.ingresos.toLocaleString()}</p>
-                <p className={`text-sm flex items-center gap-1 ${stats.ingresosChange >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {stats.ingresosChange >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {stats.ingresosChange >= 0 ? '+' : ''}{stats.ingresosChange}%
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-primary/10">
-                <DollarSign className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Select value={filtros.tipoId} onValueChange={(v) => setFiltros((f) => ({ ...f, tipoId: v }))}>
+            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los tipos</SelectItem>
+              {tipos.map((t) => (<SelectItem key={t.id} value={t.id}>{t.nombre}</SelectItem>))}
+            </SelectContent>
+          </Select>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ocupación Promedio</p>
-                <p className="text-2xl font-bold">{stats.ocupacion}%</p>
-                <p className={`text-sm flex items-center gap-1 ${stats.ocupacionChange >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {stats.ocupacionChange >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {stats.ocupacionChange >= 0 ? '+' : ''}{stats.ocupacionChange}%
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-success/10">
-                <BedDouble className="h-6 w-6 text-success" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Select value={filtros.habitacionId} onValueChange={(v) => setFiltros((f) => ({ ...f, habitacionId: v }))}>
+            <SelectTrigger><SelectValue placeholder="Habitación" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las habs.</SelectItem>
+              {habitaciones.map((h) => (<SelectItem key={h.id} value={h.id}>Hab. {h.numero}</SelectItem>))}
+            </SelectContent>
+          </Select>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Huéspedes</p>
-                <p className="text-2xl font-bold">{stats.huespedes}</p>
-                <p className={`text-sm flex items-center gap-1 ${stats.huespedesChange >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {stats.huespedesChange >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {stats.huespedesChange >= 0 ? '+' : ''}{stats.huespedesChange}%
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-info/10">
-                <Users className="h-6 w-6 text-info" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Select value={filtros.usuarioId} onValueChange={(v) => setFiltros((f) => ({ ...f, usuarioId: v }))}>
+            <SelectTrigger><SelectValue placeholder="Usuario" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los usuarios</SelectItem>
+              {usuarios.map((u) => (<SelectItem key={u.id} value={u.id}>{`${u.nombre || ''} ${u.apellido_paterno || ''}`.trim() || u.email}</SelectItem>))}
+            </SelectContent>
+          </Select>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">ADR</p>
-                <p className="text-2xl font-bold">${stats.adr.toLocaleString()}</p>
-                <p className={`text-sm flex items-center gap-1 ${stats.adrChange >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {stats.adrChange >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {stats.adrChange >= 0 ? '+' : ''}{stats.adrChange}%
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-warning/10">
-                <BarChart3 className="h-6 w-6 text-warning" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2 mb-6">
-        {/* Revenue Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Ingresos vs Gastos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
-                  <defs>
-                    <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="mes" className="text-xs" />
-                  <YAxis className="text-xs" tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip 
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-                  />
-                  <Area type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorIngresos)" />
-                  <Area type="monotone" dataKey="gastos" stroke="hsl(var(--muted-foreground))" fillOpacity={0.3} fill="hsl(var(--muted))" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Occupancy Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Ocupación Semanal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={occupancyData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="dia" className="text-xs" />
-                  <YAxis className="text-xs" allowDecimals={false} />
-                  <Tooltip 
-                    formatter={(value: number) => [`${value}`, 'Reservas']}
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-                  />
-                  <Bar dataKey="ocupacion" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bottom row */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Source Pie Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Fuentes de Reserva</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[200px]">
-              {sourceData.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Sin reservas registradas
-                </div>
-              ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sourceData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}%`}
-                  >
-                    {sourceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Room Type Performance */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Rendimiento por Tipo de Habitación</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {roomTypeData.length > 0 ? roomTypeData.map(room => (
-                <div key={room.tipo} className="flex items-center gap-4">
-                  <div className="w-24 font-medium">{room.tipo}</div>
-                  <div className="flex-1">
-                    <div className="h-3 rounded-full bg-muted overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${Math.min((room.ingresos / (stats.ingresos || 1)) * 100, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="w-20 text-right text-sm text-muted-foreground">
-                    {room.reservas} res.
-                  </div>
-                  <div className="w-24 text-right font-medium">
-                    ${(room.ingresos / 1000).toFixed(0)}k
-                  </div>
-                </div>
-              )) : (
-                <p className="text-center text-muted-foreground py-4">No hay datos de tipos de habitación</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Histórico 12 meses */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Tendencia 12 meses · Ingresos / RevPAR / Ocupación</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={historicoData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="mes" className="text-xs" />
-                <YAxis yAxisId="left" className="text-xs" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                <YAxis yAxisId="right" orientation="right" className="text-xs" tickFormatter={(v) => `${v}%`} />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
-                <Line yAxisId="left" type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" strokeWidth={2} name="Ingresos" />
-                <Line yAxisId="left" type="monotone" dataKey="revpar" stroke="hsl(var(--info))" strokeWidth={2} name="RevPAR" />
-                <Line yAxisId="right" type="monotone" dataKey="ocup" stroke="hsl(var(--success))" strokeWidth={2} name="Ocupación %" />
-              </LineChart>
-            </ResponsiveContainer>
+          <Select value={filtros.origen} onValueChange={(v) => setFiltros((f) => ({ ...f, origen: v }))}>
+            <SelectTrigger><SelectValue placeholder="Origen" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los orígenes</SelectItem>
+              <SelectItem value="Reserva">Reserva</SelectItem>
+              <SelectItem value="Web">Web</SelectItem>
+              <SelectItem value="Walk-in">Walk-in</SelectItem>
+              <SelectItem value="OTA">OTA</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+        <CardContent className="p-4 pt-0 flex justify-between items-center">
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {filtros.tipoId !== 'all' && <Badge variant="secondary">Tipo: {tipos.find((t) => t.id === filtros.tipoId)?.nombre}</Badge>}
+            {filtros.habitacionId !== 'all' && <Badge variant="secondary">Hab: {habitaciones.find((h) => h.id === filtros.habitacionId)?.numero}</Badge>}
+            {filtros.usuarioId !== 'all' && <Badge variant="secondary">Usuario filtrado</Badge>}
+            {filtros.origen !== 'all' && <Badge variant="secondary">Origen: {filtros.origen}</Badge>}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="icon" onClick={cargar} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button onClick={exportar}><Download className="mr-2 h-4 w-4" />Exportar PDF</Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* KPIs */}
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 mb-6">
+        <KpiCard label="Ingresos" value={`$${totalIngresos.toLocaleString()}`} change={cambioIngresos} icon={DollarSign} color="primary" />
+        <KpiCard label="Gastos" value={`$${totalGastos.toLocaleString()}`} icon={DollarSign} color="destructive" />
+        <KpiCard label="Utilidad" value={`$${utilidad.toLocaleString()}`} icon={TrendingUp} color={utilidad >= 0 ? 'success' : 'destructive'} />
+        <KpiCard label="Ocupación" value={`${ocupacion}%`} icon={Percent} color="info" />
+        <KpiCard label="ADR" value={`$${adr.toLocaleString()}`} icon={BedDouble} color="warning" />
+        <KpiCard label="RevPAR" value={`$${revpar.toLocaleString()}`} icon={BarChart3} color="primary" />
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
+          <TabsTrigger value="ocupacion">Ocupación</TabsTrigger>
+          <TabsTrigger value="desglose">Desglose</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="resumen" className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Ingresos vs Gastos</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-[320px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={serieTemporal}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="label" className="text-xs" />
+                    <YAxis className="text-xs" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Legend />
+                    <Area type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+                    <Area type="monotone" dataKey="gastos" stroke="hsl(var(--destructive))" fill="hsl(var(--destructive))" fillOpacity={0.2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader><CardTitle className="text-base">Reservas por origen</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-[280px]">
+                  {porOrigen.length === 0 ? <Empty /> : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={porOrigen} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}%`}>
+                          {porOrigen.map((e, i) => (<Cell key={i} fill={e.color} />))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base">Por tipo de habitación</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-[280px]">
+                  {porTipo.length === 0 ? <Empty /> : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={porTipo}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="tipo" className="text-xs" />
+                        <YAxis className="text-xs" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                        <Bar dataKey="ingresos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ingresos" className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Tendencia de ingresos</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-[320px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={serieTemporal}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="label" className="text-xs" />
+                    <YAxis className="text-xs" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Line type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ocupacion" className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Reservas en el período</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-[320px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={serieTemporal}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="label" className="text-xs" />
+                    <YAxis className="text-xs" allowDecimals={false} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Bar dataKey="reservas" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="desglose" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <DesgloseTabla title="Top habitaciones" rows={porHabitacion.map((h) => ({ k: `Hab. ${h.numero}`, n: h.reservas, v: h.ingresos }))} />
+            <DesgloseTabla title="Por usuario" rows={porUsuario.map((u) => ({ k: u.nombre, n: u.reservas, v: u.ingresos }))} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </MainLayout>
   );
+}
+
+function KpiCard({ label, value, change, icon: Icon, color }: { label: string; value: string; change?: number; icon: any; color: string }) {
+  const colorClass: any = {
+    primary: 'bg-primary/10 text-primary',
+    info: 'bg-info/10 text-info',
+    success: 'bg-success/10 text-success',
+    warning: 'bg-warning/10 text-warning',
+    destructive: 'bg-destructive/10 text-destructive',
+  };
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">{label}</p>
+            <p className="text-xl font-bold truncate">{value}</p>
+            {typeof change === 'number' && (
+              <p className={`text-xs flex items-center gap-1 ${change >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {change >= 0 ? '+' : ''}{change}% vs anterior
+              </p>
+            )}
+          </div>
+          <div className={`p-2 rounded-lg ${colorClass[color] || colorClass.primary}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DesgloseTabla({ title, rows }: { title: string; rows: { k: string; n: number; v: number }[] }) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader>
+      <CardContent>
+        {rows.length === 0 ? <Empty /> : (
+          <div className="space-y-2">
+            {rows.map((r) => (
+              <div key={r.k} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                <span className="font-medium truncate">{r.k}</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground"><Users className="inline h-3 w-3 mr-1" />{r.n}</span>
+                  <span className="font-semibold">${r.v.toLocaleString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Empty() {
+  return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Sin datos para los filtros aplicados</div>;
 }
