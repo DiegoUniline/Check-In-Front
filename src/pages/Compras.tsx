@@ -980,6 +980,12 @@ export default function Compras() {
                               <DropdownMenuItem>
                                 <FileText className="mr-2 h-4 w-4" /> Generar PDF
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleEliminarOrden(orden)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
