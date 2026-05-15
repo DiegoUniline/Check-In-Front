@@ -25,6 +25,7 @@ import CheckOut from "./pages/CheckOut";
 import Turnos from "./pages/Turnos";
 import Gastos from "./pages/Gastos";
 import Compras from "./pages/Compras";
+import Proveedores from "./pages/Proveedores";
 import Historial from "./pages/Historial";
 import HistorialReservas from "./pages/HistorialReservas";
 import NotFound from "./pages/NotFound";
@@ -213,6 +214,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="compras">
           <Compras />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/proveedores"
+      element={
+        <ProtectedRoute viewKey="proveedores">
+          <Proveedores />
         </ProtectedRoute>
       }
     />
