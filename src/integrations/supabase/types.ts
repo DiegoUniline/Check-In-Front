@@ -832,6 +832,45 @@ export type Database = {
           },
         ]
       }
+      notificaciones: {
+        Row: {
+          created_at: string
+          hotel_id: string
+          id: string
+          leida: boolean
+          mensaje: string | null
+          metadata: Json | null
+          tipo: string
+          titulo: string
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          hotel_id: string
+          id?: string
+          leida?: boolean
+          mensaje?: string | null
+          metadata?: Json | null
+          tipo?: string
+          titulo: string
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          hotel_id?: string
+          id?: string
+          leida?: boolean
+          mensaje?: string | null
+          metadata?: Json | null
+          tipo?: string
+          titulo?: string
+          url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       pagos: {
         Row: {
           concepto: string | null
@@ -1799,6 +1838,10 @@ export type Database = {
         Returns: boolean
       }
       is_superadmin: { Args: never; Returns: boolean }
+      tiene_permiso: {
+        Args: { _modulo: string; _rol?: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
