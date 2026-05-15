@@ -89,6 +89,10 @@ export default function Reservas() {
     : 'recepcion';
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
+  const [desdeCheckin, setDesdeCheckin] = useState('');
+  const [hastaCheckin, setHastaCheckin] = useState('');
+  const [desdeCheckout, setDesdeCheckout] = useState('');
+  const [hastaCheckout, setHastaCheckout] = useState('');
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
   const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
 
@@ -306,27 +310,43 @@ export default function Reservas() {
             )}
           </TabsContent>
 
-          {/* TAB CHECK-IN HOY */}
+          {/* TAB CHECK-IN PENDIENTES */}
           <TabsContent value="checkin" className="space-y-3 mt-3">
             <CheckInOutPanel
               tipo="checkin"
-              data={llegadasHoyData}
+              data={reservas.filter((r: any) =>
+                !r.checkin_realizado &&
+                !['Cancelada', 'NoShow'].includes(r.estado) &&
+                !(r.origen === 'Web' && r.estado === 'Pendiente')
+              )}
               loading={loading}
               busqueda={busquedaCheckin}
               onBusquedaChange={setBusquedaCheckin}
+              desde={desdeCheckin}
+              hasta={hastaCheckin}
+              onDesdeChange={setDesdeCheckin}
+              onHastaChange={setHastaCheckin}
               onAction={(id) => navigate(`/checkin/${id}`)}
               onRefresh={cargarDatos}
             />
           </TabsContent>
 
-          {/* TAB CHECK-OUT HOY */}
+          {/* TAB CHECK-OUT PENDIENTES */}
           <TabsContent value="checkout" className="space-y-3 mt-3">
             <CheckInOutPanel
               tipo="checkout"
-              data={salidasHoyData}
+              data={reservas.filter((r: any) =>
+                r.checkin_realizado &&
+                !r.checkout_realizado &&
+                !['Cancelada', 'NoShow'].includes(r.estado)
+              )}
               loading={loading}
               busqueda={busquedaCheckout}
               onBusquedaChange={setBusquedaCheckout}
+              desde={desdeCheckout}
+              hasta={hastaCheckout}
+              onDesdeChange={setDesdeCheckout}
+              onHastaChange={setHastaCheckout}
               onAction={(id) => navigate(`/checkout/${id}`)}
               onRefresh={cargarDatos}
             />
@@ -682,6 +702,10 @@ interface CheckInOutPanelProps {
   loading: boolean;
   busqueda: string;
   onBusquedaChange: (value: string) => void;
+  desde: string;
+  hasta: string;
+  onDesdeChange: (value: string) => void;
+  onHastaChange: (value: string) => void;
   onAction: (id: string) => void;
   onRefresh: () => void;
 }
@@ -692,6 +716,10 @@ function CheckInOutPanel({
   loading,
   busqueda,
   onBusquedaChange,
+  desde,
+  hasta,
+  onDesdeChange,
+  onHastaChange,
   onAction,
   onRefresh,
 }: CheckInOutPanelProps) {
@@ -716,16 +744,22 @@ function CheckInOutPanel({
         avatarBg: 'bg-orange-100 dark:bg-orange-950/40',
         avatarText: 'text-orange-700 dark:text-orange-300',
       };
-  const titulo = esCheckin ? 'Llegadas de hoy' : 'Salidas de hoy';
+  const titulo = esCheckin ? 'Check-In pendientes' : 'Check-Out pendientes';
   const subtitulo = esCheckin
-    ? 'Reservas con check-in programado para hoy'
-    : 'Huéspedes que finalizan su estancia hoy';
+    ? 'Reservas pendientes de check-in (incluye atrasadas)'
+    : 'Huéspedes pendientes de check-out (incluye atrasados)';
   const ctaLabel = esCheckin ? 'Iniciar Check-In' : 'Iniciar Check-Out';
   const emptyText = esCheckin
-    ? 'No hay llegadas pendientes para hoy.'
-    : 'No hay salidas programadas para hoy.';
+    ? 'No hay check-ins pendientes en el rango seleccionado.'
+    : 'No hay check-outs pendientes en el rango seleccionado.';
+
+  const fechaCampo = esCheckin ? 'fecha_checkin' : 'fecha_checkout';
+  const hoyStr = new Date().toISOString().slice(0, 10);
 
   const filtrados = data.filter((r: any) => {
+    const f = r[fechaCampo];
+    if (desde && (!f || f < desde)) return false;
+    if (hasta && (!f || f > hasta)) return false;
     if (!busqueda) return true;
     const q = busqueda.toLowerCase();
     const nombre = `${r.cliente_nombre || r.nombre || ''} ${r.apellido_paterno || ''}`.toLowerCase();
@@ -734,7 +768,7 @@ function CheckInOutPanel({
     return nombre.includes(q) || hab.includes(q) || num.includes(q);
   });
 
-  const totalPersonas = data.reduce(
+  const totalPersonas = filtrados.reduce(
     (acc: number, r: any) => acc + (Number(r.adultos) || 0) + (Number(r.ninos) || 0),
     0
   );
@@ -756,7 +790,7 @@ function CheckInOutPanel({
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className={`text-2xl font-light tabular-nums leading-none ${palette.bigText}`}>
-                {data.length}
+                {filtrados.length}
               </p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
                 Reservas
@@ -777,23 +811,51 @@ function CheckInOutPanel({
         </CardContent>
       </Card>
 
-      {/* Buscador */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por huésped, habitación o número de reserva…"
-          value={busqueda}
-          onChange={(e) => onBusquedaChange(e.target.value)}
-          className="pl-8 h-9 text-sm"
-        />
-        {busqueda && (
-          <button
-            onClick={() => onBusquedaChange('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            aria-label="Limpiar búsqueda"
+      {/* Filtros */}
+      <div className="flex items-end gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por huésped, habitación o número…"
+            value={busqueda}
+            onChange={(e) => onBusquedaChange(e.target.value)}
+            className="pl-8 h-9 text-sm"
+          />
+          {busqueda && (
+            <button
+              onClick={() => onBusquedaChange('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Desde</label>
+          <Input type="date" value={desde} onChange={(e) => onDesdeChange(e.target.value)} className="h-9 text-sm w-[150px]" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Hasta</label>
+          <Input type="date" value={hasta} onChange={(e) => onHastaChange(e.target.value)} className="h-9 text-sm w-[150px]" />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9"
+          onClick={() => { onDesdeChange(hoyStr); onHastaChange(hoyStr); }}
+        >
+          Hoy
+        </Button>
+        {(desde || hasta) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9"
+            onClick={() => { onDesdeChange(''); onHastaChange(''); }}
           >
-            <X className="h-3.5 w-3.5" />
-          </button>
+            Limpiar fechas
+          </Button>
         )}
       </div>
 
