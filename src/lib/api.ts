@@ -675,8 +675,17 @@ class ApiClient {
   getTransaccion = async (id: string): Promise<any> => { const { data } = await supabase.from('transacciones').select('*').eq('id', id).maybeSingle(); return data; };
 
   // ------- Hotel -------
-  getHotel = async (): Promise<any> => { const { data } = await supabase.from('hotels').select('*').eq('id', this.hid()).maybeSingle(); return data; };
-  updateHotel = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('hotels').update(data).eq('id', this.hid()).select().single(); if (error) throw error; return r; };
+  getHotel = async (): Promise<any> => {
+    const { data } = await supabase.from('hotels').select('*').eq('id', this.hid()).maybeSingle();
+    if ((data as any)?.timezone) setHotelTimezone((data as any).timezone);
+    return data;
+  };
+  updateHotel = async (data: any): Promise<any> => {
+    const { data: r, error } = await supabase.from('hotels').update(data).eq('id', this.hid()).select().single();
+    if (error) throw error;
+    if ((r as any)?.timezone) setHotelTimezone((r as any).timezone);
+    return r;
+  };
 
   // ------- SAAS -------
   getCuentas = async (): Promise<any> => {
