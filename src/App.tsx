@@ -266,9 +266,11 @@ const App = () => (
       <BrowserRouter basename={ROUTER_BASENAME}>
         <AuthProvider>
           <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <AppRoutes />
+            <UnsavedChangesProvider>
+              <Toaster />
+              <Sonner />
+              <AppRoutes />
+            </UnsavedChangesProvider>
           </TooltipProvider>
         </AuthProvider>
       </BrowserRouter>
