@@ -19,7 +19,8 @@ import {
   FileText,
   ShieldAlert,
   ShieldCheck, // Icono para Diego
-  Inbox
+  Inbox,
+  ScrollText
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -70,6 +71,7 @@ const salesNavItems = [
 const configNavItems = [
   { title: 'Usuarios', url: '/usuarios', icon: UserCog, viewKey: 'usuarios' },
   { title: 'Permisos', url: '/permisos', icon: ShieldAlert, viewKey: 'permisos' },
+  { title: 'Auditoría', url: '/auditoria', icon: ScrollText, viewKey: 'auditoria' },
   { title: 'Turnos', url: '/turnos', icon: Clock, viewKey: 'turnos' },
   { title: 'Catálogos', url: '/catalogos', icon: BookOpen, viewKey: 'catalogos' },
   { title: 'Configuración', url: '/configuracion', icon: Settings, viewKey: 'configuracion' },
