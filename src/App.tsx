@@ -20,6 +20,7 @@ import POS from "./pages/POS";
 import Inventario from "./pages/Inventario";
 import Productos from "./pages/Productos";
 import AjustesStock from "./pages/AjustesStock";
+import HistorialAjustes from "./pages/HistorialAjustes";
 import Reportes from "./pages/Reportes";
 import Configuracion from "./pages/Configuracion";
 import CheckIn from "./pages/CheckIn";
@@ -168,6 +169,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="inventario">
           <AjustesStock />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/historial-ajustes"
+      element={
+        <ProtectedRoute viewKey="inventario">
+          <HistorialAjustes />
         </ProtectedRoute>
       }
     />
