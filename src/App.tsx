@@ -31,6 +31,7 @@ import Catalogos from "./pages/Catalogos";
 import Usuarios from "./pages/Usuarios";
 import Permisos from "./pages/Permisos";
 import Auditoria from "./pages/Auditoria";
+import Gerencia from "./pages/Gerencia";
 import AdminPlataforma from "./pages/AdminPlataforma";
 import ReservasOnline from "./pages/ReservasOnline";
 import Signup from "./pages/Signup";
@@ -252,6 +253,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="auditoria">
           <Auditoria />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/gerencia"
+      element={
+        <ProtectedRoute viewKey="gerencia">
+          <Gerencia />
         </ProtectedRoute>
       }
     />
