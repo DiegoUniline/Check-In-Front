@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/hooks/useConfirm';
 import api from '@/lib/api';
 
 type Tipo = 'checkin' | 'checkout';
 
 function ListaItems({ tipo, titulo, descripcion }: { tipo: Tipo; titulo: string; descripcion: string }) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [nuevo, setNuevo] = useState('');
@@ -70,7 +72,13 @@ function ListaItems({ tipo, titulo, descripcion }: { tipo: Tipo; titulo: string;
   };
 
   const eliminar = async (id: string) => {
-    if (!confirm('¿Eliminar este item del checklist?')) return;
+    const ok = await confirm({
+      title: 'Eliminar item',
+      description: '¿Eliminar este item del checklist?',
+      confirmText: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteChecklistItem(id);
       setItems((prev) => prev.filter((i) => i.id !== id));
