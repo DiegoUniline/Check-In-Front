@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { registrarAuditoria } from '@/lib/auditoria';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const IVA_RATE = 0.16;
@@ -380,7 +381,13 @@ class ApiClient {
       estado: data.estado || 'Confirmada',
     };
     const { data: r, error } = await supabase.from('reservas').insert(payload).select().single();
-    if (error) throw error; return r;
+    if (error) throw error;
+    void registrarAuditoria({
+      accion: 'crear', entidad: 'reserva', entidad_id: r?.id,
+      descripcion: `Reserva ${r?.numero_reserva || ''} (${r?.fecha_checkin} → ${r?.fecha_checkout})`,
+      datos_despues: r,
+    });
+    return r;
   };
   updateReserva = async (id: string, data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('reservas').update(data).eq('id', id).select().single();
@@ -406,7 +413,12 @@ class ApiClient {
   };
   cancelarReserva = async (id: string, motivo?: string): Promise<any> => {
     const { data: r, error } = await supabase.from('reservas').update({ estado: 'Cancelada', notas: motivo }).eq('id', id).select().single();
-    if (error) throw error; return r;
+    if (error) throw error;
+    void registrarAuditoria({
+      accion: 'actualizar', entidad: 'reserva', entidad_id: id,
+      descripcion: `Reserva cancelada${motivo ? ': ' + motivo : ''}`,
+    });
+    return r;
   };
   confirmarReserva = async (id: string): Promise<any> => {
     const { data: r, error } = await supabase.from('reservas').update({ estado: 'Confirmada' }).eq('id', id).select().single();
@@ -762,6 +774,10 @@ class ApiClient {
       .update({ activo_plataforma: false, suspendido_motivo: motivo || null, suspendido_at: new Date().toISOString() } as any)
       .eq('id', id);
     if (error) throw error;
+    void registrarAuditoria({
+      accion: 'actualizar', entidad: 'hotel', entidad_id: id,
+      descripcion: `Hotel suspendido${motivo ? ': ' + motivo : ''}`,
+    });
     return {};
   };
   reactivarHotel = async (id: string): Promise<any> => {
@@ -770,6 +786,10 @@ class ApiClient {
       .update({ activo_plataforma: true, suspendido_motivo: null, suspendido_at: null } as any)
       .eq('id', id);
     if (error) throw error;
+    void registrarAuditoria({
+      accion: 'actualizar', entidad: 'hotel', entidad_id: id,
+      descripcion: 'Hotel reactivado',
+    });
     return {};
   };
 
@@ -818,6 +838,11 @@ class ApiClient {
       .from('permisos_hotel' as any)
       .upsert(rows, { onConflict: 'hotel_id,rol,modulo' });
     if (error) throw error;
+    void registrarAuditoria({
+      accion: 'actualizar', entidad: 'permisos',
+      descripcion: `Matriz de permisos actualizada (${Object.keys(matrix).length} módulos)`,
+      datos_despues: matrix,
+    });
     return {};
   };
 
