@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SaveButton, isDirty } from '@/components/ui/save-button';
+import { useUnsavedChanges } from '@/contexts/UnsavedChangesContext';
 // Tipos aún no se regeneran hasta que se aplica la migración; usamos un cliente sin tipos.
 const sb = supabase as any;
 
@@ -91,6 +92,7 @@ export function WhatsAppConfig() {
     );
     return !!(hotelChanged || tplChanged);
   }, [hotel, hotelInitial, templates, templatesInitial]);
+  useUnsavedChanges(dirty);
 
   const guardar = async () => {
     if (!hotel) return;
