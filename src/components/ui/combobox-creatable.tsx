@@ -53,6 +53,37 @@ export function ComboboxCreatable({
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [isCreating, setIsCreating] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const justSelectedRef = React.useRef(false);
+
+  const focusNextField = () => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const focusables = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        'input:not([disabled]):not([type="hidden"]), button:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter((el) => el.offsetParent !== null);
+    const idx = focusables.indexOf(trigger);
+    if (idx >= 0 && idx + 1 < focusables.length) {
+      focusables[idx + 1].focus();
+      const next = focusables[idx + 1] as HTMLInputElement;
+      if (typeof next.select === "function") next.select();
+    }
+  };
+
+  const handleSelect = (newValue: string) => {
+    justSelectedRef.current = true;
+    onValueChange(newValue);
+    setOpen(false);
+    setSearch("");
+    setTimeout(() => {
+      focusNextField();
+      setTimeout(() => {
+        justSelectedRef.current = false;
+      }, 100);
+    }, 0);
+  };
 
   const selectedOption = options.find((opt) => opt.value === value);
   
@@ -70,9 +101,7 @@ export function ComboboxCreatable({
     try {
       const result = await onCreate(search.trim());
       if (result) {
-        onValueChange(result.value);
-        setSearch("");
-        setOpen(false);
+        handleSelect(result.value);
       }
       // Si onCreate retorna undefined (error), mantenemos el popover abierto
     } catch (error) {
@@ -90,13 +119,14 @@ export function ComboboxCreatable({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
           disabled={disabled}
           onFocus={() => {
-            if (autoOpenOnFocus && !open) setOpen(true);
+            if (autoOpenOnFocus && !open && !justSelectedRef.current) setOpen(true);
           }}
         >
           {selectedOption ? selectedOption.label : placeholder}
@@ -125,11 +155,7 @@ export function ComboboxCreatable({
                 <CommandItem
                   key={option.value}
                   value={option.value}
-                  onSelect={() => {
-                    onValueChange(option.value);
-                    setOpen(false);
-                    setSearch("");
-                  }}
+                  onSelect={() => handleSelect(option.value)}
                 >
                   <Check
                     className={cn(
