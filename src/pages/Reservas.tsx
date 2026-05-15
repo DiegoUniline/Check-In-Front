@@ -438,6 +438,175 @@ export default function Reservas() {
           )}
         </div>
           </TabsContent>
+
+          {/* TAB HISTÓRICO: Tabla con todas las reservas */}
+          <TabsContent value="historico" className="space-y-3 mt-3">
+            <Card>
+              <CardContent className="p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar reserva, cliente, habitación..."
+                        className="pl-8 h-9 w-[260px] text-sm"
+                        value={busquedaHistorico}
+                        onChange={(e) => setBusquedaHistorico(e.target.value)}
+                      />
+                    </div>
+                    <Select value={estadoHistorico} onValueChange={setEstadoHistorico}>
+                      <SelectTrigger className="w-[160px] h-9 text-sm">
+                        <SelectValue placeholder="Estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos los estados</SelectItem>
+                        <SelectItem value="Pendiente">Pendiente</SelectItem>
+                        <SelectItem value="Confirmada">Confirmada</SelectItem>
+                        <SelectItem value="CheckIn">Check-In</SelectItem>
+                        <SelectItem value="CheckOut">Check-Out</SelectItem>
+                        <SelectItem value="Cancelada">Cancelada</SelectItem>
+                        <SelectItem value="NoShow">No Show</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {(() => {
+                      const f = reservas.filter(r => {
+                        if (estadoHistorico !== 'todos' && r.estado !== estadoHistorico) return false;
+                        if (!busquedaHistorico) return true;
+                        const t = busquedaHistorico.toLowerCase();
+                        return (
+                          r.numero_reserva?.toLowerCase().includes(t) ||
+                          r.cliente_nombre?.toLowerCase().includes(t) ||
+                          r.clientes?.nombre?.toLowerCase().includes(t) ||
+                          r.clientes?.apellido_paterno?.toLowerCase().includes(t) ||
+                          r.habitacion_numero?.toString().includes(t) ||
+                          r.habitaciones?.numero?.toString().includes(t)
+                        );
+                      });
+                      return `${f.length} reserva(s)`;
+                    })()}
+                  </span>
+                </div>
+
+                <div className="relative w-full overflow-x-auto rounded-md border">
+                  <Table className="min-w-[900px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Reserva</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Habitación</TableHead>
+                        <TableHead>Check-In</TableHead>
+                        <TableHead>Check-Out</TableHead>
+                        <TableHead className="text-center">Noches</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Origen</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Pagado</TableHead>
+                        <TableHead className="text-right">Saldo</TableHead>
+                        <TableHead className="text-center">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={12} className="text-center py-8">
+                            <RefreshCw className="h-5 w-5 animate-spin inline-block text-muted-foreground" />
+                          </TableCell>
+                        </TableRow>
+                      ) : (() => {
+                        const filtradas = reservas
+                          .filter(r => {
+                            if (estadoHistorico !== 'todos' && r.estado !== estadoHistorico) return false;
+                            if (!busquedaHistorico) return true;
+                            const t = busquedaHistorico.toLowerCase();
+                            return (
+                              r.numero_reserva?.toLowerCase().includes(t) ||
+                              r.cliente_nombre?.toLowerCase().includes(t) ||
+                              r.clientes?.nombre?.toLowerCase().includes(t) ||
+                              r.clientes?.apellido_paterno?.toLowerCase().includes(t) ||
+                              r.habitacion_numero?.toString().includes(t) ||
+                              r.habitaciones?.numero?.toString().includes(t)
+                            );
+                          })
+                          .sort((a, b) => new Date(b.fecha_checkin).getTime() - new Date(a.fecha_checkin).getTime());
+
+                        if (filtradas.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={12} className="text-center py-8 text-muted-foreground text-sm">
+                                No se encontraron reservas
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+
+                        const estadoColor: Record<string, string> = {
+                          Pendiente: 'bg-yellow-500',
+                          Confirmada: 'bg-blue-500',
+                          CheckIn: 'bg-green-500',
+                          CheckOut: 'bg-slate-500',
+                          Cancelada: 'bg-red-500',
+                          NoShow: 'bg-orange-500',
+                        };
+
+                        return filtradas.map((r) => {
+                          const cliente = r.cliente_nombre
+                            || `${r.clientes?.nombre || ''} ${r.clientes?.apellido_paterno || ''}`.trim()
+                            || '—';
+                          const habNum = r.habitacion_numero || r.habitaciones?.numero || '—';
+                          const total = Number(r.total || 0);
+                          const pagado = Number(r.total_pagado || 0);
+                          const saldo = Number(r.saldo_pendiente ?? Math.max(0, total - pagado));
+                          return (
+                            <TableRow key={r.id} className="hover:bg-muted/50">
+                              <TableCell className="font-mono text-xs">
+                                {r.numero_reserva || r.id?.slice(0, 8)}
+                              </TableCell>
+                              <TableCell className="font-medium">{cliente}</TableCell>
+                              <TableCell>Hab. {habNum}</TableCell>
+                              <TableCell className="text-xs">
+                                {r.fecha_checkin ? format(new Date(r.fecha_checkin), 'd MMM yyyy', { locale: es }) : '—'}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                {r.fecha_checkout ? format(new Date(r.fecha_checkout), 'd MMM yyyy', { locale: es }) : '—'}
+                              </TableCell>
+                              <TableCell className="text-center">{r.noches || '—'}</TableCell>
+                              <TableCell>
+                                <Badge className={`${estadoColor[r.estado] || 'bg-muted'} hover:${estadoColor[r.estado] || 'bg-muted'} text-white text-[10px]`}>
+                                  {r.estado}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-[10px]">
+                                  {r.origen || 'Reserva'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">${total.toLocaleString()}</TableCell>
+                              <TableCell className="text-right tabular-nums text-green-600">${pagado.toLocaleString()}</TableCell>
+                              <TableCell className={`text-right tabular-nums ${saldo > 0 ? 'text-orange-600 font-semibold' : ''}`}>
+                                ${saldo.toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2"
+                                  onClick={() => handleReservationClick(r)}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        });
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
 
