@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { UnsavedChangesProvider } from "@/contexts/UnsavedChangesContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ConfirmProvider } from "@/hooks/useConfirm";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -304,9 +305,11 @@ const App = () => (
         <AuthProvider>
           <TooltipProvider>
             <UnsavedChangesProvider>
-              <Toaster />
-              <Sonner />
-              <AppRoutes />
+              <ConfirmProvider>
+                <Toaster />
+                <Sonner />
+                <AppRoutes />
+              </ConfirmProvider>
             </UnsavedChangesProvider>
           </TooltipProvider>
         </AuthProvider>
