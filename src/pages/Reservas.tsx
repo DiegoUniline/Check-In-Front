@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { format, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -37,12 +37,13 @@ import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
 export default function Reservas() {
   const navigate = useNavigate();
+  const { vista } = useParams<{ vista?: string }>();
   const [loading, setLoading] = useState(true);
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [reservas, setReservas] = useState<any[]>([]);
@@ -81,7 +82,11 @@ export default function Reservas() {
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
   const [modalDetalle, setModalDetalle] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
-  const [tabActiva, setTabActiva] = useState<'recepcion' | 'checkin' | 'checkout' | 'reservas' | 'historico'>('recepcion');
+  const validViews = ['recepcion', 'checkin', 'checkout', 'timeline', 'historico'] as const;
+  type Vista = typeof validViews[number];
+  const tabActiva: Vista = (validViews as readonly string[]).includes(vista || '')
+    ? (vista as Vista)
+    : 'recepcion';
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
