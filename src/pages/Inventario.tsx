@@ -139,6 +139,15 @@ export default function Inventario() {
         </CardContent></Card>
       </div>
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="todo">Todos ({productos.length})</TabsTrigger>
+          <TabsTrigger value="con">Con stock ({productos.filter(p => Number(p.stock_actual||0) > 0).length})</TabsTrigger>
+          <TabsTrigger value="sin">Sin stock ({sinStock})</TabsTrigger>
+          <TabsTrigger value="bajo">Stock bajo ({lowStock.filter(p => Number(p.stock_actual||0) > 0).length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
