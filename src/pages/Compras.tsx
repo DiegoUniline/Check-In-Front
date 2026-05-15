@@ -451,6 +451,7 @@ export default function Compras() {
       title="Órdenes de Compra" 
       subtitle="Gestión de compras a proveedores"
     >
+      {detalleModal.open && detalleModal.orden ? null : (
       <Tabs defaultValue="ordenes">
         {/*
           Tabs responsivas: evitamos overflow horizontal global (en este caso son solo 2 pestañas).
