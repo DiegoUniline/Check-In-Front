@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Settings, Hotel, Users, CreditCard, Bell, 
@@ -25,6 +25,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/lib/api';
 import { ChecklistConfig } from '@/components/configuracion/ChecklistConfig';
 import { WhatsAppConfig } from '@/components/configuracion/WhatsAppConfig';
+import { SaveButton, isDirty } from '@/components/ui/save-button';
 
 const emptyHotel = {
   nombre: '',
@@ -51,6 +52,7 @@ export default function Configuracion() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [hotelData, setHotelData] = useState<any>(emptyHotel);
+  const [hotelInitial, setHotelInitial] = useState<any>(emptyHotel);
   const [loadingHotel, setLoadingHotel] = useState(true);
   const [savingHotel, setSavingHotel] = useState(false);
 
@@ -120,7 +122,9 @@ export default function Configuracion() {
     setLoadingHotel(true);
     try {
       const h = await api.getHotel();
-      setHotelData(mapBackendToUi(h));
+      const ui = mapBackendToUi(h);
+      setHotelData(ui);
+      setHotelInitial(ui);
     } catch (error: any) {
       // Si falla (ej. falta x-hotel-id o no hay token), dejamos mock pero avisamos.
       toast({
@@ -158,6 +162,11 @@ export default function Configuracion() {
       setSavingHotel(false);
     }
   };
+
+  const hotelDirty = useMemo(
+    () => isDirty(hotelInitial, hotelData),
+    [hotelInitial, hotelData]
+  );
 
   return (
     <MainLayout 
@@ -621,10 +630,12 @@ export default function Configuracion() {
 
       {/* Save button */}
       <div className="flex justify-end mt-6">
-        <Button onClick={handleSave} size="lg" disabled={savingHotel || loadingHotel}>
-          <Save className="mr-2 h-4 w-4" />
-          {savingHotel ? 'Guardando...' : 'Guardar Cambios'}
-        </Button>
+        <SaveButton
+          onClick={handleSave}
+          size="lg"
+          dirty={hotelDirty && !loadingHotel}
+          loading={savingHotel}
+        />
       </div>
     </MainLayout>
   );

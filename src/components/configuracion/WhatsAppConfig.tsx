@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { MessageCircle, Save, Send, RefreshCw, Sparkles, Info } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { MessageCircle, Send, RefreshCw, Sparkles, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { SaveButton, isDirty } from '@/components/ui/save-button';
 // Tipos aún no se regeneran hasta que se aplica la migración; usamos un cliente sin tipos.
 const sb = supabase as any;
 
@@ -44,7 +45,9 @@ export function WhatsAppConfig() {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [hotel, setHotel] = useState<any>(null);
+  const [hotelInitial, setHotelInitial] = useState<any>(null);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [templatesInitial, setTemplatesInitial] = useState<any[]>([]);
   const [testPhone, setTestPhone] = useState('5213171035768');
 
   const cargar = async () => {
@@ -54,6 +57,7 @@ export function WhatsAppConfig() {
       const h = hotels?.[0];
       if (!h) throw new Error('No se encontró el hotel');
       setHotel(h);
+      setHotelInitial(h);
 
       const { data: tpls } = await sb
         .from('whatsapp_templates')
@@ -66,6 +70,7 @@ export function WhatsAppConfig() {
         return found ? { ...d, ...found } : { ...d, hotel_id: h.id, activo: true };
       });
       setTemplates(merged);
+      setTemplatesInitial(merged);
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally {
@@ -74,6 +79,18 @@ export function WhatsAppConfig() {
   };
 
   useEffect(() => { cargar(); }, []);
+
+  const dirty = useMemo(() => {
+    const hotelChanged = hotelInitial && (
+      (hotel?.whatsapp_token || '') !== (hotelInitial?.whatsapp_token || '') ||
+      !!hotel?.whatsapp_enabled !== !!hotelInitial?.whatsapp_enabled
+    );
+    const tplChanged = isDirty(
+      templatesInitial.map((t) => ({ k: t.template_key, m: t.mensaje, a: !!t.activo })),
+      templates.map((t) => ({ k: t.template_key, m: t.mensaje, a: !!t.activo }))
+    );
+    return !!(hotelChanged || tplChanged);
+  }, [hotel, hotelInitial, templates, templatesInitial]);
 
   const guardar = async () => {
     if (!hotel) return;
@@ -266,10 +283,13 @@ export function WhatsAppConfig() {
 
       <Separator />
       <div className="flex justify-end">
-        <Button onClick={guardar} disabled={saving} size="lg">
-          {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          Guardar configuración
-        </Button>
+        <SaveButton
+          onClick={guardar}
+          size="lg"
+          dirty={dirty}
+          loading={saving}
+          label="Guardar configuración"
+        />
       </div>
     </div>
   );

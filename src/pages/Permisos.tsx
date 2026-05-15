@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Shield, Save, RotateCcw, Search } from 'lucide-react';
+import { Shield, RotateCcw, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -17,10 +17,12 @@ import {
   ROLES, VIEWS, RoleId, PermissionMatrix,
   loadPermissions, savePermissions, resetPermissions, DEFAULT_PERMISSIONS,
 } from '@/lib/permissions';
+import { SaveButton, isDirty } from '@/components/ui/save-button';
 
 export default function Permisos() {
   const { toast } = useToast();
   const [matrix, setMatrix] = useState<PermissionMatrix>(() => loadPermissions());
+  const [initialMatrix, setInitialMatrix] = useState<PermissionMatrix>(() => loadPermissions());
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -31,6 +33,7 @@ export default function Permisos() {
       const remote = await api.getPermisosHotel().catch(() => ({}));
       const merged = { ...DEFAULT_PERMISSIONS, ...remote } as PermissionMatrix;
       setMatrix(merged);
+      setInitialMatrix(merged);
       savePermissions(merged); // cache local
       return merged;
     },
@@ -70,6 +73,7 @@ export default function Permisos() {
     try {
       await api.savePermisosHotel(matrix);
       savePermissions(matrix);
+      setInitialMatrix(matrix);
       toast({ title: 'Permisos guardados', description: 'Sincronizados con la base de datos.' });
     } catch (e: any) {
       toast({ title: 'Error al guardar', description: e?.message || 'Intenta de nuevo', variant: 'destructive' });
@@ -79,9 +83,12 @@ export default function Permisos() {
   };
 
   const handleReset = () => {
-    setMatrix(resetPermissions());
+    const def = resetPermissions();
+    setMatrix(def);
     toast({ title: 'Permisos restaurados', description: 'Se cargaron los valores por defecto.' });
   };
+
+  const dirty = useMemo(() => isDirty(initialMatrix, matrix), [initialMatrix, matrix]);
 
   return (
     <MainLayout
@@ -102,9 +109,7 @@ export default function Permisos() {
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="mr-2 h-4 w-4" /> Restaurar
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="mr-2 h-4 w-4" /> Guardar Cambios
-          </Button>
+          <SaveButton onClick={handleSave} dirty={dirty} loading={saving} />
         </div>
       </div>
 
