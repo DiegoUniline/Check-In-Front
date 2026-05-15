@@ -537,6 +537,29 @@ export default function Reportes() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Histórico 12 meses */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Tendencia 12 meses · Ingresos / RevPAR / Ocupación</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={historicoData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="mes" className="text-xs" />
+                <YAxis yAxisId="left" className="text-xs" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                <YAxis yAxisId="right" orientation="right" className="text-xs" tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                <Line yAxisId="left" type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" strokeWidth={2} name="Ingresos" />
+                <Line yAxisId="left" type="monotone" dataKey="revpar" stroke="hsl(var(--info))" strokeWidth={2} name="RevPAR" />
+                <Line yAxisId="right" type="monotone" dataKey="ocup" stroke="hsl(var(--success))" strokeWidth={2} name="Ocupación %" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
     </MainLayout>
   );
 }
