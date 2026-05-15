@@ -52,6 +52,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/hooks/useConfirm';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { ComboboxCreatable, ComboboxOption } from '@/components/ui/combobox-creatable';
@@ -65,6 +66,7 @@ interface OrderItem {
 
 export default function Compras() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEstado, setFilterEstado] = useState('all');
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
@@ -390,7 +392,13 @@ export default function Compras() {
 
   const handleEliminarOrden = async (orden: any) => {
     if (!orden?.id) return;
-    if (!confirm(`¿Eliminar la orden ${orden.numero_orden || ''}? Esta acción no se puede deshacer.`)) return;
+    const ok = await confirm({
+      title: 'Eliminar orden',
+      description: `¿Eliminar la orden ${orden.numero_orden || ''}? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteCompra(orden.id);
       toast({ title: 'Orden eliminada' });
