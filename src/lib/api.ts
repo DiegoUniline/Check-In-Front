@@ -412,7 +412,7 @@ class ApiClient {
   };
   getCheckinsHoy = async (): Promise<any> => {
     const today = todayLocal();
-    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkin', today).eq('checkin_realizado', false).or('origen.neq.Web,estado.neq.Pendiente');
+    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkin', today).eq('checkin_realizado', false).not('estado', 'in', '(Cancelada,NoShow)').or('origen.neq.Web,estado.neq.Pendiente');
     return (data || []).map((r: any) => ({
       ...r,
       cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
@@ -421,7 +421,7 @@ class ApiClient {
   };
   getCheckoutsHoy = async (): Promise<any> => {
     const today = todayLocal();
-    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false).or('origen.neq.Web,estado.neq.Pendiente');
+    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false).not('estado', 'in', '(Cancelada,NoShow)').or('origen.neq.Web,estado.neq.Pendiente');
     return (data || []).map((r: any) => ({
       ...r,
       cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
