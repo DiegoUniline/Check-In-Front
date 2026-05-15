@@ -679,6 +679,7 @@ export type Database = {
           suspendido_at: string | null
           suspendido_motivo: string | null
           telefono: string | null
+          timezone: string
           updated_at: string | null
           whatsapp_enabled: boolean
           whatsapp_token: string | null
@@ -707,6 +708,7 @@ export type Database = {
           suspendido_at?: string | null
           suspendido_motivo?: string | null
           telefono?: string | null
+          timezone?: string
           updated_at?: string | null
           whatsapp_enabled?: boolean
           whatsapp_token?: string | null
@@ -735,6 +737,7 @@ export type Database = {
           suspendido_at?: string | null
           suspendido_motivo?: string | null
           telefono?: string | null
+          timezone?: string
           updated_at?: string | null
           whatsapp_enabled?: boolean
           whatsapp_token?: string | null
