@@ -310,27 +310,43 @@ export default function Reservas() {
             )}
           </TabsContent>
 
-          {/* TAB CHECK-IN HOY */}
+          {/* TAB CHECK-IN PENDIENTES */}
           <TabsContent value="checkin" className="space-y-3 mt-3">
             <CheckInOutPanel
               tipo="checkin"
-              data={llegadasHoyData}
+              data={reservas.filter((r: any) =>
+                !r.checkin_realizado &&
+                !['Cancelada', 'NoShow'].includes(r.estado) &&
+                !(r.origen === 'Web' && r.estado === 'Pendiente')
+              )}
               loading={loading}
               busqueda={busquedaCheckin}
               onBusquedaChange={setBusquedaCheckin}
+              desde={desdeCheckin}
+              hasta={hastaCheckin}
+              onDesdeChange={setDesdeCheckin}
+              onHastaChange={setHastaCheckin}
               onAction={(id) => navigate(`/checkin/${id}`)}
               onRefresh={cargarDatos}
             />
           </TabsContent>
 
-          {/* TAB CHECK-OUT HOY */}
+          {/* TAB CHECK-OUT PENDIENTES */}
           <TabsContent value="checkout" className="space-y-3 mt-3">
             <CheckInOutPanel
               tipo="checkout"
-              data={salidasHoyData}
+              data={reservas.filter((r: any) =>
+                r.checkin_realizado &&
+                !r.checkout_realizado &&
+                !['Cancelada', 'NoShow'].includes(r.estado)
+              )}
               loading={loading}
               busqueda={busquedaCheckout}
               onBusquedaChange={setBusquedaCheckout}
+              desde={desdeCheckout}
+              hasta={hastaCheckout}
+              onDesdeChange={setDesdeCheckout}
+              onHastaChange={setHastaCheckout}
               onAction={(id) => navigate(`/checkout/${id}`)}
               onRefresh={cargarDatos}
             />
