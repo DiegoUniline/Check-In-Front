@@ -5,6 +5,15 @@ import { crearNotificacion } from '@/lib/notificaciones';
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const IVA_RATE = 0.16;
 
+// Fecha local YYYY-MM-DD (evita off-by-one por zona horaria al usar toISOString())
+const todayLocal = (): string => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 class ApiClient {
   private hotelId: string | null = null;
   private _demoMode = false;
