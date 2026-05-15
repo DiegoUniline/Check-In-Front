@@ -1206,6 +1206,8 @@ export type Database = {
           numero_reserva: string | null
           origen: string | null
           personas_extra: number
+          revisada_at: string | null
+          revisada_por: string | null
           saldo_pendiente: number | null
           solicitudes_especiales: string | null
           subtotal_hospedaje: number | null
@@ -1240,6 +1242,8 @@ export type Database = {
           numero_reserva?: string | null
           origen?: string | null
           personas_extra?: number
+          revisada_at?: string | null
+          revisada_por?: string | null
           saldo_pendiente?: number | null
           solicitudes_especiales?: string | null
           subtotal_hospedaje?: number | null
@@ -1274,6 +1278,8 @@ export type Database = {
           numero_reserva?: string | null
           origen?: string | null
           personas_extra?: number
+          revisada_at?: string | null
+          revisada_por?: string | null
           saldo_pendiente?: number | null
           solicitudes_especiales?: string | null
           subtotal_hospedaje?: number | null
