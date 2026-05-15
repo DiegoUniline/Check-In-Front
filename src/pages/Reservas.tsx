@@ -89,10 +89,11 @@ export default function Reservas() {
     : 'recepcion';
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
-  const [desdeCheckin, setDesdeCheckin] = useState('');
-  const [hastaCheckin, setHastaCheckin] = useState('');
-  const [desdeCheckout, setDesdeCheckout] = useState('');
-  const [hastaCheckout, setHastaCheckout] = useState('');
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const [desdeCheckin, setDesdeCheckin] = useState(hoyISO);
+  const [hastaCheckin, setHastaCheckin] = useState(hoyISO);
+  const [desdeCheckout, setDesdeCheckout] = useState(hoyISO);
+  const [hastaCheckout, setHastaCheckout] = useState(hoyISO);
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
   const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
 
