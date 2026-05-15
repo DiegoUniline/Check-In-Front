@@ -16,11 +16,13 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { Link } from 'react-router-dom';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Inventario() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('all');
+  const [tab, setTab] = useState<'todo' | 'con' | 'sin' | 'bajo'>('todo');
   const [loading, setLoading] = useState(true);
   const [productos, setProductos] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -48,7 +50,14 @@ export default function Inventario() {
     const matchSearch = p.nombre?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                        p.codigo?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchCategory = filterCategoria === 'all' || (p.categoria_nombre || p.categoria) === filterCategoria;
-    return matchSearch && matchCategory;
+    const stock = Number(p.stock_actual || 0);
+    const min = Number(p.stock_minimo || 0);
+    const matchTab =
+      tab === 'todo' ? true :
+      tab === 'con' ? stock > 0 :
+      tab === 'sin' ? stock <= 0 :
+      stock > 0 && stock < min;
+    return matchSearch && matchCategory && matchTab;
   });
 
   const lowStock = productos.filter(p => (p.stock_actual || 0) < (p.stock_minimo || 20));
