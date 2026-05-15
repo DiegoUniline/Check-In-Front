@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { exportarReportePDF } from '@/lib/pdfExport';
 
 // Colores para gráficos
 const CHART_COLORS = [
@@ -68,6 +69,7 @@ export default function Reportes() {
   const [occupancyData, setOccupancyData] = useState<any[]>([]);
   const [sourceData, setSourceData] = useState<any[]>([]);
   const [roomTypeData, setRoomTypeData] = useState<any[]>([]);
+  const [historicoData, setHistoricoData] = useState<any[]>([]);
 
   useEffect(() => {
     cargarDatos();
@@ -97,14 +99,19 @@ export default function Reportes() {
         default:
           fechaDesde = startOfMonth(now);
       }
+      // Período anterior para comparativa
+      const diffDays = Math.max(1, Math.ceil((fechaHasta.getTime() - fechaDesde.getTime()) / 86400000));
+      const prevHasta = subDays(fechaDesde, 1);
+      const prevDesde = subDays(prevHasta, diffDays);
 
-      // Cargar datos del dashboard y estadísticas
-      const [dashStats, tiposHab, gastos, pagos, reservas] = await Promise.all([
+      // Cargar datos del dashboard y estadísticas (incluyendo período anterior)
+      const [dashStats, tiposHab, gastos, pagos, reservas, pagosPrev] = await Promise.all([
         api.getDashboardStats().catch(() => ({})),
         api.getTiposHabitacion().catch(() => []),
         api.getGastos({ fecha_desde: format(fechaDesde, 'yyyy-MM-dd'), fecha_hasta: format(fechaHasta, 'yyyy-MM-dd') }).catch(() => []),
         api.getPagos({ fecha_desde: format(fechaDesde, 'yyyy-MM-dd'), fecha_hasta: format(fechaHasta, 'yyyy-MM-dd') }).catch(() => []),
         api.getReservas().catch(() => []),
+        api.getPagos({ fecha_desde: format(prevDesde, 'yyyy-MM-dd'), fecha_hasta: format(prevHasta, 'yyyy-MM-dd') }).catch(() => []),
       ]);
 
       // Calculate stats
@@ -112,16 +119,36 @@ export default function Reportes() {
       const totalGastos = Array.isArray(gastos) ? gastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0) : 0;
       const ocupacionActual = dashStats?.ocupacion || dashStats?.porcentaje_ocupacion || 0;
       const totalReservas = Array.isArray(reservas) ? reservas.length : 0;
-      
+
+      const totalIngresosPrev = Array.isArray(pagosPrev) ? pagosPrev.reduce((s, p) => s + (Number(p.monto) || 0), 0) : 0;
+      const reservasPeriodo = Array.isArray(reservas)
+        ? reservas.filter((r: any) => {
+            const d = new Date(r.fecha_checkin);
+            return d >= fechaDesde && d <= fechaHasta;
+          }).length
+        : 0;
+      const reservasPrev = Array.isArray(reservas)
+        ? reservas.filter((r: any) => {
+            const d = new Date(r.fecha_checkin);
+            return d >= prevDesde && d <= prevHasta;
+          }).length
+        : 0;
+
+      const pct = (curr: number, prev: number) =>
+        prev <= 0 ? (curr > 0 ? 100 : 0) : Math.round(((curr - prev) / prev) * 100);
+
       setStats({
         ingresos: totalIngresos,
         ocupacion: Math.round(ocupacionActual),
         huespedes: dashStats?.huespedes_actuales || totalReservas,
         adr: totalReservas > 0 ? Math.round(totalIngresos / totalReservas) : 0,
-        ingresosChange: 0,
+        ingresosChange: pct(totalIngresos, totalIngresosPrev),
         ocupacionChange: 0,
-        huespedesChange: 0,
-        adrChange: 0,
+        huespedesChange: pct(reservasPeriodo, reservasPrev),
+        adrChange: pct(
+          reservasPeriodo > 0 ? totalIngresos / reservasPeriodo : 0,
+          reservasPrev > 0 ? totalIngresosPrev / reservasPrev : 0,
+        ),
       });
 
       // Generate revenue chart data
@@ -145,6 +172,31 @@ export default function Reportes() {
         });
       }
       setRevenueData(revenueChartData);
+
+      // Histórico 12 meses: ingresos, ADR, ocupación estimada
+      const totalHab = Array.isArray(tiposHab) && tiposHab.length
+        ? tiposHab.reduce((s: number, t: any) => s + (Number(t.cantidad_habitaciones) || 1), 0)
+        : (dashStats?.total_habitaciones || 1);
+      const hist: any[] = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = subMonths(now, i);
+        const mPagos = Array.isArray(pagos) ? pagos.filter((p: any) => {
+          const pd = new Date(p.fecha || p.created_at);
+          return pd.getMonth() === d.getMonth() && pd.getFullYear() === d.getFullYear();
+        }) : [];
+        const mReservas = Array.isArray(reservas) ? reservas.filter((r: any) => {
+          const rd = new Date(r.fecha_checkin);
+          return rd.getMonth() === d.getMonth() && rd.getFullYear() === d.getFullYear();
+        }) : [];
+        const ingresos = mPagos.reduce((s: number, p: any) => s + (Number(p.monto) || 0), 0);
+        const noches = mReservas.reduce((s: number, r: any) => s + (Number(r.noches) || 1), 0);
+        const diasMes = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        const adr = mReservas.length > 0 ? Math.round(ingresos / mReservas.length) : 0;
+        const ocup = totalHab > 0 ? Math.min(100, Math.round((noches / (totalHab * diasMes)) * 100)) : 0;
+        const revpar = totalHab > 0 ? Math.round(ingresos / (totalHab * diasMes)) : 0;
+        hist.push({ mes: monthNames[d.getMonth()], ingresos, adr, ocup, revpar });
+      }
+      setHistoricoData(hist);
 
       // Occupancy by day of week
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -201,8 +253,51 @@ export default function Reportes() {
   };
 
   const handleExport = () => {
-    toast({ title: 'Exportando...', description: 'Generando reporte en PDF' });
-    // TODO: Implement PDF export
+    try {
+      const periodoLabel = ({ semana: 'Última semana', mes: 'Este mes', trimestre: 'Trimestre', año: 'Este año' } as any)[periodo] || periodo;
+      exportarReportePDF({
+        titulo: 'Reporte de Operación',
+        subtitulo: 'Resumen financiero y de ocupación',
+        periodo: periodoLabel,
+        kpis: [
+          { label: 'Ingresos', value: `$${stats.ingresos.toLocaleString()}` },
+          { label: 'Ocupación', value: `${stats.ocupacion}%` },
+          { label: 'Huéspedes', value: String(stats.huespedes) },
+          { label: 'ADR', value: `$${stats.adr.toLocaleString()}` },
+        ],
+        tablas: [
+          {
+            title: 'Ingresos vs Gastos por mes',
+            head: ['Mes', 'Ingresos', 'Gastos', 'Utilidad'],
+            rows: revenueData.map((r) => [
+              r.mes,
+              `$${Number(r.ingresos).toLocaleString()}`,
+              `$${Number(r.gastos).toLocaleString()}`,
+              `$${(Number(r.ingresos) - Number(r.gastos)).toLocaleString()}`,
+            ]),
+          },
+          {
+            title: 'Histórico 12 meses (KPIs)',
+            head: ['Mes', 'Ingresos', 'ADR', 'Ocupación %', 'RevPAR'],
+            rows: historicoData.map((h) => [
+              h.mes,
+              `$${Number(h.ingresos).toLocaleString()}`,
+              `$${Number(h.adr).toLocaleString()}`,
+              `${h.ocup}%`,
+              `$${Number(h.revpar).toLocaleString()}`,
+            ]),
+          },
+          {
+            title: 'Rendimiento por tipo de habitación',
+            head: ['Tipo', 'Reservas', 'Ingresos'],
+            rows: roomTypeData.map((r) => [r.tipo, r.reservas, `$${Number(r.ingresos).toLocaleString()}`]),
+          },
+        ],
+      });
+      toast({ title: 'PDF generado', description: 'Se descargó el reporte' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudo generar el PDF', variant: 'destructive' });
+    }
   };
 
   return (
