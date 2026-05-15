@@ -978,6 +978,7 @@ export default function Compras() {
               </Table>
             </div>
           </Card>
+          </>)}
         </TabsContent>
 
         <TabsContent value="proveedores">
