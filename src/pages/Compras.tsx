@@ -3,7 +3,7 @@ import {
   ShoppingBag, Plus, Search, Package, Truck, 
   Calendar, DollarSign, CheckCircle2, Clock, AlertCircle,
   MoreVertical, Eye, FileText, Building, RefreshCw, X,
-  RotateCcw
+  RotateCcw, Trash2, Wallet, Receipt
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
