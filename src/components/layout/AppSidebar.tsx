@@ -23,6 +23,8 @@ import {
   Inbox,
   ScrollText
   ,ArrowUpDown
+  ,LogIn
+  ,LogOut
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';

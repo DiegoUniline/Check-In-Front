@@ -102,6 +102,14 @@ const AppRoutes = () => (
       }
     />
     <Route
+      path="/reservas/:vista"
+      element={
+        <ProtectedRoute viewKey="reservas">
+          <Reservas />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="/reservas-online"
       element={
         <ProtectedRoute viewKey="reservas">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { format, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -37,12 +37,13 @@ import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
 export default function Reservas() {
   const navigate = useNavigate();
+  const { vista } = useParams<{ vista?: string }>();
   const [loading, setLoading] = useState(true);
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [reservas, setReservas] = useState<any[]>([]);
@@ -81,7 +82,11 @@ export default function Reservas() {
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
   const [modalDetalle, setModalDetalle] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
-  const [tabActiva, setTabActiva] = useState<'recepcion' | 'checkin' | 'checkout' | 'reservas' | 'historico'>('recepcion');
+  const validViews = ['recepcion', 'checkin', 'checkout', 'timeline', 'historico'] as const;
+  type Vista = typeof validViews[number];
+  const tabActiva: Vista = (validViews as readonly string[]).includes(vista || '')
+    ? (vista as Vista)
+    : 'recepcion';
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
@@ -254,40 +259,8 @@ export default function Reservas() {
           </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={tabActiva} onValueChange={(v) => setTabActiva(v as typeof tabActiva)}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 max-w-3xl h-auto">
-            <TabsTrigger value="recepcion">
-              <BedDouble className="h-4 w-4 mr-1.5" />
-              Recepción
-            </TabsTrigger>
-            <TabsTrigger value="checkin" className="gap-1.5">
-              <LogIn className="h-4 w-4" />
-              <span>Check-In</span>
-              {llegadasHoy > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold tabular-nums">
-                  {llegadasHoy}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="checkout" className="gap-1.5">
-              <LogOut className="h-4 w-4" />
-              <span>Check-Out</span>
-              {salidasHoy > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold tabular-nums">
-                  {salidasHoy}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="reservas">
-              <CalendarDays className="h-4 w-4 mr-1.5" />
-              Timeline
-            </TabsTrigger>
-            <TabsTrigger value="historico">
-              <History className="h-4 w-4 mr-1.5" />
-              Histórico
-            </TabsTrigger>
-          </TabsList>
+        {/* Vistas seleccionables desde el sidebar */}
+        <Tabs value={tabActiva}>
 
           {/* TAB RECEPCIÓN: Cards por habitación */}
           <TabsContent value="recepcion" className="space-y-3 mt-3">
@@ -360,7 +333,7 @@ export default function Reservas() {
           </TabsContent>
 
           {/* TAB RESERVAS: Timeline existente */}
-          <TabsContent value="reservas" className="space-y-3 mt-3">
+          <TabsContent value="timeline" className="space-y-3 mt-3">
             <Card>
           <CardContent className="p-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
