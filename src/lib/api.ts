@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { registrarAuditoria } from '@/lib/auditoria';
+import { crearNotificacion } from '@/lib/notificaciones';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const IVA_RATE = 0.16;
@@ -387,6 +388,15 @@ class ApiClient {
       descripcion: `Reserva ${r?.numero_reserva || ''} (${r?.fecha_checkin} → ${r?.fecha_checkout})`,
       datos_despues: r,
     });
+    if (r?.origen === 'Web') {
+      void crearNotificacion({
+        tipo: 'reserva_online',
+        titulo: 'Nueva reserva online',
+        mensaje: `Reserva ${r.numero_reserva || ''} pendiente de revisar`,
+        url: '/reservas-online',
+        metadata: { reserva_id: r.id },
+      });
+    }
     return r;
   };
   updateReserva = async (id: string, data: any): Promise<any> => {
@@ -438,6 +448,12 @@ class ApiClient {
       const total = Number(reserva?.total || 0);
       await supabase.from('reservas').update({ total_pagado: totalPagado, saldo_pendiente: Math.max(0, total - totalPagado) }).eq('id', r.reserva_id);
     }
+    void crearNotificacion({
+      tipo: 'pago',
+      titulo: 'Pago registrado',
+      mensaje: `${r?.metodo_pago || 'Pago'} por $${Number(r?.monto || 0).toLocaleString()}`,
+      url: r?.reserva_id ? `/reservas` : undefined,
+    });
     return r;
   };
   deletePago = async (id: string): Promise<any> => { const { error } = await supabase.from('pagos').delete().eq('id', id); if (error) throw error; return { ok: true }; };

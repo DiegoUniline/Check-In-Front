@@ -1,4 +1,5 @@
-import { Bell, Search, Sun, Moon, Menu, LogOut, User, Settings, Hotel } from 'lucide-react';
+import { Search, Sun, Moon, Menu, LogOut, User, Settings, Hotel } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -123,16 +124,7 @@ export function Header({ title, subtitle }: HeaderProps) {
         </Button>
 
         {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative text-muted-foreground hover:text-foreground"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-            3
-          </span>
-        </Button>
+        <NotificationBell />
 
         {/* User menu */}
         <DropdownMenu>
