@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { formatCurrency } from '@/lib/currency';
 import {
   Table,
   TableBody,
@@ -218,7 +219,7 @@ export default function Gastos() {
       
       toast({
         title: 'Gasto registrado',
-        description: `${descripcion} - $${parseFloat(formData.monto).toFixed(2)}`,
+        description: `${descripcion} - ${formatCurrency(parseFloat(formData.monto))}`,
       });
       
       setIsNewGastoOpen(false);
