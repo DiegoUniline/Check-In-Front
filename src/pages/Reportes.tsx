@@ -368,7 +368,7 @@ export default function Reportes() {
                   <AreaChart data={serieTemporal}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="label" className="text-xs" />
-                    <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}{formatCurrency((v / 1000))}k`} />
+                    <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}${(v / 1000).toFixed(0)}k`} />
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
                     <Legend />
                     <Area type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
@@ -407,7 +407,7 @@ export default function Reportes() {
                       <BarChart data={porTipo}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis dataKey="tipo" className="text-xs" />
-                        <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}{formatCurrency((v / 1000))}k`} />
+                        <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}${(v / 1000).toFixed(0)}k`} />
                         <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
                         <Bar dataKey="ingresos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -428,7 +428,7 @@ export default function Reportes() {
                   <LineChart data={serieTemporal}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="label" className="text-xs" />
-                    <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}{formatCurrency((v / 1000))}k`} />
+                    <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}${(v / 1000).toFixed(0)}k`} />
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
                     <Line type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" strokeWidth={2} />
                   </LineChart>
