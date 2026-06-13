@@ -654,7 +654,7 @@ const noches = differenceInDays(
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-lg">{formatCurrency(hab.precio_base?)}</p>
+                      <p className="font-bold text-lg">{formatCurrency(hab.precio_base)}</p>
                       <p className="text-xs text-muted-foreground">/noche</p>
                     </div>
                   </CardContent>

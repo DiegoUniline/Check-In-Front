@@ -559,8 +559,8 @@ export default function Catalogos() {
                         <TableCell>
                           {tipo.capacidad_adultos}A + {tipo.capacidad_ninos}N (máx {tipo.capacidad_maxima})
                         </TableCell>
-                        <TableCell>{formatCurrency(tipo.precio_base?)}</TableCell>
-                        <TableCell>{formatCurrency(tipo.precio_persona_extra?)}</TableCell>
+                        <TableCell>{formatCurrency(tipo.precio_base)}</TableCell>
+                        <TableCell>{formatCurrency(tipo.precio_persona_extra)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
                             {(tipo.amenidades || []).slice(0, 3).map((a: string, i: number) => (

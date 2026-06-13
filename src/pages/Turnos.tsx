@@ -367,7 +367,7 @@ export default function Turnos() {
                       <p className="text-muted-foreground">Tarj: {formatCurrency(turno.ventasTarjeta)}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{formatCurrency(turno.fondoFinal?)}</TableCell>
+                  <TableCell className="font-medium">{formatCurrency(turno.fondoFinal)}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{turno.estado}</Badge>
                   </TableCell>
