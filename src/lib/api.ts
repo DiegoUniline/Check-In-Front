@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { registrarAuditoria } from '@/lib/auditoria';
 import { crearNotificacion } from '@/lib/notificaciones';
+import { setHotelCurrency } from '@/lib/currency';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const IVA_RATE = 0.16;
@@ -909,12 +910,22 @@ class ApiClient {
   getHotel = async (): Promise<any> => {
     const { data } = await supabase.from('hotels').select('*').eq('id', this.hid()).maybeSingle();
     if ((data as any)?.timezone) setHotelTimezone((data as any).timezone);
+    if (data) setHotelCurrency({
+      codigo: (data as any).moneda_codigo,
+      simbolo: (data as any).moneda_simbolo,
+      locale: (data as any).moneda_locale,
+    });
     return data;
   };
   updateHotel = async (data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('hotels').update(data).eq('id', this.hid()).select().single();
     if (error) throw error;
     if ((r as any)?.timezone) setHotelTimezone((r as any).timezone);
+    if (r) setHotelCurrency({
+      codigo: (r as any).moneda_codigo,
+      simbolo: (r as any).moneda_simbolo,
+      locale: (r as any).moneda_locale,
+    });
     return r;
   };
 
