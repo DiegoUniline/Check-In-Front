@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { registrarAuditoria } from '@/lib/auditoria';
 import { crearNotificacion } from '@/lib/notificaciones';
 import { setHotelCurrency, formatCurrency } from '@/lib/currency';
+import { withOfflineCache } from '@/lib/offlineCache';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const IVA_RATE = 0.16;
@@ -286,17 +287,20 @@ class ApiClient {
 
   // ------- Habitaciones -------
   getHabitaciones = async (params?: Record<string, string>): Promise<any> => {
-    let q = supabase.from('habitaciones').select('*, tipos_habitacion(*)').eq('hotel_id', this.hid()).order('numero');
-    if (params?.estado_habitacion) q = q.eq('estado_habitacion', params.estado_habitacion);
-    const { data, error } = await q;
-    if (error) throw error;
-    return (data || []).map((h: any) => ({
-      ...h,
-      tipo: h.tipos_habitacion?.nombre,
-      tipo_nombre: h.tipos_habitacion?.nombre,
-      tipo_codigo: h.tipos_habitacion?.codigo,
-      precio_base: h.tipos_habitacion?.precio_base,
-    }));
+    const key = `habitaciones:${this.hid()}:${params?.estado_habitacion || 'all'}`;
+    return withOfflineCache(key, async () => {
+      let q = supabase.from('habitaciones').select('*, tipos_habitacion(*)').eq('hotel_id', this.hid()).order('numero');
+      if (params?.estado_habitacion) q = q.eq('estado_habitacion', params.estado_habitacion);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []).map((h: any) => ({
+        ...h,
+        tipo: h.tipos_habitacion?.nombre,
+        tipo_nombre: h.tipos_habitacion?.nombre,
+        tipo_codigo: h.tipos_habitacion?.codigo,
+        precio_base: h.tipos_habitacion?.precio_base,
+      }));
+    });
   };
   getHabitacion = async (id: string): Promise<any> => {
     const { data, error } = await supabase.from('habitaciones').select('*, tipos_habitacion(*)').eq('id', id).maybeSingle();
@@ -327,8 +331,11 @@ class ApiClient {
 
   // ------- Tipos Habitación -------
   getTiposHabitacion = async (): Promise<any> => {
-    const { data, error } = await supabase.from('tipos_habitacion').select('*').eq('hotel_id', this.hid()).order('nombre');
-    if (error) throw error; return data || [];
+    const key = `tipos_habitacion:${this.hid()}`;
+    return withOfflineCache(key, async () => {
+      const { data, error } = await supabase.from('tipos_habitacion').select('*').eq('hotel_id', this.hid()).order('nombre');
+      if (error) throw error; return data || [];
+    });
   };
   createTipoHabitacion = async (data: any): Promise<any> => {
     const codigo =
@@ -358,11 +365,21 @@ class ApiClient {
 
   // ------- Clientes -------
   getClientes = async (params?: Record<string, string>): Promise<any> => {
-    let q = supabase.from('clientes').select('*').eq('hotel_id', this.hid()).order('nombre');
-    if (params?.search) q = q.ilike('nombre', `%${params.search}%`);
-    const { data, error } = await q;
-    if (error) throw error;
-    return (data || []).map((c: any) => this.sanitizeClienteResponse(c));
+    // Solo cacheamos la lista completa sin filtro de búsqueda (la búsqueda
+    // se evalúa local en offline filtrando el resultado cacheado).
+    if (params?.search) {
+      let q = supabase.from('clientes').select('*').eq('hotel_id', this.hid()).order('nombre');
+      q = q.ilike('nombre', `%${params.search}%`);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []).map((c: any) => this.sanitizeClienteResponse(c));
+    }
+    const key = `clientes:${this.hid()}`;
+    return withOfflineCache(key, async () => {
+      const { data, error } = await supabase.from('clientes').select('*').eq('hotel_id', this.hid()).order('nombre');
+      if (error) throw error;
+      return (data || []).map((c: any) => this.sanitizeClienteResponse(c));
+    });
   };
   getCliente = async (id: string): Promise<any> => {
     const { data, error } = await supabase.from('clientes').select('*').eq('id', id).maybeSingle();
@@ -388,18 +405,21 @@ class ApiClient {
 
   // ------- Reservas -------
   getReservas = async (params?: Record<string, string>): Promise<any> => {
-    let q = supabase.from('reservas').select('*, clientes(*), habitaciones(numero, tipos_habitacion(nombre)), tipos_habitacion(nombre)').eq('hotel_id', this.hid()).order('fecha_checkin', { ascending: false });
-    if (params?.estado) q = q.eq('estado', params.estado);
-    // Excluir reservas online aún pendientes de aprobación
-    q = q.or('origen.neq.Web,estado.neq.Pendiente');
-    const { data, error } = await q;
-    if (error) throw error;
-    return (data || []).map((r: any) => ({
-      ...r,
-      cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
-      habitacion_numero: r.habitaciones?.numero,
-      tipo_habitacion_nombre: r.tipos_habitacion?.nombre || r.habitaciones?.tipos_habitacion?.nombre,
-    }));
+    const key = `reservas:${this.hid()}:${params?.estado || 'all'}`;
+    return withOfflineCache(key, async () => {
+      let q = supabase.from('reservas').select('*, clientes(*), habitaciones(numero, tipos_habitacion(nombre)), tipos_habitacion(nombre)').eq('hotel_id', this.hid()).order('fecha_checkin', { ascending: false });
+      if (params?.estado) q = q.eq('estado', params.estado);
+      // Excluir reservas online aún pendientes de aprobación
+      q = q.or('origen.neq.Web,estado.neq.Pendiente');
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []).map((r: any) => ({
+        ...r,
+        cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
+        habitacion_numero: r.habitaciones?.numero,
+        tipo_habitacion_nombre: r.tipos_habitacion?.nombre || r.habitaciones?.tipos_habitacion?.nombre,
+      }));
+    });
   };
   getReserva = async (id: string): Promise<any> => {
     const { data, error } = await supabase.from('reservas').select('*, clientes(*), habitaciones(*, tipos_habitacion(*)), tipos_habitacion(*)').eq('id', id).maybeSingle();
@@ -594,10 +614,13 @@ class ApiClient {
 
   // ------- Limpieza -------
   getTareasLimpieza = async (params?: Record<string, string>): Promise<any> => {
-    let q = supabase.from('tareas_limpieza').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
-    if (params?.estado) q = q.eq('estado', params.estado);
-    const { data } = await q;
-    return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
+    const key = `tareas_limpieza:${this.hid()}:${params?.estado || 'all'}`;
+    return withOfflineCache(key, async () => {
+      let q = supabase.from('tareas_limpieza').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
+      if (params?.estado) q = q.eq('estado', params.estado);
+      const { data } = await q;
+      return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
+    });
   };
   getTareasLimpiezaHoy = async (): Promise<any> => {
     const today = todayLocal();
