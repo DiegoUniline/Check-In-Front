@@ -260,7 +260,7 @@ export default function PublicHotel() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-stone-50"><Loader2 className="h-6 w-6 animate-spin text-stone-400" /></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-stone-50 public-page"><Loader2 className="h-6 w-6 animate-spin text-stone-400" /></div>;
   }
   if (notFound || !hotel || !hotel.permite_reservas_online) {
     return (

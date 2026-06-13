@@ -42,7 +42,7 @@ const features = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden public-page">
       {/* NAV */}
       <header className="border-b bg-background/70 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
