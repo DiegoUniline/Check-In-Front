@@ -22,6 +22,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { exportarReportePDF } from '@/lib/pdfExport';
+import { formatCurrency, currencySymbol } from '@/lib/currency';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--info))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -237,18 +238,18 @@ export default function Reportes() {
       subtitulo: 'Resumen financiero, ocupación y operación',
       periodo: `${format(filtros.desde, 'dd MMM yyyy', { locale: es })} – ${format(filtros.hasta, 'dd MMM yyyy', { locale: es })}`,
       kpis: [
-        { label: 'Ingresos', value: `$${totalIngresos.toLocaleString()}` },
-        { label: 'Gastos', value: `$${totalGastos.toLocaleString()}` },
-        { label: 'Utilidad', value: `$${utilidad.toLocaleString()}` },
+        { label: 'Ingresos', value: formatCurrency(totalIngresos) },
+        { label: 'Gastos', value: formatCurrency(totalGastos) },
+        { label: 'Utilidad', value: formatCurrency(utilidad) },
         { label: 'Ocupación', value: `${ocupacion}%` },
-        { label: 'ADR', value: `$${adr.toLocaleString()}` },
-        { label: 'RevPAR', value: `$${revpar.toLocaleString()}` },
+        { label: 'ADR', value: formatCurrency(adr) },
+        { label: 'RevPAR', value: formatCurrency(revpar) },
       ],
       tablas: [
         { title: 'Por origen', head: ['Origen', 'Reservas', '%'], rows: porOrigen.map((o) => [o.name, o.count, `${o.value}%`]) },
-        { title: 'Por tipo de habitación', head: ['Tipo', 'Reservas', 'Ingresos'], rows: porTipo.map((t) => [t.tipo, t.reservas, `$${t.ingresos.toLocaleString()}`]) },
-        { title: 'Top habitaciones', head: ['Habitación', 'Reservas', 'Ingresos'], rows: porHabitacion.map((h) => [h.numero, h.reservas, `$${h.ingresos.toLocaleString()}`]) },
-        { title: 'Por usuario', head: ['Usuario', 'Reservas', 'Ingresos'], rows: porUsuario.map((u) => [u.nombre, u.reservas, `$${u.ingresos.toLocaleString()}`]) },
+        { title: 'Por tipo de habitación', head: ['Tipo', 'Reservas', 'Ingresos'], rows: porTipo.map((t) => [t.tipo, t.reservas, formatCurrency(t.ingresos)]) },
+        { title: 'Top habitaciones', head: ['Habitación', 'Reservas', 'Ingresos'], rows: porHabitacion.map((h) => [h.numero, h.reservas, formatCurrency(h.ingresos)]) },
+        { title: 'Por usuario', head: ['Usuario', 'Reservas', 'Ingresos'], rows: porUsuario.map((u) => [u.nombre, u.reservas, formatCurrency(u.ingresos)]) },
       ],
     });
     toast({ title: 'PDF generado' });
@@ -342,12 +343,12 @@ export default function Reportes() {
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 mb-6">
-        <KpiCard label="Ingresos" value={`$${totalIngresos.toLocaleString()}`} change={cambioIngresos} icon={DollarSign} color="primary" />
-        <KpiCard label="Gastos" value={`$${totalGastos.toLocaleString()}`} icon={DollarSign} color="destructive" />
-        <KpiCard label="Utilidad" value={`$${utilidad.toLocaleString()}`} icon={TrendingUp} color={utilidad >= 0 ? 'success' : 'destructive'} />
+        <KpiCard label="Ingresos" value={formatCurrency(totalIngresos)} change={cambioIngresos} icon={DollarSign} color="primary" />
+        <KpiCard label="Gastos" value={formatCurrency(totalGastos)} icon={DollarSign} color="destructive" />
+        <KpiCard label="Utilidad" value={formatCurrency(utilidad)} icon={TrendingUp} color={utilidad >= 0 ? 'success' : 'destructive'} />
         <KpiCard label="Ocupación" value={`${ocupacion}%`} icon={Percent} color="info" />
-        <KpiCard label="ADR" value={`$${adr.toLocaleString()}`} icon={BedDouble} color="warning" />
-        <KpiCard label="RevPAR" value={`$${revpar.toLocaleString()}`} icon={BarChart3} color="primary" />
+        <KpiCard label="ADR" value={formatCurrency(adr)} icon={BedDouble} color="warning" />
+        <KpiCard label="RevPAR" value={formatCurrency(revpar)} icon={BarChart3} color="primary" />
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -367,7 +368,7 @@ export default function Reportes() {
                   <AreaChart data={serieTemporal}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="label" className="text-xs" />
-                    <YAxis className="text-xs" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}${(v / 1000).toFixed(0)}k`} />
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
                     <Legend />
                     <Area type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
@@ -406,7 +407,7 @@ export default function Reportes() {
                       <BarChart data={porTipo}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis dataKey="tipo" className="text-xs" />
-                        <YAxis className="text-xs" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                        <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}${(v / 1000).toFixed(0)}k`} />
                         <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
                         <Bar dataKey="ingresos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -427,7 +428,7 @@ export default function Reportes() {
                   <LineChart data={serieTemporal}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="label" className="text-xs" />
-                    <YAxis className="text-xs" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <YAxis className="text-xs" tickFormatter={(v) => `${currencySymbol()}${(v / 1000).toFixed(0)}k`} />
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
                     <Line type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" strokeWidth={2} />
                   </LineChart>
