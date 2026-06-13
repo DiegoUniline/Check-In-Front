@@ -5,6 +5,14 @@ import {
   CalendarIcon, Download, RefreshCw, DollarSign, BedDouble, Users, BarChart3,
   TrendingUp, TrendingDown, Percent,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +29,12 @@ import {
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { exportarReportePDF } from '@/lib/pdfExport';
+import {
+  exportarReportePDF,
+  exportarReporteOcupacion,
+  exportarReporteIngresos,
+  exportarCorteCaja,
+} from '@/lib/pdfExport';
 import { formatCurrency, currencySymbol } from '@/lib/currency';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--info))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
@@ -255,6 +268,35 @@ export default function Reportes() {
     toast({ title: 'PDF generado' });
   };
 
+  const exportarOcupacion = () => {
+    exportarReporteOcupacion({
+      desde: filtros.desde,
+      hasta: filtros.hasta,
+      habitaciones,
+      reservas: reservasFiltradas,
+    });
+    toast({ title: 'PDF de ocupación generado' });
+  };
+
+  const exportarIngresos = () => {
+    exportarReporteIngresos({
+      desde: filtros.desde,
+      hasta: filtros.hasta,
+      pagos: pagosFiltrados,
+    });
+    toast({ title: 'PDF de ingresos generado' });
+  };
+
+  const exportarCorte = () => {
+    exportarCorteCaja({
+      desde: filtros.desde,
+      hasta: filtros.hasta,
+      pagos: pagosFiltrados,
+      gastos,
+    });
+    toast({ title: 'Corte de caja generado' });
+  };
+
   return (
     <MainLayout title="Reportes" subtitle="Dashboard ejecutivo · KPIs y análisis con filtros">
       {/* Toolbar de filtros */}
@@ -336,7 +378,27 @@ export default function Reportes() {
             <Button variant="outline" size="icon" onClick={cargar} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
-            <Button onClick={exportar}><Download className="mr-2 h-4 w-4" />Exportar PDF</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button><Download className="mr-2 h-4 w-4" />Exportar PDF</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Reportes disponibles</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={exportar}>
+                  <BarChart3 className="mr-2 h-4 w-4" /> Ejecutivo (general)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportarOcupacion}>
+                  <Percent className="mr-2 h-4 w-4" /> Ocupación
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportarIngresos}>
+                  <DollarSign className="mr-2 h-4 w-4" /> Ingresos
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportarCorte}>
+                  <TrendingUp className="mr-2 h-4 w-4" /> Corte de caja
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>
