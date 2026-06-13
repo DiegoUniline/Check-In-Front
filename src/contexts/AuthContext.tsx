@@ -101,6 +101,7 @@ useEffect(() => {
       const data = await api.login(email, password);
       setUser(data.user);
       localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.token) localStorage.setItem('token', data.token);
       if (email === 'admin@hotel.com') {
         localStorage.setItem('demoMode', 'true');
       }
