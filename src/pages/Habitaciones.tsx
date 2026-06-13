@@ -5,6 +5,7 @@ import {
   RotateCcw, Globe, GlobeLock
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { formatCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -661,7 +662,7 @@ export default function Habitaciones() {
             <div className="grid gap-2">
               <Label>Tipo de Habitación</Label>
               <ComboboxCreatable
-                options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base}` }))}
+                options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - ${formatCurrency(t.precio_base)}` }))}
                 value={formData.tipo_habitacion_id}
                 onValueChange={(v) => setFormData({ ...formData, tipo_habitacion_id: v })}
                 onCreate={async (nombre) => {
@@ -669,7 +670,7 @@ export default function Habitaciones() {
                     const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
                     setTiposHabitacion([...tiposHabitacion, newTipo]);
                     toast({ title: 'Tipo de habitación creado' });
-                    return { value: newTipo.id, label: `${newTipo.nombre} - $${newTipo.precio_base}` };
+                    return { value: newTipo.id, label: `${newTipo.nombre} - ${formatCurrency(newTipo.precio_base)}` };
                   } catch (e: any) {
                     toast({ title: 'Error', description: e.message, variant: 'destructive' });
                   }
