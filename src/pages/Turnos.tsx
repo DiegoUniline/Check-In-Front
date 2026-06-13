@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatCurrency } from '@/lib/currency';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -127,7 +128,7 @@ export default function Turnos() {
 
     toast({
       title: 'Turno abierto',
-      description: `Fondo inicial: $${fondo.toFixed(2)}`,
+      description: `Fondo inicial: ${formatCurrency(fondo)}`,
     });
     setIsAbrirDialogOpen(false);
     setFondoInicial('');
@@ -154,7 +155,7 @@ export default function Turnos() {
       title: 'Turno cerrado',
       description: diferencia === 0 
         ? 'Arqueo correcto' 
-        : `Diferencia: ${diferencia > 0 ? '+' : ''}$${diferencia.toFixed(2)}`,
+        : `Diferencia: ${diferencia > 0 ? '+' : ''}${formatCurrency(diferencia)}`,
       variant: diferencia === 0 ? 'default' : 'destructive',
     });
     
@@ -488,7 +489,7 @@ export default function Turnos() {
                         <CheckCircle2 className="h-5 w-5" /> Correcto
                       </span>
                     ) : (
-                      `${parseFloat(fondoContado) > efectivoEnCaja ? '+' : ''}$${(parseFloat(fondoContado) - efectivoEnCaja).toFixed(2)}`
+                      `${parseFloat(fondoContado) > efectivoEnCaja ? '+' : ''}${formatCurrency(parseFloat(fondoContado) - efectivoEnCaja)}`
                     )}
                   </span>
                 </CardContent>
