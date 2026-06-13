@@ -1,4 +1,4 @@
-import { Search, Sun, Moon, Menu, LogOut, User, Settings, Hotel } from 'lucide-react';
+import { Search, Sun, Moon, LogOut, User, Settings, Hotel } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/useAuth';
-import { useSidebar } from '@/components/ui/sidebar';
 
 interface HeaderProps {
   title?: string;
@@ -27,7 +26,6 @@ interface HeaderProps {
 export function Header({ title, subtitle }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout, refreshUser } = useAuth();
-  const { toggleSidebar } = useSidebar();
   const queryClient = useQueryClient();
   const isSuperAdmin = user?.email === 'diego.leon@uniline.mx' || user?.rol === 'SuperAdmin';
 
