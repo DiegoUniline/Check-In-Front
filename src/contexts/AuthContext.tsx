@@ -89,6 +89,18 @@ useEffect(() => {
         return;
       }
 
+      // Fallback: si hay sesión activa en Supabase aunque no haya token/user en localStorage
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          localStorage.setItem('token', session.access_token);
+          localStorage.setItem('user', JSON.stringify({ id: session.user.id, email: session.user.email }));
+          // Re-ejecuta bootstrap para hidratar perfil completo
+          void bootstrapAuth();
+          return;
+        }
+      } catch {}
       setIsLoading(false);
     };
 
