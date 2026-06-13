@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency, setHotelCurrency, currencyCode } from '@/lib/currency';
 import {
   Hotel as HotelIcon, MapPin, Phone, Mail, Users, BedDouble, CheckCircle2,
   Loader2, Star, Wifi, Wind, Tv, Coffee, Bath, Calendar as CalIcon, ChevronLeft, ChevronRight,
@@ -109,6 +110,11 @@ export default function PublicHotel() {
       const { data: h } = await (supabase.from('hotels') as any).select('*').eq('slug', slug).maybeSingle();
       if (!h) { setNotFound(true); setLoading(false); return; }
       setHotel(h as any);
+      setHotelCurrency({
+        codigo: (h as any).moneda_codigo,
+        simbolo: (h as any).moneda_simbolo,
+        locale: (h as any).moneda_locale,
+      });
       const [{ data: tps }, { data: hbs }] = await Promise.all([
         (supabase.from('tipos_habitacion') as any).select('*').eq('hotel_id', h.id).eq('publicar_web', true),
         (supabase.from('habitaciones') as any).select('id, numero, piso, tipo_habitacion_id, fotos, excluida_publica').eq('hotel_id', h.id).eq('excluida_publica', false),
@@ -454,9 +460,9 @@ export default function PublicHotel() {
 
                   <div className="mt-auto pt-3 border-t border-stone-100 text-right">
                     <div className="inline-block bg-emerald-700 text-white text-[11px] font-semibold rounded px-1.5 py-0.5 mb-1">15% de descuento</div>
-                    <div className="text-xs text-stone-400 line-through">${precioOriginal.toLocaleString()} MXN</div>
-                    <div className="text-2xl font-bold text-stone-900 leading-tight">${precio.toLocaleString()} <span className="text-sm font-medium text-stone-500">MXN</span></div>
-                    <div className="text-[11px] text-stone-500">por noche{ns > 1 ? ` · $${total.toLocaleString()} total` : ''}</div>
+                    <div className="text-xs text-stone-400 line-through">{formatCurrency(precioOriginal)} {currencyCode()}</div>
+                    <div className="text-2xl font-bold text-stone-900 leading-tight">{formatCurrency(precio)} <span className="text-sm font-medium text-stone-500">{currencyCode()}</span></div>
+                    <div className="text-[11px] text-stone-500">por noche{ns > 1 ? ` · ${formatCurrency(total)} total` : ''}</div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mt-2">
