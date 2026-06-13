@@ -668,6 +668,9 @@ export type Database = {
           hora_checkout: string | null
           id: string
           logo_url: string | null
+          moneda_codigo: string
+          moneda_locale: string
+          moneda_simbolo: string
           nombre: string
           pais: string | null
           permite_reservas_online: boolean
@@ -697,6 +700,9 @@ export type Database = {
           hora_checkout?: string | null
           id?: string
           logo_url?: string | null
+          moneda_codigo?: string
+          moneda_locale?: string
+          moneda_simbolo?: string
           nombre: string
           pais?: string | null
           permite_reservas_online?: boolean
@@ -726,6 +732,9 @@ export type Database = {
           hora_checkout?: string | null
           id?: string
           logo_url?: string | null
+          moneda_codigo?: string
+          moneda_locale?: string
+          moneda_simbolo?: string
           nombre?: string
           pais?: string | null
           permite_reservas_online?: boolean
