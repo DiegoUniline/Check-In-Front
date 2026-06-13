@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/hooks/useConfirm';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
+import { formatCurrency } from '@/lib/currency';
 
 interface ReservaDetalleModalProps {
   open: boolean;
@@ -315,7 +316,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     }
     
     if (saldoPendiente > 0.01) {
-      toast({ title: 'Saldo pendiente', description: `El huésped debe liquidar $${saldoPendiente.toFixed(2)}`, variant: 'destructive' });
+      toast({ title: 'Saldo pendiente', description: `El huésped debe liquidar ${formatCurrency(saldoPendiente)}`, variant: 'destructive' });
       return;
     }
     
@@ -347,7 +348,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
         metodo_pago: metodoPago,
         concepto: 'Abono a reserva',
       });
-      toast({ title: '✅ Pago registrado', description: `$${monto.toFixed(2)} con ${metodoPago}` });
+      toast({ title: '✅ Pago registrado', description: `${formatCurrency(monto)} con ${metodoPago}` });
       setMontoAbono('');
       await cargarReserva();
       onUpdate?.();
@@ -461,7 +462,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       if (result?.cargo) {
         toast({ 
           title: '✅ Devolución procesada', 
-          description: `Cargo por faltantes: $${result.cargo.total.toLocaleString()}` 
+          description: `Cargo por faltantes: ${formatCurrency(result.cargo.total)}` 
         });
       } else {
         toast({ title: '✅ Devolución registrada' });
@@ -1006,7 +1007,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                           <SelectContent>
                             {conceptosCargo.map(c => (
                               <SelectItem key={c.id} value={c.id}>
-                                {c.nombre} {c.precio_default > 0 && `- $${c.precio_default}`}
+                                {c.nombre} {c.precio_default > 0 && `- ${formatCurrency(c.precio_default)}`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1071,7 +1072,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                             {entregables.map(e => (
                               <SelectItem key={e.id} value={e.id}>
                                 {e.nombre} {e.requiere_devolucion ? '(devolver)' : ''} 
-                                {e.costo_reposicion > 0 && ` - $${e.costo_reposicion}/u`}
+                                {e.costo_reposicion > 0 && ` - ${formatCurrency(e.costo_reposicion)}/u`}
                               </SelectItem>
                             ))}
                           </SelectContent>
