@@ -21,7 +21,12 @@ import {
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { exportarReportePDF } from '@/lib/pdfExport';
+import {
+  exportarReportePDF,
+  exportarReporteOcupacion,
+  exportarReporteIngresos,
+  exportarCorteCaja,
+} from '@/lib/pdfExport';
 import { formatCurrency, currencySymbol } from '@/lib/currency';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--info))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
@@ -253,6 +258,35 @@ export default function Reportes() {
       ],
     });
     toast({ title: 'PDF generado' });
+  };
+
+  const exportarOcupacion = () => {
+    exportarReporteOcupacion({
+      desde: filtros.desde,
+      hasta: filtros.hasta,
+      habitaciones,
+      reservas: reservasFiltradas,
+    });
+    toast({ title: 'PDF de ocupación generado' });
+  };
+
+  const exportarIngresos = () => {
+    exportarReporteIngresos({
+      desde: filtros.desde,
+      hasta: filtros.hasta,
+      pagos: pagosFiltrados,
+    });
+    toast({ title: 'PDF de ingresos generado' });
+  };
+
+  const exportarCorte = () => {
+    exportarCorteCaja({
+      desde: filtros.desde,
+      hasta: filtros.hasta,
+      pagos: pagosFiltrados,
+      gastos,
+    });
+    toast({ title: 'Corte de caja generado' });
   };
 
   return (
