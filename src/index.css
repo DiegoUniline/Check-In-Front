@@ -303,6 +303,75 @@
     max-width: 100%;
   }
 
+  /* ============================================
+     RESPONSIVE GLOBAL OVERRIDES (mobile-first)
+     Aplican a TODO el sistema sin tocar cada vista.
+     ============================================ */
+  @media (max-width: 639px) {
+    /* Grids amplios degradan a 2 columnas en móvil */
+    .grid.grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.grid-cols-5,
+    .grid.grid-cols-6,
+    .grid.grid-cols-7,
+    .grid.grid-cols-8 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    /* TabsList con muchas pestañas → scroll horizontal en móvil */
+    [role="tablist"].grid {
+      display: flex !important;
+      grid-template-columns: none !important;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+    [role="tablist"].grid > * {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
+    /* Solo títulos de página H1 se reducen — no tocar KPIs (p.text-3xl) */
+    h1.text-3xl { font-size: 1.5rem; line-height: 2rem; }
+    h1.text-4xl { font-size: 1.875rem; line-height: 2.25rem; }
+    h1.text-5xl { font-size: 2.25rem; line-height: 2.5rem; }
+    h1.text-6xl { font-size: 2.5rem; line-height: 2.75rem; }
+
+    /* Contenedores con flex que apilen verticalmente cuando no hay sm:flex-row explícito */
+    /* (no podemos saberlo desde CSS; solo aseguramos wrap) */
+    .flex.items-center.justify-between { flex-wrap: wrap; row-gap: 0.5rem; }
+
+    /* Toolbars con .gap-4 reducen gap */
+    .gap-6 { gap: 1rem; }
+
+    /* Cards/paddings grandes se reducen */
+    .p-8 { padding: 1.25rem; }
+    .p-10 { padding: 1.25rem; }
+    .px-8 { padding-left: 1rem; padding-right: 1rem; }
+    .py-8 { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+  }
+
+  /* Tablas: siempre permitir scroll horizontal interno */
+  .table-wrapper, .relative.w-full.overflow-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Diálogos: en móvil ocupar casi todo el viewport sin tocar el override del autor */
+  @media (max-width: 639px) {
+    [role="dialog"][data-state="open"] {
+      width: calc(100vw - 0.75rem) !important;
+      max-width: calc(100vw - 0.75rem) !important;
+    }
+  }
+
+  /* Evitar zoom de iOS al enfocar inputs (font-size mínimo 16px en móvil) */
+  @media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
   /* Status indicator dots */
   .status-dot {
     @apply w-2.5 h-2.5 rounded-full shrink-0;
