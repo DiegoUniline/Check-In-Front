@@ -85,7 +85,7 @@ export function MobileBottomNav() {
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="grid grid-cols-5 h-16">
+        <div className="h-16" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
           {visiblePrimary.slice(0, 4).map((item) => {
             const active = isActive(item.url);
             return (
