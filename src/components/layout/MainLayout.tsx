@@ -1,10 +1,11 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Header } from './Header';
 import { AlertaSuscripcion } from '@/components/AlertaSuscripcion';
 import { MobileBottomNav } from './MobileBottomNav';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { CommandPalette } from '@/components/CommandPalette';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -13,8 +14,22 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <SidebarProvider>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <div
         className="flex min-h-[100dvh] w-full overflow-x-hidden"
         style={{
