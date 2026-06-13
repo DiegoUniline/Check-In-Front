@@ -614,10 +614,13 @@ class ApiClient {
 
   // ------- Limpieza -------
   getTareasLimpieza = async (params?: Record<string, string>): Promise<any> => {
-    let q = supabase.from('tareas_limpieza').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
-    if (params?.estado) q = q.eq('estado', params.estado);
-    const { data } = await q;
-    return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
+    const key = `tareas_limpieza:${this.hid()}:${params?.estado || 'all'}`;
+    return withOfflineCache(key, async () => {
+      let q = supabase.from('tareas_limpieza').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
+      if (params?.estado) q = q.eq('estado', params.estado);
+      const { data } = await q;
+      return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
+    });
   };
   getTareasLimpiezaHoy = async (): Promise<any> => {
     const today = todayLocal();
