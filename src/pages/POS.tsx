@@ -21,6 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
+import { formatCurrency } from '@/lib/currency';
 
 interface CartItem {
   producto: any;
@@ -129,7 +130,7 @@ export default function POS() {
 
   const formatCurrency = (value: number) => {
     const num = parseFloat(String(value)) || 0;
-    return isNaN(num) ? '$0.00' : `$${num.toFixed(2)}`;
+    return isNaN(num) ? formatCurrency(0) : formatCurrency(num);
   };
 
   const safeNumber = (value: any, defaultValue: number = 0): number => {

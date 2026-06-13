@@ -2,6 +2,7 @@ import { TrendingUp, FileText, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { formatCurrency, useCurrency } from '@/lib/currency';
 
 interface VentasDiaCardProps {
   ventas: {
@@ -13,19 +14,13 @@ interface VentasDiaCardProps {
 }
 
 export function VentasDiaCard({ ventas }: VentasDiaCardProps) {
+  useCurrency(); // re-render al cambiar de moneda
   // Ensure values are valid numbers
   const total = Number(ventas?.total) || 0;
   const alojamiento = Number(ventas?.alojamiento) || 0;
   const alimentos = Number(ventas?.alimentos) || 0;
   const servicios = Number(ventas?.servicios) || 0;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const getPercentage = (value: number) => total > 0 ? Math.round((value / total) * 100) : 0;
 

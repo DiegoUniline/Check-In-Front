@@ -38,6 +38,7 @@ import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/Nue
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { formatCurrency } from '@/lib/currency';
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
@@ -576,10 +577,10 @@ export default function Reservas() {
                                   {r.origen || 'Reserva'}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-right tabular-nums">${total.toLocaleString()}</TableCell>
-                              <TableCell className="text-right tabular-nums text-green-600">${pagado.toLocaleString()}</TableCell>
+                              <TableCell className="text-right tabular-nums">{formatCurrency(total)}</TableCell>
+                              <TableCell className="text-right tabular-nums text-green-600">{formatCurrency(pagado)}</TableCell>
                               <TableCell className={`text-right tabular-nums ${saldo > 0 ? 'text-orange-600 font-semibold' : ''}`}>
-                                ${saldo.toLocaleString()}
+                                {formatCurrency(saldo)}
                               </TableCell>
                               <TableCell className="text-center">
                                 <Button
@@ -893,7 +894,7 @@ function CheckInOutPanel({
                       <p className="font-medium text-sm truncate">{nombre}</p>
                       {saldo > 0 && (
                         <span className="text-[10px] font-bold tabular-nums text-rose-600 dark:text-rose-400">
-                          ${saldo.toLocaleString()}
+                          {formatCurrency(saldo)}
                         </span>
                       )}
                     </div>

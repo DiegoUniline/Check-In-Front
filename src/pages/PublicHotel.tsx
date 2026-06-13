@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency, setHotelCurrency, currencyCode } from '@/lib/currency';
 import {
   Hotel as HotelIcon, MapPin, Phone, Mail, Users, BedDouble, CheckCircle2,
   Loader2, Star, Wifi, Wind, Tv, Coffee, Bath, Calendar as CalIcon, ChevronLeft, ChevronRight,
@@ -109,6 +110,11 @@ export default function PublicHotel() {
       const { data: h } = await (supabase.from('hotels') as any).select('*').eq('slug', slug).maybeSingle();
       if (!h) { setNotFound(true); setLoading(false); return; }
       setHotel(h as any);
+      setHotelCurrency({
+        codigo: (h as any).moneda_codigo,
+        simbolo: (h as any).moneda_simbolo,
+        locale: (h as any).moneda_locale,
+      });
       const [{ data: tps }, { data: hbs }] = await Promise.all([
         (supabase.from('tipos_habitacion') as any).select('*').eq('hotel_id', h.id).eq('publicar_web', true),
         (supabase.from('habitaciones') as any).select('id, numero, piso, tipo_habitacion_id, fotos, excluida_publica').eq('hotel_id', h.id).eq('excluida_publica', false),
@@ -454,9 +460,9 @@ export default function PublicHotel() {
 
                   <div className="mt-auto pt-3 border-t border-stone-100 text-right">
                     <div className="inline-block bg-emerald-700 text-white text-[11px] font-semibold rounded px-1.5 py-0.5 mb-1">15% de descuento</div>
-                    <div className="text-xs text-stone-400 line-through">${precioOriginal.toLocaleString()} MXN</div>
-                    <div className="text-2xl font-bold text-stone-900 leading-tight">${precio.toLocaleString()} <span className="text-sm font-medium text-stone-500">MXN</span></div>
-                    <div className="text-[11px] text-stone-500">por noche{ns > 1 ? ` · $${total.toLocaleString()} total` : ''}</div>
+                    <div className="text-xs text-stone-400 line-through">{formatCurrency(precioOriginal)} {currencyCode()}</div>
+                    <div className="text-2xl font-bold text-stone-900 leading-tight">{formatCurrency(precio)} <span className="text-sm font-medium text-stone-500">{currencyCode()}</span></div>
+                    <div className="text-[11px] text-stone-500">por noche{ns > 1 ? ` · ${formatCurrency(total)} total` : ''}</div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mt-2">
@@ -575,15 +581,15 @@ export default function PublicHotel() {
                     </div>
 
                     <div className="rounded-xl border border-stone-200 p-3 bg-stone-50 text-sm space-y-1">
-                      <div className="flex justify-between text-stone-600"><span>Tarifa por noche</span><span className="font-medium text-stone-900">${tarifa.toLocaleString()}</span></div>
+                      <div className="flex justify-between text-stone-600"><span>Tarifa por noche</span><span className="font-medium text-stone-900">{formatCurrency(tarifa)}</span></div>
                       <div className="flex justify-between text-stone-600"><span>Noches</span><span className="font-medium text-stone-900">{nsBooking}</span></div>
                       <div className="flex justify-between font-serif text-base border-t border-stone-200 pt-2 mt-1">
-                        <span>Total</span><span>${totalEstim.toLocaleString()}</span>
+                        <span>Total</span><span>{formatCurrency(totalEstim)}</span>
                       </div>
                       {hotel.requiere_anticipo && nsBooking > 0 && (
                         <div className="flex justify-between text-amber-700 text-xs pt-1">
                           <span>Anticipo ({hotel.porcentaje_anticipo}%)</span>
-                          <span>${Math.round(totalEstim * Number(hotel.porcentaje_anticipo) / 100).toLocaleString()}</span>
+                          <span>{formatCurrency(Math.round(totalEstim * Number(hotel.porcentaje_anticipo) / 100))}</span>
                         </div>
                       )}
                       {bookingRange?.from && bookingRange?.to && !disponible && (
@@ -622,10 +628,10 @@ export default function PublicHotel() {
                 <div className="text-xs text-stone-500">Número de reserva</div>
                 <div className="text-xl font-bold tracking-wider">{confirmacion.numero}</div>
               </div>
-              <div className="flex justify-between"><span className="text-stone-500">Total estimado</span><span className="font-semibold">${confirmacion.total.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-stone-500">Total estimado</span><span className="font-semibold">{formatCurrency(confirmacion.total)}</span></div>
               {confirmacion.anticipo > 0 && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 mt-2">
-                  <div className="font-semibold mb-1 text-amber-900">Anticipo solicitado: ${confirmacion.anticipo.toLocaleString()}</div>
+                  <div className="font-semibold mb-1 text-amber-900">Anticipo solicitado: {formatCurrency(confirmacion.anticipo)}</div>
                   <p className="text-xs text-amber-800/80">El hotel te contactará para coordinar el método de pago del anticipo y confirmar tu reserva.</p>
                 </div>
               )}

@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { formatCurrency } from '@/lib/currency';
 import {
   Table,
   TableBody,
@@ -218,7 +219,7 @@ export default function Gastos() {
       
       toast({
         title: 'Gasto registrado',
-        description: `${descripcion} - $${parseFloat(formData.monto).toFixed(2)}`,
+        description: `${descripcion} - ${formatCurrency(parseFloat(formData.monto))}`,
       });
       
       setIsNewGastoOpen(false);
@@ -317,7 +318,7 @@ export default function Gastos() {
                 <TrendingDown className="h-5 w-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold">${totalMes.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalMes)}</p>
                 <p className="text-sm text-muted-foreground">Total del Mes</p>
               </div>
             </div>
@@ -330,7 +331,7 @@ export default function Gastos() {
                 <DollarSign className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold">${totalHoy.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalHoy)}</p>
                 <p className="text-sm text-muted-foreground">Gastos Hoy</p>
               </div>
             </div>
@@ -378,7 +379,7 @@ export default function Gastos() {
                   <Icon className="h-5 w-5 text-white" />
                 </div>
                 <p className="text-xs text-muted-foreground truncate">{cat.nombre}</p>
-                <p className="font-bold">${cat.total.toLocaleString()}</p>
+                <p className="font-bold">{formatCurrency(cat.total)}</p>
               </CardContent>
             </Card>
           );
@@ -486,7 +487,7 @@ export default function Gastos() {
                     <Badge variant="outline">{gasto.metodo_pago || gasto.metodoPago || 'N/A'}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-bold text-destructive">
-                    -${Number(gasto.monto).toLocaleString()}
+                    -{formatCurrency(Number(gasto.monto))}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -699,7 +700,7 @@ export default function Gastos() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Monto</p>
-                  <p className="font-bold text-lg text-destructive">-${Number(detalleModal.gasto.monto).toLocaleString()}</p>
+                  <p className="font-bold text-lg text-destructive">-{formatCurrency(Number(detalleModal.gasto.monto))}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Método de Pago</p>

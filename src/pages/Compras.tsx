@@ -56,6 +56,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { ComboboxCreatable, ComboboxOption } from '@/components/ui/combobox-creatable';
+import { formatCurrency } from '@/lib/currency';
 
 interface OrderItem {
   producto_id: string;
@@ -641,7 +642,7 @@ export default function Compras() {
                                     />
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
-                                    ${lineSub.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                    {formatCurrency(lineSub)}
                                   </TableCell>
                                   <TableCell>
                                     <Button
@@ -684,16 +685,16 @@ export default function Compras() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Subtotal</span>
-                          <span className="font-medium">${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                          <span className="font-medium">{formatCurrency(subtotal)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">IVA (16%)</span>
-                          <span className="font-medium">${impuestos.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                          <span className="font-medium">{formatCurrency(impuestos)}</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between text-base">
                           <span className="font-semibold">Total</span>
-                          <span className="font-bold text-primary">${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                          <span className="font-bold text-primary">{formatCurrency(total)}</span>
                         </div>
                         <Button onClick={handleCreateOrder} size="lg" className="w-full mt-2">
                           <CheckCircle2 className="h-4 w-4 mr-2" /> Guardar orden
@@ -756,7 +757,7 @@ export default function Compras() {
                     <DollarSign className="h-5 w-5 text-destructive" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-2xl font-bold truncate">${totalPendiente.toLocaleString()}</p>
+                    <p className="text-2xl font-bold truncate">{formatCurrency(totalPendiente)}</p>
                     <p className="text-sm text-muted-foreground truncate">Por Pagar</p>
                   </div>
                 </div>
@@ -851,7 +852,7 @@ export default function Compras() {
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Total</p>
-                            <p className="font-bold">${Number(orden.total || 0).toLocaleString()}</p>
+                            <p className="font-bold">{formatCurrency(Number(orden.total || 0))}</p>
                           </div>
                           <div className="col-span-2">
                             <p className="text-xs text-muted-foreground">Items</p>
@@ -953,7 +954,7 @@ export default function Compras() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-bold">
-                          ${Number(orden.total || 0).toLocaleString()}
+                          {formatCurrency(Number(orden.total || 0))}
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -1128,16 +1129,16 @@ export default function Compras() {
                 <div className="p-4 rounded-lg border bg-card">
                   <div className="flex items-center justify-between text-sm py-1">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">${Number(detalleModal.orden.subtotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-medium">{formatCurrency(Number(detalleModal.orden.subtotal || 0))}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm py-1">
                     <span className="text-muted-foreground">Impuestos</span>
-                    <span className="font-medium">${Number(detalleModal.orden.impuestos || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-medium">{formatCurrency(Number(detalleModal.orden.impuestos || 0))}</span>
                   </div>
                   <Separator className="my-2" />
                   <div className="flex items-center justify-between py-1">
                     <span className="font-semibold">Total</span>
-                    <span className="text-xl font-bold text-primary">${Number(detalleModal.orden.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-xl font-bold text-primary">{formatCurrency(Number(detalleModal.orden.total || 0))}</span>
                   </div>
                   {(() => {
                     const total = Number(detalleModal.orden.total || 0);
@@ -1147,12 +1148,12 @@ export default function Compras() {
                         <Separator className="my-2" />
                         <div className="flex items-center justify-between text-sm py-0.5">
                           <span className="text-muted-foreground">Pagado</span>
-                          <span className="font-semibold text-emerald-600">${totalPagadoOrden.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                          <span className="font-semibold text-emerald-600">{formatCurrency(totalPagadoOrden)}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm py-0.5">
                           <span className="text-muted-foreground">Saldo</span>
                           <span className={cn('font-semibold', saldo > 0 ? 'text-amber-600' : 'text-emerald-600')}>
-                            ${saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            {formatCurrency(saldo)}
                           </span>
                         </div>
                       </>
@@ -1179,8 +1180,8 @@ export default function Compras() {
                         <TableRow key={idx}>
                       <TableCell>{item.producto_nombre || item.producto || item.nombre}</TableCell>
                           <TableCell>{item.cantidad}</TableCell>
-                          <TableCell>${Number(item.precio_unitario || item.precioUnitario || 0).toLocaleString()}</TableCell>
-                      <TableCell className="text-right">${Number(item.subtotal || (item.cantidad * item.precio_unitario) || 0).toLocaleString()}</TableCell>
+                          <TableCell>{formatCurrency(Number(item.precio_unitario || item.precioUnitario || 0))}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(Number(item.subtotal || (item.cantidad * item.precio_unitario) || 0))}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1211,8 +1212,8 @@ export default function Compras() {
                     const saldo = Math.max(0, total - totalPagadoOrden);
                     return (
                       <div className="text-xs text-right">
-                        <div>Pagado: <span className="font-semibold text-emerald-600">${totalPagadoOrden.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
-                        <div>Saldo: <span className={cn('font-semibold', saldo > 0 ? 'text-amber-600' : 'text-emerald-600')}>${saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                        <div>Pagado: <span className="font-semibold text-emerald-600">{formatCurrency(totalPagadoOrden)}</span></div>
+                        <div>Saldo: <span className={cn('font-semibold', saldo > 0 ? 'text-amber-600' : 'text-emerald-600')}>{formatCurrency(saldo)}</span></div>
                       </div>
                     );
                   })()}
@@ -1235,7 +1236,7 @@ export default function Compras() {
                           <TableCell className="text-sm">{format(new Date(p.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
                           <TableCell><Badge variant="secondary">{p.metodo_pago}</Badge></TableCell>
                           <TableCell className="text-sm text-muted-foreground">{p.referencia || '—'}</TableCell>
-                          <TableCell className="text-right font-medium">${Number(p.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(Number(p.monto))}</TableCell>
                           <TableCell>
                             <Button variant="ghost" size="icon" onClick={() => handleEliminarPago(p.id)} aria-label="Eliminar pago">
                               <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />

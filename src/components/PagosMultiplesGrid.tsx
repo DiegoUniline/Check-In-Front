@@ -5,6 +5,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
+import { formatCurrency } from '@/lib/currency';
 
 export interface PagoItem {
   id: string;
@@ -123,7 +124,7 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
       <div className="rounded-md bg-muted/40 px-3 py-2 space-y-1">
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Pagado</span>
-          <span className="font-semibold tabular-nums">${totalPagado.toLocaleString()}</span>
+          <span className="font-semibold tabular-nums">{formatCurrency(totalPagado)}</span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Saldo</span>
@@ -131,7 +132,7 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
             'font-semibold tabular-nums',
             saldo > 0 ? 'text-amber-600' : 'text-primary'
           )}>
-            ${saldo.toLocaleString()}
+            {formatCurrency(saldo)}
           </span>
         </div>
       </div>

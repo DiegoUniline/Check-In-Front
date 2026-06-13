@@ -59,6 +59,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { ComboboxCreatable, ComboboxOption } from '@/components/ui/combobox-creatable';
+import { formatCurrency } from '@/lib/currency';
 
 export default function Productos() {
   const { toast } = useToast();
@@ -298,7 +299,7 @@ export default function Productos() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Valor Total</p>
-            <p className="text-2xl font-bold text-primary">${totalValue.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(totalValue)}</p>
           </CardContent>
         </Card>
       </div>
@@ -408,7 +409,7 @@ export default function Productos() {
                 <TableCell>
                   <Badge variant="outline">{producto.categoria_nombre || producto.categoria || '-'}</Badge>
                 </TableCell>
-                <TableCell className="text-right">${Number(producto.precio_venta || 0).toLocaleString()}</TableCell>
+                <TableCell className="text-right">{formatCurrency(Number(producto.precio_venta || 0))}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

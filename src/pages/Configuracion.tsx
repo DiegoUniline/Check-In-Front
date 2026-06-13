@@ -23,6 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/lib/api';
+import { CURRENCY_PRESETS } from '@/lib/currency';
 import { ChecklistConfig } from '@/components/configuracion/ChecklistConfig';
 import { WhatsAppConfig } from '@/components/configuracion/WhatsAppConfig';
 import { SaveButton, isDirty } from '@/components/ui/save-button';
@@ -46,6 +47,9 @@ const emptyHotel = {
   permiteReservasOnline: false,
   requiereAnticipo: false,
   porcentajeAnticipo: 30,
+  monedaCodigo: 'MXN',
+  monedaSimbolo: '$',
+  monedaLocale: 'es-MX',
 };
 
 export default function Configuracion() {
@@ -80,6 +84,9 @@ export default function Configuracion() {
       permiteReservasOnline: !!(h.permite_reservas_online ?? hotelData.permiteReservasOnline),
       requiereAnticipo: !!(h.requiere_anticipo ?? hotelData.requiereAnticipo),
       porcentajeAnticipo: Number(h.porcentaje_anticipo ?? hotelData.porcentajeAnticipo ?? 30),
+      monedaCodigo: h.moneda_codigo ?? hotelData.monedaCodigo ?? 'MXN',
+      monedaSimbolo: h.moneda_simbolo ?? hotelData.monedaSimbolo ?? '$',
+      monedaLocale: h.moneda_locale ?? hotelData.monedaLocale ?? 'es-MX',
     };
   };
 
@@ -116,6 +123,9 @@ export default function Configuracion() {
       permite_reservas_online: !!ui.permiteReservasOnline,
       requiere_anticipo: !!ui.requiereAnticipo,
       porcentaje_anticipo: Number(ui.porcentajeAnticipo) || 0,
+      moneda_codigo: (ui.monedaCodigo || 'MXN').toUpperCase(),
+      moneda_simbolo: ui.monedaSimbolo || '$',
+      moneda_locale: ui.monedaLocale || 'es-MX',
     };
   };
 
@@ -260,6 +270,36 @@ export default function Configuracion() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label>Moneda</Label>
+                  <Select
+                    value={hotelData.monedaCodigo || 'MXN'}
+                    onValueChange={(v) => {
+                      const preset = CURRENCY_PRESETS.find((p) => p.codigo === v);
+                      setHotelData({
+                        ...hotelData,
+                        monedaCodigo: v,
+                        monedaSimbolo: preset?.simbolo ?? hotelData.monedaSimbolo,
+                        monedaLocale: preset?.locale ?? hotelData.monedaLocale,
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CURRENCY_PRESETS.map((p) => (
+                        <SelectItem key={p.codigo} value={p.codigo}>
+                          {p.codigo} — {p.simbolo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Esta moneda se aplica a todos los precios, cobros y reportes del sistema. Los valores guardados no se convierten — solo cambia el formato y el código mostrado.
+                  </p>
                 </div>
               </CardContent>
             </Card>
