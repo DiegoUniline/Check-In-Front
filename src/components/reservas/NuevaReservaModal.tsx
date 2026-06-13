@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { formatCurrency } from '@/lib/currency';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -620,7 +621,7 @@ const noches = differenceInDays(
               <div className="space-y-2">
                 <Label>Tipo de habitación</Label>
                 <ComboboxCreatable
-                  options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - $${t.precio_base?.toLocaleString()}/noche` }))}
+                  options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - ${formatCurrency(t.precio_base)}/noche` }))}
                   value={formData.tipoHabitacion}
                   onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
                   onCreate={async (nombre) => {
