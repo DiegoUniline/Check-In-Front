@@ -1,68 +1,100 @@
-## Objetivo
-Que cada pantalla del sistema funcione correctamente en móvil (≤640 px), tablet (641–1024 px) y desktop (>1024 px), sin desbordes horizontales, con tablas usables y formularios cómodos al pulgar.
 
-## Estrategia transversal (aplica a todos los archivos)
+# Plan: Features gratis (sin cuentas externas)
 
-1. **Layout base**
-   - `MainLayout`/`Header`/`AppSidebar`: el sidebar ya colapsa en móvil; verificar que el botón `Menu` esté siempre visible y que `<main>` use `px-3 sm:px-4 lg:px-6` y `py-4 lg:py-6` sin paddings fijos grandes.
-   - Garantizar `overflow-x: hidden` solo en `body`, nunca dentro de contenedores que recortarían dropdowns.
+Voy a entregar en **3 tandas** para que puedas validar después de cada una. Si algo no te gusta, paramos antes de seguir.
 
-2. **Encabezados de página**
-   - Títulos: `text-xl sm:text-2xl lg:text-3xl`.
-   - Acciones (botones "Nuevo", filtros): pasar de `flex` a `flex-col sm:flex-row gap-2`, botones `w-full sm:w-auto`.
+---
 
-3. **Grids de KPIs / cards**
-   - Reemplazar `grid-cols-3/4/6` por `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-{n}`.
+## TANDA 1 — UX móvil nativa y tiempo real (lo más impactante)
 
-4. **Tablas (patrón "doble vista")**
-   - Envolver cada `<Table>` en `<div className="hidden md:block overflow-x-auto">`.
-   - Añadir, debajo, una vista mobile `<div className="md:hidden space-y-2">` que recorra los mismos datos y los muestre como `Card` apiladas con las 3–5 columnas más relevantes.
-   - Crear helper `src/components/datatable/ResponsiveTable.tsx` que reciba `columns`, `data`, `mobileRender` y aplique el patrón de forma consistente (Reservas, Historial, Clientes, Compras, Gastos, Productos, Inventario, Habitaciones, Catálogos, Turnos, Permisos, Usuarios, Auditoría, etc.).
+### 1. Sincronización en tiempo real (Supabase Realtime)
+- Migración: `ALTER PUBLICATION supabase_realtime ADD TABLE` para `reservas`, `habitaciones`, `tareas_limpieza`, `tareas_mantenimiento`, `pagos`, `notificaciones`.
+- Hook nuevo `src/hooks/useRealtimeSync.ts` que invalida queries de React Query cuando llega un cambio.
+- Se monta una sola vez en `MainLayout`. Si dos recepcionistas trabajan al mismo tiempo, los cambios aparecen al instante.
 
-5. **Formularios y modales**
-   - Diálogos: `max-w-[95vw] sm:max-w-lg md:max-w-2xl lg:max-w-4xl`, `max-h-[90vh] overflow-y-auto`.
-   - Grids internos: `grid-cols-1 sm:grid-cols-2` (en lugar de `grid-cols-2` fijo).
-   - Inputs `h-11` en móvil para áreas táctiles ≥44 px (vía `min-h-11`).
-   - Reservas → NuevaReservaModal, ReservaDetalleModal, DetalleReservaModal: revisar pasos del wizard, asegurando que el footer de navegación no se corte.
+### 2. Modo offline básico
+- Persistir queries críticas (reservas, habitaciones, tareas) en `localStorage` usando el persister de React Query (`@tanstack/react-query-persist-client` + `@tanstack/query-sync-storage-persister`).
+- Banner sticky superior cuando `navigator.onLine === false`: "Sin conexión — viendo datos guardados. Los cambios se sincronizarán al reconectar."
+- Cola simple de mutaciones offline en `localStorage` que se reintenta al volver online (solo para acciones idempotentes: cambiar estado de habitación, completar tarea de limpieza). Las acciones complejas (crear reserva, cobrar) se bloquean offline con mensaje claro.
 
-6. **Filtros y toolbars**
-   - Reservas, HistorialReservas, CheckIn, CheckOut, Reportes: convertir las barras `flex gap-3` en `flex-col md:flex-row` con `flex-wrap` y inputs `min-w-0`.
-   - Selects de fecha "Desde/Hasta": `grid grid-cols-2 sm:flex` para que en móvil ocupen una fila completa.
+### 3. Drawers móviles (bottom sheet)
+- Componente `ResponsiveDialog` (`src/components/ui/responsive-dialog.tsx`) que usa shadcn `Drawer` (vaul) en móvil y `Dialog` en desktop. Misma API que Dialog.
+- Reemplazar en: Nueva Reserva, Detalle de Reserva, Registrar Pago, Nueva Tarea, Detalle Habitación.
 
-7. **Gráficos (Recharts)**
-   - Asegurar siempre `ResponsiveContainer` con `width="100%"` y altura `h-[220px] sm:h-[280px] lg:h-[320px]`.
-   - En móvil, reducir `tickFormatter` y rotar etiquetas `angle={-25} textAnchor="end"` cuando aplique.
-   - Pie charts: ocultar `label` en móvil, mostrar `Legend` debajo.
+### 4. Gestos swipe
+- Componente `SwipeableCard` con `framer-motion` drag horizontal.
+- Reserva: swipe → izquierda = Check-out, derecha = Check-in (con confirmación + haptic feedback vía `navigator.vibrate`).
+- Tarea de limpieza: swipe derecha = Completar.
+- Solo activo en viewport `< 768px`.
 
-8. **Sidebar / navegación**
-   - Confirmar que `SidebarProvider` cierra el sheet móvil al navegar.
-   - El header `Hotel selector` (SuperAdmin) se oculta en `hidden md:flex` (ya está); añadir versión compacta dentro del dropdown de usuario en móvil.
+---
 
-9. **Timeline de reservas** (`TimelineGrid`)
-   - Habilitar scroll horizontal con sticky en la primera columna (habitación). En móvil reducir el ancho mínimo del día a 56 px y permitir zoom in/out con dos botones.
+## TANDA 2 — Operación y documentos
 
-10. **POS**
-    - Layout dos columnas → en móvil un Drawer inferior para el carrito; productos en grid `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`.
+### 5. Firma digital del huésped
+- Componente `SignaturePad` con `<canvas>` táctil (sin librería, ~80 líneas).
+- En el modal de check-in: aparece después de verificar datos. Se guarda como base64 PNG en `reservas.firma_huesped` (nueva columna `text`).
+- Botón "Limpiar" y "Confirmar firma".
 
-11. **Página pública (`PublicHotel`)**
-    - Hero `text-2xl sm:text-4xl`, galería con `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, calendario `w-full overflow-x-auto`.
+### 6. Reportes PDF
+- Librería: `jspdf` + `jspdf-autotable` (todo client-side, sin edge functions).
+- 3 reportes desde `/reportes`:
+  - **Ocupación**: % por día, habitaciones ocupadas vs disponibles, gráfico simple.
+  - **Ingresos**: por método de pago, por concepto, total del período.
+  - **Corte de caja**: por turno/usuario, ingresos - egresos del día.
+- Cada uno con logo del hotel, rango de fechas configurable, botón "Descargar PDF".
 
-12. **Landing**
-    - Revisar hero/secciones, tipografías fluidas y CTAs apilados en móvil.
+### 7. Compartir por WhatsApp (sin API, solo deep link)
+- Botón "Compartir por WhatsApp" en detalle de reserva → abre `https://wa.me/<telefono>?text=<mensaje>` con plantilla precargada (confirmación de reserva, link al recibo, etc.).
+- Plantillas configurables ya existen (`whatsapp_templates`), solo hay que conectar el botón.
+- No requiere API de WhatsApp Business, usa el handler nativo del SO.
 
-## Trabajo por pantalla (alcance concreto)
+---
 
-- Dashboard, Reservas, HistorialReservas, CheckIn, CheckOut, Limpieza, Mantenimiento, Habitaciones, Catálogos, Productos, Inventario, AjustesStock, HistorialAjustes, Compras, Proveedores, Gastos, Clientes, POS, Turnos, Reportes, Auditoría, Usuarios, Permisos, Configuración, AdminPlataforma, ReservasOnline, Landing, PublicHotel, Login/Signup/Forgot/Reset.
-- Componentes compartidos: `MainLayout`, `Header`, `AppSidebar`, `NotificationBell`, `TimelineGrid`/`Toolbar`/`Legend`, `RecepcionGrid`, todos los modales de `src/components/reservas/*`, `PagosMultiplesGrid`, `dashboard/*`, `datatable/*`.
+## TANDA 3 — Configuración avanzada
 
-## Verificación
-- QA en 360×800, 414×896, 768×1024, 1280×800 y 1920×1080.
-- Sin scroll horizontal involuntario en ninguna ruta.
-- Todos los modales caben en pantalla y son scrollables internamente.
-- Botones táctiles ≥44 px en móvil.
-- Tablas: vista cards en `<md`, vista tabla con scroll horizontal en `>=md` cuando supera el ancho.
+### 8. Multi-idioma ES/EN
+- Librería: `react-i18next`.
+- Archivos `src/locales/es.json` y `src/locales/en.json`.
+- Switch en perfil de usuario + auto-detección por `navigator.language`.
+- Cobertura: toda la UI pública (`/hotel/:slug`, landing, login, signup) y los textos del huésped en check-in. La parte administrativa interna queda solo en ES por ahora (es para staff mexicano).
 
-## Notas técnicas
-- Nuevo componente `ResponsiveTable` para evitar duplicar el patrón en 20+ archivos.
-- Sin cambios de lógica de negocio ni de esquema.
-- Sin nuevas dependencias: solo Tailwind utilities y shadcn primitives existentes (`Drawer`, `Sheet`, `ScrollArea`).
+### 9. Tarifas dinámicas
+- Nueva tabla `tarifas_dinamicas` (hotel_id, tipo_habitacion_id, regla_tipo `temporada|dia_semana|ocupacion`, fecha_inicio, fecha_fin, dia_semana, umbral_ocupacion, multiplicador, precio_fijo, prioridad).
+- Función SQL `calcular_precio_dinamico(tipo_habitacion_id, fecha_checkin, fecha_checkout)` que aplica reglas por prioridad.
+- UI en `/configuracion/tarifas`: crear/editar reglas con preview de precio resultante.
+- Al crear reserva se llama la función y se muestra "Tarifa base $X → Tarifa aplicada $Y (temporada alta)".
+
+### 10. Backups y exportación
+- Botón "Exportar todo" en SuperAdmin/Admin: dispara edge function `exportar-hotel` que genera un ZIP con todas las tablas del hotel en JSON + CSV.
+- Backups automáticos diarios: cron job (pg_cron) que guarda snapshot JSON en bucket de Storage `backups-hotel` (nuevo, privado), retención 30 días.
+- UI muestra lista de backups con botón descargar.
+
+---
+
+## Detalles técnicos
+
+**Dependencias nuevas:**
+- `@tanstack/react-query-persist-client`, `@tanstack/query-sync-storage-persister` (offline)
+- `jspdf`, `jspdf-autotable` (PDFs)
+- `react-i18next`, `i18next`, `i18next-browser-languagedetector` (i18n)
+- (`vaul` ya está incluido por shadcn Drawer; `framer-motion` ya está)
+
+**Migraciones SQL:**
+- Habilitar realtime en 6 tablas
+- Columna `firma_huesped` en `reservas`
+- Tabla `tarifas_dinamicas` + función `calcular_precio_dinamico`
+- Bucket `backups-hotel` + edge function `exportar-hotel` + cron
+
+**Riesgos:**
+- Offline + Realtime conviven bien si invalidamos el cache de RQ al reconectar.
+- Swipe puede chocar con scroll vertical — uso `drag="x"` con `dragConstraints` estrictos.
+- PDFs grandes (>500 reservas) pueden tardar 3-5s en cliente; añado loader.
+
+---
+
+## ¿Procedemos?
+
+Empiezo con **Tanda 1** completa (Realtime + Offline + Drawers + Swipe). Cuando confirmes que funciona bien, sigo con Tanda 2 y 3.
+
+Si quieres reordenar algo o saltar alguna feature, dímelo ahora.
