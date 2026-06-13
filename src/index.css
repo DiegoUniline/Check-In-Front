@@ -534,3 +534,40 @@ select,
 .sidebar-layout > main {
   @apply flex-1 min-w-0 overflow-x-hidden;
 }
+
+/* === Native-app polish (mobile) === */
+html, body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, [role="button"], nav, .no-select {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Safe-area utilities applied globally to fixed/full-screen pages */
+.safe-top    { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-x      { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+/* Auth & landing pages safe-area on mobile */
+@media (max-width: 1023px) {
+  .auth-page, .public-page {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Smooth scrolling on iOS */
+main, .scroll-area, [data-radix-scroll-area-viewport] {
+  -webkit-overflow-scrolling: touch;
+}
