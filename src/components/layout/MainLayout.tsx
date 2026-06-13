@@ -4,6 +4,7 @@ import { AppSidebar } from './AppSidebar';
 import { Header } from './Header';
 import { AlertaSuscripcion } from '@/components/AlertaSuscripcion';
 import { MobileBottomNav } from './MobileBottomNav';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -26,6 +27,7 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           <AppSidebar />
         </div>
         <SidebarInset className="flex flex-1 flex-col min-w-0">
+          <OfflineBanner />
           <AlertaSuscripcion />
           <Header title={title} subtitle={subtitle} />
           <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-6">
