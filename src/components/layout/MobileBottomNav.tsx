@@ -93,11 +93,14 @@ export function MobileBottomNav() {
                 key={item.url}
                 to={item.url}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors',
-                  active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                  'relative flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors',
+                  active ? 'text-primary' : 'text-muted-foreground active:text-foreground'
                 )}
               >
-                <item.icon className={cn('h-5 w-5', active && 'scale-110 transition-transform')} />
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-b-full bg-primary" />
+                )}
+                <item.icon className={cn('h-5 w-5 transition-transform', active && 'scale-110')} />
                 <span className="leading-none">{item.title}</span>
               </NavLink>
             );
