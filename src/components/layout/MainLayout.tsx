@@ -28,10 +28,7 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
         <SidebarInset className="flex flex-1 flex-col min-w-0">
           <AlertaSuscripcion />
           <Header title={title} subtitle={subtitle} />
-          <main
-            className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0 pb-24 lg:pb-6"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-          >
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-6">
             {children}
           </main>
         </SidebarInset>
