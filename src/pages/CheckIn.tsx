@@ -24,6 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { PagosMultiplesGrid, type PagoItem } from '@/components/PagosMultiplesGrid';
+import { formatCurrency } from '@/lib/currency';
 
 export default function CheckIn() {
   const { id } = useParams();
@@ -294,16 +295,16 @@ export default function CheckIn() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Hospedaje ({noches} noches)</span>
-                    <span>${subtotal.toLocaleString()}</span>
+                    <span>{formatCurrency(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Impuestos</span>
-                    <span>${impuestos.toLocaleString()}</span>
+                    <span>{formatCurrency(impuestos)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-primary">${total.toLocaleString()}</span>
+                    <span className="text-primary">{formatCurrency(total)}</span>
                   </div>
                 </div>
 

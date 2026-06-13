@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useConfirm } from '@/hooks/useConfirm';
+import { formatCurrency } from '@/lib/currency';
 
 export default function AdminPlataforma() {
   const queryClient = useQueryClient();
@@ -528,7 +529,7 @@ export default function AdminPlataforma() {
             </div>
             <div className="bg-white border rounded-xl p-4">
               <div className="flex items-center gap-2 text-xs text-slate-500"><DollarSign className="w-3 h-3" /> MRR</div>
-              <div className="text-2xl font-black mt-1">${Number(metricas.mrr || 0).toLocaleString('es-MX')}</div>
+              <div className="text-2xl font-black mt-1">{formatCurrency(Number(metricas.mrr || 0))}</div>
               <div className="text-[10px] text-slate-400">mensual recurrente</div>
             </div>
             <div className="bg-white border rounded-xl p-4">
@@ -608,9 +609,9 @@ export default function AdminPlataforma() {
                 </div>
                 <h3 className="font-bold text-lg">{p.nombre}</h3>
                 <p className="text-xs text-slate-500 mb-2">{p.descripcion}</p>
-                <p className="text-3xl font-black my-2">${Number(p.costo_mensual).toLocaleString('es-MX')}<span className="text-xs font-normal text-slate-400">/mes</span></p>
+                <p className="text-3xl font-black my-2">{formatCurrency(Number(p.costo_mensual))}<span className="text-xs font-normal text-slate-400">/mes</span></p>
                 {p.costo_anual > 0 && (
-                  <p className="text-xs text-slate-400">${Number(p.costo_anual).toLocaleString('es-MX')} MXN/año</p>
+                  <p className="text-xs text-slate-400">{formatCurrency(Number(p.costo_anual))} MXN/año</p>
                 )}
                 <div className="space-y-2 mt-4 text-xs text-slate-500">
                   <div className="flex justify-between"><span>Hoteles</span><span className="font-bold text-slate-900">{p.limite_hoteles >= 999 ? '∞' : p.limite_hoteles}</span></div>

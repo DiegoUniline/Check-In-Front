@@ -25,6 +25,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
+import { formatCurrency } from '@/lib/currency';
 
 export default function CheckOut() {
   const { id } = useParams();
@@ -193,14 +194,14 @@ export default function CheckOut() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">1</TableCell>
-                    <TableCell className="text-right">${subtotal.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">${subtotal.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(subtotal)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(subtotal)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className="text-muted-foreground">IVA (16%)</TableCell>
                     <TableCell></TableCell>
                     <TableCell></TableCell>
-                    <TableCell className="text-right">${impuestos.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(impuestos)}</TableCell>
                   </TableRow>
                   
                   {cargosExtra.length > 0 && (
@@ -217,8 +218,8 @@ export default function CheckOut() {
                         <TableRow key={idx}>
                           <TableCell>{cargo.concepto || cargo.producto_nombre}</TableCell>
                           <TableCell className="text-center">{cargo.cantidad || 1}</TableCell>
-                          <TableCell className="text-right">${Number(cargo.precio).toLocaleString()}</TableCell>
-                          <TableCell className="text-right">${(Number(cargo.precio) * (cargo.cantidad || 1)).toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(Number(cargo.precio))}</TableCell>
+                          <TableCell className="text-right">{formatCurrency((Number(cargo.precio) * (cargo.cantidad || 1)))}</TableCell>
                         </TableRow>
                       ))}
                     </>
@@ -270,20 +271,20 @@ export default function CheckOut() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal hospedaje</span>
-                    <span>${total.toLocaleString()}</span>
+                    <span>{formatCurrency(total)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Cargos adicionales</span>
-                    <span>${totalCargosExtra.toLocaleString()}</span>
+                    <span>{formatCurrency(totalCargosExtra)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-success">
                     <span>Pagado anteriormente</span>
-                    <span>-${totalPagado.toLocaleString()}</span>
+                    <span>-{formatCurrency(totalPagado)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Saldo a Pagar</span>
-                    <span className="text-primary">${saldoPendiente.toLocaleString()}</span>
+                    <span className="text-primary">{formatCurrency(saldoPendiente)}</span>
                   </div>
                 </div>
 

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { formatCurrency } from '@/lib/currency';
 
 export default function ReservasOnline() {
   const { toast } = useToast();
@@ -112,7 +113,7 @@ export default function ReservasOnline() {
                   </div>
 
                   <div className="flex justify-between items-center pt-2 border-t">
-                    <div className="font-bold text-primary">${Number(r.total || 0).toLocaleString()}</div>
+                    <div className="font-bold text-primary">{formatCurrency(Number(r.total || 0))}</div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"

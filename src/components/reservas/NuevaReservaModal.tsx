@@ -654,7 +654,7 @@ const noches = differenceInDays(
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-lg">${hab.precio_base?.toLocaleString()}</p>
+                      <p className="font-bold text-lg">{formatCurrency(hab.precio_base?)}</p>
                       <p className="text-xs text-muted-foreground">/noche</p>
                     </div>
                   </CardContent>
@@ -883,7 +883,7 @@ const noches = differenceInDays(
                     <div key={c.id} className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded">
                       <span className="text-sm">{c.concepto_nombre} x{c.cantidad}</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">${c.total.toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(c.total)}</span>
                         <Button variant="ghost" size="sm" onClick={() => setFormData(p => ({ ...p, cargos: p.cargos.filter(x => x.id !== c.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
                     </div>
@@ -1143,7 +1143,7 @@ const noches = differenceInDays(
                           <div key={p.id} className="flex justify-between items-center py-2 px-3 bg-primary-foreground/10 rounded">
                             <span className="text-sm">{p.metodo_pago}</span>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">${p.monto.toLocaleString()}</span>
+                              <span className="font-medium">{formatCurrency(p.monto)}</span>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-primary-foreground/20" onClick={() => handleEliminarPago(p.id)}>
                                 <X className="h-3 w-3" />
                               </Button>

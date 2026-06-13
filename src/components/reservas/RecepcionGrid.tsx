@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+import { formatCurrency } from '@/lib/currency';
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 
@@ -512,7 +513,7 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
         </div>
         {saldo > 0 && (
           <span className="text-[10px] font-bold tabular-nums text-rose-600 dark:text-rose-400">
-            ${saldo.toLocaleString()}
+            {formatCurrency(saldo)}
           </span>
         )}
       </div>
@@ -639,7 +640,7 @@ function RoomTable({ items, onRowClick }: { items: HabitacionStatus[]; onRowClic
                 <TableCell className="text-right text-sm tabular-nums font-medium">
                   {saldo > 0 ? (
                     <span className="text-rose-600 dark:text-rose-400 font-bold">
-                      ${saldo.toLocaleString()}
+                      {formatCurrency(saldo)}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>

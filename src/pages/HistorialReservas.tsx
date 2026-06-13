@@ -57,6 +57,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
+import { formatCurrency } from '@/lib/currency';
 
 export default function HistorialReservas() {
   const { toast } = useToast();
@@ -299,7 +300,7 @@ export default function HistorialReservas() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Ingresos (Est.)</p>
-                <p className="text-xl font-bold text-primary">${stats.ingresos.toLocaleString()}</p>
+                <p className="text-xl font-bold text-primary">{formatCurrency(stats.ingresos)}</p>
               </div>
               <DollarSign className="h-8 w-8 text-primary opacity-20" />
             </div>
@@ -519,7 +520,7 @@ export default function HistorialReservas() {
                           {reserva.noches || '-'}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          <span className="font-medium">${safeNumber(reserva.total).toLocaleString()}</span>
+                          <span className="font-medium">{formatCurrency(safeNumber(reserva.total))}</span>
                         </TableCell>
                         <TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
                         <TableCell>{getOrigenBadge(reserva.origen)}</TableCell>
@@ -675,7 +676,7 @@ export default function HistorialReservas() {
                         <div>
                           <p className="font-medium">{detalleCompleto.tipo_habitacion_nombre || 'Sin tipo'}</p>
                           <p className="text-sm text-muted-foreground">
-                            ${safeNumber(detalleCompleto.tarifa_noche).toLocaleString()} /noche
+                            {formatCurrency(safeNumber(detalleCompleto.tarifa_noche))} /noche
                           </p>
                         </div>
                         {detalleCompleto.habitacion_numero ? (
@@ -690,7 +691,7 @@ export default function HistorialReservas() {
                         <div className="p-2 bg-muted rounded text-sm flex justify-between items-center">
                           <span className="text-muted-foreground">Pers. Extra:</span>
                           <span className="font-medium">
-                            {detalleCompleto.personas_extra} x ${safeNumber(detalleCompleto.cargo_persona_extra).toLocaleString()}
+                            {detalleCompleto.personas_extra} x {formatCurrency(safeNumber(detalleCompleto.cargo_persona_extra))}
                           </span>
                         </div>
                       )}
@@ -708,34 +709,34 @@ export default function HistorialReservas() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-center mb-4">
                       <div className="p-2 bg-muted/50 rounded-lg">
                         <p className="text-xs text-muted-foreground">Subtotal</p>
-                        <p className="text-base font-bold">${safeNumber(detalleCompleto.subtotal_hospedaje).toLocaleString()}</p>
+                        <p className="text-base font-bold">{formatCurrency(safeNumber(detalleCompleto.subtotal_hospedaje))}</p>
                       </div>
                       <div className="p-2 bg-muted/50 rounded-lg">
                         <p className="text-xs text-muted-foreground">Extras</p>
                         <p className="text-base font-bold">
-                          ${(detalleCompleto.cargos?.reduce((s: number, c: any) => s + safeNumber(c.total), 0) || 0).toLocaleString()}
+                          {formatCurrency((detalleCompleto.cargos?.reduce((s: number, c: any) => s + safeNumber(c.total), 0) || 0))}
                         </p>
                       </div>
                       <div className="p-2 bg-muted/50 rounded-lg">
                         <p className="text-xs text-muted-foreground">Descuento</p>
                         <p className="text-base font-bold text-green-600">
-                          -${safeNumber(detalleCompleto.descuento_monto).toLocaleString()}
+                          -{formatCurrency(safeNumber(detalleCompleto.descuento_monto))}
                         </p>
                       </div>
                       <div className="p-2 bg-muted/50 rounded-lg">
                         <p className="text-xs text-muted-foreground">IVA</p>
-                        <p className="text-base font-bold">${safeNumber(detalleCompleto.total_impuestos).toLocaleString()}</p>
+                        <p className="text-base font-bold">{formatCurrency(safeNumber(detalleCompleto.total_impuestos))}</p>
                       </div>
                       <div className="p-2 bg-primary text-primary-foreground rounded-lg col-span-2 sm:col-span-1">
                         <p className="text-xs opacity-80">Total</p>
-                        <p className="text-lg font-bold">${safeNumber(detalleCompleto.total).toLocaleString()}</p>
+                        <p className="text-lg font-bold">{formatCurrency(safeNumber(detalleCompleto.total))}</p>
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-100 dark:border-green-800 flex justify-between items-center">
                         <p className="text-sm font-medium text-green-700 dark:text-green-300">Pagado</p>
-                        <p className="text-xl font-bold text-green-600">${safeNumber(detalleCompleto.total_pagado).toLocaleString()}</p>
+                        <p className="text-xl font-bold text-green-600">{formatCurrency(safeNumber(detalleCompleto.total_pagado))}</p>
                       </div>
                       <div className={`p-3 rounded-lg border flex justify-between items-center ${
                         safeNumber(detalleCompleto.total) - safeNumber(detalleCompleto.total_pagado) > 0.1
@@ -746,7 +747,7 @@ export default function HistorialReservas() {
                         <p className={`text-xl font-bold ${
                           safeNumber(detalleCompleto.total) - safeNumber(detalleCompleto.total_pagado) > 0.1 ? 'text-red-600' : 'text-slate-600'
                         }`}>
-                          ${(safeNumber(detalleCompleto.total) - safeNumber(detalleCompleto.total_pagado)).toLocaleString()}
+                          {formatCurrency((safeNumber(detalleCompleto.total) - safeNumber(detalleCompleto.total_pagado)))}
                         </p>
                       </div>
                     </div>
@@ -881,7 +882,7 @@ export default function HistorialReservas() {
                                 <TableCell>{cargo.concepto}</TableCell>
                                 <TableCell>{cargo.cantidad}</TableCell>
                                 <TableCell className="text-right font-medium">
-                                  ${safeNumber(cargo.total).toLocaleString()}
+                                  {formatCurrency(safeNumber(cargo.total))}
                                 </TableCell>
                               </TableRow>
                             ))
@@ -906,7 +907,7 @@ export default function HistorialReservas() {
                     <CardTitle className="text-base flex justify-between items-center">
                       <span>Historial de Pagos</span>
                       <Badge variant="outline" className="font-normal">
-                        Total: ${safeNumber(detalleCompleto.total_pagado).toLocaleString()}
+                        Total: {formatCurrency(safeNumber(detalleCompleto.total_pagado))}
                       </Badge>
                     </CardTitle>
                   </CardHeader>
@@ -938,7 +939,7 @@ export default function HistorialReservas() {
                                   {pago.referencia || '-'}
                                 </TableCell>
                                 <TableCell className="text-right font-medium text-green-600">
-                                  ${safeNumber(pago.monto).toLocaleString()}
+                                  {formatCurrency(safeNumber(pago.monto))}
                                 </TableCell>
                               </TableRow>
                             ))

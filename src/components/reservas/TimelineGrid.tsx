@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { UserPlus } from 'lucide-react';
+import { formatCurrency } from '@/lib/currency';
 
 interface TimelineGridProps {
   habitaciones: any[];
@@ -235,7 +236,7 @@ export function TimelineGrid({
                                   </p>
                                   {reserva.total && (
                                     <p className="font-medium text-primary">
-                                      ${Number(reserva.total).toLocaleString()}
+                                      {formatCurrency(Number(reserva.total))}
                                     </p>
                                   )}
                                   <div className="flex gap-2 items-center">
@@ -244,7 +245,7 @@ export function TimelineGrid({
                                     </Badge>
                                     {parseFloat(reserva.saldo_pendiente) > 0 && (
                                       <span className="text-xs text-destructive font-bold">
-                                        Debe: ${Number(reserva.saldo_pendiente).toLocaleString()}
+                                        Debe: {formatCurrency(Number(reserva.saldo_pendiente))}
                                       </span>
                                     )}
                                   </div>

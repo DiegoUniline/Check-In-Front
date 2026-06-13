@@ -581,15 +581,15 @@ export default function PublicHotel() {
                     </div>
 
                     <div className="rounded-xl border border-stone-200 p-3 bg-stone-50 text-sm space-y-1">
-                      <div className="flex justify-between text-stone-600"><span>Tarifa por noche</span><span className="font-medium text-stone-900">${tarifa.toLocaleString()}</span></div>
+                      <div className="flex justify-between text-stone-600"><span>Tarifa por noche</span><span className="font-medium text-stone-900">{formatCurrency(tarifa)}</span></div>
                       <div className="flex justify-between text-stone-600"><span>Noches</span><span className="font-medium text-stone-900">{nsBooking}</span></div>
                       <div className="flex justify-between font-serif text-base border-t border-stone-200 pt-2 mt-1">
-                        <span>Total</span><span>${totalEstim.toLocaleString()}</span>
+                        <span>Total</span><span>{formatCurrency(totalEstim)}</span>
                       </div>
                       {hotel.requiere_anticipo && nsBooking > 0 && (
                         <div className="flex justify-between text-amber-700 text-xs pt-1">
                           <span>Anticipo ({hotel.porcentaje_anticipo}%)</span>
-                          <span>${Math.round(totalEstim * Number(hotel.porcentaje_anticipo) / 100).toLocaleString()}</span>
+                          <span>{formatCurrency(Math.round(totalEstim * Number(hotel.porcentaje_anticipo) / 100))}</span>
                         </div>
                       )}
                       {bookingRange?.from && bookingRange?.to && !disponible && (
@@ -628,10 +628,10 @@ export default function PublicHotel() {
                 <div className="text-xs text-stone-500">Número de reserva</div>
                 <div className="text-xl font-bold tracking-wider">{confirmacion.numero}</div>
               </div>
-              <div className="flex justify-between"><span className="text-stone-500">Total estimado</span><span className="font-semibold">${confirmacion.total.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-stone-500">Total estimado</span><span className="font-semibold">{formatCurrency(confirmacion.total)}</span></div>
               {confirmacion.anticipo > 0 && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 mt-2">
-                  <div className="font-semibold mb-1 text-amber-900">Anticipo solicitado: ${confirmacion.anticipo.toLocaleString()}</div>
+                  <div className="font-semibold mb-1 text-amber-900">Anticipo solicitado: {formatCurrency(confirmacion.anticipo)}</div>
                   <p className="text-xs text-amber-800/80">El hotel te contactará para coordinar el método de pago del anticipo y confirmar tu reserva.</p>
                 </div>
               )}

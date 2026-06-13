@@ -663,8 +663,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 {devolucionForm.crearCargo && costoForm > 0 && (
                   <div className="p-2 bg-red-50 border border-red-200 rounded dark:bg-red-950/30 dark:border-red-800">
                     <p className="text-sm text-red-800 dark:text-red-200">
-                      <strong>Cargo:</strong> {faltantesForm} × ${costoForm.toLocaleString()} + IVA = 
-                      <strong> ${totalCargoForm.toLocaleString()}</strong>
+                      <strong>Cargo:</strong> {faltantesForm} × {formatCurrency(costoForm)} + IVA = 
+                      <strong> {formatCurrency(totalCargoForm)}</strong>
                     </p>
                   </div>
                 )}
@@ -848,14 +848,14 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                           </SelectContent>
                         </Select>
                         <div className="text-right">
-                          <p className="text-sm text-muted-foreground">${tarifaNoche.toLocaleString()} /noche</p>
+                          <p className="text-sm text-muted-foreground">{formatCurrency(tarifaNoche)} /noche</p>
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium">{r.tipo_habitacion_nombre || 'Sin tipo'}</p>
-                          <p className="text-sm text-muted-foreground">${tarifaNoche.toLocaleString()} /noche</p>
+                          <p className="text-sm text-muted-foreground">{formatCurrency(tarifaNoche)} /noche</p>
                         </div>
                         {r.habitacion_numero ? (
                           <Badge variant="outline" className="text-2xl px-4 py-2">{r.habitacion_numero}</Badge>
@@ -1035,12 +1035,12 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                             <div>
                               <p className="font-medium">{cargo.concepto || cargo.producto_nombre}</p>
                               <p className="text-xs text-muted-foreground">
-                                {cargo.cantidad} x ${safeNumber(cargo.precio_unitario).toLocaleString()}
+                                {cargo.cantidad} x {formatCurrency(safeNumber(cargo.precio_unitario))}
                                 {cargo.notas && ` • ${cargo.notas}`}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-medium">${safeNumber(cargo.total).toLocaleString()}</p>
+                              <p className="font-medium">{formatCurrency(safeNumber(cargo.total))}</p>
                               <p className="text-xs text-muted-foreground">
                                 {cargo.created_at ? format(new Date(cargo.created_at), 'd MMM HH:mm', { locale: es }) : ''}
                               </p>
@@ -1049,7 +1049,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                         ))}
                         <div className="flex justify-between pt-2 font-bold">
                           <span>Total cargos:</span>
-                          <span>${totalCargos.toLocaleString()}</span>
+                          <span>{formatCurrency(totalCargos)}</span>
                         </div>
                       </div>
                     ) : (
@@ -1127,7 +1127,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     </div>
                     {saldoPendiente > 0 && (
                       <Button variant="outline" className="w-full mt-2" onClick={() => setMontoAbono(saldoPendiente.toFixed(2))}>
-                        Liquidar total: ${saldoPendiente.toLocaleString()}
+                        Liquidar total: {formatCurrency(saldoPendiente)}
                       </Button>
                     )}
                   </CardContent>
@@ -1141,7 +1141,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                         {r.pagos.map((pago: any, idx: number) => (
                           <div key={pago.id || idx} className="flex items-center justify-between py-2 border-b last:border-0">
                             <div>
-                              <p className="font-medium">${safeNumber(pago.monto).toLocaleString()}</p>
+                              <p className="font-medium">{formatCurrency(safeNumber(pago.monto))}</p>
                               <p className="text-xs text-muted-foreground">{pago.metodo_pago} • {pago.concepto}</p>
                             </div>
                             <span className="text-xs text-muted-foreground">
@@ -1167,19 +1167,19 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between opacity-80">
-                  <span>Hospedaje ({nochesActuales}n × ${tarifaNoche.toLocaleString()})</span>
-                  <span>${subtotalHospedaje.toLocaleString()}</span>
+                  <span>Hospedaje ({nochesActuales}n × {formatCurrency(tarifaNoche)})</span>
+                  <span>{formatCurrency(subtotalHospedaje)}</span>
                 </div>
                 {totalPersonaExtra > 0 && (
                   <div className="flex justify-between opacity-80">
                     <span>Persona extra ({personasExtra})</span>
-                    <span>${totalPersonaExtra.toLocaleString()}</span>
+                    <span>{formatCurrency(totalPersonaExtra)}</span>
                   </div>
                 )}
                 {totalCargos > 0 && (
                   <div className="flex justify-between opacity-80">
                     <span>Cargos extras</span>
-                    <span>${totalCargos.toLocaleString()}</span>
+                    <span>{formatCurrency(totalCargos)}</span>
                   </div>
                 )}
                 {descuentoMonto > 0 && (
@@ -1188,30 +1188,30 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                       <Tag className="h-3 w-3" />
                       Descuento {r.descuento_tipo === 'Porcentaje' && `(${r.descuento_valor}%)`}
                     </span>
-                    <span>-${descuentoMonto.toLocaleString()}</span>
+                    <span>-{formatCurrency(descuentoMonto)}</span>
                   </div>
                 )}
                 <div className="flex justify-between opacity-80">
                   <span>IVA (16%)</span>
-                  <span>${impuestos.toLocaleString()}</span>
+                  <span>{formatCurrency(impuestos)}</span>
                 </div>
                 <Separator className="bg-primary-foreground/20" />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>${total.toLocaleString()}</span>
+                  <span>{formatCurrency(total)}</span>
                 </div>
                 
                 <div className="mt-3 p-3 rounded-lg bg-primary-foreground/10">
                   <div className="flex justify-between text-sm mb-1">
                     <span>Pagado</span>
-                    <span className="text-green-300">${pagado.toLocaleString()}</span>
+                    <span className="text-green-300">{formatCurrency(pagado)}</span>
                   </div>
                   <Progress value={porcentajePagado} className="h-2 bg-primary-foreground/20" />
                 </div>
                 
                 <div className={`p-4 rounded-lg text-center ${saldoPendiente > 0 ? 'bg-red-500/20' : 'bg-green-500/20'}`}>
                   <p className="text-xs opacity-80">Saldo pendiente</p>
-                  <p className="text-2xl font-bold">${saldoPendiente.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(saldoPendiente)}</p>
                 </div>
               </CardContent>
             </Card>

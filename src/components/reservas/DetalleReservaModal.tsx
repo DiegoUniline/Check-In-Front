@@ -520,38 +520,38 @@ const handleGuardarCambios = async () => {
               <CardContent className="pt-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Hospedaje ({nochesNuevas} noches × ${tarifaNoche.toLocaleString()})</span>
-                    <span>${subtotalHospedaje.toLocaleString()}</span>
+                    <span>Hospedaje ({nochesNuevas} noches × {formatCurrency(tarifaNoche)})</span>
+                    <span>{formatCurrency(subtotalHospedaje)}</span>
                   </div>
                   {totalCargos > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>Cargos extras</span>
-                      <span>${totalCargos.toLocaleString()}</span>
+                      <span>{formatCurrency(totalCargos)}</span>
                     </div>
                   )}
                   {descuentoMonto > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
                       <span>Descuento</span>
-                      <span>-${descuentoMonto.toLocaleString()}</span>
+                      <span>-{formatCurrency(descuentoMonto)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span>IVA (16%)</span>
-                    <span>${impuestos.toLocaleString()}</span>
+                    <span>{formatCurrency(impuestos)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>${totalGeneral.toLocaleString()}</span>
+                    <span>{formatCurrency(totalGeneral)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Pagado</span>
-                    <span className="text-green-600">${totalPagado.toLocaleString()}</span>
+                    <span className="text-green-600">{formatCurrency(totalPagado)}</span>
                   </div>
                   <div className="flex justify-between font-bold">
                     <span>Saldo pendiente</span>
                     <span className={saldoPendiente <= 0.01 ? "text-green-600" : "text-red-600"}>
-                      ${saldoPendiente.toLocaleString()}
+                      {formatCurrency(saldoPendiente)}
                     </span>
                   </div>
                 </div>
@@ -578,7 +578,7 @@ const handleGuardarCambios = async () => {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Saldo pendiente</AlertDialogTitle>
                           <AlertDialogDescription>
-                            El huésped tiene un saldo pendiente de <strong>${saldoPendiente.toLocaleString()}</strong>. 
+                            El huésped tiene un saldo pendiente de <strong>{formatCurrency(saldoPendiente)}</strong>. 
                             ¿Deseas registrar el pago primero?
                           </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -669,7 +669,7 @@ const handleGuardarCambios = async () => {
                           <span className="text-sm text-muted-foreground ml-2">x{c.cantidad}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">${safeParseFloat(c.total).toLocaleString()}</span>
+                          <span className="font-medium">{formatCurrency(safeParseFloat(c.total))}</span>
                           {puedeEditar && (
                             <Button variant="ghost" size="sm" onClick={() => handleEliminarCargo(c.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -681,7 +681,7 @@ const handleGuardarCambios = async () => {
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold">
                       <span>Total cargos</span>
-                      <span>${totalCargos.toLocaleString()}</span>
+                      <span>{formatCurrency(totalCargos)}</span>
                     </div>
                   </div>
                 )}
@@ -741,7 +741,7 @@ const handleGuardarCambios = async () => {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-green-600">${safeParseFloat(p.monto).toLocaleString()}</span>
+                          <span className="font-medium text-green-600">{formatCurrency(safeParseFloat(p.monto))}</span>
                           {puedeEditar && (
                             <Button variant="ghost" size="sm" onClick={() => handleEliminarPago(p.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -758,16 +758,16 @@ const handleGuardarCambios = async () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Total cuenta</span>
-                    <span className="font-medium">${totalGeneral.toLocaleString()}</span>
+                    <span className="font-medium">{formatCurrency(totalGeneral)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Total pagado</span>
-                    <span className="font-medium text-green-600">${totalPagado.toLocaleString()}</span>
+                    <span className="font-medium text-green-600">{formatCurrency(totalPagado)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Saldo pendiente</span>
                     <span className={saldoPendiente <= 0.01 ? "text-green-600" : "text-red-600"}>
-                      ${saldoPendiente.toLocaleString()}
+                      {formatCurrency(saldoPendiente)}
                     </span>
                   </div>
                 </div>

@@ -44,6 +44,7 @@ import { SortHeader } from '@/components/datatable/SortHeader';
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import { MultiImageUpload } from '@/components/ui/multi-image-upload';
+import { formatCurrency } from '@/lib/currency';
 
 export default function Catalogos() {
   const { toast } = useToast();
@@ -558,8 +559,8 @@ export default function Catalogos() {
                         <TableCell>
                           {tipo.capacidad_adultos}A + {tipo.capacidad_ninos}N (máx {tipo.capacidad_maxima})
                         </TableCell>
-                        <TableCell>${tipo.precio_base?.toLocaleString()}</TableCell>
-                        <TableCell>${tipo.precio_persona_extra?.toLocaleString()}</TableCell>
+                        <TableCell>{formatCurrency(tipo.precio_base?)}</TableCell>
+                        <TableCell>{formatCurrency(tipo.precio_persona_extra?)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
                             {(tipo.amenidades || []).slice(0, 3).map((a: string, i: number) => (
@@ -758,7 +759,7 @@ export default function Catalogos() {
                         </TableCell>
                         <TableCell>
                           {ent.costo_reposicion > 0 ? (
-                            <span className="font-medium">${ent.costo_reposicion.toLocaleString()}</span>
+                            <span className="font-medium">{formatCurrency(ent.costo_reposicion)}</span>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}

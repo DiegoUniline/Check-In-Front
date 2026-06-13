@@ -239,7 +239,7 @@ export default function Turnos() {
                     <Banknote className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">${efectivoEnCaja.toFixed(2)}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(efectivoEnCaja)}</p>
                     <p className="text-sm text-muted-foreground">Efectivo en Caja</p>
                   </div>
                 </div>
@@ -252,7 +252,7 @@ export default function Turnos() {
                     <ArrowDownCircle className="h-5 w-5 text-success" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-success">${totalIngresos.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-success">{formatCurrency(totalIngresos)}</p>
                     <p className="text-sm text-muted-foreground">Ingresos</p>
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export default function Turnos() {
                     <ArrowUpCircle className="h-5 w-5 text-destructive" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-destructive">${totalEgresos.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-destructive">{formatCurrency(totalEgresos)}</p>
                     <p className="text-sm text-muted-foreground">Egresos</p>
                   </div>
                 </div>
@@ -322,7 +322,7 @@ export default function Turnos() {
                         "text-right font-medium",
                         mov.tipo === 'Ingreso' ? 'text-success' : 'text-destructive'
                       )}>
-                        {mov.tipo === 'Ingreso' ? '+' : '-'}${mov.monto.toFixed(2)}
+                        {mov.tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(mov.monto)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -360,14 +360,14 @@ export default function Turnos() {
                     {format(turno.fechaInicio, "d MMM yyyy", { locale: es })}
                   </TableCell>
                   <TableCell>{turno.usuario}</TableCell>
-                  <TableCell>${turno.fondoInicial.toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(turno.fondoInicial)}</TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <p>Efvo: ${turno.ventasEfectivo.toFixed(2)}</p>
-                      <p className="text-muted-foreground">Tarj: ${turno.ventasTarjeta.toFixed(2)}</p>
+                      <p>Efvo: {formatCurrency(turno.ventasEfectivo)}</p>
+                      <p className="text-muted-foreground">Tarj: {formatCurrency(turno.ventasTarjeta)}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">${turno.fondoFinal?.toFixed(2)}</TableCell>
+                  <TableCell className="font-medium">{formatCurrency(turno.fondoFinal?)}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{turno.estado}</Badge>
                   </TableCell>
@@ -440,19 +440,19 @@ export default function Turnos() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Fondo Inicial</p>
-                    <p className="font-medium">${turnoActual?.fondoInicial.toFixed(2)}</p>
+                    <p className="font-medium">{formatCurrency(turnoActual?.fondoInicial)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Ingresos Efectivo</p>
-                    <p className="font-medium text-success">+${ingresos.filter(m => m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0).toFixed(2)}</p>
+                    <p className="font-medium text-success">+{formatCurrency(ingresos.filter(m => m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0))}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Egresos Efectivo</p>
-                    <p className="font-medium text-destructive">-${egresos.filter(m => m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0).toFixed(2)}</p>
+                    <p className="font-medium text-destructive">-{formatCurrency(egresos.filter(m => m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0))}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Esperado en Caja</p>
-                    <p className="font-bold text-lg">${efectivoEnCaja.toFixed(2)}</p>
+                    <p className="font-bold text-lg">{formatCurrency(efectivoEnCaja)}</p>
                   </div>
                 </div>
               </CardContent>
