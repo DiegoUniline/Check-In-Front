@@ -1,4 +1,4 @@
-import { Search, Sun, Moon, Menu, LogOut, User, Settings, Hotel } from 'lucide-react';
+import { Search, Sun, Moon, LogOut, User, Settings, Hotel } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/useAuth';
-import { useSidebar } from '@/components/ui/sidebar';
 
 interface HeaderProps {
   title?: string;
@@ -27,7 +26,6 @@ interface HeaderProps {
 export function Header({ title, subtitle }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout, refreshUser } = useAuth();
-  const { toggleSidebar } = useSidebar();
   const queryClient = useQueryClient();
   const isSuperAdmin = user?.email === 'diego.leon@uniline.mx' || user?.rol === 'SuperAdmin';
 
@@ -57,25 +55,21 @@ export function Header({ title, subtitle }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-card px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-3 lg:px-6">
       {/* Left section */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden"
-          onClick={toggleSidebar}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-        
-        {title && (
-          <div className="hidden sm:block">
-            <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
+          <Hotel className="h-5 w-5" />
+        </div>
+        {title ? (
+          <div className="min-w-0">
+            <h1 className="text-base lg:text-lg font-semibold text-foreground truncate">{title}</h1>
             {subtitle && (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
+              <p className="hidden sm:block text-sm text-muted-foreground truncate">{subtitle}</p>
             )}
           </div>
+        ) : (
+          <span className="lg:hidden font-semibold text-foreground">Hotel</span>
         )}
       </div>
 
