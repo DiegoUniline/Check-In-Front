@@ -43,6 +43,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { formatCurrency } from '@/lib/currency';
 
 interface DetalleReservaModalProps {
   open: boolean;
@@ -180,7 +181,7 @@ export function DetalleReservaModal({
         metodo_pago: pagoMetodo,
         concepto: 'Pago adicional',
       });
-      toast({ title: '✅ Pago registrado', description: `$${monto.toLocaleString()} - ${pagoMetodo}` });
+      toast({ title: '✅ Pago registrado', description: `${formatCurrency(monto)} - ${pagoMetodo}` });
       setPagoMonto('');
       cargarDetalles();
       onSuccess?.();
@@ -319,7 +320,7 @@ const handleGuardarCambios = async () => {
     if (saldoPendiente > 0.01) { // Tolerancia para decimales
       toast({ 
         title: '⚠️ Saldo pendiente', 
-        description: `Hay un saldo de $${saldoPendiente.toLocaleString()} por cobrar`,
+        description: `Hay un saldo de ${formatCurrency(saldoPendiente)} por cobrar`,
         variant: 'destructive'
       });
       return;
