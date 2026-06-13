@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { registrarAuditoria } from '@/lib/auditoria';
 import { crearNotificacion } from '@/lib/notificaciones';
-import { setHotelCurrency } from '@/lib/currency';
+import { setHotelCurrency, formatCurrency } from '@/lib/currency';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const IVA_RATE = 0.16;
@@ -516,7 +516,7 @@ class ApiClient {
     void crearNotificacion({
       tipo: 'pago',
       titulo: 'Pago registrado',
-      mensaje: `${r?.metodo_pago || 'Pago'} por $${Number(r?.monto || 0).toLocaleString()}`,
+      mensaje: `${r?.metodo_pago || 'Pago'} por ${formatCurrency(r?.monto || 0)}`,
       url: r?.reserva_id ? `/reservas` : undefined,
     });
     return r;
