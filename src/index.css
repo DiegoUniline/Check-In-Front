@@ -537,7 +537,8 @@ select,
 
 /* === Native-app polish (mobile) === */
 html, body {
-  overscroll-behavior-y: none;
+  overflow-y: auto;
+  overscroll-behavior-x: none;
   -webkit-tap-highlight-color: transparent;
 }
 

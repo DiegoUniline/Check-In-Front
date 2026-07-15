@@ -254,11 +254,11 @@ export default function PublicHotel() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-stone-50 public-page"><Loader2 className="h-6 w-6 animate-spin text-stone-400" /></div>;
+    return <div className="public-page h-[100dvh] overflow-y-auto flex items-center justify-center bg-stone-50"><Loader2 className="h-6 w-6 animate-spin text-stone-400" /></div>;
   }
   if (notFound || !hotel || !hotel.permite_reservas_online) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center gap-4 bg-stone-50 text-stone-900">
+      <div className="public-page h-[100dvh] overflow-y-auto flex flex-col items-center justify-center p-6 text-center gap-4 bg-stone-50 text-stone-900">
         <HotelIcon className="h-10 w-10 text-stone-400" />
         <h1 className="text-2xl font-serif">Hotel no disponible</h1>
         <p className="text-stone-600 max-w-md">Este hotel no tiene activadas las reservas en línea o el enlace no es correcto.</p>
@@ -268,7 +268,7 @@ export default function PublicHotel() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 [color-scheme:light] [&_input]:bg-white [&_input]:text-stone-900 [&_input]:border-stone-200 [&_textarea]:bg-white [&_textarea]:text-stone-900 [&_textarea]:border-stone-200 [&_[role=combobox]]:bg-white [&_[role=combobox]]:text-stone-900">
+    <div data-scroll-container className="public-page h-[100dvh] overflow-y-auto overscroll-contain bg-stone-50 text-stone-900 [color-scheme:light] [&_input]:bg-white [&_input]:text-stone-900 [&_input]:border-stone-200 [&_textarea]:bg-white [&_textarea]:text-stone-900 [&_textarea]:border-stone-200 [&_[role=combobox]]:bg-white [&_[role=combobox]]:text-stone-900">
       {/* Hero */}
       <header className="relative overflow-hidden text-stone-50">
         <img

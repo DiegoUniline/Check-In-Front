@@ -46,6 +46,7 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           <AlertaSuscripcion />
           <Header title={title} subtitle={subtitle} />
           <main
+            data-scroll-container
             className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-6"
             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
           >
