@@ -46,6 +46,8 @@ import Landing from "./pages/Landing";
 import PublicHotel from "./pages/PublicHotel";
 import ScrollToTop from "./components/ScrollToTop";
 import Chats from "./pages/Chats";
+import WhatsAppAgente from "./pages/WhatsAppAgente";
+import WhatsAppConexion from "./pages/WhatsAppConexion";
 
 const queryClient = new QueryClient();
 
@@ -124,6 +126,22 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="chats">
           <Chats />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/whatsapp/agente"
+      element={
+        <ProtectedRoute viewKey="configuracion">
+          <WhatsAppAgente />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/whatsapp/conexion"
+      element={
+        <ProtectedRoute viewKey="configuracion">
+          <WhatsAppConexion />
         </ProtectedRoute>
       }
     />
