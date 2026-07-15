@@ -89,6 +89,14 @@ Deno.serve(async (req) => {
       for (const m of list) {
         await procesarMensaje(admin, hotelId, m);
       }
+      // Disparar agente IA para mensajes entrantes (no bloqueante)
+      for (const m of list) {
+        const key = (m.key as Record<string, unknown> | undefined) ?? {};
+        if (key.fromMe) continue;
+        const jid = (key.remoteJid as string) ?? "";
+        if (jid.endsWith("@g.us")) continue;
+        dispararAgente(hotelId, jid).catch((e) => console.error("agent trigger error", e));
+      }
       return json({ ok: true, procesados: list.length });
     }
 
@@ -257,4 +265,28 @@ async function procesarMensaje(
       .update({ no_leidos: (chat.no_leidos ?? 0) + 1 })
       .eq("id", chat.id);
   }
+}
+
+async function dispararAgente(hotelId: string, remoteJid: string) {
+  const { wa_id } = parseJid(remoteJid);
+  const admin = (await import("npm:@supabase/supabase-js@2.45.0")).createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { data: chat } = await admin
+    .from("wa_chats")
+    .select("id, estado_bot")
+    .eq("hotel_id", hotelId)
+    .eq("wa_id", wa_id)
+    .maybeSingle();
+  if (!chat || chat.estado_bot !== "bot") return;
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/wa-ai-agent`;
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    },
+    body: JSON.stringify({ chat_id: chat.id }),
+  }).catch((e) => console.error("wa-ai-agent invoke", e));
 }

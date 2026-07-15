@@ -27,6 +27,7 @@ import { CURRENCY_PRESETS } from '@/lib/currency';
 import { ChecklistConfig } from '@/components/configuracion/ChecklistConfig';
 import { WhatsAppConfig } from '@/components/configuracion/WhatsAppConfig';
 import { EvolutionConfig } from '@/components/configuracion/EvolutionConfig';
+import { WhatsAppAgentConfig } from '@/components/configuracion/WhatsAppAgentConfig';
 import { SaveButton, isDirty } from '@/components/ui/save-button';
 import { useUnsavedChanges } from '@/contexts/UnsavedChangesContext';
 
@@ -555,6 +556,7 @@ export default function Configuracion() {
         <TabsContent value="whatsapp">
           <div className="space-y-6">
             <EvolutionConfig />
+            <WhatsAppAgentConfig />
             <WhatsAppConfig />
           </div>
         </TabsContent>

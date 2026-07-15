@@ -1755,6 +1755,254 @@ export type Database = {
           },
         ]
       }
+      wa_chats: {
+        Row: {
+          archivado: boolean
+          asignado_a: string | null
+          avatar_url: string | null
+          cliente_id: string | null
+          created_at: string
+          estado_bot: string
+          etiquetas: string[]
+          hotel_id: string
+          id: string
+          no_leidos: number
+          nombre: string | null
+          phone: string | null
+          ultima_actividad: string | null
+          ultimo_mensaje: string | null
+          updated_at: string
+          wa_id: string
+        }
+        Insert: {
+          archivado?: boolean
+          asignado_a?: string | null
+          avatar_url?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          estado_bot?: string
+          etiquetas?: string[]
+          hotel_id: string
+          id?: string
+          no_leidos?: number
+          nombre?: string | null
+          phone?: string | null
+          ultima_actividad?: string | null
+          ultimo_mensaje?: string | null
+          updated_at?: string
+          wa_id: string
+        }
+        Update: {
+          archivado?: boolean
+          asignado_a?: string | null
+          avatar_url?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          estado_bot?: string
+          etiquetas?: string[]
+          hotel_id?: string
+          id?: string
+          no_leidos?: number
+          nombre?: string | null
+          phone?: string | null
+          ultima_actividad?: string | null
+          ultimo_mensaje?: string | null
+          updated_at?: string
+          wa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_chats_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_chats_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_etiquetas: {
+        Row: {
+          color: string
+          created_at: string
+          hotel_id: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          hotel_id: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          hotel_id?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_etiquetas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_instancias: {
+        Row: {
+          connected_at: string | null
+          created_at: string
+          estado: string
+          hotel_id: string
+          id: string
+          instance_name: string
+          last_status_at: string | null
+          phone_number: string | null
+          qr: string | null
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          connected_at?: string | null
+          created_at?: string
+          estado?: string
+          hotel_id: string
+          id?: string
+          instance_name: string
+          last_status_at?: string | null
+          phone_number?: string | null
+          qr?: string | null
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          connected_at?: string | null
+          created_at?: string
+          estado?: string
+          hotel_id?: string
+          id?: string
+          instance_name?: string
+          last_status_at?: string | null
+          phone_number?: string | null
+          qr?: string | null
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_instancias_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_mensajes: {
+        Row: {
+          author_id: string | null
+          chat_id: string
+          contenido: string | null
+          created_at: string
+          direccion: string
+          from_bot: boolean
+          hotel_id: string
+          id: string
+          media_mime: string | null
+          media_url: string | null
+          status: string
+          timestamp: string
+          tipo: string
+          wa_message_id: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          chat_id: string
+          contenido?: string | null
+          created_at?: string
+          direccion: string
+          from_bot?: boolean
+          hotel_id: string
+          id?: string
+          media_mime?: string | null
+          media_url?: string | null
+          status?: string
+          timestamp?: string
+          tipo?: string
+          wa_message_id?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          chat_id?: string
+          contenido?: string | null
+          created_at?: string
+          direccion?: string
+          from_bot?: boolean
+          hotel_id?: string
+          id?: string
+          media_mime?: string | null
+          media_url?: string | null
+          status?: string
+          timestamp?: string
+          tipo?: string
+          wa_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_mensajes_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "wa_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_notas: {
+        Row: {
+          chat_id: string
+          created_at: string
+          hotel_id: string
+          id: string
+          nota: string
+          user_id: string | null
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          hotel_id: string
+          id?: string
+          nota: string
+          user_id?: string | null
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          hotel_id?: string
+          id?: string
+          nota?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_notas_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "wa_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_envios: {
         Row: {
           created_at: string
