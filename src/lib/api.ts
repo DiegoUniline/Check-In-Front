@@ -1162,7 +1162,23 @@ class ApiClient {
   // ------- Usuarios -------
   getUsuarios = async (): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('hotel_id', this.hid()); return (data || []).map((u: any) => ({ ...u, rol: 'Recepcion' })); };
   getUsuario = async (id: string): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle(); return data; };
-  createUsuario = async (_data: any): Promise<any> => { throw new Error('La creación de usuarios se hace desde Configuración / Auth.'); };
+  createUsuario = async (data: any): Promise<any> => {
+    const { data: result, error } = await supabase.functions.invoke('create-user', { body: data });
+    if (error) {
+      // Intentar extraer mensaje del edge function
+      let msg = error.message || 'No se pudo crear el usuario';
+      try {
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          if (body?.error) msg = body.error;
+        }
+      } catch { /* ignore */ }
+      throw new Error(msg);
+    }
+    if ((result as any)?.error) throw new Error((result as any).error);
+    return result;
+  };
   updateUsuario = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('profiles').update(data).eq('id', id).select().single(); if (error) throw error; return r; };
   deleteUsuario = async (_id: string): Promise<any> => { throw new Error('Eliminación de usuarios deshabilitada en demo.'); };
   getRoles = async (): Promise<any> => ['Admin', 'Recepcion', 'Housekeeping', 'Mantenimiento', 'Gerente'];
