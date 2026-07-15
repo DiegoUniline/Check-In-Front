@@ -66,12 +66,6 @@ const amenityIcon = (a: string) => {
   return CheckCircle2;
 };
 
-function genReservaNumber() {
-  const year = new Date().getFullYear();
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `RES-${year}-${rand}`;
-}
-
 export default function PublicHotel() {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
