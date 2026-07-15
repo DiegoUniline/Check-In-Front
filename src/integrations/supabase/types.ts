@@ -1755,6 +1755,65 @@ export type Database = {
           },
         ]
       }
+      wa_agent_config: {
+        Row: {
+          activo: boolean
+          auto_crear_reservas: boolean
+          created_at: string
+          handoff_keywords: string[]
+          hora_fin: string | null
+          hora_inicio: string | null
+          horario_24_7: boolean
+          hotel_id: string
+          instrucciones: string
+          mensaje_fuera_horario: string
+          nombre_agente: string
+          personalidad: string
+          saludo: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          auto_crear_reservas?: boolean
+          created_at?: string
+          handoff_keywords?: string[]
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          horario_24_7?: boolean
+          hotel_id: string
+          instrucciones?: string
+          mensaje_fuera_horario?: string
+          nombre_agente?: string
+          personalidad?: string
+          saludo?: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          auto_crear_reservas?: boolean
+          created_at?: string
+          handoff_keywords?: string[]
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          horario_24_7?: boolean
+          hotel_id?: string
+          instrucciones?: string
+          mensaje_fuera_horario?: string
+          nombre_agente?: string
+          personalidad?: string
+          saludo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_agent_config_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: true
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wa_chats: {
         Row: {
           archivado: boolean
@@ -1852,6 +1911,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "wa_etiquetas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_faq: {
+        Row: {
+          activo: boolean
+          categoria: string | null
+          created_at: string
+          hotel_id: string
+          id: string
+          orden: number
+          pregunta: string
+          respuesta: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria?: string | null
+          created_at?: string
+          hotel_id: string
+          id?: string
+          orden?: number
+          pregunta: string
+          respuesta: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string | null
+          created_at?: string
+          hotel_id?: string
+          id?: string
+          orden?: number
+          pregunta?: string
+          respuesta?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_faq_hotel_id_fkey"
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
