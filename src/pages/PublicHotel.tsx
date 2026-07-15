@@ -66,12 +66,6 @@ const amenityIcon = (a: string) => {
   return CheckCircle2;
 };
 
-function genReservaNumber() {
-  const year = new Date().getFullYear();
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `RES-${year}-${rand}`;
-}
-
 export default function PublicHotel() {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -228,10 +222,10 @@ export default function PublicHotel() {
         ? Math.round(total * (Number(hotel.porcentaje_anticipo) || 0)) / 100
         : 0;
 
-      const numero = genReservaNumber();
-      const { error: errR } = await supabase.from('reservas').insert({
+      // El numero_reserva lo asigna un trigger BEFORE INSERT en la DB
+      // (RES-AAAA-XXXX con secuencia por hotel/año)
+      const { data: reservaCreada, error: errR } = await supabase.from('reservas').insert({
         hotel_id: hotel.id,
-        numero_reserva: numero,
         cliente_id: cliente.id,
         habitacion_id: bookingHab.id,
         tipo_habitacion_id: tipo.id,
@@ -246,10 +240,10 @@ export default function PublicHotel() {
         estado: 'Pendiente',
         origen: 'Web',
         solicitudes_especiales: form.solicitudes || null,
-      });
+      }).select('numero_reserva').single();
       if (errR) throw errR;
 
-      setConfirmacion({ numero, total, anticipo });
+      setConfirmacion({ numero: reservaCreada?.numero_reserva || '', total, anticipo });
       setBookingHab(null);
       setForm({ nombre: '', apellido_paterno: '', email: '', telefono: '', solicitudes: '' });
     } catch (e: any) {
