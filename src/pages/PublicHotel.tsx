@@ -224,7 +224,7 @@ export default function PublicHotel() {
 
       // El numero_reserva lo asigna un trigger BEFORE INSERT en la DB
       // (RES-AAAA-XXXX con secuencia por hotel/año)
-      const { error: errR } = await supabase.from('reservas').insert({
+      const { data: reservaCreada, error: errR } = await supabase.from('reservas').insert({
         hotel_id: hotel.id,
         cliente_id: cliente.id,
         habitacion_id: bookingHab.id,
@@ -240,10 +240,10 @@ export default function PublicHotel() {
         estado: 'Pendiente',
         origen: 'Web',
         solicitudes_especiales: form.solicitudes || null,
-      });
+      }).select('numero_reserva').single();
       if (errR) throw errR;
 
-      setConfirmacion({ numero, total, anticipo });
+      setConfirmacion({ numero: reservaCreada?.numero_reserva || '', total, anticipo });
       setBookingHab(null);
       setForm({ nombre: '', apellido_paterno: '', email: '', telefono: '', solicitudes: '' });
     } catch (e: any) {
