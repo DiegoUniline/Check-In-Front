@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, Send, Bot, User as UserIcon, Check, CheckCheck,
-  MessageCircle, RefreshCw, Pause, Play, Tag as TagIcon, Hotel
+  MessageCircle, RefreshCw, Pause, Play, Hotel
 } from 'lucide-react';
+import { CrmPanel } from '@/components/whatsapp/CrmPanel';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
