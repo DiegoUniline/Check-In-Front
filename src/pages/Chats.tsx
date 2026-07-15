@@ -47,6 +47,39 @@ type Mensaje = {
   timestamp: string;
 };
 
+type ClienteResumen = {
+  id: string;
+  nombre?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+};
+
+const soloDigitos = (value?: string | null) => String(value || '').replace(/\D/g, '');
+
+const pareceTelefono = (value?: string | null) => soloDigitos(value).length >= 7;
+
+const nombreCompletoCliente = (cliente?: ClienteResumen | null) => {
+  if (!cliente) return '';
+  const tokens: string[] = [];
+  [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno]
+    .filter(Boolean)
+    .map((s) => String(s).trim())
+    .forEach((parte) => {
+      parte.split(/\s+/).forEach((token) => {
+        if (token && !tokens.some((x) => x.toLowerCase() === token.toLowerCase())) tokens.push(token);
+      });
+    });
+  return tokens.join(' ');
+};
+
+const nombreVisibleChat = (chat?: Chat | null, cliente?: ClienteResumen | null) => {
+  if (!chat) return '';
+  const nombreCliente = nombreCompletoCliente(cliente);
+  if (nombreCliente) return nombreCliente;
+  if (chat.nombre && !pareceTelefono(chat.nombre)) return chat.nombre;
+  return chat.phone || chat.nombre || 'Sin nombre';
+};
+
 export default function Chats() {
   const { toast } = useToast();
   const [chats, setChats] = useState<Chat[]>([]);
