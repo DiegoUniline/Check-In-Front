@@ -111,6 +111,7 @@ export function SwipeableCard({
       )}
       <motion.div
         drag="x"
+        dragDirectionLock
         dragConstraints={{ left: leftAction ? -200 : 0, right: rightAction ? 200 : 0 }}
         dragElastic={0.2}
         onDragEnd={handleDragEnd}

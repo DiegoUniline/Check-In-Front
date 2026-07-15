@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -11,6 +11,10 @@ export function useRealtimeSync(
   opts: { event?: 'INSERT' | 'UPDATE' | 'DELETE' | '*'; enabled?: boolean } = {}
 ) {
   const { event = '*', enabled = true } = opts;
+  // Guardamos onChange en un ref para invocar siempre la última versión
+  // sin re-suscribir el canal en cada render.
+  const handlerRef = useRef(onChange);
+  useEffect(() => { handlerRef.current = onChange; }, [onChange]);
   useEffect(() => {
     if (!enabled) return;
     const channel = supabase
@@ -18,12 +22,11 @@ export function useRealtimeSync(
       .on(
         'postgres_changes' as never,
         { event, schema: 'public', table } as never,
-        () => onChange()
+        () => handlerRef.current()
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table, event, enabled]);
 }
