@@ -2,6 +2,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { COUNTRY_CODES, joinPhone } from '@/lib/phoneCountries';
 
+// Extrae solo el emoji de bandera del label ("🇲🇽 México" -> "🇲🇽").
+function flagOf(label: string) {
+  const m = label.match(/^\p{Extended_Pictographic}+/u);
+  return m ? m[0] : label.split(' ')[0];
+}
+
 interface Props {
   country: string;
   localPhone: string;
@@ -15,8 +21,13 @@ export function PhoneInput({ country, localPhone, onCountryChange, onLocalPhoneC
     <div>
       <div className="flex gap-2">
         <Select value={country} onValueChange={onCountryChange}>
-          <SelectTrigger className="w-[170px]">
-            <SelectValue />
+          <SelectTrigger className="w-[110px] shrink-0">
+            <SelectValue>
+              {(() => {
+                const c = COUNTRY_CODES.find((x) => x.code === country) || COUNTRY_CODES[0];
+                return <span className="flex items-center gap-1">{flagOf(c.label)} +{c.dial}</span>;
+              })()}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent className="max-h-72">
             {COUNTRY_CODES.map((c) => (
@@ -27,9 +38,9 @@ export function PhoneInput({ country, localPhone, onCountryChange, onLocalPhoneC
           </SelectContent>
         </Select>
         <Input
-          className="flex-1"
+          className="flex-1 min-w-0"
           inputMode="tel"
-          placeholder={country === 'MX' ? '3171035768 (10 dígitos)' : 'Número local'}
+          placeholder={country === 'MX' ? '3171035768' : 'Número'}
           value={localPhone}
           onChange={(e) => onLocalPhoneChange(e.target.value.replace(/\D/g, ''))}
         />
