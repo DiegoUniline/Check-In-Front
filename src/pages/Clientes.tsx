@@ -156,12 +156,17 @@ export default function Clientes() {
 
   const handleNuevoCliente = () => {
     setFormData(clienteInicial);
+    setPhoneCountry(DEFAULT_COUNTRY);
+    setPhoneLocal('');
     setIsEditing(false);
     setIsFormOpen(true);
   };
 
   const handleEditarCliente = (cliente: Cliente) => {
     const esVip = isVipValue((cliente as any).es_vip);
+    const sp = splitPhone(cliente.telefono);
+    setPhoneCountry(sp.country);
+    setPhoneLocal(sp.local);
     setFormData({
       tipo_cliente: cliente.tipo_cliente || 'Persona',
       nombre: cliente.nombre || '',
