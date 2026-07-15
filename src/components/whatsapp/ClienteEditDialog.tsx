@@ -179,37 +179,37 @@ export function ClienteEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] max-w-3xl h-[92vh] sm:h-auto sm:max-h-[92vh] p-4 sm:p-5 gap-3 flex flex-col overflow-hidden">
+        <DialogHeader className="flex-none space-y-1">
           <DialogTitle>{cliente?.id ? 'Editar cliente' : 'Nuevo cliente'}</DialogTitle>
-          <DialogDescription>
-            Ficha completa del cliente para el CRM. Los datos se vinculan a este chat.
+          <DialogDescription className="text-xs">
+            Ficha del cliente vinculada al chat.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="general"><User className="h-4 w-4 mr-1" /> General</TabsTrigger>
-            <TabsTrigger value="banco"><CreditCard className="h-4 w-4 mr-1" /> Datos bancarios</TabsTrigger>
-            <TabsTrigger value="direccion"><MapPin className="h-4 w-4 mr-1" /> Dirección</TabsTrigger>
+        <Tabs defaultValue="general" className="w-full flex-1 min-h-0 flex flex-col">
+          <TabsList className="grid grid-cols-3 w-full flex-none h-9">
+            <TabsTrigger value="general" className="text-xs sm:text-sm"><User className="h-3.5 w-3.5 mr-1" /> General</TabsTrigger>
+            <TabsTrigger value="banco" className="text-xs sm:text-sm"><CreditCard className="h-3.5 w-3.5 mr-1" /> Bancarios</TabsTrigger>
+            <TabsTrigger value="direccion" className="text-xs sm:text-sm"><MapPin className="h-3.5 w-3.5 mr-1" /> Dirección</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="space-y-3 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <TabsContent value="general" className="flex-1 min-h-0 overflow-y-auto space-y-2 mt-3 pr-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <div>
-                <Label>Nombre *</Label>
-                <Input value={form.nombre || ''} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+                <Label className="text-xs">Nombre *</Label>
+                <Input className="h-9" value={form.nombre || ''} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
               </div>
               <div>
-                <Label>Apellido paterno</Label>
-                <Input value={form.apellido_paterno || ''} onChange={(e) => setForm({ ...form, apellido_paterno: e.target.value })} />
+                <Label className="text-xs">Apellido paterno</Label>
+                <Input className="h-9" value={form.apellido_paterno || ''} onChange={(e) => setForm({ ...form, apellido_paterno: e.target.value })} />
               </div>
               <div>
-                <Label>Apellido materno</Label>
-                <Input value={form.apellido_materno || ''} onChange={(e) => setForm({ ...form, apellido_materno: e.target.value })} />
+                <Label className="text-xs">Apellido materno</Label>
+                <Input className="h-9" value={form.apellido_materno || ''} onChange={(e) => setForm({ ...form, apellido_materno: e.target.value })} />
               </div>
-              <div className="col-span-2">
-                <Label>Teléfono</Label>
+              <div className="col-span-2 sm:col-span-2">
+                <Label className="text-xs">Teléfono</Label>
                 <PhoneInput
                   country={country}
                   localPhone={localPhone}
@@ -217,87 +217,87 @@ export function ClienteEditDialog({
                   onLocalPhoneChange={setLocalPhone}
                 />
               </div>
-              <div className="col-span-2">
-                <Label>Email</Label>
-                <Input type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <div className="col-span-2 sm:col-span-1">
+                <Label className="text-xs">Email</Label>
+                <Input className="h-9" type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </div>
               <div>
-                <Label>Tipo documento</Label>
-                <Input placeholder="INE / Pasaporte" value={form.tipo_documento || ''} onChange={(e) => setForm({ ...form, tipo_documento: e.target.value })} />
+                <Label className="text-xs">Tipo documento</Label>
+                <Input className="h-9" placeholder="INE / Pasaporte" value={form.tipo_documento || ''} onChange={(e) => setForm({ ...form, tipo_documento: e.target.value })} />
               </div>
               <div>
-                <Label>Número documento</Label>
-                <Input value={form.numero_documento || ''} onChange={(e) => setForm({ ...form, numero_documento: e.target.value })} />
+                <Label className="text-xs">Número documento</Label>
+                <Input className="h-9" value={form.numero_documento || ''} onChange={(e) => setForm({ ...form, numero_documento: e.target.value })} />
               </div>
               <div>
-                <Label>Nacionalidad</Label>
-                <Input value={form.nacionalidad || ''} onChange={(e) => setForm({ ...form, nacionalidad: e.target.value })} />
+                <Label className="text-xs">Nacionalidad</Label>
+                <Input className="h-9" value={form.nacionalidad || ''} onChange={(e) => setForm({ ...form, nacionalidad: e.target.value })} />
               </div>
               <div>
-                <Label>Nivel de lealtad</Label>
-                <Input placeholder="Bronce / Plata / Oro" value={form.nivel_lealtad || ''} onChange={(e) => setForm({ ...form, nivel_lealtad: e.target.value })} />
+                <Label className="text-xs">Nivel de lealtad</Label>
+                <Input className="h-9" placeholder="Bronce / Plata / Oro" value={form.nivel_lealtad || ''} onChange={(e) => setForm({ ...form, nivel_lealtad: e.target.value })} />
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="flex items-center justify-between rounded-lg border px-3 py-2">
               <div>
-                <Label className="text-base">Cliente VIP</Label>
-                <p className="text-xs text-muted-foreground">Marcar para prioridad en atención.</p>
+                <Label className="text-sm">Cliente VIP</Label>
+                <p className="text-[11px] text-muted-foreground">Prioridad en atención.</p>
               </div>
               <Switch checked={!!form.es_vip} onCheckedChange={(v) => setForm({ ...form, es_vip: v })} />
             </div>
             <div>
-              <Label>Notas internas</Label>
-              <Textarea rows={3} value={notasGen} onChange={(e) => setNotasGen(e.target.value)} placeholder="Preferencias, alergias, comentarios…" />
+              <Label className="text-xs">Notas internas</Label>
+              <Textarea rows={2} value={notasGen} onChange={(e) => setNotasGen(e.target.value)} placeholder="Preferencias, alergias, comentarios…" />
             </div>
           </TabsContent>
 
-          <TabsContent value="banco" className="space-y-3 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <TabsContent value="banco" className="flex-1 min-h-0 overflow-y-auto space-y-2 mt-3 pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
-                <Label>Banco</Label>
-                <Input value={banco.banco} onChange={(e) => setBanco({ ...banco, banco: e.target.value })} />
+                <Label className="text-xs">Banco</Label>
+                <Input className="h-9" value={banco.banco} onChange={(e) => setBanco({ ...banco, banco: e.target.value })} />
               </div>
               <div>
-                <Label>Titular</Label>
-                <Input value={banco.titular} onChange={(e) => setBanco({ ...banco, titular: e.target.value })} />
+                <Label className="text-xs">Titular</Label>
+                <Input className="h-9" value={banco.titular} onChange={(e) => setBanco({ ...banco, titular: e.target.value })} />
               </div>
               <div>
-                <Label>Número de cuenta</Label>
-                <Input value={banco.cuenta} onChange={(e) => setBanco({ ...banco, cuenta: e.target.value })} />
+                <Label className="text-xs">Número de cuenta</Label>
+                <Input className="h-9" value={banco.cuenta} onChange={(e) => setBanco({ ...banco, cuenta: e.target.value })} />
               </div>
               <div>
-                <Label>CLABE / IBAN</Label>
-                <Input value={banco.clabe} onChange={(e) => setBanco({ ...banco, clabe: e.target.value })} />
+                <Label className="text-xs">CLABE / IBAN</Label>
+                <Input className="h-9" value={banco.clabe} onChange={(e) => setBanco({ ...banco, clabe: e.target.value })} />
               </div>
               <div className="col-span-2">
-                <Label>Método de pago preferido</Label>
-                <Input placeholder="Transferencia, tarjeta, efectivo…" value={banco.metodo} onChange={(e) => setBanco({ ...banco, metodo: e.target.value })} />
+                <Label className="text-xs">Método de pago preferido</Label>
+                <Input className="h-9" placeholder="Transferencia, tarjeta, efectivo…" value={banco.metodo} onChange={(e) => setBanco({ ...banco, metodo: e.target.value })} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Los datos bancarios se almacenan cifrados junto a las notas del cliente.
+            <p className="text-[11px] text-muted-foreground">
+              Los datos bancarios se almacenan cifrados.
             </p>
           </TabsContent>
 
-          <TabsContent value="direccion" className="space-y-3 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <TabsContent value="direccion" className="flex-1 min-h-0 overflow-y-auto space-y-2 mt-3 pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="col-span-2">
-                <Label>Calle y número</Label>
-                <Input value={direccion.calle} onChange={(e) => setDireccion({ ...direccion, calle: e.target.value })} />
+                <Label className="text-xs">Calle y número</Label>
+                <Input className="h-9" value={direccion.calle} onChange={(e) => setDireccion({ ...direccion, calle: e.target.value })} />
               </div>
               <div>
-                <Label>Ciudad</Label>
-                <Input value={direccion.ciudad} onChange={(e) => setDireccion({ ...direccion, ciudad: e.target.value })} />
+                <Label className="text-xs">Ciudad</Label>
+                <Input className="h-9" value={direccion.ciudad} onChange={(e) => setDireccion({ ...direccion, ciudad: e.target.value })} />
               </div>
               <div>
-                <Label>País</Label>
-                <Input value={direccion.pais} onChange={(e) => setDireccion({ ...direccion, pais: e.target.value })} />
+                <Label className="text-xs">País</Label>
+                <Input className="h-9" value={direccion.pais} onChange={(e) => setDireccion({ ...direccion, pais: e.target.value })} />
               </div>
             </div>
           </TabsContent>
         </Tabs>
 
-        <DialogFooter>
+        <DialogFooter className="flex-none pt-2 border-t mt-1">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={guardar} disabled={saving}>
             <Save className="h-4 w-4 mr-1" />
