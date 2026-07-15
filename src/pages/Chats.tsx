@@ -348,7 +348,17 @@ export default function Chats() {
             <>
               <div className="p-3 border-b flex items-center justify-between">
                 <div>
-                  <div className="font-semibold">{selected.nombre || selected.phone}</div>
+                  <div className="font-semibold">
+                    {cliente
+                      ? [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno]
+                          .filter(Boolean)
+                          .join(' ')
+                          .split(/\s+/)
+                          .filter((t: string, i: number, a: string[]) =>
+                            a.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i)
+                          .join(' ')
+                      : (selected.nombre || selected.phone)}
+                  </div>
                   <div className="text-xs text-muted-foreground">{selected.phone}</div>
                 </div>
                 <div className="flex items-center gap-2">
