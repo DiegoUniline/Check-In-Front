@@ -16,6 +16,7 @@ import {
   Phone, Mail, Building2, IdCard,
 } from 'lucide-react';
 import { ClienteEditDialog, parseNotas } from './ClienteEditDialog';
+import { EmpresaAcciones } from './EmpresaAcciones';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -189,6 +190,11 @@ export function CrmPanel({ chat, cliente, onClienteChange, onChatChange }: Props
         />
         <ActionBtn icon={ExternalLink} label="WA Web" onClick={abrirWA} />
       </div>
+
+      <Separator />
+
+      {/* Acciones de empresa (datos propios del hotel) */}
+      <EmpresaAcciones chat={chat} hotelId={chat?.hotel_id} />
 
       <Separator />
 
