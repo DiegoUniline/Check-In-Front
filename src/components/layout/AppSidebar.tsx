@@ -25,6 +25,7 @@ import {
   ,ArrowUpDown
   ,LogIn
   ,LogOut
+  ,MessageCircle
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -57,6 +58,7 @@ const mainNavItems = [
   { title: 'Timeline', url: '/reservas/timeline', icon: CalendarDays, viewKey: 'reservas' },
   { title: 'Histórico Reservas', url: '/reservas/historico', icon: History, viewKey: 'reservas' },
   { title: 'Reservas Online', url: '/reservas-online', icon: Inbox, viewKey: 'reservas', badgeKey: 'reservas-online' },
+  { title: 'WhatsApp / Chats', url: '/chats', icon: MessageCircle, viewKey: 'chats' },
   { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
   { title: 'Clientes', url: '/clientes', icon: Users, viewKey: 'clientes' },
 ];
