@@ -176,7 +176,12 @@ export default function Chats() {
         const match = data?.[0];
         if (match) {
           setCliente(match);
-          await sb.from('wa_chats').update({ cliente_id: match.id }).eq('id', selected.id);
+          const nombreCliente = [match.nombre, match.apellido_paterno, match.apellido_materno]
+            .filter(Boolean).join(' ').trim();
+          await sb.from('wa_chats')
+            .update({ cliente_id: match.id, nombre: nombreCliente || selected.nombre })
+            .eq('id', selected.id);
+          cargarChats();
         } else {
           setCliente(null);
         }
