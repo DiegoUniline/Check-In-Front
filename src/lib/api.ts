@@ -1164,7 +1164,24 @@ class ApiClient {
   };
 
   // ------- Usuarios -------
-  getUsuarios = async (): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('hotel_id', this.hid()); return (data || []).map((u: any) => ({ ...u, rol: 'Recepcion' })); };
+  getUsuarios = async (): Promise<any> => {
+    const { data: profiles } = await supabase.from('profiles').select('*').eq('hotel_id', this.hid());
+    const list = profiles || [];
+    if (list.length === 0) return [];
+    const ids = list.map((u: any) => u.id);
+    const { data: rolesData } = await supabase.from('user_roles').select('user_id, role').in('user_id', ids);
+    const rolesByUser: Record<string, string[]> = {};
+    (rolesData || []).forEach((r: any) => {
+      (rolesByUser[r.user_id] ||= []).push(r.role);
+    });
+    // Prioridad: SuperAdmin > Admin > Gerente > Mantenimiento > Housekeeping > Recepcion
+    const prio = ['SuperAdmin', 'Admin', 'Gerente', 'Mantenimiento', 'Housekeeping', 'Recepcion'];
+    return list.map((u: any) => {
+      const rs = rolesByUser[u.id] || [];
+      const rol = prio.find((p) => rs.includes(p)) || rs[0] || 'Recepcion';
+      return { ...u, rol, roles: rs };
+    });
+  };
   getUsuario = async (id: string): Promise<any> => { const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle(); return data; };
   createUsuario = async (data: any): Promise<any> => {
     const { data: result, error } = await supabase.functions.invoke('create-user', { body: data });
@@ -1183,8 +1200,38 @@ class ApiClient {
     if ((result as any)?.error) throw new Error((result as any).error);
     return result;
   };
-  updateUsuario = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('profiles').update(data).eq('id', id).select().single(); if (error) throw error; return r; };
-  deleteUsuario = async (_id: string): Promise<any> => { throw new Error('Eliminación de usuarios deshabilitada en demo.'); };
+  updateUsuario = async (id: string, data: any): Promise<any> => {
+    const { data: result, error } = await supabase.functions.invoke('update-user', { body: { id, ...data } });
+    if (error) {
+      let msg = error.message || 'No se pudo actualizar el usuario';
+      try {
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          if (body?.error) msg = body.error;
+        }
+      } catch { /* ignore */ }
+      throw new Error(msg);
+    }
+    if ((result as any)?.error) throw new Error((result as any).error);
+    return result;
+  };
+  deleteUsuario = async (id: string): Promise<any> => {
+    const { data: result, error } = await supabase.functions.invoke('delete-user', { body: { id } });
+    if (error) {
+      let msg = error.message || 'No se pudo eliminar el usuario';
+      try {
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          if (body?.error) msg = body.error;
+        }
+      } catch { /* ignore */ }
+      throw new Error(msg);
+    }
+    if ((result as any)?.error) throw new Error((result as any).error);
+    return result;
+  };
   getRoles = async (): Promise<any> => ['Admin', 'Recepcion', 'Housekeeping', 'Mantenimiento', 'Gerente'];
 
   publicRequest = async <T>(_endpoint: string, _method = 'GET', _body?: any): Promise<T> => {
