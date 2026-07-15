@@ -222,10 +222,10 @@ export default function PublicHotel() {
         ? Math.round(total * (Number(hotel.porcentaje_anticipo) || 0)) / 100
         : 0;
 
-      const numero = genReservaNumber();
+      // El numero_reserva lo asigna un trigger BEFORE INSERT en la DB
+      // (RES-AAAA-XXXX con secuencia por hotel/año)
       const { error: errR } = await supabase.from('reservas').insert({
         hotel_id: hotel.id,
-        numero_reserva: numero,
         cliente_id: cliente.id,
         habitacion_id: bookingHab.id,
         tipo_habitacion_id: tipo.id,
