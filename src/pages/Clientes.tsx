@@ -46,6 +46,8 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { splitPhone, joinPhone, DEFAULT_COUNTRY } from '@/lib/phoneCountries';
 
 interface Cliente {
   id: string;
@@ -91,6 +93,8 @@ export default function Clientes() {
   const [saving, setSaving] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [phoneCountry, setPhoneCountry] = useState<string>(DEFAULT_COUNTRY);
+  const [phoneLocal, setPhoneLocal] = useState<string>('');
 
   // Normalización de VIP para evitar que React renderice "0".
   // - Qué hace: convierte valores típicos de MySQL (0/1, "0"/"1") a boolean real.
@@ -152,12 +156,17 @@ export default function Clientes() {
 
   const handleNuevoCliente = () => {
     setFormData(clienteInicial);
+    setPhoneCountry(DEFAULT_COUNTRY);
+    setPhoneLocal('');
     setIsEditing(false);
     setIsFormOpen(true);
   };
 
   const handleEditarCliente = (cliente: Cliente) => {
     const esVip = isVipValue((cliente as any).es_vip);
+    const sp = splitPhone(cliente.telefono);
+    setPhoneCountry(sp.country);
+    setPhoneLocal(sp.local);
     setFormData({
       tipo_cliente: cliente.tipo_cliente || 'Persona',
       nombre: cliente.nombre || '',
@@ -189,8 +198,10 @@ export default function Clientes() {
       // Saneamos antes de enviar: evita que se guarde "Apellido0" en clientes NO VIP.
       // `direccion` no existe en la tabla `clientes` del backend, lo excluimos del payload.
       const { direccion: _direccion, ...rest } = formData as any;
+      const telefonoNormalizado = joinPhone(phoneCountry, phoneLocal);
       const payload = {
         ...rest,
+        telefono: telefonoNormalizado || null,
         apellido_paterno: sanitizeApellidoParaNoVip(formData.apellido_paterno, Boolean(formData.es_vip)),
         apellido_materno: sanitizeApellidoParaNoVip(formData.apellido_materno, Boolean(formData.es_vip)),
       };
@@ -652,10 +663,11 @@ export default function Clientes() {
               </div>
               <div>
                 <Label>Teléfono</Label>
-                <Input 
-                  value={formData.telefono}
-                  onChange={(e) => setFormData({...formData, telefono: e.target.value})}
-                  placeholder="33 1234 5678"
+                <PhoneInput
+                  country={phoneCountry}
+                  localPhone={phoneLocal}
+                  onCountryChange={setPhoneCountry}
+                  onLocalPhoneChange={setPhoneLocal}
                 />
               </div>
             </div>
