@@ -198,8 +198,10 @@ export default function Clientes() {
       // Saneamos antes de enviar: evita que se guarde "Apellido0" en clientes NO VIP.
       // `direccion` no existe en la tabla `clientes` del backend, lo excluimos del payload.
       const { direccion: _direccion, ...rest } = formData as any;
+      const telefonoNormalizado = joinPhone(phoneCountry, phoneLocal);
       const payload = {
         ...rest,
+        telefono: telefonoNormalizado || null,
         apellido_paterno: sanitizeApellidoParaNoVip(formData.apellido_paterno, Boolean(formData.es_vip)),
         apellido_materno: sanitizeApellidoParaNoVip(formData.apellido_materno, Boolean(formData.es_vip)),
       };
