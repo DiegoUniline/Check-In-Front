@@ -58,7 +58,7 @@ export default function Chats() {
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [cliente, setCliente] = useState<any>(null);
-  const [fichaAbierta, setFichaAbierta] = useState(true);
+  const [fichaAbierta, setFichaAbierta] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(
