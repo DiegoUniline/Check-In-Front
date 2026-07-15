@@ -452,18 +452,28 @@ class ApiClient {
   createReserva = async (data: any): Promise<any> => {
     const noches = data.noches || 1;
     const tarifa = Number(data.tarifa_noche || 0);
-    const subtotal = noches * tarifa;
-    const descuento = Number(data.descuento || 0);
-    const base = subtotal - descuento;
+    const personasExtra = Number(data.personas_extra || 0);
+    const cargoPE = Number(data.cargo_persona_extra || 0);
+    const subtotal = noches * tarifa + noches * personasExtra * cargoPE;
+    // Soporte para descuento porcentaje / monto
+    const descuentoValor = Number(data.descuento_valor ?? data.descuento ?? 0);
+    const esPorcentaje = String(data.descuento_tipo || '').toLowerCase().startsWith('porc');
+    const descuento = Math.max(
+      0,
+      Math.min(subtotal, esPorcentaje ? subtotal * (descuentoValor / 100) : descuentoValor),
+    );
+    const base = Math.max(0, subtotal - descuento);
     const impuestos = base * IVA_RATE;
     const total = base + impuestos;
+    const totalPagado = Number(data.total_pagado || 0);
     const payload = {
       ...data,
       hotel_id: this.hid(),
       subtotal_hospedaje: subtotal,
+      descuento,
       total_impuestos: impuestos,
       total,
-      saldo_pendiente: total,
+      saldo_pendiente: Math.max(0, total - totalPagado),
       estado: data.estado || 'Confirmada',
     };
     const { data: r, error } = await supabase.from('reservas').insert(payload).select().single();
