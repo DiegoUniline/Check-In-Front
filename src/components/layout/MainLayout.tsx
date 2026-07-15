@@ -31,7 +31,7 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
     <SidebarProvider>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <div
-        className="flex min-h-[100dvh] w-full overflow-x-hidden"
+        className="flex h-[100dvh] w-full overflow-hidden"
         style={{
           paddingTop: 'env(safe-area-inset-top)',
           paddingLeft: 'env(safe-area-inset-left)',
@@ -41,11 +41,14 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
         <div className="hidden lg:block">
           <AppSidebar />
         </div>
-        <SidebarInset className="flex flex-1 flex-col min-w-0">
+        <SidebarInset className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
           <OfflineBanner />
           <AlertaSuscripcion />
           <Header title={title} subtitle={subtitle} />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-6">
+          <main
+            className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-6"
+            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+          >
             {children}
           </main>
         </SidebarInset>
