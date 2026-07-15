@@ -663,10 +663,11 @@ export default function Clientes() {
               </div>
               <div>
                 <Label>Teléfono</Label>
-                <Input 
-                  value={formData.telefono}
-                  onChange={(e) => setFormData({...formData, telefono: e.target.value})}
-                  placeholder="33 1234 5678"
+                <PhoneInput
+                  country={phoneCountry}
+                  localPhone={phoneLocal}
+                  onCountryChange={setPhoneCountry}
+                  onLocalPhoneChange={setPhoneLocal}
                 />
               </div>
             </div>
