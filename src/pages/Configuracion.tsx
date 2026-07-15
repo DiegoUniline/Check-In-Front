@@ -26,6 +26,7 @@ import api from '@/lib/api';
 import { CURRENCY_PRESETS } from '@/lib/currency';
 import { ChecklistConfig } from '@/components/configuracion/ChecklistConfig';
 import { WhatsAppConfig } from '@/components/configuracion/WhatsAppConfig';
+import { EvolutionConfig } from '@/components/configuracion/EvolutionConfig';
 import { SaveButton, isDirty } from '@/components/ui/save-button';
 import { useUnsavedChanges } from '@/contexts/UnsavedChangesContext';
 
@@ -552,7 +553,10 @@ export default function Configuracion() {
         </TabsContent>
 
         <TabsContent value="whatsapp">
-          <WhatsAppConfig />
+          <div className="space-y-6">
+            <EvolutionConfig />
+            <WhatsAppConfig />
+          </div>
         </TabsContent>
 
         {/* Checklists */}

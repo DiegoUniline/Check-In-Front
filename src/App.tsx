@@ -45,6 +45,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/Landing";
 import PublicHotel from "./pages/PublicHotel";
 import ScrollToTop from "./components/ScrollToTop";
+import Chats from "./pages/Chats";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +116,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="reservas">
           <ReservasOnline />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/chats"
+      element={
+        <ProtectedRoute viewKey="chats">
+          <Chats />
         </ProtectedRoute>
       }
     />

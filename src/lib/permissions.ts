@@ -23,6 +23,7 @@ export const VIEWS: ViewDef[] = [
   { key: 'reservas', label: 'Reservas', group: 'Principal', path: '/reservas' },
   { key: 'habitaciones', label: 'Habitaciones', group: 'Principal', path: '/habitaciones' },
   { key: 'clientes', label: 'Clientes', group: 'Principal', path: '/clientes' },
+  { key: 'chats', label: 'WhatsApp / Chats', group: 'Principal', path: '/chats' },
 
   // Operaciones
   { key: 'limpieza', label: 'Limpieza', group: 'Operaciones', path: '/limpieza' },
@@ -78,6 +79,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   reservas: ['Admin', 'Gerente', 'Recepcion'],
   habitaciones: ['Admin', 'Gerente', 'Recepcion', 'Housekeeping', 'Mantenimiento'],
   clientes: ['Admin', 'Gerente', 'Recepcion'],
+  chats: ['Admin', 'Gerente', 'Recepcion'],
 
   limpieza: ['Admin', 'Gerente', 'Housekeeping'],
   mantenimiento: ['Admin', 'Gerente', 'Mantenimiento'],
