@@ -1075,9 +1075,13 @@ class ApiClient {
 
   // ------- Métricas plataforma (SuperAdmin) -------
   getMetricasPlataforma = async (): Promise<any> => {
-    const { data, error } = await supabase.from('v_metricas_plataforma' as any).select('*').maybeSingle();
+    // RPC SECURITY DEFINER — valida is_superadmin() en el backend.
+    // Antes se leía la vista `v_metricas_plataforma`, que bypasseaba RLS
+    // y exponía métricas globales a cualquier usuario autenticado.
+    const { data, error } = await supabase.rpc('get_metricas_plataforma' as any);
     if (error) throw error;
-    return data || {};
+    const row = Array.isArray(data) ? data[0] : data;
+    return row || {};
   };
 
   // ------- Suspender/reactivar hotel -------
