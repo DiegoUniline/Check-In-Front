@@ -26,6 +26,7 @@ import {
   ,LogIn
   ,LogOut
   ,MessageCircle
+  ,Bot
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -58,7 +59,6 @@ const mainNavItems = [
   { title: 'Timeline', url: '/reservas/timeline', icon: CalendarDays, viewKey: 'reservas' },
   { title: 'Histórico Reservas', url: '/reservas/historico', icon: History, viewKey: 'reservas' },
   { title: 'Reservas Online', url: '/reservas-online', icon: Inbox, viewKey: 'reservas', badgeKey: 'reservas-online' },
-  { title: 'WhatsApp / Chats', url: '/chats', icon: MessageCircle, viewKey: 'chats' },
   { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
   { title: 'Clientes', url: '/clientes', icon: Users, viewKey: 'clientes' },
 ];
@@ -89,6 +89,18 @@ const configNavItems = [
   { title: 'Turnos', url: '/turnos', icon: Clock, viewKey: 'turnos' },
   { title: 'Catálogos', url: '/catalogos', icon: BookOpen, viewKey: 'catalogos' },
   { title: 'Configuración', url: '/configuracion', icon: Settings, viewKey: 'configuracion' },
+];
+
+// Acceso destacado arriba (encima de "Principal")
+const chatTopItem = [
+  { title: 'WhatsApp Chat', url: '/chats', icon: MessageCircle, viewKey: 'chats' },
+];
+
+// Módulo consolidado de WhatsApp al final
+const whatsappNavItems = [
+  { title: 'Chats', url: '/chats', icon: MessageCircle, viewKey: 'chats' },
+  { title: 'Agente IA', url: '/configuracion?tab=whatsapp', icon: Bot, viewKey: 'configuracion' },
+  { title: 'Conexión / QR', url: '/configuracion?tab=whatsapp', icon: Settings, viewKey: 'configuracion' },
 ];
 
 // Item especial para Diego
