@@ -32,6 +32,7 @@ type Chat = {
   asignado_a: string | null;
   estado_bot: 'bot' | 'humano';
   etiquetas: string[];
+  clientes?: ClienteResumen | null;
 };
 
 type Mensaje = {
@@ -104,7 +105,7 @@ export default function Chats() {
   const cargarChats = async () => {
     const { data, error } = await sb
       .from('wa_chats')
-      .select('*')
+      .select('*, clientes:cliente_id(id,nombre,apellido_paterno,apellido_materno)')
       .order('ultima_actividad', { ascending: false })
       .limit(200);
     if (error) {
@@ -113,18 +114,11 @@ export default function Chats() {
     }
     const rows = (data as Chat[]) ?? [];
     setChats(rows);
-    const clienteIds = Array.from(new Set(rows.map((c) => c.cliente_id).filter(Boolean))) as string[];
-    if (clienteIds.length > 0) {
-      const { data: clientesData } = await sb
-        .from('clientes')
-        .select('id,nombre,apellido_paterno,apellido_materno')
-        .in('id', clienteIds);
-      setClientesPorId(Object.fromEntries(
-        ((clientesData as ClienteResumen[]) ?? []).map((item) => [item.id, item])
-      ));
-    } else {
-      setClientesPorId({});
-    }
+    setClientesPorId(Object.fromEntries(
+      rows
+        .filter((chat) => chat.cliente_id && chat.clientes)
+        .map((chat) => [chat.cliente_id as string, chat.clientes as ClienteResumen])
+    ));
     return rows;
   };
 
