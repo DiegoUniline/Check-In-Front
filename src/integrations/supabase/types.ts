@@ -1832,22 +1832,23 @@ export type Database = {
       }
     }
     Views: {
-      v_metricas_plataforma: {
-        Row: {
-          hoteles_activos: number | null
-          mrr: number | null
-          por_vencer_7d: number | null
-          reservas_mes: number | null
-          suscripciones_activas: number | null
-          total_hoteles: number | null
-          total_usuarios: number | null
-          vencidas: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       current_hotel_id: { Args: never; Returns: string }
+      get_metricas_plataforma: {
+        Args: never
+        Returns: {
+          hoteles_activos: number
+          mrr: number
+          por_vencer_7d: number
+          reservas_mes: number
+          suscripciones_activas: number
+          total_hoteles: number
+          total_usuarios: number
+          vencidas: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
