@@ -46,6 +46,8 @@ import Landing from "./pages/Landing";
 import PublicHotel from "./pages/PublicHotel";
 import ScrollToTop from "./components/ScrollToTop";
 import Chats from "./pages/Chats";
+import WhatsAppAgente from "./pages/WhatsAppAgente";
+import WhatsAppConexion from "./pages/WhatsAppConexion";
 
 const queryClient = new QueryClient();
 
