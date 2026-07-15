@@ -89,6 +89,14 @@ Deno.serve(async (req) => {
       for (const m of list) {
         await procesarMensaje(admin, hotelId, m);
       }
+      // Disparar agente IA para mensajes entrantes (no bloqueante)
+      for (const m of list) {
+        const key = (m.key as Record<string, unknown> | undefined) ?? {};
+        if (key.fromMe) continue;
+        const jid = (key.remoteJid as string) ?? "";
+        if (jid.endsWith("@g.us")) continue;
+        dispararAgente(hotelId, jid).catch((e) => console.error("agent trigger error", e));
+      }
       return json({ ok: true, procesados: list.length });
     }
 
