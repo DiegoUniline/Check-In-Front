@@ -152,10 +152,36 @@ export default function Chats() {
 
   // Cargar cliente asociado
   useEffect(() => {
-    if (!selected?.cliente_id) { setCliente(null); return; }
-    sb.from('clientes').select('*').eq('id', selected.cliente_id).single()
-      .then(({ data }: any) => setCliente(data));
-  }, [selected?.cliente_id]);
+    if (!selected) { setCliente(null); return; }
+    if (selected.cliente_id) {
+      sb.from('clientes').select('*').eq('id', selected.cliente_id).single()
+        .then(({ data }: any) => setCliente(data));
+      return;
+    }
+    // Auto-vincular: busca clientes por teléfono, aún si guardaron con o sin lada.
+    const digits = String(selected.phone || '').replace(/\D/g, '');
+    if (!digits) { setCliente(null); return; }
+    // Variantes: full (5213171035768), sin '1' móvil (523171035768), local (3171035768).
+    const variantes = new Set<string>([digits]);
+    if (digits.startsWith('521')) variantes.add('52' + digits.slice(3));
+    if (digits.startsWith('52') && digits.length >= 12) variantes.add(digits.slice(2));
+    if (digits.startsWith('521')) variantes.add(digits.slice(3));
+    if (digits.length > 10) variantes.add(digits.slice(-10));
+    const arr = Array.from(variantes);
+    sb.from('clientes')
+      .select('*')
+      .in('telefono', arr)
+      .limit(1)
+      .then(async ({ data }: any) => {
+        const match = data?.[0];
+        if (match) {
+          setCliente(match);
+          await sb.from('wa_chats').update({ cliente_id: match.id }).eq('id', selected.id);
+        } else {
+          setCliente(null);
+        }
+      });
+  }, [selected?.id, selected?.cliente_id, selected?.phone]);
 
   // Scroll al final al cargar mensajes
   useEffect(() => {
