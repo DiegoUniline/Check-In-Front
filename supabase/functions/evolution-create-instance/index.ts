@@ -101,6 +101,29 @@ Deno.serve(async (req) => {
       return json({ error: "Evolution create fallo", details: createResp.body }, 502);
     }
 
+    // Asegurar webhook (Evolution v2 requiere endpoint dedicado)
+    try {
+      await evoFetch(`/webhook/set/${inst!.instance_name}`, {
+        method: "POST",
+        body: JSON.stringify({
+          webhook: {
+            enabled: true,
+            url: webhookUrl,
+            webhookByEvents: false,
+            webhookBase64: true,
+            events: [
+              "MESSAGES_UPSERT",
+              "MESSAGES_UPDATE",
+              "CONNECTION_UPDATE",
+              "QRCODE_UPDATED",
+            ],
+          },
+        }),
+      });
+    } catch (e) {
+      console.error("webhook/set fallo", e);
+    }
+
     await admin
       .from("wa_instancias")
       .update({
