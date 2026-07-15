@@ -2,6 +2,7 @@ import { Search, Sun, Moon, LogOut, User, Settings, Hotel } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -58,6 +59,7 @@ export function Header({ title, subtitle }: HeaderProps) {
     <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-3 lg:px-6">
       {/* Left section */}
       <div className="flex items-center gap-3 min-w-0 flex-1">
+        <SidebarTrigger className="hidden lg:inline-flex" />
         <div className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
           <Hotel className="h-5 w-5" />
         </div>
