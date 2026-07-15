@@ -131,7 +131,7 @@ export default function AdminPlataforma() {
         nombre: data.nombre_administrador,
         email: data.email_acceso,
         password: data.password,
-        rol: 'admin',
+        rol: 'Admin',
         cuenta_id: (cuenta as any)?.id,
         hotel_id: null,
         activo: true
@@ -155,7 +155,7 @@ export default function AdminPlataforma() {
         nombre: data.nombre,
         email: data.email,
         password: data.password,
-        rol: 'admin',
+        rol: 'Admin',
         cuenta_id: data.cuenta_id,
         hotel_id: null,
         activo: true
