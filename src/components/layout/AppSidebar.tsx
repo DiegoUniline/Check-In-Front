@@ -231,6 +231,13 @@ export function AppSidebar() {
         )}
 
         <SidebarGroup>
+          {!collapsed && <SidebarGroupLabel className="text-green-600 font-semibold">WhatsApp Chat</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            {renderNavItems(chatTopItem)}
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Principal</SidebarGroupLabel>}
           <SidebarGroupContent>
             {renderNavItems(mainNavItems)}
@@ -255,6 +262,13 @@ export function AppSidebar() {
           {!collapsed && <SidebarGroupLabel>Sistema</SidebarGroupLabel>}
           <SidebarGroupContent>
             {renderNavItems(configNavItems)}
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          {!collapsed && <SidebarGroupLabel className="text-green-600 font-semibold">WhatsApp</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            {renderNavItems(whatsappNavItems)}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
