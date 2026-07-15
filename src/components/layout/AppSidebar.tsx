@@ -233,7 +233,7 @@ export function AppSidebar() {
         </NavLink>
       </SidebarHeader>
 
-      <SidebarContent ref={contentRef} className="px-2 py-4">
+      <SidebarContent ref={contentRef} className="py-4 group-data-[collapsible=icon]:px-0">
         {/* SECCIÓN PARA DIEGO - Solo aparece si el correo coincide */}
         {user?.email === 'diego.leon@uniline.mx' && (
           <SidebarGroup>
