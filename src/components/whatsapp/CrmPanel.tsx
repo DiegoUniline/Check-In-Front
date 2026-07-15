@@ -117,9 +117,22 @@ export function CrmPanel({ chat, cliente, onClienteChange, onChatChange }: Props
     onChatChange();
   };
 
-  const nombreCompleto = cliente
-    ? [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno].filter(Boolean).join(' ')
-    : (chat?.nombre || chat?.phone);
+  // Nombre completo con deduplicación de tokens repetidos: si `apellido_paterno`
+  // ya trae el nombre completo (p.ej. "Diego León" guardado en un solo campo),
+  // evitamos mostrar "Diego Diego León".
+  const nombreCompleto = (() => {
+    if (!cliente) return chat?.nombre || chat?.phone;
+    const partes = [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno]
+      .filter(Boolean)
+      .map((s: string) => String(s).trim());
+    const tokens: string[] = [];
+    for (const p of partes) {
+      for (const t of p.split(/\s+/)) {
+        if (t && !tokens.some((x) => x.toLowerCase() === t.toLowerCase())) tokens.push(t);
+      }
+    }
+    return tokens.join(' ');
+  })();
 
   return (
     <div className="p-4 space-y-4 overflow-y-auto">
