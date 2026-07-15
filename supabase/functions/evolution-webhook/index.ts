@@ -23,7 +23,10 @@ Deno.serve(async (req) => {
       instance?: string;
       data?: Record<string, unknown>;
     };
-    const event = (evt.event ?? "").toString().toUpperCase();
+    const event = (evt.event ?? "")
+      .toString()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "_");
     const instance = evt.instance ?? "";
     const data = evt.data ?? {};
 
