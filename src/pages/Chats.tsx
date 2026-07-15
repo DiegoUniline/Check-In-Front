@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, Send, Bot, User as UserIcon, Check, CheckCheck,
-  MessageCircle, RefreshCw, Pause, Play, Tag as TagIcon, Hotel
+  MessageCircle, RefreshCw, Pause, Play, Hotel
 } from 'lucide-react';
+import { CrmPanel } from '@/components/whatsapp/CrmPanel';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -433,56 +433,19 @@ export default function Chats() {
               Selecciona una conversación
             </div>
           ) : (
-            <div className="p-4 space-y-4 overflow-y-auto">
-              <div className="flex flex-col items-center text-center">
-                <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-2xl font-bold text-emerald-600 mb-2">
-                  {(selected.nombre || selected.phone || '?').slice(0, 1).toUpperCase()}
-                </div>
-                <div className="font-semibold">{selected.nombre || selected.phone}</div>
-                <div className="text-xs text-muted-foreground">{selected.phone}</div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-1">Estado</div>
-                <Badge variant={selected.estado_bot === 'bot' ? 'default' : 'secondary'}>
-                  {selected.estado_bot === 'bot' ? '🤖 Atendido por IA' : '👤 Atendido por humano'}
-                </Badge>
-              </div>
-
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                  <TagIcon className="h-3 w-3" /> Etiquetas
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {selected.etiquetas.length === 0 && (
-                    <span className="text-xs text-muted-foreground">Sin etiquetas</span>
-                  )}
-                  {selected.etiquetas.map((et) => (
-                    <Badge key={et} variant="outline">{et}</Badge>
-                  ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-1">Cliente vinculado</div>
-                {cliente ? (
-                  <div className="text-sm">
-                    <div className="font-medium">
-                      {[cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno].filter(Boolean).join(' ')}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{cliente.email}</div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    Sin cliente. Se vinculará automáticamente por teléfono.
-                  </div>
-                )}
-              </div>
-            </div>
+            <CrmPanel
+              chat={selected}
+              cliente={cliente}
+              onClienteChange={() => {
+                if (selected?.cliente_id) {
+                  sb.from('clientes').select('*').eq('id', selected.cliente_id).single()
+                    .then(({ data }: any) => setCliente(data));
+                } else {
+                  cargarChats();
+                }
+              }}
+              onChatChange={cargarChats}
+            />
           ))}
         </div>
       </div>
