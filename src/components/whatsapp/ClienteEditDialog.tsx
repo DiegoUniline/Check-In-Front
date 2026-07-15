@@ -210,32 +210,12 @@ export function ClienteEditDialog({
               </div>
               <div className="col-span-2">
                 <Label>Teléfono</Label>
-                <div className="flex gap-2">
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      {COUNTRY_CODES.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.label} (+{c.dial})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    className="flex-1"
-                    inputMode="tel"
-                    placeholder={country === 'MX' ? '3171035768 (10 dígitos)' : 'Número local'}
-                    value={localPhone}
-                    onChange={(e) => setLocalPhone(e.target.value.replace(/\D/g, ''))}
-                  />
-                </div>
-                {localPhone && (
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    WhatsApp: +{joinPhone(country, localPhone)}
-                  </p>
-                )}
+                <PhoneInput
+                  country={country}
+                  localPhone={localPhone}
+                  onCountryChange={setCountry}
+                  onLocalPhoneChange={setLocalPhone}
+                />
               </div>
               <div className="col-span-2">
                 <Label>Email</Label>
