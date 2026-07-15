@@ -128,11 +128,6 @@ export default function POS() {
   const iva = Math.round(subtotal * 0.16 * 100) / 100;
   const total = Math.round((subtotal + iva) * 100) / 100;
 
-  const formatCurrency = (value: number) => {
-    const num = parseFloat(String(value)) || 0;
-    return isNaN(num) ? formatCurrency(0) : formatCurrency(num);
-  };
-
   const safeNumber = (value: any, defaultValue: number = 0): number => {
     if (value === null || value === undefined || value === '') return defaultValue;
     const num = parseFloat(String(value));
