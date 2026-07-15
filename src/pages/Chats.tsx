@@ -56,6 +56,7 @@ export default function Chats() {
   const [filter, setFilter] = useState<'todos' | 'no_leidos' | 'bot' | 'humano'>('todos');
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [cliente, setCliente] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -66,15 +67,46 @@ export default function Chats() {
 
   // Cargar chats
   const cargarChats = async () => {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('wa_chats')
       .select('*')
       .order('ultima_actividad', { ascending: false })
       .limit(200);
-    setChats((data as Chat[]) ?? []);
+    if (error) {
+      toast({ title: 'Error al cargar chats', description: error.message, variant: 'destructive' });
+      return [];
+    }
+    const rows = (data as Chat[]) ?? [];
+    setChats(rows);
+    return rows;
   };
 
-  useEffect(() => { cargarChats(); }, []);
+  const sincronizarChats = async (silent = false) => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('evolution-sync-chats', { body: {} });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      await cargarChats();
+      if (!silent) {
+        toast({
+          title: 'Chats sincronizados',
+          description: `${(data as any)?.chats ?? 0} chats y ${(data as any)?.mensajes ?? 0} mensajes actualizados.`,
+        });
+      }
+    } catch (e: any) {
+      if (!silent) toast({ title: 'Error al sincronizar', description: e.message, variant: 'destructive' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarChats().then((rows) => {
+      if (rows.length === 0) sincronizarChats(true);
+    });
+  }, []);
 
   // Realtime chats
   useEffect(() => {
@@ -203,6 +235,16 @@ export default function Chats() {
                   {f === 'no_leidos' ? 'No leídos' : f[0].toUpperCase() + f.slice(1)}
                 </Button>
               ))}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs px-2 ml-auto"
+                onClick={() => sincronizarChats(false)}
+                disabled={syncing}
+              >
+                <RefreshCw className={cn('h-3 w-3 mr-1', syncing && 'animate-spin')} />
+                Sync
+              </Button>
             </div>
           </div>
           <ScrollArea className="flex-1">
