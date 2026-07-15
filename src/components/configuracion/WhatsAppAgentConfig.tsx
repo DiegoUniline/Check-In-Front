@@ -6,7 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as sb } from "@/integrations/supabase/client";
+// Tablas creadas manualmente; types aún no regenerados.
+const supabase = sb as any;
 import { toast } from "sonner";
 import { Bot, Plus, Trash2, Sparkles } from "lucide-react";
 
