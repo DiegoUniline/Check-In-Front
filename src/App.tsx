@@ -44,6 +44,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/Landing";
 import PublicHotel from "./pages/PublicHotel";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -316,6 +317,7 @@ const App = () => (
               <ConfirmProvider>
                 <Toaster />
                 <Sonner />
+                <ScrollToTop />
                 <AppRoutes />
               </ConfirmProvider>
             </UnsavedChangesProvider>
