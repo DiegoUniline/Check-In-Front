@@ -29,7 +29,7 @@ import {
   ,Bot
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
@@ -113,6 +113,19 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const { user } = useAuth(); // Detectamos al usuario actual
   const collapsed = state === 'collapsed';
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  // Persistir la posición del scroll de la sidebar entre navegaciones
+  // (cada página monta su propio MainLayout, así que la sidebar se remonta).
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const saved = Number(sessionStorage.getItem('sidebar-scroll') ?? '0');
+    if (saved > 0) el.scrollTop = saved;
+    const onScroll = () => sessionStorage.setItem('sidebar-scroll', String(el.scrollTop));
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   const [ocupadas, setOcupadas] = useState(0);
   const [totalHab, setTotalHab] = useState(0);
@@ -219,7 +232,7 @@ export function AppSidebar() {
         </NavLink>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-4">
+      <SidebarContent ref={contentRef} className="px-2 py-4">
         {/* SECCIÓN PARA DIEGO - Solo aparece si el correo coincide */}
         {user?.email === 'diego.leon@uniline.mx' && (
           <SidebarGroup>
