@@ -46,6 +46,8 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { splitPhone, joinPhone, DEFAULT_COUNTRY } from '@/lib/phoneCountries';
 
 interface Cliente {
   id: string;
@@ -91,6 +93,8 @@ export default function Clientes() {
   const [saving, setSaving] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [phoneCountry, setPhoneCountry] = useState<string>(DEFAULT_COUNTRY);
+  const [phoneLocal, setPhoneLocal] = useState<string>('');
 
   // Normalización de VIP para evitar que React renderice "0".
   // - Qué hace: convierte valores típicos de MySQL (0/1, "0"/"1") a boolean real.
