@@ -83,7 +83,6 @@ export function WhatsAppConfig() {
 
   const dirty = useMemo(() => {
     const hotelChanged = hotelInitial && (
-      (hotel?.whatsapp_token || '') !== (hotelInitial?.whatsapp_token || '') ||
       !!hotel?.whatsapp_enabled !== !!hotelInitial?.whatsapp_enabled
     );
     const tplChanged = isDirty(
@@ -102,7 +101,6 @@ export function WhatsAppConfig() {
       const { error: hErr } = await sb
         .from('hotels')
         .update({
-          whatsapp_token: hotel.whatsapp_token || null,
           whatsapp_enabled: !!hotel.whatsapp_enabled,
         })
         .eq('id', hotel.id);
@@ -133,7 +131,7 @@ export function WhatsAppConfig() {
   };
 
   const enviarPrueba = async (template_key?: string) => {
-    if (!hotel?.whatsapp_token || !hotel?.whatsapp_enabled) {
+    if (!hotel?.whatsapp_enabled) {
       toast({ title: 'Activa WhatsApp y guarda primero', variant: 'destructive' });
       return;
     }
