@@ -187,7 +187,7 @@ export default function Configuracion() {
       title="Configuración" 
       subtitle="Ajustes del sistema y preferencias"
     >
-      <Tabs defaultValue="hotel" className="space-y-6">
+      <Tabs defaultValue={new URLSearchParams(window.location.search).get('tab') ?? 'hotel'} className="space-y-6">
         <TabsList className="grid grid-cols-2 md:grid-cols-8 w-full max-w-5xl">
           <TabsTrigger value="hotel">
             <Hotel className="mr-2 h-4 w-4" /> Hotel
