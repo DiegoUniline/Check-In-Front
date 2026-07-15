@@ -99,8 +99,8 @@ const chatTopItem = [
 // Módulo consolidado de WhatsApp al final
 const whatsappNavItems = [
   { title: 'Chats', url: '/chats', icon: MessageCircle, viewKey: 'chats' },
-  { title: 'Agente IA', url: '/configuracion?tab=whatsapp', icon: Bot, viewKey: 'configuracion' },
-  { title: 'Conexión / QR', url: '/configuracion?tab=whatsapp', icon: Settings, viewKey: 'configuracion' },
+  { title: 'Agente IA', url: '/whatsapp/agente', icon: Bot, viewKey: 'configuracion' },
+  { title: 'Conexión / QR', url: '/whatsapp/conexion', icon: Settings, viewKey: 'configuracion' },
 ];
 
 // Item especial para Diego
