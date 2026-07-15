@@ -177,32 +177,26 @@ export function WhatsAppConfig() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-emerald-500" />
-            Conexión WhatsAPI
+            Conexión de WhatsApp
           </CardTitle>
           <CardDescription>
-            Pega aquí tu API Token de WhatsAPI. La URL del proxy ya está configurada para todos los hoteles.
+            Los mensajes automáticos y del chat se envían a través del WhatsApp
+            vinculado por QR. Conéctalo en <b>WhatsApp → Conexión</b>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <Label className="text-base">Activar WhatsApp</Label>
-              <p className="text-xs text-muted-foreground">Si está apagado, no se enviará ningún mensaje automático.</p>
+              <Label className="text-base">Activar mensajes automáticos</Label>
+              <p className="text-xs text-muted-foreground">
+                Si está apagado, no se enviará ningún mensaje automático (recordatorios,
+                agradecimientos, etc.). El chat manual sigue disponible.
+              </p>
             </div>
             <Switch
               checked={!!hotel?.whatsapp_enabled}
               onCheckedChange={(v) => setHotel({ ...hotel, whatsapp_enabled: v })}
             />
-          </div>
-          <div className="space-y-2">
-            <Label>API Token</Label>
-            <Input
-              type="password"
-              placeholder="Pega tu token de WhatsAPI"
-              value={hotel?.whatsapp_token || ''}
-              onChange={(e) => setHotel({ ...hotel, whatsapp_token: e.target.value })}
-            />
-            <p className="text-xs text-muted-foreground">Lo obtienes en WhatsAPI → Mis Instancias.</p>
           </div>
           <div className="rounded-lg bg-muted/40 border p-3 text-xs flex gap-2">
             <Info className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
