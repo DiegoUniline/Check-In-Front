@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Save, User, CreditCard, MapPin } from 'lucide-react';
 
@@ -33,6 +34,68 @@ interface Props {
  * dedicadas.
  */
 const BLOCK_RE = /\[([A-Z_]+)\]([\s\S]*?)\[\/\1\]/g;
+
+// Lista de códigos de país más usados. `waPrefix` es lo que WhatsApp
+// realmente antepone (ej: MX = 52 pero WA guarda 521 para móviles).
+const COUNTRY_CODES: Array<{ code: string; label: string; dial: string; waPrefix: string }> = [
+  { code: 'MX', label: '🇲🇽 México', dial: '52', waPrefix: '521' },
+  { code: 'US', label: '🇺🇸 Estados Unidos', dial: '1', waPrefix: '1' },
+  { code: 'CA', label: '🇨🇦 Canadá', dial: '1', waPrefix: '1' },
+  { code: 'AR', label: '🇦🇷 Argentina', dial: '54', waPrefix: '549' },
+  { code: 'BR', label: '🇧🇷 Brasil', dial: '55', waPrefix: '55' },
+  { code: 'CL', label: '🇨🇱 Chile', dial: '56', waPrefix: '56' },
+  { code: 'CO', label: '🇨🇴 Colombia', dial: '57', waPrefix: '57' },
+  { code: 'PE', label: '🇵🇪 Perú', dial: '51', waPrefix: '51' },
+  { code: 'EC', label: '🇪🇨 Ecuador', dial: '593', waPrefix: '593' },
+  { code: 'VE', label: '🇻🇪 Venezuela', dial: '58', waPrefix: '58' },
+  { code: 'UY', label: '🇺🇾 Uruguay', dial: '598', waPrefix: '598' },
+  { code: 'PY', label: '🇵🇾 Paraguay', dial: '595', waPrefix: '595' },
+  { code: 'BO', label: '🇧🇴 Bolivia', dial: '591', waPrefix: '591' },
+  { code: 'CR', label: '🇨🇷 Costa Rica', dial: '506', waPrefix: '506' },
+  { code: 'PA', label: '🇵🇦 Panamá', dial: '507', waPrefix: '507' },
+  { code: 'GT', label: '🇬🇹 Guatemala', dial: '502', waPrefix: '502' },
+  { code: 'HN', label: '🇭🇳 Honduras', dial: '504', waPrefix: '504' },
+  { code: 'SV', label: '🇸🇻 El Salvador', dial: '503', waPrefix: '503' },
+  { code: 'NI', label: '🇳🇮 Nicaragua', dial: '505', waPrefix: '505' },
+  { code: 'DO', label: '🇩🇴 República Dominicana', dial: '1', waPrefix: '1' },
+  { code: 'CU', label: '🇨🇺 Cuba', dial: '53', waPrefix: '53' },
+  { code: 'ES', label: '🇪🇸 España', dial: '34', waPrefix: '34' },
+  { code: 'FR', label: '🇫🇷 Francia', dial: '33', waPrefix: '33' },
+  { code: 'DE', label: '🇩🇪 Alemania', dial: '49', waPrefix: '49' },
+  { code: 'IT', label: '🇮🇹 Italia', dial: '39', waPrefix: '39' },
+  { code: 'GB', label: '🇬🇧 Reino Unido', dial: '44', waPrefix: '44' },
+];
+
+const DEFAULT_COUNTRY = 'MX';
+
+/** Divide un teléfono completo (con o sin '+') en país + número local. */
+function splitPhone(raw: string | null | undefined): { country: string; local: string } {
+  if (!raw) return { country: DEFAULT_COUNTRY, local: '' };
+  const digits = String(raw).replace(/\D/g, '');
+  if (!digits) return { country: DEFAULT_COUNTRY, local: '' };
+  // Ordenamos por prefijo más largo primero para hacer match preciso.
+  const sorted = [...COUNTRY_CODES].sort((a, b) => b.waPrefix.length - a.waPrefix.length);
+  for (const c of sorted) {
+    if (digits.startsWith(c.waPrefix)) {
+      return { country: c.code, local: digits.slice(c.waPrefix.length) };
+    }
+  }
+  const sortedDial = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
+  for (const c of sortedDial) {
+    if (digits.startsWith(c.dial)) {
+      return { country: c.code, local: digits.slice(c.dial.length) };
+    }
+  }
+  return { country: DEFAULT_COUNTRY, local: digits };
+}
+
+/** Ensambla el teléfono completo listo para WhatsApp (sin '+'). */
+function joinPhone(countryCode: string, local: string): string {
+  const c = COUNTRY_CODES.find((x) => x.code === countryCode) || COUNTRY_CODES[0];
+  const clean = (local || '').replace(/\D/g, '');
+  if (!clean) return '';
+  return `${c.waPrefix}${clean}`;
+}
 
 function parseNotas(notas: string | null | undefined) {
   const out: Record<string, string> = { general: '', banco: '', direccion: '' };
@@ -64,6 +127,8 @@ export function ClienteEditDialog({
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Cliente>({});
+  const [country, setCountry] = useState<string>(DEFAULT_COUNTRY);
+  const [localPhone, setLocalPhone] = useState<string>('');
   const [banco, setBanco] = useState({ banco: '', titular: '', cuenta: '', clabe: '', metodo: '' });
   const [direccion, setDireccion] = useState({ calle: '', ciudad: '', pais: '' });
   const [notasGen, setNotasGen] = useState('');
@@ -72,6 +137,9 @@ export function ClienteEditDialog({
     if (!open) return;
     if (cliente) {
       setForm({ ...cliente });
+      const sp = splitPhone(cliente.telefono);
+      setCountry(sp.country);
+      setLocalPhone(sp.local);
       const parsed = parseNotas(cliente.notas);
       setNotasGen(parsed.general);
       const b = Object.fromEntries(parsed.banco.split('\n').map((l) => l.split(':').map((x) => x.trim())));
@@ -90,6 +158,9 @@ export function ClienteEditDialog({
       });
     } else {
       const [nombre, ...rest] = (defaultName || '').split(' ');
+      const sp = splitPhone(defaultPhone);
+      setCountry(sp.country);
+      setLocalPhone(sp.local);
       setForm({
         nombre: nombre || '',
         apellido_paterno: rest.join(' ') || '',
@@ -111,6 +182,7 @@ export function ClienteEditDialog({
     }
     setSaving(true);
     try {
+      const telefonoFinal = joinPhone(country, localPhone);
       const bancoBlock = [
         banco.banco && `Banco: ${banco.banco}`,
         banco.titular && `Titular: ${banco.titular}`,
@@ -132,7 +204,7 @@ export function ClienteEditDialog({
         apellido_paterno: form.apellido_paterno?.trim() || null,
         apellido_materno: form.apellido_materno?.trim() || null,
         email: form.email?.trim() || null,
-        telefono: form.telefono?.trim() || null,
+        telefono: telefonoFinal || null,
         nacionalidad: form.nacionalidad?.trim() || null,
         tipo_documento: form.tipo_documento?.trim() || null,
         numero_documento: form.numero_documento?.trim() || null,
@@ -197,9 +269,34 @@ export function ClienteEditDialog({
                 <Label>Apellido materno</Label>
                 <Input value={form.apellido_materno || ''} onChange={(e) => setForm({ ...form, apellido_materno: e.target.value })} />
               </div>
-              <div>
+              <div className="col-span-2">
                 <Label>Teléfono</Label>
-                <Input value={form.telefono || ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+                <div className="flex gap-2">
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {COUNTRY_CODES.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.label} (+{c.dial})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    className="flex-1"
+                    inputMode="tel"
+                    placeholder={country === 'MX' ? '3171035768 (10 dígitos)' : 'Número local'}
+                    value={localPhone}
+                    onChange={(e) => setLocalPhone(e.target.value.replace(/\D/g, ''))}
+                  />
+                </div>
+                {localPhone && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    WhatsApp: +{joinPhone(country, localPhone)}
+                  </p>
+                )}
               </div>
               <div className="col-span-2">
                 <Label>Email</Label>
