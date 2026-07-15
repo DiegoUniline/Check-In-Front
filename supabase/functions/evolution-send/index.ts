@@ -27,9 +27,9 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
     const token = authHeader.replace("Bearer ", "");
-    const { data: claims } = await userClient.auth.getClaims(token);
-    if (!claims?.claims) return json({ error: "Unauthorized" }, 401);
-    const userId = claims.claims.sub;
+    const { data: userData } = await userClient.auth.getUser(token);
+    if (!userData?.user) return json({ error: "Unauthorized" }, 401);
+    const userId = userData.user.id;
 
     const {
       chat_id,
