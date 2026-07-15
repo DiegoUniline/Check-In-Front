@@ -75,9 +75,9 @@ Deno.serve(async (req) => {
       return json({ error: "Instancia WhatsApp no está conectada" }, 400);
     }
 
+    const number = phone;
     let path = "";
     let payload: Record<string, unknown> = {};
-    const number = phone;
     if (tipo === "text") {
       path = `/message/sendText/${inst.instance_name}`;
       payload = { number, text: String(contenido ?? "") };

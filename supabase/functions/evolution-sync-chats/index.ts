@@ -91,7 +91,14 @@ Deno.serve(async (req) => {
 
       chatsSincronizados += 1;
       const chatId = upsert.data.id as string;
-      mensajesSincronizados += await sincronizarMensajes(admin, hotelId, chatId, inst.instance_name, remoteJid);
+      mensajesSincronizados += await sincronizarMensajes(
+        admin,
+        hotelId,
+        chatId,
+        inst.instance_name,
+        remoteJid,
+        parsed.phone,
+      );
     }
 
     return json({ ok: true, chats: chatsSincronizados, mensajes: mensajesSincronizados });
@@ -106,6 +113,7 @@ async function sincronizarMensajes(
   chatId: string,
   instanceName: string,
   remoteJid: string,
+  chatPhone: string,
 ) {
   const resp = await evoFetch(`/chat/findMessages/${instanceName}`, {
     method: "POST",
@@ -119,6 +127,23 @@ async function sincronizarMensajes(
   const messages = extractArray(resp.body, ["messages", "data", "records", "result"])
     .map((m) => parseMessage(m))
     .filter((m) => m && m.wa_message_id) as ParsedMessage[];
+
+  // Si el remoteJid es un LID (privacidad WA) intentamos resolver el número
+  // real desde `key.remoteJidAlt` presente en los mensajes.
+  if (remoteJid.endsWith("@lid")) {
+    const raws = extractArray(resp.body, ["messages", "data", "records", "result"]);
+    for (const raw of raws) {
+      const key = (raw.key as AnyRecord | undefined) ?? {};
+      const alt = key.remoteJidAlt as string | undefined;
+      if (alt && alt.endsWith("@s.whatsapp.net")) {
+        const realPhone = alt.split("@")[0]?.replace(/\D/g, "") ?? "";
+        if (realPhone && realPhone !== chatPhone) {
+          await admin.from("wa_chats").update({ phone: realPhone }).eq("id", chatId);
+        }
+        break;
+      }
+    }
+  }
 
   messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   const recent = messages.slice(-200);
