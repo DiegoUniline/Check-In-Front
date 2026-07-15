@@ -185,7 +185,7 @@ export function AppSidebar() {
         const badgeValue = item.badgeKey === 'reservas-online' ? pendientesOnline : 0;
         return (
           <SidebarMenuItem key={item.title}>
-            <SidebarMenuButton asChild isActive={isActive}>
+            <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
               <NavLink 
                 to={item.url} 
                 className={cn(
