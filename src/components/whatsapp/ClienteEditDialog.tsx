@@ -179,7 +179,7 @@ export function ClienteEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{cliente?.id ? 'Editar cliente' : 'Nuevo cliente'}</DialogTitle>
           <DialogDescription>
@@ -195,7 +195,7 @@ export function ClienteEditDialog({
           </TabsList>
 
           <TabsContent value="general" className="space-y-3 mt-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>Nombre *</Label>
                 <Input value={form.nombre || ''} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
@@ -252,7 +252,7 @@ export function ClienteEditDialog({
           </TabsContent>
 
           <TabsContent value="banco" className="space-y-3 mt-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>Banco</Label>
                 <Input value={banco.banco} onChange={(e) => setBanco({ ...banco, banco: e.target.value })} />
@@ -280,7 +280,7 @@ export function ClienteEditDialog({
           </TabsContent>
 
           <TabsContent value="direccion" className="space-y-3 mt-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label>Calle y número</Label>
                 <Input value={direccion.calle} onChange={(e) => setDireccion({ ...direccion, calle: e.target.value })} />
