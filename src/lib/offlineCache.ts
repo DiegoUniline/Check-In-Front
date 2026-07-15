@@ -121,3 +121,59 @@ export function removeMutation(id: string) {
 export function clearQueue() {
   localStorage.removeItem(QUEUE_KEY);
 }
+
+/**
+ * Handlers registrados por `kind` para reproducir mutaciones encoladas.
+ * Ejemplo:
+ *   registerMutationHandler('habitacion.cambiarEstado', async (payload) => { ... });
+ */
+type MutationHandler = (payload: unknown) => Promise<void>;
+const handlers = new Map<string, MutationHandler>();
+
+export function registerMutationHandler(kind: string, fn: MutationHandler) {
+  handlers.set(kind, fn);
+}
+
+let flushing = false;
+
+/**
+ * Reintenta todas las mutaciones encoladas. Se llama automáticamente cuando
+ * `window` dispara el evento `online`. Los items sin handler registrado se
+ * descartan (evita loops infinitos por payloads antiguos incompatibles).
+ */
+export async function flushMutationQueue(): Promise<{ ok: number; failed: number }> {
+  if (flushing) return { ok: 0, failed: 0 };
+  flushing = true;
+  let ok = 0;
+  let failed = 0;
+  try {
+    const queue = readQueue();
+    for (const m of queue) {
+      const handler = handlers.get(m.kind);
+      if (!handler) {
+        removeMutation(m.id);
+        continue;
+      }
+      try {
+        await handler(m.payload);
+        removeMutation(m.id);
+        ok++;
+      } catch (err) {
+        console.warn(`[offlineCache] replay falló para ${m.kind}:`, err);
+        failed++;
+        // Detener el flush ante el primer fallo para preservar orden.
+        break;
+      }
+    }
+  } finally {
+    flushing = false;
+  }
+  return { ok, failed };
+}
+
+// Auto-flush al recuperar conexión (una sola vez por carga).
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    void flushMutationQueue();
+  });
+}
