@@ -162,10 +162,13 @@ export function AppSidebar() {
     return (
     <SidebarMenu>
       {visible.map((item) => {
-        const isActive = item.url === '/reservas'
+        const [path, qs] = item.url.split('?');
+        const isActive = path === '/reservas'
           ? location.pathname === '/reservas'
-          : location.pathname === item.url ||
-            (item.url !== '/dashboard' && location.pathname.startsWith(item.url + '/'));
+          : qs
+            ? location.pathname === path && location.search.includes(qs)
+            : location.pathname === path ||
+              (path !== '/dashboard' && location.pathname.startsWith(path + '/'));
         const badgeValue = item.badgeKey === 'reservas-online' ? pendientesOnline : 0;
         return (
           <SidebarMenuItem key={item.title}>
