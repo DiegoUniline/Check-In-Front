@@ -91,6 +91,7 @@ export default function Chats() {
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [cliente, setCliente] = useState<any>(null);
+  const [clientesPorId, setClientesPorId] = useState<Record<string, ClienteResumen>>({});
   const [fichaAbierta, setFichaAbierta] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -112,6 +113,18 @@ export default function Chats() {
     }
     const rows = (data as Chat[]) ?? [];
     setChats(rows);
+    const clienteIds = Array.from(new Set(rows.map((c) => c.cliente_id).filter(Boolean))) as string[];
+    if (clienteIds.length > 0) {
+      const { data: clientesData } = await sb
+        .from('clientes')
+        .select('id,nombre,apellido_paterno,apellido_materno')
+        .in('id', clienteIds);
+      setClientesPorId(Object.fromEntries(
+        ((clientesData as ClienteResumen[]) ?? []).map((item) => [item.id, item])
+      ));
+    } else {
+      setClientesPorId({});
+    }
     return rows;
   };
 
@@ -188,7 +201,14 @@ export default function Chats() {
     if (!selected) { setCliente(null); return; }
     if (selected.cliente_id) {
       sb.from('clientes').select('*').eq('id', selected.cliente_id).single()
-        .then(({ data }: any) => setCliente(data));
+        .then(async ({ data }: any) => {
+          setCliente(data);
+          const nombreCliente = nombreCompletoCliente(data);
+          if (nombreCliente && (!selected.nombre || pareceTelefono(selected.nombre))) {
+            await sb.from('wa_chats').update({ nombre: nombreCliente }).eq('id', selected.id);
+            cargarChats();
+          }
+        });
       return;
     }
     // Auto-vincular: busca clientes por teléfono, aún si guardaron con o sin lada.
@@ -209,8 +229,7 @@ export default function Chats() {
         const match = data?.[0];
         if (match) {
           setCliente(match);
-          const nombreCliente = [match.nombre, match.apellido_paterno, match.apellido_materno]
-            .filter(Boolean).join(' ').trim();
+          const nombreCliente = nombreCompletoCliente(match);
           await sb.from('wa_chats')
             .update({ cliente_id: match.id, nombre: nombreCliente || selected.nombre })
             .eq('id', selected.id);
