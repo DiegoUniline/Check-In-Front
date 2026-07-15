@@ -32,6 +32,7 @@ type Chat = {
   asignado_a: string | null;
   estado_bot: 'bot' | 'humano';
   etiquetas: string[];
+  clientes?: ClienteResumen | null;
 };
 
 type Mensaje = {
@@ -47,6 +48,39 @@ type Mensaje = {
   timestamp: string;
 };
 
+type ClienteResumen = {
+  id: string;
+  nombre?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+};
+
+const soloDigitos = (value?: string | null) => String(value || '').replace(/\D/g, '');
+
+const pareceTelefono = (value?: string | null) => soloDigitos(value).length >= 7;
+
+const nombreCompletoCliente = (cliente?: ClienteResumen | null) => {
+  if (!cliente) return '';
+  const tokens: string[] = [];
+  [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno]
+    .filter(Boolean)
+    .map((s) => String(s).trim())
+    .forEach((parte) => {
+      parte.split(/\s+/).forEach((token) => {
+        if (token && !tokens.some((x) => x.toLowerCase() === token.toLowerCase())) tokens.push(token);
+      });
+    });
+  return tokens.join(' ');
+};
+
+const nombreVisibleChat = (chat?: Chat | null, cliente?: ClienteResumen | null) => {
+  if (!chat) return '';
+  const nombreCliente = nombreCompletoCliente(cliente);
+  if (nombreCliente) return nombreCliente;
+  if (chat.nombre && !pareceTelefono(chat.nombre)) return chat.nombre;
+  return chat.phone || chat.nombre || 'Sin nombre';
+};
+
 export default function Chats() {
   const { toast } = useToast();
   const [chats, setChats] = useState<Chat[]>([]);
@@ -58,6 +92,7 @@ export default function Chats() {
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [cliente, setCliente] = useState<any>(null);
+  const [clientesPorId, setClientesPorId] = useState<Record<string, ClienteResumen>>({});
   const [fichaAbierta, setFichaAbierta] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -70,7 +105,7 @@ export default function Chats() {
   const cargarChats = async () => {
     const { data, error } = await sb
       .from('wa_chats')
-      .select('*')
+      .select('*, clientes:cliente_id(id,nombre,apellido_paterno,apellido_materno)')
       .order('ultima_actividad', { ascending: false })
       .limit(200);
     if (error) {
@@ -79,6 +114,11 @@ export default function Chats() {
     }
     const rows = (data as Chat[]) ?? [];
     setChats(rows);
+    setClientesPorId(Object.fromEntries(
+      rows
+        .filter((chat) => chat.cliente_id && chat.clientes)
+        .map((chat) => [chat.cliente_id as string, chat.clientes as ClienteResumen])
+    ));
     return rows;
   };
 
@@ -155,7 +195,14 @@ export default function Chats() {
     if (!selected) { setCliente(null); return; }
     if (selected.cliente_id) {
       sb.from('clientes').select('*').eq('id', selected.cliente_id).single()
-        .then(({ data }: any) => setCliente(data));
+        .then(async ({ data }: any) => {
+          setCliente(data);
+          const nombreCliente = nombreCompletoCliente(data);
+          if (nombreCliente && (!selected.nombre || pareceTelefono(selected.nombre))) {
+            await sb.from('wa_chats').update({ nombre: nombreCliente }).eq('id', selected.id);
+            cargarChats();
+          }
+        });
       return;
     }
     // Auto-vincular: busca clientes por teléfono, aún si guardaron con o sin lada.
@@ -176,8 +223,7 @@ export default function Chats() {
         const match = data?.[0];
         if (match) {
           setCliente(match);
-          const nombreCliente = [match.nombre, match.apellido_paterno, match.apellido_materno]
-            .filter(Boolean).join(' ').trim();
+          const nombreCliente = nombreCompletoCliente(match);
           await sb.from('wa_chats')
             .update({ cliente_id: match.id, nombre: nombreCliente || selected.nombre })
             .eq('id', selected.id);
@@ -293,45 +339,48 @@ export default function Chats() {
                 <br />Conecta WhatsApp en <b>Configuración</b>.
               </div>
             )}
-            {chatsFiltrados.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setSelectedId(c.id)}
-                className={cn(
-                  'w-full text-left p-3 border-b hover:bg-muted/50 transition-colors',
-                  selectedId === c.id && 'bg-muted'
-                )}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-bold flex-shrink-0">
-                    {(c.nombre || c.phone || '?').slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium truncate">{c.nombre || c.phone}</span>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatDistanceToNow(new Date(c.ultima_actividad), { addSuffix: false, locale: es })}
-                      </span>
+            {chatsFiltrados.map((c) => {
+              const nombre = nombreVisibleChat(c, c.cliente_id ? clientesPorId[c.cliente_id] : null);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedId(c.id)}
+                  className={cn(
+                    'w-full text-left p-3 border-b hover:bg-muted/50 transition-colors',
+                    selectedId === c.id && 'bg-muted'
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-bold flex-shrink-0">
+                      {(nombre || '?').slice(0, 1).toUpperCase()}
                     </div>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      {c.estado_bot === 'bot' ? (
-                        <Bot className="h-3 w-3 text-blue-500 shrink-0" />
-                      ) : (
-                        <UserIcon className="h-3 w-3 text-orange-500 shrink-0" />
-                      )}
-                      <span className="text-xs text-muted-foreground truncate">
-                        {c.ultimo_mensaje || '—'}
-                      </span>
-                      {c.no_leidos > 0 && (
-                        <Badge variant="default" className="ml-auto h-5 min-w-5 px-1 text-[10px]">
-                          {c.no_leidos}
-                        </Badge>
-                      )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium truncate">{nombre}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {formatDistanceToNow(new Date(c.ultima_actividad), { addSuffix: false, locale: es })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {c.estado_bot === 'bot' ? (
+                          <Bot className="h-3 w-3 text-blue-500 shrink-0" />
+                        ) : (
+                          <UserIcon className="h-3 w-3 text-orange-500 shrink-0" />
+                        )}
+                        <span className="text-xs text-muted-foreground truncate">
+                          {c.ultimo_mensaje || '—'}
+                        </span>
+                        {c.no_leidos > 0 && (
+                          <Badge variant="default" className="ml-auto h-5 min-w-5 px-1 text-[10px]">
+                            {c.no_leidos}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </ScrollArea>
         </div>
 
@@ -349,15 +398,7 @@ export default function Chats() {
               <div className="p-3 border-b flex items-center justify-between">
                 <div>
                   <div className="font-semibold">
-                    {cliente
-                      ? [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno]
-                          .filter(Boolean)
-                          .join(' ')
-                          .split(/\s+/)
-                          .filter((t: string, i: number, a: string[]) =>
-                            a.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i)
-                          .join(' ')
-                      : (selected.nombre || selected.phone)}
+                    {nombreVisibleChat(selected, cliente || (selected.cliente_id ? clientesPorId[selected.cliente_id] : null))}
                   </div>
                   <div className="text-xs text-muted-foreground">{selected.phone}</div>
                 </div>
