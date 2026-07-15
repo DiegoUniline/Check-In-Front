@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, Send, Bot, User as UserIcon, Check, CheckCheck,
-  MessageCircle, RefreshCw, Pause, Play, Tag as TagIcon
+  MessageCircle, RefreshCw, Pause, Play, Tag as TagIcon, Hotel
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -58,6 +58,7 @@ export default function Chats() {
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [cliente, setCliente] = useState<any>(null);
+  const [fichaAbierta, setFichaAbierta] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(
@@ -210,7 +211,14 @@ export default function Chats() {
 
   return (
     <MainLayout title="WhatsApp / Chats" subtitle="Bandeja de conversaciones con IA">
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_320px] gap-3 h-[calc(100vh-11rem)]">
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-3 h-[calc(100vh-11rem)] transition-[grid-template-columns] duration-300',
+          fichaAbierta
+            ? 'lg:grid-cols-[320px_1fr_320px]'
+            : 'lg:grid-cols-[320px_1fr_56px]'
+        )}
+      >
         {/* Panel izquierdo: lista */}
         <div className="border rounded-lg bg-card overflow-hidden flex flex-col">
           <div className="p-3 border-b space-y-2">
@@ -398,13 +406,34 @@ export default function Chats() {
         </div>
 
         {/* Panel derecho: ficha */}
-        <div className="border rounded-lg bg-card overflow-y-auto hidden lg:block">
-          {!selected ? (
+        <div className="border rounded-lg bg-card overflow-hidden hidden lg:flex flex-col">
+          <div
+            className={cn(
+              'flex items-center border-b p-2',
+              fichaAbierta ? 'justify-between' : 'justify-center'
+            )}
+          >
+            {fichaAbierta && (
+              <span className="text-xs font-semibold text-muted-foreground px-2">
+                Ficha del contacto
+              </span>
+            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => setFichaAbierta((v) => !v)}
+              title={fichaAbierta ? 'Contraer ficha' : 'Expandir ficha'}
+            >
+              <Hotel className="h-4 w-4" />
+            </Button>
+          </div>
+          {fichaAbierta && (!selected ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              Ficha del contacto
+              Selecciona una conversación
             </div>
           ) : (
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 overflow-y-auto">
               <div className="flex flex-col items-center text-center">
                 <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-2xl font-bold text-emerald-600 mb-2">
                   {(selected.nombre || selected.phone || '?').slice(0, 1).toUpperCase()}
@@ -454,7 +483,7 @@ export default function Chats() {
                 )}
               </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </MainLayout>
