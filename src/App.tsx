@@ -130,6 +130,22 @@ const AppRoutes = () => (
       }
     />
     <Route
+      path="/whatsapp/agente"
+      element={
+        <ProtectedRoute viewKey="configuracion">
+          <WhatsAppAgente />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/whatsapp/conexion"
+      element={
+        <ProtectedRoute viewKey="configuracion">
+          <WhatsAppConexion />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="/habitaciones"
       element={
         <ProtectedRoute viewKey="habitaciones">
