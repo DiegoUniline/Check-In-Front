@@ -145,7 +145,7 @@ export function resetPermissions(): PermissionMatrix {
 
 export function canAccess(viewKey: string, role: string | undefined): boolean {
   if (!role) return false;
-  if (role === 'Admin') return true;
+  if (role === 'Admin' || role === 'SuperAdmin') return true;
   const matrix = loadPermissions();
   const allowed = matrix[viewKey];
   if (!allowed) return true; // si no está definida, no bloquear
