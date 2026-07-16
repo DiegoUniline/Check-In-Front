@@ -75,8 +75,8 @@ export default function Login() {
       <Card className="relative w-full max-w-md shadow-lg">
         <CardHeader className="text-center pb-2">
           {/* Logo */}
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-            <Logo size={36} className="text-primary-foreground" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
+            <Logo size={64} className="text-primary" />
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">HospedApp</CardTitle>
           <CardDescription>Sistema de Gestión Hotelera</CardDescription>
