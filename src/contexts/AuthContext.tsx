@@ -1,6 +1,17 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import api from '@/lib/api';
 import { AuthContext, User } from './auth-context';
+import { savePermissions, DEFAULT_PERMISSIONS, PermissionMatrix } from '@/lib/permissions';
+
+async function syncPermisosFromBD() {
+  try {
+    const remote = await api.getPermisosHotel().catch(() => ({}));
+    const merged = { ...DEFAULT_PERMISSIONS, ...(remote as PermissionMatrix) };
+    savePermissions(merged);
+  } catch {
+    // no-op
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -78,6 +89,7 @@ useEffect(() => {
           localStorage.setItem('user', JSON.stringify(hydratedUser));
           localStorage.setItem('token', session.access_token);
           localStorage.removeItem('demoMode');
+          void syncPermisosFromBD();
         } catch (e) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -117,6 +129,7 @@ useEffect(() => {
       if (email === 'admin@hotel.com') {
         localStorage.setItem('demoMode', 'true');
       }
+      void syncPermisosFromBD();
       setIsLoading(false);
       return true;
     } catch (error) {
@@ -176,6 +189,7 @@ useEffect(() => {
       localStorage.setItem('user', JSON.stringify(u));
       localStorage.setItem('token', session.access_token);
       localStorage.removeItem('demoMode');
+      void syncPermisosFromBD();
     } catch (e) {
       console.error('refreshUser error', e);
     }
