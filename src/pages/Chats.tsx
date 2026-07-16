@@ -151,15 +151,23 @@ export default function Chats() {
 
   // Realtime chats
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (timer) return;
+      timer = setTimeout(() => { timer = null; cargarChats(); }, 200);
+    };
     const ch = supabase
       .channel('wa_chats_rt')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'wa_chats' },
-        () => cargarChats()
+        () => scheduleReload()
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   // Cargar mensajes del chat seleccionado
@@ -184,7 +192,24 @@ export default function Chats() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'wa_mensajes', filter: `chat_id=eq.${selectedId}` },
-        () => cargarMensajes(selectedId)
+        (payload: any) => {
+          // Aplicar incrementalmente para evitar refetch completo
+          const nuevo = payload?.new as Mensaje | undefined;
+          const viejo = payload?.old as Mensaje | undefined;
+          if (payload?.eventType === 'INSERT' && nuevo?.id) {
+            setMensajes((prev) => prev.some((m) => m.id === nuevo.id) ? prev : [...prev, nuevo]);
+            return;
+          }
+          if (payload?.eventType === 'UPDATE' && nuevo?.id) {
+            setMensajes((prev) => prev.map((m) => m.id === nuevo.id ? { ...m, ...nuevo } : m));
+            return;
+          }
+          if (payload?.eventType === 'DELETE' && viejo?.id) {
+            setMensajes((prev) => prev.filter((m) => m.id !== viejo.id));
+            return;
+          }
+          cargarMensajes(selectedId);
+        }
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
