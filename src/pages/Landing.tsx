@@ -7,6 +7,7 @@ import {
   Users, Wrench, Sparkle, ShoppingCart, Package, BarChart3,
   ClipboardCheck, DollarSign, Globe, Clock, Check, Star, MessageCircle, Phone,
 } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 /**
  * Landing pública (vista principal en "/")
@@ -47,8 +48,8 @@ export default function Landing() {
       <header className="border-b bg-background/70 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2 font-bold text-lg">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-              <Hotel className="h-4 w-4 text-primary-foreground" />
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+              <Logo size={20} className="text-primary-foreground" />
             </div>
             HospedApp
           </div>
@@ -277,7 +278,7 @@ export default function Landing() {
       <footer className="border-t">
         <div className="container mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Hotel className="h-4 w-4 text-primary" />
+            <Logo size={16} className="text-primary" />
             © {new Date().getFullYear()} HospedApp · Sistema de gestión hotelera
           </div>
           <div className="flex items-center gap-4">
