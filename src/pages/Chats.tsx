@@ -198,7 +198,10 @@ export default function Chats() {
         .then(async ({ data }: any) => {
           setCliente(data);
           const nombreCliente = nombreCompletoCliente(data);
-          if (nombreCliente && (!selected.nombre || pareceTelefono(selected.nombre))) {
+          // Solo escribimos si tenemos un nombre real y el chat aún no lo tiene
+          // (o guardaba solo el teléfono). Nunca sobrescribir con vacío.
+          if (nombreCliente && nombreCliente !== selected.nombre
+              && (!selected.nombre || pareceTelefono(selected.nombre))) {
             await sb.from('wa_chats').update({ nombre: nombreCliente }).eq('id', selected.id);
             cargarChats();
           }
@@ -217,6 +220,7 @@ export default function Chats() {
     const arr = Array.from(variantes);
     sb.from('clientes')
       .select('*')
+      .eq('hotel_id', selected.hotel_id)
       .in('telefono', arr)
       .limit(1)
       .then(async ({ data }: any) => {
@@ -224,9 +228,16 @@ export default function Chats() {
         if (match) {
           setCliente(match);
           const nombreCliente = nombreCompletoCliente(match);
-          await sb.from('wa_chats')
-            .update({ cliente_id: match.id, nombre: nombreCliente || selected.nombre })
-            .eq('id', selected.id);
+          // Solo persistimos `nombre` si tenemos uno real. Si el actual ya es
+          // un teléfono o está vacío y el cliente sí tiene nombre, lo
+          // actualizamos; en otro caso conservamos el que estaba.
+          const patch: Record<string, unknown> = { cliente_id: match.id };
+          if (nombreCliente
+              && (!selected.nombre || pareceTelefono(selected.nombre))
+              && nombreCliente !== selected.nombre) {
+            patch.nombre = nombreCliente;
+          }
+          await sb.from('wa_chats').update(patch).eq('id', selected.id);
           cargarChats();
         } else {
           setCliente(null);
