@@ -26,6 +26,17 @@ export function ProtectedRoute({ children, viewKey }: ProtectedRouteProps) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Si el usuario está autenticado pero no tiene hotel activo (p. ej. SuperAdmin
+  // que aún no seleccionó hotel), evitamos renderizar vistas que consultan por
+  // hotel_id y provocarían errores 500/RLS. SuperAdmin va a la vista de admin
+  // de plataforma; el resto al login para revisar su perfil.
+  const hotelId = typeof window !== 'undefined' ? localStorage.getItem('hotel_id') : null;
+  if (!hotelId) {
+    if (user?.rol === 'SuperAdmin' && location.pathname !== '/admin-plataforma') {
+      return <Navigate to="/admin-plataforma" replace />;
+    }
+  }
+
   if (viewKey && !canAccess(viewKey, user?.rol)) {
     return <Navigate to="/dashboard" replace />;
   }
