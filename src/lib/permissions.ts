@@ -148,6 +148,8 @@ export function canAccess(viewKey: string, role: string | undefined): boolean {
   if (role === 'Admin' || role === 'SuperAdmin') return true;
   const matrix = loadPermissions();
   const allowed = matrix[viewKey];
-  if (!allowed) return true; // si no está definida, no bloquear
+  // Cierre por defecto: si la vista no está en la matriz, denegar.
+  // Solo Admin/SuperAdmin (arriba) pasan sin estar declarados.
+  if (!allowed) return false;
   return allowed.includes(role as RoleId);
 }
