@@ -1,6 +1,17 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import api from '@/lib/api';
 import { AuthContext, User } from './auth-context';
+import { savePermissions, DEFAULT_PERMISSIONS, PermissionMatrix } from '@/lib/permissions';
+
+async function syncPermisosFromBD() {
+  try {
+    const remote = await api.getPermisosHotel().catch(() => ({}));
+    const merged = { ...DEFAULT_PERMISSIONS, ...(remote as PermissionMatrix) };
+    savePermissions(merged);
+  } catch {
+    // no-op
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
