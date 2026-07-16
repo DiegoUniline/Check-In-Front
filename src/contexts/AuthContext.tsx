@@ -1,15 +1,21 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import api from '@/lib/api';
 import { AuthContext, User } from './auth-context';
-import { savePermissions, DEFAULT_PERMISSIONS, PermissionMatrix } from '@/lib/permissions';
+import { savePermissions, loadPermissions, DEFAULT_PERMISSIONS, PermissionMatrix } from '@/lib/permissions';
 
 async function syncPermisosFromBD() {
   try {
-    const remote = await api.getPermisosHotel().catch(() => ({}));
-    const merged = { ...DEFAULT_PERMISSIONS, ...(remote as PermissionMatrix) };
-    savePermissions(merged);
+    const remote = await api.getPermisosHotel();
+    // Solo sobrescribimos si la respuesta remota trae claves; si viene vacía,
+    // conservamos los permisos ya guardados en local (evita "perder" acceso
+    // cuando la BD no tiene overrides o falla la consulta).
+    if (remote && typeof remote === 'object' && Object.keys(remote).length > 0) {
+      const current = loadPermissions();
+      const merged = { ...DEFAULT_PERMISSIONS, ...current, ...(remote as PermissionMatrix) };
+      savePermissions(merged);
+    }
   } catch {
-    // no-op
+    // Fallback: preservar permisos locales; no tocar nada.
   }
 }
 
