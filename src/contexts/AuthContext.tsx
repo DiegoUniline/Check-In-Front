@@ -129,6 +129,7 @@ useEffect(() => {
       if (email === 'admin@hotel.com') {
         localStorage.setItem('demoMode', 'true');
       }
+      void syncPermisosFromBD();
       setIsLoading(false);
       return true;
     } catch (error) {
