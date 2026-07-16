@@ -89,6 +89,7 @@ useEffect(() => {
           localStorage.setItem('user', JSON.stringify(hydratedUser));
           localStorage.setItem('token', session.access_token);
           localStorage.removeItem('demoMode');
+          void syncPermisosFromBD();
         } catch (e) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -187,6 +188,7 @@ useEffect(() => {
       localStorage.setItem('user', JSON.stringify(u));
       localStorage.setItem('token', session.access_token);
       localStorage.removeItem('demoMode');
+      void syncPermisosFromBD();
     } catch (e) {
       console.error('refreshUser error', e);
     }
