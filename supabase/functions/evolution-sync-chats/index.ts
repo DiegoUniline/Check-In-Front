@@ -61,10 +61,27 @@ Deno.serve(async (req) => {
       const parsed = parseJid(remoteJid);
       if (parsed.isGroup || !parsed.phone) continue;
 
-      const nombre = getString(evoChat, ["name", "pushName", "verifiedName", "notifyName"]) || parsed.phone;
+      const nombreExterno = getString(evoChat, ["name", "pushName", "verifiedName", "notifyName"]);
       const ultimo = getLastText(evoChat) || null;
       const ultimaActividad = getTimestamp(evoChat) || new Date().toISOString();
       const noLeidos = getNumber(evoChat, ["unreadMessages", "unreadCount", "unread", "unreadMessagesCount"]) ?? 0;
+
+      // Buscar fila existente para no sobrescribir el nombre real con phone
+      // ni pisar el nombre del cliente vinculado.
+      const { data: existente } = await admin
+        .from("wa_chats")
+        .select("id, nombre")
+        .eq("hotel_id", hotelId)
+        .eq("wa_id", parsed.wa_id)
+        .maybeSingle();
+
+      const nombreActual = ((existente as { nombre?: string } | null)?.nombre ?? "").trim();
+      // Regla:
+      //  - Si ya hay un nombre real (no vacío, no es el propio teléfono), respetarlo.
+      //  - Si no, usar el nombre externo si viene, o el teléfono como último recurso.
+      const nombreFinal = nombreActual && nombreActual !== parsed.phone
+        ? nombreActual
+        : (nombreExterno || parsed.phone);
 
       const upsert = await admin
         .from("wa_chats")
@@ -73,7 +90,7 @@ Deno.serve(async (req) => {
             hotel_id: hotelId,
             wa_id: parsed.wa_id,
             phone: parsed.phone,
-            nombre,
+            nombre: nombreFinal,
             ultima_actividad: ultimaActividad,
             ultimo_mensaje: ultimo,
             no_leidos: noLeidos,

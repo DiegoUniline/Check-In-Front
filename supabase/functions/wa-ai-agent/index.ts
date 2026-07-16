@@ -18,9 +18,13 @@ type Msg = { role: "system" | "user" | "assistant" | "tool"; content: string; to
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Método inválido" }, 405);
   try {
-    const { chat_id } = await req.json();
-    if (!chat_id) return json({ error: "chat_id requerido" }, 400);
+    const body = await req.json().catch(() => ({}));
+    const chat_id = (body as { chat_id?: unknown }).chat_id;
+    if (typeof chat_id !== "string" || !/^[0-9a-f-]{36}$/i.test(chat_id)) {
+      return json({ error: "chat_id inválido" }, 400);
+    }
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,

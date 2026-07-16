@@ -237,35 +237,58 @@ async function procesarMensaje(
     contenido = "[mensaje no soportado]";
   }
 
-  // Buscar cliente por teléfono para vincularlo automáticamente
-  const { data: cliente } = await admin
-    .from("clientes")
-    .select("id, nombre, apellido_paterno")
+  // Buscar cliente por teléfono para vincularlo automáticamente (mismo hotel)
+  const suffix = phone.slice(-8);
+  const { data: cliente } = suffix
+    ? await admin
+        .from("clientes")
+        .select("id, nombre, apellido_paterno")
+        .eq("hotel_id", hotelId)
+        .ilike("telefono", `%${suffix}%`)
+        .maybeSingle()
+    : { data: null };
+
+  // Verificar si el chat ya existe para NO sobrescribir su nombre con vacío
+  // ni con el teléfono cuando ya tiene un nombre real guardado.
+  const { data: existente } = await admin
+    .from("wa_chats")
+    .select("id, nombre, no_leidos, cliente_id")
     .eq("hotel_id", hotelId)
-    .ilike("telefono", `%${phone.slice(-8)}%`)
+    .eq("wa_id", wa_id)
     .maybeSingle();
 
-  // Upsert chat
-  const chatName =
-    pushName ??
-    (cliente
-      ? [cliente.nombre, cliente.apellido_paterno].filter(Boolean).join(" ")
-      : phone);
+  const nombreClienteReal = cliente
+    ? [cliente.nombre, cliente.apellido_paterno]
+        .filter((s) => typeof s === "string" && s.trim())
+        .join(" ")
+        .trim()
+    : "";
+  const pushNameLimpio = (pushName ?? "").trim();
+
+  const nombreCandidato = nombreClienteReal || pushNameLimpio || "";
+  const nombreActual = (existente?.nombre ?? "").trim();
+  // Solo persistir un nombre si:
+  //  - Hay uno mejor (real, no vacío) que el actual, o
+  //  - El actual está vacío/es el mismo teléfono.
+  const nombreFinal = nombreCandidato
+    ? nombreCandidato
+    : (nombreActual || phone);
+
+  const patchChat: Record<string, unknown> = {
+    hotel_id: hotelId,
+    wa_id,
+    phone,
+    nombre: nombreFinal,
+    ultima_actividad: ts,
+    ultimo_mensaje: contenido || `[${tipo}]`,
+  };
+  // No pisar cliente_id existente con null.
+  if (cliente?.id) patchChat.cliente_id = cliente.id;
+  else if (existente?.cliente_id) patchChat.cliente_id = existente.cliente_id;
 
   const { data: chat } = await admin
     .from("wa_chats")
-    .upsert(
-      {
-        hotel_id: hotelId,
-        wa_id,
-        phone,
-        nombre: chatName,
-        cliente_id: cliente?.id ?? null,
-        ultima_actividad: ts,
-        ultimo_mensaje: contenido || `[${tipo}]`,
-      },
-      { onConflict: "hotel_id,wa_id" },
-    )
+    .upsert(patchChat, { onConflict: "hotel_id,wa_id" })
     .select("id, no_leidos")
     .single();
 
