@@ -17,6 +17,40 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Método inválido" }, 405);
 
   try {
+    // Validación de firma / secreto compartido (opcional pero recomendado).
+    // Si EVOLUTION_WEBHOOK_SECRET está definido en el proyecto, exigimos que
+    // Evolution API envíe el mismo valor en una de estas cabeceras:
+    //   - x-evolution-signature
+    //   - x-webhook-secret
+    //   - apikey (Evolution reenvía la API key por defecto)
+    // También aceptamos el mismo valor como query string ?secret=...
+    // Si no está definido, dejamos pasar (comportamiento anterior) pero
+    // logueamos advertencia para que el operador lo configure.
+    const expected = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
+    if (expected) {
+      const url = new URL(req.url);
+      const provided =
+        req.headers.get("x-evolution-signature") ||
+        req.headers.get("x-webhook-secret") ||
+        req.headers.get("apikey") ||
+        url.searchParams.get("secret") ||
+        "";
+      // Comparación en tiempo constante para evitar timing attacks básicos.
+      const a = new TextEncoder().encode(provided);
+      const b = new TextEncoder().encode(expected);
+      let ok = a.length === b.length;
+      const len = Math.max(a.length, b.length);
+      let diff = a.length ^ b.length;
+      for (let i = 0; i < len; i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
+      if (!ok || diff !== 0) {
+        return json({ error: "firma inválida" }, 401);
+      }
+    } else {
+      console.warn(
+        "[evolution-webhook] EVOLUTION_WEBHOOK_SECRET no configurado: aceptando eventos sin verificar firma.",
+      );
+    }
+
     const raw = await req.json().catch(() => ({}));
     const evt = raw as {
       event?: string;
