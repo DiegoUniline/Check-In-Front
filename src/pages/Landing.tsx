@@ -41,6 +41,48 @@ const features = [
   { icon: ShieldCheck, title: 'Multi-hotel seguro', desc: 'Cada hotel aislado por permisos y políticas a nivel de base de datos.' },
 ];
 
+const hotelesReales = [
+  {
+    img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&auto=format&fit=crop',
+    tag: 'RECEPCIÓN',
+    title: 'Check-in en segundos',
+    desc: 'Registra huéspedes, escanea identificación y cobra el anticipo desde una sola pantalla.',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=900&q=80&auto=format&fit=crop',
+    tag: 'OPERACIÓN',
+    title: 'Tu equipo, sincronizado',
+    desc: 'Housekeeping ve las habitaciones sucias, mantenimiento recibe los tickets, gerencia mira todo en vivo.',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=900&q=80&auto=format&fit=crop',
+    tag: 'MOVILIDAD',
+    title: 'Desde cualquier dispositivo',
+    desc: 'Web, tablet o celular. Tu hotel funciona igual estés en recepción, en casa o de viaje.',
+  },
+];
+
+const testimonios = [
+  {
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&q=80&auto=format&fit=crop&crop=faces',
+    name: 'María Fernanda R.',
+    role: 'Gerente · Hotel Boutique Colima',
+    quote: 'Dejamos Excel y tres grupos de WhatsApp. Ahora todo está en HospedApp y las reservas de la web caen solas al sistema.',
+  },
+  {
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80&auto=format&fit=crop&crop=faces',
+    name: 'Ricardo Ortega',
+    role: 'Dueño · Posada del Sol',
+    quote: 'En dos semanas capacitamos a recepción, housekeeping y mantenimiento. La ocupación real por fin es visible.',
+  },
+  {
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=80&auto=format&fit=crop&crop=faces',
+    name: 'Ana Lucía Peña',
+    role: 'Recepcionista · Hotel Mirador',
+    quote: 'El timeline es lo mejor. Arrastro una reserva, cambio de habitación y todo se actualiza en tiempo real.',
+  },
+];
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden public-page">
