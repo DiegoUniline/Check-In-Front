@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "harbor-haven"
+const SITE_NAME = "HospedApp"
 const SENDER_DOMAIN = "notify.hospedapp.com"
 const ROOT_DOMAIN = "hospedapp.com"
 const FROM_DOMAIN = "hospedapp.com" // Domain shown in From address (may be root or sender subdomain)
@@ -54,19 +54,23 @@ const SAMPLE_DATA: Record<string, object> = {
     siteUrl: SAMPLE_PROJECT_URL,
     recipient: SAMPLE_EMAIL,
     confirmationUrl: SAMPLE_PROJECT_URL,
+    hotelName: 'Hotel Vista Mar',
   },
   magiclink: {
     siteName: SITE_NAME,
     confirmationUrl: SAMPLE_PROJECT_URL,
+    hotelName: 'Hotel Vista Mar',
   },
   recovery: {
     siteName: SITE_NAME,
     confirmationUrl: SAMPLE_PROJECT_URL,
+    hotelName: 'Hotel Vista Mar',
   },
   invite: {
     siteName: SITE_NAME,
     siteUrl: SAMPLE_PROJECT_URL,
     confirmationUrl: SAMPLE_PROJECT_URL,
+    hotelName: 'Hotel Vista Mar',
   },
   email_change: {
     siteName: SITE_NAME,
@@ -74,9 +78,11 @@ const SAMPLE_DATA: Record<string, object> = {
     email: SAMPLE_EMAIL,
     newEmail: SAMPLE_EMAIL,
     confirmationUrl: SAMPLE_PROJECT_URL,
+    hotelName: 'Hotel Vista Mar',
   },
   reauthentication: {
     token: '123456',
+    hotelName: 'Hotel Vista Mar',
   },
 }
 
@@ -218,6 +224,39 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Look up the recipient's hotel name so the email is co-branded with the hotel
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+
+  let hotelName: string | undefined
+  try {
+    const userId = payload.data.user?.id || payload.data.user_id
+    const userMeta = payload.data.user?.user_metadata || {}
+    // 1) Prefer explicit metadata provided at signup (hotel_name / hotelName)
+    hotelName = userMeta.hotel_name || userMeta.hotelName
+    // 2) Otherwise resolve via profiles -> hotels
+    if (!hotelName && userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('hotel_id, hotel_activo_id')
+        .eq('id', userId)
+        .maybeSingle()
+      const hotelId = profile?.hotel_activo_id || profile?.hotel_id
+      if (hotelId) {
+        const { data: hotel } = await supabase
+          .from('hotels')
+          .select('nombre')
+          .eq('id', hotelId)
+          .maybeSingle()
+        hotelName = hotel?.nombre || undefined
+      }
+    }
+  } catch (err) {
+    console.warn('Could not resolve hotel name for email', err)
+  }
+
   // Build template props from payload.data (HookData structure)
   const templateProps = {
     siteName: SITE_NAME,
@@ -228,6 +267,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     email: payload.data.email,
     oldEmail: payload.data.old_email,
     newEmail: payload.data.new_email,
+    hotelName,
   }
 
   // Render React Email to HTML and plain text
@@ -237,12 +277,19 @@ async function handleWebhook(req: Request): Promise<Response> {
   })
 
   // Enqueue email for async processing by the dispatcher (process-email-queue).
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
-
   const messageId = crypto.randomUUID()
+
+  // Subject line: include hotel name when we have one for stronger co-branding.
+  const baseSubjects: Record<string, string> = {
+    signup: 'Confirma tu correo',
+    invite: 'Te invitaron a colaborar',
+    magiclink: 'Tu enlace de acceso',
+    recovery: 'Restablece tu contraseña',
+    email_change: 'Confirma tu nuevo correo',
+    reauthentication: 'Tu código de verificación',
+  }
+  const subjectBase = baseSubjects[emailType] || EMAIL_SUBJECTS[emailType] || 'Notificación'
+  const subject = hotelName ? `${subjectBase} · ${hotelName}` : `${subjectBase} · HospedApp`
 
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
@@ -260,7 +307,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       to: payload.data.email,
       from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
-      subject: EMAIL_SUBJECTS[emailType] || 'Notification',
+      subject,
       html,
       text,
       purpose: 'transactional',
