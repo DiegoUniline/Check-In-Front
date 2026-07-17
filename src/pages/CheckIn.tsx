@@ -325,6 +325,39 @@ export default function CheckIn() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <PenLine className="h-5 w-5 text-primary" />
+                Términos y firma digital
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-md bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
+                El huésped declara que los datos proporcionados son verídicos y acepta las políticas del
+                establecimiento (horarios de check-in/out, política de cancelación, cargos por daños,
+                responsabilidad por objetos personales) así como el aviso de privacidad para el tratamiento
+                de sus datos personales.
+              </div>
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={aceptaTerminos}
+                  onCheckedChange={(v) => setAceptaTerminos(Boolean(v))}
+                  className="mt-0.5"
+                />
+                <span>Acepto los términos y condiciones y el aviso de privacidad.</span>
+              </label>
+              <div>
+                <Label className="mb-2 block">Firma del huésped</Label>
+                <SignaturePad onChange={setFirma} height={170} />
+              </div>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <FileDown className="h-3 w-3" />
+                Al completar el check-in se generará automáticamente la tarjeta de registro en PDF con la firma.
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="lg:col-span-1">
