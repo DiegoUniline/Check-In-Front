@@ -449,6 +449,8 @@ export default function Habitaciones() {
               <SelectItem value="Ocupada">Ocupada</SelectItem>
               <SelectItem value="Reservada">Reservada</SelectItem>
               <SelectItem value="Bloqueada">Bloqueada</SelectItem>
+              <SelectItem value="Limpieza">Limpieza</SelectItem>
+              <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
             </SelectContent>
           </Select>
 
