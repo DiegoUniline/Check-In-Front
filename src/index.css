@@ -71,8 +71,8 @@
   }
 
   .dark {
-    /* Primary - Hotel Green (brighter for dark mode) */
-    --primary: 160 84% 45%;
+    /* Primary - HospedApp Turquesa (brighter for dark mode) */
+    --primary: 172 87% 42%;
     --primary-foreground: 0 0% 100%;
     
     /* Backgrounds - Dark theme */
@@ -95,8 +95,8 @@
     --muted-foreground: 215 20% 65%;
     
     /* Accent */
-    --accent: 160 50% 15%;
-    --accent-foreground: 160 84% 60%;
+    --accent: 173 50% 15%;
+    --accent-foreground: 172 87% 55%;
     
     /* Destructive */
     --destructive: 0 63% 31%;
@@ -105,17 +105,17 @@
     /* Borders & Inputs */
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 160 84% 45%;
+    --ring: 172 87% 42%;
     
     /* Sidebar */
     --sidebar-background: 222 47% 9%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 160 84% 45%;
+    --sidebar-primary: 172 87% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 160 50% 15%;
-    --sidebar-accent-foreground: 160 84% 60%;
+    --sidebar-accent: 173 50% 15%;
+    --sidebar-accent-foreground: 172 87% 55%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 160 84% 45%;
+    --sidebar-ring: 172 87% 42%;
     
     /* Semantic Colors */
     --success: 160 84% 45%;
