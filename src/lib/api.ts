@@ -645,13 +645,47 @@ class ApiClient {
 
   // ------- Limpieza -------
   getTareasLimpieza = async (params?: Record<string, string>): Promise<any> => {
+    // Sincronizar: crear tareas pendientes para habitaciones sucias/en limpieza sin tarea activa
+    try { await this.sincronizarTareasLimpiezaDesdeHabitaciones(); } catch { /* noop */ }
     const key = `tareas_limpieza:${this.hid()}:${params?.estado || 'all'}`;
     return withOfflineCache(key, async () => {
-      let q = supabase.from('tareas_limpieza').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
+      let q = supabase.from('tareas_limpieza').select('*, habitaciones(numero, tipo:tipos_habitacion(nombre))').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
       if (params?.estado) q = q.eq('estado', params.estado);
       const { data } = await q;
       return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
     });
+  };
+  sincronizarTareasLimpiezaDesdeHabitaciones = async (): Promise<void> => {
+    const hid = this.hid();
+    if (!hid) return;
+    const { data: habs } = await supabase
+      .from('habitaciones')
+      .select('id, estado_limpieza')
+      .eq('hotel_id', hid)
+      .in('estado_limpieza', ['Sucia', 'EnLimpieza', 'En Limpieza']);
+    if (!habs?.length) return;
+    const { data: tareasActivas } = await supabase
+      .from('tareas_limpieza')
+      .select('habitacion_id, estado')
+      .eq('hotel_id', hid)
+      .in('estado', ['Pendiente', 'EnProceso', 'En Proceso', 'Completada']);
+    const yaConTarea = new Set((tareasActivas || []).map((t: any) => t.habitacion_id));
+    const faltantes = habs.filter((h: any) => !yaConTarea.has(h.id));
+    if (!faltantes.length) return;
+    const hoy = todayLocal();
+    const nuevas = faltantes.map((h: any) => ({
+      hotel_id: hid,
+      habitacion_id: h.id,
+      fecha: hoy,
+      tipo: 'Limpieza',
+      prioridad: 'Normal',
+      estado: 'Pendiente',
+    }));
+    await supabase.from('tareas_limpieza').insert(nuevas);
+    try {
+      const prefix = 'hospedapp:cache:';
+      Object.keys(localStorage).filter(k => k.startsWith(prefix) && k.includes(':tareas_limpieza:')).forEach(k => localStorage.removeItem(k));
+    } catch { /* noop */ }
   };
   getTareasLimpiezaHoy = async (): Promise<any> => {
     const today = todayLocal();
