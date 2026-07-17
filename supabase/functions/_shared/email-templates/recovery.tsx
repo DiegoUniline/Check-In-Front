@@ -1,71 +1,28 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-} from 'npm:@react-email/components@0.0.22'
+import { Heading, Text } from 'npm:@react-email/components@0.0.22'
+import { EmailLayout, CTA, FallbackLink, Highlight, h1, p, muted } from './_layout.tsx'
 
 interface RecoveryEmailProps {
   siteName: string
   confirmationUrl: string
+  hotelName?: string
 }
 
-export const RecoveryEmail = ({
-  siteName,
-  confirmationUrl,
-}: RecoveryEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Reset your password for {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Reset your password</Heading>
-        <Text style={text}>
-          We received a request to reset your password for {siteName}. Click
-          the button below to choose a new password.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Reset Password
-        </Button>
-        <Text style={footer}>
-          If you didn't request a password reset, you can safely ignore this
-          email. Your password will not be changed.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
+export const RecoveryEmail = ({ confirmationUrl, hotelName }: RecoveryEmailProps) => (
+  <EmailLayout preview={`Restablece tu contraseña${hotelName ? ` de ${hotelName}` : ''}`} hotelName={hotelName}>
+    <Heading style={h1}>Restablece tu contraseña 🔐</Heading>
+    <Text style={p}>
+      Recibimos una solicitud para restablecer la contraseña de tu cuenta{hotelName ? ` en ${hotelName}` : ''}. Haz clic en el botón para elegir una nueva.
+    </Text>
+    <CTA href={confirmationUrl}>Crear nueva contraseña</CTA>
+    <Highlight>
+      Por seguridad, este enlace caduca pronto y solo puede usarse una vez. Si no solicitaste el cambio, ignora este correo y tu contraseña seguirá igual.
+    </Highlight>
+    <Text style={muted}>Consejo: usa una contraseña única con al menos 10 caracteres, letras, números y símbolos.</Text>
+    <FallbackLink href={confirmationUrl} />
+  </EmailLayout>
 )
 
 export default RecoveryEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
