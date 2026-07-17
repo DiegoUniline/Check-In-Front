@@ -38,9 +38,7 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           paddingRight: 'env(safe-area-inset-right)',
         }}
       >
-        <div className="hidden lg:block">
-          <AppSidebar />
-        </div>
+        <AppSidebar />
         <SidebarInset className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
           <OfflineBanner />
           <AlertaSuscripcion />
