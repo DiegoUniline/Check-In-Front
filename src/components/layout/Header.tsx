@@ -60,7 +60,7 @@ export function Header({ title, subtitle }: HeaderProps) {
     <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-3 lg:px-6">
       {/* Left section */}
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <SidebarTrigger className="hidden lg:inline-flex" />
+        <SidebarTrigger />
         <Logo size={36} className="lg:hidden" />
         {title ? (
           <div className="min-w-0">
