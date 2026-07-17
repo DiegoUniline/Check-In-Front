@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale';
 import { 
   ChevronLeft, ChevronRight, Plus, Search, 
   CalendarDays, BedDouble, Users, RefreshCw, Calendar,
-  LogIn, LogOut, Clock, ArrowRight, X, Eye, History,
+  LogIn, LogOut, Clock, ArrowRight, X, Eye, History, SlidersHorizontal,
   CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,14 @@ import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
+import { ReservaCard } from '@/components/reservas/ReservaCard';
+import {
+  ReservasFiltersSheet,
+  countActiveFilters,
+  defaultFilters,
+  type ReservasFilters,
+} from '@/components/reservas/ReservasFiltersSheet';
+import { getEstadoConfig } from '@/components/reservas/estadoConfig';
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
