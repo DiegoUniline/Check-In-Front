@@ -475,36 +475,39 @@ export default function Reservas() {
           <TabsContent value="historico" className="space-y-3 mt-3">
             <Card>
               <CardContent className="p-3 space-y-3">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar reserva, cliente, habitación..."
-                        className="pl-8 h-9 w-[260px] text-sm"
-                        value={busquedaHistorico}
-                        onChange={(e) => setBusquedaHistorico(e.target.value)}
-                      />
-                    </div>
-                    <Select value={estadoHistorico} onValueChange={setEstadoHistorico}>
-                      <SelectTrigger className="w-[160px] h-9 text-sm">
-                        <SelectValue placeholder="Estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos los estados</SelectItem>
-                        <SelectItem value="Pendiente">Pendiente</SelectItem>
-                        <SelectItem value="Confirmada">Confirmada</SelectItem>
-                        <SelectItem value="CheckIn">Check-In</SelectItem>
-                        <SelectItem value="CheckOut">Check-Out</SelectItem>
-                        <SelectItem value="Cancelada">Cancelada</SelectItem>
-                        <SelectItem value="NoShow">No Show</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="relative flex-1 min-w-[180px] sm:flex-initial sm:min-w-[260px]">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="Buscar reserva, cliente, habitación..."
+                      className="pl-8 h-10 text-sm w-full"
+                      value={busquedaHistorico}
+                      onChange={(e) => setBusquedaHistorico(e.target.value)}
+                    />
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 gap-2 relative"
+                    onClick={() => setFiltrosOpen(true)}
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span className="hidden sm:inline">Filtros</span>
+                    {activeFilterCount > 0 && (
+                      <Badge variant="default" className="h-5 min-w-[20px] px-1.5 text-[10px] rounded-full">
+                        {activeFilterCount}
+                      </Badge>
+                    )}
+                  </Button>
+                  <span className="text-xs text-muted-foreground ml-auto hidden sm:inline">
                     {(() => {
                       const f = reservas.filter(r => {
-                        if (estadoHistorico !== 'todos' && r.estado !== estadoHistorico) return false;
+                        if (filtros.estado !== 'todos' && r.estado !== filtros.estado) return false;
+                        if (filtros.tipoHabitacion !== 'all' && r.tipo_id !== filtros.tipoHabitacion && r.habitaciones?.tipo_id !== filtros.tipoHabitacion) return false;
+                        if (filtros.origen !== 'todos' && r.origen !== filtros.origen) return false;
+                        if (filtros.soloConSaldo && !(Number(r.saldo_pendiente || 0) > 0)) return false;
+                        if (filtros.desde && (!r.fecha_checkin || r.fecha_checkin.substring(0, 10) < filtros.desde)) return false;
+                        if (filtros.hasta && (!r.fecha_checkin || r.fecha_checkin.substring(0, 10) > filtros.hasta)) return false;
                         if (!busquedaHistorico) return true;
                         const t = busquedaHistorico.toLowerCase();
                         return (
@@ -521,7 +524,82 @@ export default function Reservas() {
                   </span>
                 </div>
 
-                <div className="relative w-full overflow-x-auto rounded-md border">
+                {/* Chips de filtros activos */}
+                {activeFilterCount > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {filtros.desde && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        Desde {filtros.desde}
+                        <button
+                          className="ml-0.5 hover:bg-background/60 rounded p-0.5"
+                          onClick={() => setFiltros({ ...filtros, desde: '' })}
+                          aria-label="Quitar filtro desde"
+                        ><X className="h-3 w-3" /></button>
+                      </Badge>
+                    )}
+                    {filtros.hasta && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        Hasta {filtros.hasta}
+                        <button
+                          className="ml-0.5 hover:bg-background/60 rounded p-0.5"
+                          onClick={() => setFiltros({ ...filtros, hasta: '' })}
+                          aria-label="Quitar filtro hasta"
+                        ><X className="h-3 w-3" /></button>
+                      </Badge>
+                    )}
+                    {filtros.estado !== 'todos' && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        {filtros.estado}
+                        <button
+                          className="ml-0.5 hover:bg-background/60 rounded p-0.5"
+                          onClick={() => setFiltros({ ...filtros, estado: 'todos' })}
+                          aria-label="Quitar filtro estado"
+                        ><X className="h-3 w-3" /></button>
+                      </Badge>
+                    )}
+                    {filtros.tipoHabitacion !== 'all' && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        {tiposHabitacion.find(t => t.id === filtros.tipoHabitacion)?.nombre || 'Tipo'}
+                        <button
+                          className="ml-0.5 hover:bg-background/60 rounded p-0.5"
+                          onClick={() => setFiltros({ ...filtros, tipoHabitacion: 'all' })}
+                          aria-label="Quitar filtro tipo"
+                        ><X className="h-3 w-3" /></button>
+                      </Badge>
+                    )}
+                    {filtros.origen !== 'todos' && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        {filtros.origen}
+                        <button
+                          className="ml-0.5 hover:bg-background/60 rounded p-0.5"
+                          onClick={() => setFiltros({ ...filtros, origen: 'todos' })}
+                          aria-label="Quitar filtro origen"
+                        ><X className="h-3 w-3" /></button>
+                      </Badge>
+                    )}
+                    {filtros.soloConSaldo && (
+                      <Badge variant="secondary" className="gap-1 pr-1">
+                        Con saldo
+                        <button
+                          className="ml-0.5 hover:bg-background/60 rounded p-0.5"
+                          onClick={() => setFiltros({ ...filtros, soloConSaldo: false })}
+                          aria-label="Quitar filtro saldo"
+                        ><X className="h-3 w-3" /></button>
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs px-2"
+                      onClick={() => setFiltros(defaultFilters)}
+                    >
+                      Limpiar todo
+                    </Button>
+                  </div>
+                )}
+
+                {/* Desktop: tabla — Móvil: tarjetas */}
+                <div className="hidden md:block relative w-full overflow-x-auto rounded-md border">
                   <Table className="min-w-[900px]">
                     <TableHeader>
                       <TableRow>
@@ -549,7 +627,12 @@ export default function Reservas() {
                       ) : (() => {
                         const filtradas = reservas
                           .filter(r => {
-                            if (estadoHistorico !== 'todos' && r.estado !== estadoHistorico) return false;
+                            if (filtros.estado !== 'todos' && r.estado !== filtros.estado) return false;
+                            if (filtros.tipoHabitacion !== 'all' && r.tipo_id !== filtros.tipoHabitacion && r.habitaciones?.tipo_id !== filtros.tipoHabitacion) return false;
+                            if (filtros.origen !== 'todos' && r.origen !== filtros.origen) return false;
+                            if (filtros.soloConSaldo && !(Number(r.saldo_pendiente || 0) > 0)) return false;
+                            if (filtros.desde && (!r.fecha_checkin || r.fecha_checkin.substring(0, 10) < filtros.desde)) return false;
+                            if (filtros.hasta && (!r.fecha_checkin || r.fecha_checkin.substring(0, 10) > filtros.hasta)) return false;
                             if (!busquedaHistorico) return true;
                             const t = busquedaHistorico.toLowerCase();
                             return (
@@ -573,15 +656,6 @@ export default function Reservas() {
                           );
                         }
 
-                        const estadoColor: Record<string, string> = {
-                          Pendiente: 'bg-yellow-500',
-                          Confirmada: 'bg-blue-500',
-                          CheckIn: 'bg-green-500',
-                          CheckOut: 'bg-slate-500',
-                          Cancelada: 'bg-red-500',
-                          NoShow: 'bg-orange-500',
-                        };
-
                         return filtradas.map((r) => {
                           const cliente = r.cliente_nombre
                             || `${r.clientes?.nombre || ''} ${r.clientes?.apellido_paterno || ''}`.trim()
@@ -590,6 +664,8 @@ export default function Reservas() {
                           const total = Number(r.total || 0);
                           const pagado = Number(r.total_pagado || 0);
                           const saldo = Number(r.saldo_pendiente ?? Math.max(0, total - pagado));
+                          const estCfg = getEstadoConfig(r.estado);
+                          const EstIcon = estCfg.icon;
                           return (
                             <TableRow key={r.id} className="hover:bg-muted/50">
                               <TableCell className="font-mono text-xs">
@@ -605,8 +681,9 @@ export default function Reservas() {
                               </TableCell>
                               <TableCell className="text-center">{r.noches || '—'}</TableCell>
                               <TableCell>
-                                <Badge className={`${estadoColor[r.estado] || 'bg-muted'} hover:${estadoColor[r.estado] || 'bg-muted'} text-white text-[10px]`}>
-                                  {r.estado}
+                                <Badge variant="secondary" className={`${estCfg.badge} text-[10px] gap-1`}>
+                                  <EstIcon className="h-3 w-3" aria-hidden="true" />
+                                  {estCfg.label}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -615,8 +692,8 @@ export default function Reservas() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(total)}</TableCell>
-                              <TableCell className="text-right tabular-nums text-green-600">{formatCurrency(pagado)}</TableCell>
-                              <TableCell className={`text-right tabular-nums ${saldo > 0 ? 'text-orange-600 font-semibold' : ''}`}>
+                              <TableCell className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(pagado)}</TableCell>
+                              <TableCell className={`text-right tabular-nums ${saldo > 0 ? 'text-destructive font-semibold' : 'text-muted-foreground'}`}>
                                 {formatCurrency(saldo)}
                               </TableCell>
                               <TableCell className="text-center">
@@ -624,6 +701,7 @@ export default function Reservas() {
                                   size="sm"
                                   variant="ghost"
                                   className="h-7 px-2"
+                                  aria-label="Ver detalle"
                                   onClick={() => handleReservationClick(r)}
                                 >
                                   <Eye className="h-3.5 w-3.5" />
@@ -636,11 +714,87 @@ export default function Reservas() {
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden space-y-2">
+                  {loading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (() => {
+                    const filtradas = reservas
+                      .filter(r => {
+                        if (filtros.estado !== 'todos' && r.estado !== filtros.estado) return false;
+                        if (filtros.tipoHabitacion !== 'all' && r.tipo_id !== filtros.tipoHabitacion && r.habitaciones?.tipo_id !== filtros.tipoHabitacion) return false;
+                        if (filtros.origen !== 'todos' && r.origen !== filtros.origen) return false;
+                        if (filtros.soloConSaldo && !(Number(r.saldo_pendiente || 0) > 0)) return false;
+                        if (filtros.desde && (!r.fecha_checkin || r.fecha_checkin.substring(0, 10) < filtros.desde)) return false;
+                        if (filtros.hasta && (!r.fecha_checkin || r.fecha_checkin.substring(0, 10) > filtros.hasta)) return false;
+                        if (!busquedaHistorico) return true;
+                        const t = busquedaHistorico.toLowerCase();
+                        return (
+                          r.numero_reserva?.toLowerCase().includes(t) ||
+                          r.cliente_nombre?.toLowerCase().includes(t) ||
+                          r.clientes?.nombre?.toLowerCase().includes(t) ||
+                          r.clientes?.apellido_paterno?.toLowerCase().includes(t) ||
+                          r.habitacion_numero?.toString().includes(t) ||
+                          r.habitaciones?.numero?.toString().includes(t)
+                        );
+                      })
+                      .sort((a, b) => new Date(b.fecha_checkin).getTime() - new Date(a.fecha_checkin).getTime());
+
+                    if (filtradas.length === 0) {
+                      return (
+                        <div className="text-center py-12 text-sm text-muted-foreground">
+                          <History className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                          {activeFilterCount > 0 || busquedaHistorico
+                            ? 'No encontramos reservas con estos filtros'
+                            : 'Todavía no hay reservas registradas'}
+                          {(activeFilterCount > 0 || busquedaHistorico) && (
+                            <div className="mt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => { setFiltros(defaultFilters); setBusquedaHistorico(''); }}
+                              >
+                                Limpiar filtros
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    return filtradas.map((r) => (
+                      <ReservaCard key={r.id} reserva={r} onClick={handleReservationClick} />
+                    ));
+                  })()}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* FAB móvil - Nueva reserva */}
+      <Button
+        size="lg"
+        className="sm:hidden fixed right-4 z-40 h-14 w-14 rounded-full shadow-xl p-0"
+        style={{ bottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4.5rem))' }}
+        onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}
+        aria-label="Nueva reserva"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
+
+      {/* Filtros */}
+      <ReservasFiltersSheet
+        open={filtrosOpen}
+        onOpenChange={setFiltrosOpen}
+        value={filtros}
+        onApply={setFiltros}
+        tiposHabitacion={tiposHabitacion}
+      />
 
       {/* Modales */}
       <NuevaReservaModal
