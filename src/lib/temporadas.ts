@@ -24,11 +24,11 @@ const getHotelId = (): string => {
   try { return localStorage.getItem('hotel_id') || 'default'; } catch { return 'default'; }
 };
 
-const key = () => `temporadas:hotel:${getHotelId()}`;
+const keyFor = (hotelId?: string) => `temporadas:hotel:${hotelId || getHotelId()}`;
 
-export const listTemporadas = (): Temporada[] => {
+export const listTemporadas = (hotelId?: string): Temporada[] => {
   try {
-    const raw = localStorage.getItem(key());
+    const raw = localStorage.getItem(keyFor(hotelId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -36,8 +36,8 @@ export const listTemporadas = (): Temporada[] => {
   } catch { return []; }
 };
 
-export const saveTemporadas = (list: Temporada[]) => {
-  try { localStorage.setItem(key(), JSON.stringify(list)); } catch { /* ignore */ }
+export const saveTemporadas = (list: Temporada[], hotelId?: string) => {
+  try { localStorage.setItem(keyFor(hotelId), JSON.stringify(list)); } catch { /* ignore */ }
 };
 
 export const upsertTemporada = (t: Temporada) => {
@@ -60,8 +60,9 @@ export const findTemporadaAplicable = (
   fechaCheckin: string,
   tipoHabitacionId?: string | null,
   habitacionId?: string | null,
+  hotelId?: string,
 ): Temporada | null => {
-  const list = listTemporadas().filter((t) => t.activo && inRange(fechaCheckin, t.fecha_inicio, t.fecha_fin));
+  const list = listTemporadas(hotelId).filter((t) => t.activo && inRange(fechaCheckin, t.fecha_inicio, t.fecha_fin));
   if (list.length === 0) return null;
   const scoped = list.filter((t) => {
     if (t.alcance === 'todos') return true;
@@ -100,8 +101,9 @@ export const resolverPrecioTemporada = (
   fechaCheckin: string,
   tipoHabitacionId?: string | null,
   habitacionId?: string | null,
+  hotelId?: string,
 ): { precio: number; temporada: Temporada | null } => {
-  const t = findTemporadaAplicable(fechaCheckin, tipoHabitacionId, habitacionId);
+  const t = findTemporadaAplicable(fechaCheckin, tipoHabitacionId, habitacionId, hotelId);
   return { precio: aplicarTemporada(basePrice, t), temporada: t };
 };
 
