@@ -83,6 +83,65 @@ const testimonios = [
   },
 ];
 
+const galeriaAccion = [
+  {
+    img: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1000&q=80&auto=format&fit=crop',
+    tag: 'RECEPCIÓN',
+    title: 'Huéspedes llegando',
+    desc: 'Check-in fluido, sin colas ni papeleos interminables.',
+    span: 'md:col-span-2 md:row-span-2',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1512txmp/photo-1556742044-3c52d6e88c62?w=800&q=80&auto=format&fit=crop',
+    tag: 'RESERVAS ONLINE',
+    title: 'Reservan desde el celular',
+    desc: 'Tu página web recibe reservas 24/7.',
+    span: '',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80&auto=format&fit=crop',
+    tag: 'EQUIPO',
+    title: 'Coordinación en vivo',
+    desc: 'Recepción, housekeeping y gerencia en sincronía.',
+    span: '',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800&q=80&auto=format&fit=crop',
+    tag: 'HOUSEKEEPING',
+    title: 'Habitaciones listas',
+    desc: 'Estados actualizados al instante desde el móvil.',
+    span: '',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=1000&q=80&auto=format&fit=crop',
+    tag: 'LOBBY',
+    title: 'La primera impresión',
+    desc: 'Recibe a tus huéspedes sin distracciones operativas.',
+    span: 'md:col-span-2',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80&auto=format&fit=crop',
+    tag: 'HABITACIÓN',
+    title: 'Confort garantizado',
+    desc: 'Checklist digital para cada limpieza.',
+    span: '',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1568084680786-a84f91d1153c?w=800&q=80&auto=format&fit=crop',
+    tag: 'GERENCIA',
+    title: 'Decisiones con datos',
+    desc: 'Ocupación, ADR y RevPAR en tiempo real.',
+    span: '',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1522798514-97ceb8c4f1c8?w=800&q=80&auto=format&fit=crop',
+    tag: 'CLIENTES',
+    title: 'Experiencia memorable',
+    desc: 'Menos fricción, más hospitalidad real.',
+    span: '',
+  },
+];
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden public-page">
