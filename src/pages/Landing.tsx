@@ -48,9 +48,7 @@ export default function Landing() {
       <header className="border-b bg-background/70 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2 font-bold text-lg">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <Logo size={20} className="text-primary-foreground" />
-            </div>
+            <Logo size={32} />
             HospedApp
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
@@ -278,7 +276,7 @@ export default function Landing() {
       <footer className="border-t">
         <div className="container mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Logo size={16} className="text-primary" />
+            <Logo size={18} />
             © {new Date().getFullYear()} HospedApp · Sistema de gestión hotelera
           </div>
           <div className="flex items-center gap-4">

@@ -222,9 +222,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="border-b px-4 py-4">
         <NavLink to="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Logo size={22} className="text-primary-foreground" />
-          </div>
+          <Logo size={36} />
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-base font-bold text-sidebar-foreground tracking-tight">HospedApp</span>

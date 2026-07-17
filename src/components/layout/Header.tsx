@@ -61,9 +61,7 @@ export function Header({ title, subtitle }: HeaderProps) {
       {/* Left section */}
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <SidebarTrigger className="hidden lg:inline-flex" />
-        <div className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
-          <Logo size={22} className="text-primary-foreground" />
-        </div>
+        <Logo size={36} className="lg:hidden" />
         {title ? (
           <div className="min-w-0">
             <h1 className="text-base lg:text-lg font-semibold text-foreground truncate">{title}</h1>
