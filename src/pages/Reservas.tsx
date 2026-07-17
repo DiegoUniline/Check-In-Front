@@ -194,83 +194,109 @@ export default function Reservas() {
 
   return (
     <MainLayout title="Recepción" subtitle="Gestión de reservas">
-      <div className="space-y-3">
+      <div
+        className="space-y-3"
+        style={{ paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4rem))' }}
+      >
         <PublicLinkBanner />
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 text-primary" />
-            <div>
-              <h1 className="text-lg font-bold leading-tight">Recepción</h1>
-              <p className="text-xs text-muted-foreground">Gestión de reservas</p>
+        {/* Header premium */}
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                <CalendarDays className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold leading-tight truncate">Reservas</h1>
+                <p className="text-xs text-muted-foreground truncate">
+                  {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={cargarDatos} disabled={loading}>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={cargarDatos}
+              disabled={loading}
+              aria-label="Actualizar"
+            >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
-            <Button size="sm" onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}>
+            <Button
+              size="sm"
+              className="h-9 hidden sm:inline-flex"
+              onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}
+            >
               <Plus className="h-4 w-4 mr-1" />
-              Nueva Reserva
+              Nueva reserva
             </Button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-2">
-          <Card className="p-2">
-            <div className="flex items-center gap-2">
-              <BedDouble className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-sm font-bold">{habitacionesOcupadas}/{totalHabitaciones}</p>
-                <p className="text-[10px] text-muted-foreground">Ocupadas</p>
+        {/* KPI compactos, mobile-first */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Card className="p-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                <BedDouble className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-base font-bold tabular-nums leading-tight">
+                  {habitacionesOcupadas}<span className="text-xs text-muted-foreground font-normal">/{totalHabitaciones}</span>
+                </p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ocupadas</p>
               </div>
             </div>
           </Card>
           <Card
-            className="p-2 cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="p-3 cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             role="button"
             tabIndex={0}
             aria-label="Ver llegadas de hoy"
-            // Relacionado con `check-in-back/src/routes/reservas.js`:
-            // Abre el listado de llegadas de hoy para "visualizarlas".
             onClick={() => setModalLlegadas(true)}
             onKeyDown={(e) => handleCardKeyDown(e, () => setModalLlegadas(true))}
           >
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm font-bold text-green-600">{llegadasHoy}</p>
-                <p className="text-[10px] text-muted-foreground">Llegadas</p>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-8 w-8 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                <LogIn className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-base font-bold tabular-nums leading-tight text-emerald-600 dark:text-emerald-400">{llegadasHoy}</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Llegadas hoy</p>
               </div>
             </div>
           </Card>
           <Card
-            className="p-2 cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="p-3 cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             role="button"
             tabIndex={0}
             aria-label="Ver salidas de hoy"
-            // Relacionado con `check-in-back/src/routes/reservas.js`:
-            // Abre el listado de salidas de hoy para "visualizarlas".
             onClick={() => setModalSalidas(true)}
             onKeyDown={(e) => handleCardKeyDown(e, () => setModalSalidas(true))}
           >
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-orange-600" />
-              <div>
-                <p className="text-sm font-bold text-orange-600">{salidasHoy}</p>
-                <p className="text-[10px] text-muted-foreground">Salidas</p>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-8 w-8 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center flex-shrink-0">
+                <LogOut className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-base font-bold tabular-nums leading-tight text-orange-600 dark:text-orange-400">{salidasHoy}</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Salidas hoy</p>
               </div>
             </div>
           </Card>
-          <Card className="p-2">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm font-bold text-blue-600">
+          <Card className="p-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-8 w-8 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
+                <Calendar className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-base font-bold tabular-nums leading-tight text-sky-600 dark:text-sky-400">
                   {totalHabitaciones > 0 ? Math.round((habitacionesOcupadas / totalHabitaciones) * 100) : 0}%
                 </p>
-                <p className="text-[10px] text-muted-foreground">Ocupación</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ocupación</p>
               </div>
             </div>
           </Card>
