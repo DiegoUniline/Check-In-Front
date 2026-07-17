@@ -1044,6 +1044,30 @@ export default function Catalogos() {
                 Las fotos se cargan por habitación individual desde la pantalla de <strong>Habitaciones</strong>.
               </p>
             </div>
+
+            {/* Impuestos por defecto para este tipo de habitación */}
+            <div className="rounded-md border p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-semibold">Usar impuestos generales del hotel</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Si está activo, este tipo hereda los impuestos por defecto del hotel.
+                  </p>
+                </div>
+                <Switch
+                  checked={usarImpuestosHotel}
+                  onCheckedChange={(v) => setUsarImpuestosHotel(v)}
+                />
+              </div>
+              {!usarImpuestosHotel && (
+                <ImpuestosEditor
+                  value={formTipoImpuestos}
+                  onChange={setFormTipoImpuestos}
+                  title="Impuestos específicos de este tipo"
+                  hint="Se prellenan al crear una reserva. El usuario puede editarlos en la reserva."
+                />
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalTipoOpen(false)}>Cancelar</Button>
