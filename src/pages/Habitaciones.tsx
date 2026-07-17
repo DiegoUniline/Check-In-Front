@@ -481,13 +481,20 @@ export default function Habitaciones() {
       {/* Stats - Grid responsivo corregido */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {[
-          { label: 'Disponibles', count: habitaciones.filter(h => h.estado_habitacion === 'Disponible' && h.estado_limpieza === 'Limpia').length, color: 'text-success' },
-          { label: 'Ocupadas', count: habitaciones.filter(h => h.estado_habitacion === 'Ocupada').length, color: 'text-warning' },
-          { label: 'Reservadas', count: habitaciones.filter(h => h.estado_habitacion === 'Reservada').length, color: 'text-primary' },
-          { label: 'Limpieza', count: habitaciones.filter(h => h.estado_limpieza !== 'Limpia').length, color: 'text-info' },
-          { label: 'Mantenimiento', count: habitaciones.filter(h => h.estado_mantenimiento !== 'OK').length, color: 'text-destructive' },
+          { label: 'Disponibles', filter: 'Disponible', count: habitaciones.filter(h => h.estado_habitacion === 'Disponible' && h.estado_limpieza === 'Limpia' && h.estado_mantenimiento === 'OK').length, color: 'text-success' },
+          { label: 'Ocupadas', filter: 'Ocupada', count: habitaciones.filter(h => h.estado_habitacion === 'Ocupada').length, color: 'text-warning' },
+          { label: 'Reservadas', filter: 'Reservada', count: habitaciones.filter(h => h.estado_habitacion === 'Reservada').length, color: 'text-primary' },
+          { label: 'Limpieza', filter: 'Limpieza', count: habitaciones.filter(h => h.estado_limpieza !== 'Limpia' && h.estado_mantenimiento === 'OK').length, color: 'text-info' },
+          { label: 'Mantenimiento', filter: 'Mantenimiento', count: habitaciones.filter(h => h.estado_mantenimiento !== 'OK').length, color: 'text-destructive' },
         ].map(stat => (
-          <Card key={stat.label}>
+          <Card
+            key={stat.label}
+            onClick={() => setFilterEstado(filterEstado === stat.filter ? 'all' : stat.filter)}
+            className={cn(
+              'cursor-pointer transition-all hover:shadow-md',
+              filterEstado === stat.filter && 'ring-2 ring-primary'
+            )}
+          >
             <CardContent className="p-4 text-center">
               <p className={cn("text-2xl font-bold", stat.color)}>{stat.count}</p>
               <p className="text-[10px] uppercase font-semibold text-muted-foreground">{stat.label}</p>
