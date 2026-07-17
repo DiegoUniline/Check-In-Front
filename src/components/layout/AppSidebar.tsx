@@ -33,7 +33,7 @@ import { useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, PanelLeftClose, X } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Sidebar,
@@ -113,7 +113,7 @@ const adminSaaSItem = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const { user } = useAuth(); // Detectamos al usuario actual
   const collapsed = state === 'collapsed';
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -243,16 +243,28 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="border-b px-4 py-4">
-        <NavLink to="/dashboard" className="flex items-center gap-3">
-          {collapsed ? (
-            <Logo size={36} />
-          ) : (
-            <div className="flex flex-col">
-              <LogoHorizontal size={34} />
-              <span className="text-xs text-muted-foreground mt-1 ml-12">Sistema de Gestión</span>
-            </div>
+        <div className="flex items-center justify-between gap-2">
+          <NavLink to="/dashboard" className="flex items-center gap-3 min-w-0">
+            {collapsed ? (
+              <Logo size={36} />
+            ) : (
+              <div className="flex flex-col min-w-0">
+                <LogoHorizontal size={34} />
+                <span className="text-xs text-muted-foreground mt-1 ml-12">Sistema de Gestión</span>
+              </div>
+            )}
+          </NavLink>
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={() => (isMobile ? setOpenMobile(false) : toggleSidebar())}
+              aria-label="Contraer menú"
+              className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+            >
+              {isMobile ? <X className="h-5 w-5" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
           )}
-        </NavLink>
+        </div>
       </SidebarHeader>
 
       <SidebarContent ref={contentRef} className="py-4 group-data-[collapsible=icon]:px-0">
