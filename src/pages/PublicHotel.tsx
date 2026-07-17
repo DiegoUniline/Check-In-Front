@@ -102,7 +102,7 @@ export default function PublicHotel() {
     if (!slug) return;
     (async () => {
       setLoading(true);
-      const { data: h } = await (supabase.from('hotels') as any).select('*').eq('slug', slug).maybeSingle();
+      const { data: h } = await (supabase as any).from('hotels_publicos').select('*').eq('slug', slug).maybeSingle();
       if (!h) { setNotFound(true); setLoading(false); return; }
       setHotel(h as any);
       setHotelCurrency({

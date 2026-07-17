@@ -1,5 +1,16 @@
 import { supabase } from '@/integrations/supabase/client';
 
+async function currentHotelId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from('profiles')
+    .select('hotel_activo_id, hotel_id')
+    .eq('id', user.id)
+    .maybeSingle();
+  return (data?.hotel_activo_id ?? data?.hotel_id ?? null) as string | null;
+}
+
 /**
  * Convierte cualquier imagen (jpg/png/heic-en-blob) a WebP comprimido.
  * - Redimensiona a un ancho máximo (default 1920px) preservando aspecto.
@@ -56,7 +67,10 @@ export async function uploadImage(
 ): Promise<string> {
   const webp = await toWebP(file, { maxWidth: opts.maxWidth, quality: opts.quality });
   const folder = opts.folder ? opts.folder.replace(/^\/|\/$/g, '') + '/' : '';
-  const filename = `${folder}${crypto.randomUUID()}.webp`;
+  // Aislamiento multi-tenant: prefijo con hotel_id (obligatorio para buckets privados/sensibles)
+  const hotelId = await currentHotelId();
+  const tenantPrefix = hotelId ? `${hotelId}/` : '';
+  const filename = `${tenantPrefix}${folder}${crypto.randomUUID()}.webp`;
 
   const { error } = await supabase.storage
     .from(bucket)
