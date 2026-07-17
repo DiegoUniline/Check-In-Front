@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { UnsavedChangesProvider } from "@/contexts/UnsavedChangesContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ConfirmProvider } from "@/hooks/useConfirm";
+import { RealtimeBridge } from "@/components/RealtimeBridge";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -354,6 +355,7 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <ScrollToTop />
+                <RealtimeBridge />
                 <AppRoutes />
               </ConfirmProvider>
             </UnsavedChangesProvider>
