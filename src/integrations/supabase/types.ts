@@ -134,6 +134,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cargos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cargos_reserva_id_fkey"
             columns: ["reserva_id"]
             isOneToOne: false
@@ -173,6 +180,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categorias_producto_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -273,6 +287,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clientes_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       compras: {
@@ -333,6 +354,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
           {
@@ -420,6 +448,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conceptos_cargo_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -553,6 +588,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entregables_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entregables_reserva: {
@@ -670,6 +712,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "gastos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "gastos_proveedor_id_fkey"
             columns: ["proveedor_id"]
             isOneToOne: false
@@ -730,6 +779,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habitaciones_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
           {
@@ -882,6 +938,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "metodos_pago_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       movimientos_inventario: {
@@ -1019,6 +1082,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
           {
@@ -1175,6 +1245,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "productos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -1228,6 +1305,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       proveedores: {
@@ -1276,6 +1360,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedores_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -1412,6 +1503,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reservas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "reservas_tipo_habitacion_id_fkey"
             columns: ["tipo_habitacion_id"]
             isOneToOne: false
@@ -1535,6 +1633,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tareas_limpieza_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       tareas_mantenimiento: {
@@ -1613,6 +1718,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tareas_mantenimiento_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       temporadas: {
@@ -1677,6 +1789,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporadas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
           {
@@ -1745,6 +1864,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tipos_habitacion_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       transacciones: {
@@ -1790,6 +1916,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacciones_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -1883,6 +2016,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
           {
@@ -1996,6 +2136,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "wa_agent_config_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: true
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       wa_chats: {
@@ -2068,6 +2215,13 @@ export type Database = {
             referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "wa_chats_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       wa_etiquetas: {
@@ -2098,6 +2252,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_etiquetas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -2142,6 +2303,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_faq_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -2192,6 +2360,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_instancias_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -2367,7 +2542,75 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      hotels_publicos: {
+        Row: {
+          activo_plataforma: boolean | null
+          ciudad: string | null
+          descripcion_publica: string | null
+          direccion: string | null
+          estado: string | null
+          estrellas: number | null
+          hora_checkin: string | null
+          hora_checkout: string | null
+          id: string | null
+          logo_url: string | null
+          moneda_codigo: string | null
+          moneda_locale: string | null
+          moneda_simbolo: string | null
+          nombre: string | null
+          pais: string | null
+          permite_reservas_online: boolean | null
+          porcentaje_anticipo: number | null
+          requiere_anticipo: boolean | null
+          slug: string | null
+          timezone: string | null
+        }
+        Insert: {
+          activo_plataforma?: boolean | null
+          ciudad?: string | null
+          descripcion_publica?: string | null
+          direccion?: string | null
+          estado?: string | null
+          estrellas?: number | null
+          hora_checkin?: string | null
+          hora_checkout?: string | null
+          id?: string | null
+          logo_url?: string | null
+          moneda_codigo?: string | null
+          moneda_locale?: string | null
+          moneda_simbolo?: string | null
+          nombre?: string | null
+          pais?: string | null
+          permite_reservas_online?: boolean | null
+          porcentaje_anticipo?: number | null
+          requiere_anticipo?: boolean | null
+          slug?: string | null
+          timezone?: string | null
+        }
+        Update: {
+          activo_plataforma?: boolean | null
+          ciudad?: string | null
+          descripcion_publica?: string | null
+          direccion?: string | null
+          estado?: string | null
+          estrellas?: number | null
+          hora_checkin?: string | null
+          hora_checkout?: string | null
+          id?: string | null
+          logo_url?: string | null
+          moneda_codigo?: string | null
+          moneda_locale?: string | null
+          moneda_simbolo?: string | null
+          nombre?: string | null
+          pais?: string | null
+          permite_reservas_online?: boolean | null
+          porcentaje_anticipo?: number | null
+          requiere_anticipo?: boolean | null
+          slug?: string | null
+          timezone?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       current_hotel_id: { Args: never; Returns: string }
