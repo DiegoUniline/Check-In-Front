@@ -214,7 +214,9 @@ export default function PublicHotel() {
       }).select().single();
       if (errC) throw errC;
 
-      const tarifa = Number(tipo.precio_base) || 0;
+      const baseTarifa = Number(tipo.precio_base) || 0;
+      const fechaIn = format(bookingRange.from, 'yyyy-MM-dd');
+      const { precio: tarifa } = resolverPrecioTemporada(baseTarifa, fechaIn, tipo.id, bookingHab.id, hotel.id);
       const personasExtra = Math.max(0, (adultos + ninos) - tipo.capacidad_adultos);
       const cargoExtra = personasExtra * (Number(tipo.precio_persona_extra) || 0);
       const subtotal = tarifa * nsBooking + cargoExtra * nsBooking;
