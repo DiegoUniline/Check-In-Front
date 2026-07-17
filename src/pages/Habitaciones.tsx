@@ -96,6 +96,10 @@ export default function Habitaciones() {
     excluida_publica: false,
     fotos: [] as string[],
   });
+  // Override de impuestos para esta habitación (opcional).
+  // null = usar los del tipo/hotel; array = sobrescribir.
+  const [formImpuestos, setFormImpuestos] = useState<ImpuestoDefault[]>([]);
+  const [usarImpuestosTipo, setUsarImpuestosTipo] = useState(true);
 
   // Loading flags para evitar doble-click
   const [isSaving, setIsSaving] = useState(false);
