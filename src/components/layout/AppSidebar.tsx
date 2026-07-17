@@ -172,6 +172,26 @@ export function AppSidebar() {
   const occupancyPercent =
     totalHab > 0 ? Math.round((ocupadas / totalHab) * 100) : 0;
 
+  // Estado colapsable persistido por grupo
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = sessionStorage.getItem('sidebar-open-groups');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+  const toggleGroup = (key: string, defaultOpen: boolean) => {
+    setOpenGroups((prev) => {
+      const current = prev[key] ?? defaultOpen;
+      const next = { ...prev, [key]: !current };
+      try { sessionStorage.setItem('sidebar-open-groups', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const isGroupOpen = (key: string, defaultOpen: boolean) =>
+    openGroups[key] ?? defaultOpen;
+
   const renderNavItems = (items: { title: string; url: string; icon: any; viewKey?: string; badgeKey?: string }[]) => {
     const visible = items.filter(it => !it.viewKey || canAccess(it.viewKey, user?.rol));
     if (visible.length === 0) return null;
@@ -246,47 +266,46 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel className="text-green-600 font-semibold">WhatsApp Chat</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            {renderNavItems(chatTopItem)}
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Principal</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            {renderNavItems(mainNavItems)}
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Operaciones</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            {renderNavItems(operationsNavItems)}
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Ventas</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            {renderNavItems(salesNavItems)}
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Sistema</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            {renderNavItems(configNavItems)}
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel className="text-green-600 font-semibold">WhatsApp</SidebarGroupLabel>}
-          <SidebarGroupContent>
-            {renderNavItems(whatsappNavItems)}
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {[
+          { key: 'chat', label: 'WhatsApp Chat', items: chatTopItem, labelClass: 'text-green-600 font-semibold', defaultOpen: true },
+          { key: 'principal', label: 'Principal', items: mainNavItems, defaultOpen: true },
+          { key: 'operaciones', label: 'Operaciones', items: operationsNavItems, defaultOpen: false },
+          { key: 'ventas', label: 'Ventas', items: salesNavItems, defaultOpen: false },
+          { key: 'sistema', label: 'Sistema', items: configNavItems, defaultOpen: false },
+          { key: 'whatsapp', label: 'WhatsApp', items: whatsappNavItems, labelClass: 'text-green-600 font-semibold', defaultOpen: false },
+        ].map((g) => {
+          const rendered = renderNavItems(g.items);
+          if (!rendered) return null;
+          if (collapsed) {
+            return (
+              <SidebarGroup key={g.key}>
+                <SidebarGroupContent>{rendered}</SidebarGroupContent>
+              </SidebarGroup>
+            );
+          }
+          const open = isGroupOpen(g.key, g.defaultOpen);
+          return (
+            <SidebarGroup key={g.key}>
+              <Collapsible open={open} onOpenChange={() => toggleGroup(g.key, g.defaultOpen)}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'flex w-full items-center justify-between px-3 py-1.5 text-xs font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors',
+                      g.labelClass
+                    )}
+                  >
+                    <span>{g.label}</span>
+                    <ChevronDown className={cn('h-4 w-4 transition-transform', open ? 'rotate-0' : '-rotate-90')} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>{rendered}</SidebarGroupContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">
