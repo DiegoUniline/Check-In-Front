@@ -38,6 +38,8 @@ import api from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 import { resolveImpuestosDefault } from '@/lib/impuestosDefault';
 import { resolverPrecioTemporada, describirAjuste, loadTemporadas } from '@/lib/temporadas';
+import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
+import { formatCurrency as _fmtCur } from '@/lib/currency';
 
 export interface ReservationPreload {
   habitacion?: any;
