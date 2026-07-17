@@ -41,6 +41,48 @@ const features = [
   { icon: ShieldCheck, title: 'Multi-hotel seguro', desc: 'Cada hotel aislado por permisos y políticas a nivel de base de datos.' },
 ];
 
+const hotelesReales = [
+  {
+    img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&auto=format&fit=crop',
+    tag: 'RECEPCIÓN',
+    title: 'Check-in en segundos',
+    desc: 'Registra huéspedes, escanea identificación y cobra el anticipo desde una sola pantalla.',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=900&q=80&auto=format&fit=crop',
+    tag: 'OPERACIÓN',
+    title: 'Tu equipo, sincronizado',
+    desc: 'Housekeeping ve las habitaciones sucias, mantenimiento recibe los tickets, gerencia mira todo en vivo.',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=900&q=80&auto=format&fit=crop',
+    tag: 'MOVILIDAD',
+    title: 'Desde cualquier dispositivo',
+    desc: 'Web, tablet o celular. Tu hotel funciona igual estés en recepción, en casa o de viaje.',
+  },
+];
+
+const testimonios = [
+  {
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&q=80&auto=format&fit=crop&crop=faces',
+    name: 'María Fernanda R.',
+    role: 'Gerente · Hotel Boutique Colima',
+    quote: 'Dejamos Excel y tres grupos de WhatsApp. Ahora todo está en HospedApp y las reservas de la web caen solas al sistema.',
+  },
+  {
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80&auto=format&fit=crop&crop=faces',
+    name: 'Ricardo Ortega',
+    role: 'Dueño · Posada del Sol',
+    quote: 'En dos semanas capacitamos a recepción, housekeeping y mantenimiento. La ocupación real por fin es visible.',
+  },
+  {
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=80&auto=format&fit=crop&crop=faces',
+    name: 'Ana Lucía Peña',
+    role: 'Recepcionista · Hotel Mirador',
+    quote: 'El timeline es lo mejor. Arrastro una reserva, cambio de habitación y todo se actualiza en tiempo real.',
+  },
+];
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden public-page">
@@ -132,6 +174,43 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* HOTELES REALES - fotografía lifestyle */}
+      <section className="container mx-auto px-4 py-24">
+        <div className="max-w-2xl mx-auto text-center mb-14">
+          <div className="text-sm font-semibold text-primary mb-3">HECHO PARA HOTELES REALES</div>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">Diseñado para tu equipo, no para consultores</h2>
+          <p className="text-muted-foreground text-lg">Hoteles boutique, posadas, cadenas pequeñas y medianas. Si hospedas, HospedApp está pensado para ti.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-5">
+          {hotelesReales.map((h, i) => (
+            <motion.article
+              key={h.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="group relative overflow-hidden rounded-3xl border bg-card shadow-sm hover:shadow-xl transition-all"
+            >
+              <div className="relative aspect-[4/5] overflow-hidden">
+                <img
+                  src={h.img}
+                  alt={h.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#04122C]/95 via-[#04122C]/30 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+                  <div className="text-xs font-semibold tracking-wider text-primary/90 mb-2">{h.tag}</div>
+                  <h3 className="text-xl font-bold mb-2 leading-tight">{h.title}</h3>
+                  <p className="text-sm text-white/80 leading-relaxed">{h.desc}</p>
+                </div>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+      </section>
+
       {/* FUNCIONES */}
       <section id="funciones" className="container mx-auto px-4 py-24">
         <div className="max-w-2xl mx-auto text-center mb-16">
@@ -216,6 +295,51 @@ export default function Landing() {
             </Button>
           </div>
           <PublicSiteMockup />
+        </div>
+      </section>
+
+      {/* TESTIMONIOS */}
+      <section className="border-y bg-gradient-to-b from-muted/30 to-background">
+        <div className="container mx-auto px-4 py-24">
+          <div className="max-w-2xl mx-auto text-center mb-14">
+            <div className="text-sm font-semibold text-primary mb-3">TESTIMONIOS</div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Hoteleros que ya duermen mejor</h2>
+            <p className="text-muted-foreground text-lg">Recepción, gerencia y dueños usando HospedApp todos los días.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {testimonios.map((t, i) => (
+              <motion.figure
+                key={t.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="rounded-2xl border bg-card p-8 shadow-sm hover:shadow-lg hover:border-primary/40 transition-all flex flex-col"
+              >
+                <div className="flex items-center gap-1 text-primary mb-4">
+                  {[0, 1, 2, 3, 4].map((n) => (
+                    <Star key={n} className="h-4 w-4 fill-current" />
+                  ))}
+                </div>
+                <blockquote className="text-base leading-relaxed text-foreground/90 mb-6 flex-1">
+                  “{t.quote}”
+                </blockquote>
+                <figcaption className="flex items-center gap-3 pt-4 border-t">
+                  <img
+                    src={t.avatar}
+                    alt={t.name}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20"
+                  />
+                  <div>
+                    <div className="font-semibold text-sm">{t.name}</div>
+                    <div className="text-xs text-muted-foreground">{t.role}</div>
+                  </div>
+                </figcaption>
+              </motion.figure>
+            ))}
+          </div>
         </div>
       </section>
 
