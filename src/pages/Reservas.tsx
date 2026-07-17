@@ -105,6 +105,9 @@ export default function Reservas() {
   const [hastaCheckout, setHastaCheckout] = useState(hoyISO);
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
   const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
+  const [filtrosOpen, setFiltrosOpen] = useState(false);
+  const [filtros, setFiltros] = useState<ReservasFilters>(defaultFilters);
+  const activeFilterCount = countActiveFilters(filtros);
 
   const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
 
