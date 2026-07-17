@@ -178,6 +178,278 @@ export function exportarReporteOcupacion(opts: CommonCtx & {
   });
 }
 
+// ============================================================
+// COMPROBANTE DE RESERVA / TARJETA DE REGISTRO (con firma)
+// ============================================================
+
+interface ReservaPdfCtx {
+  hotel?: string;
+  hotelDireccion?: string;
+  hotelTelefono?: string;
+  hotelLogoUrl?: string;
+  currency?: string;
+}
+
+interface ReservaMin {
+  numero_reserva?: string;
+  fecha_checkin: string;
+  fecha_checkout: string;
+  hora_llegada?: string;
+  noches?: number;
+  adultos?: number;
+  ninos?: number;
+  habitacion_numero?: string | number;
+  tipo_habitacion_nombre?: string;
+  tarifa_noche?: number;
+  subtotal_hospedaje?: number;
+  descuento?: number;
+  total_impuestos?: number;
+  total?: number;
+  saldo_pendiente?: number;
+  solicitudes_especiales?: string | null;
+  notas?: string | null;
+  estado?: string;
+}
+
+interface ClienteMin {
+  nombre?: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
+  email?: string;
+  telefono?: string;
+  tipo_documento?: string;
+  numero_documento?: string;
+  nacionalidad?: string;
+}
+
+function buildHeader(doc: jsPDF, ctx: ReservaPdfCtx, titulo: string) {
+  const pageW = doc.internal.pageSize.getWidth();
+  doc.setFillColor(20, 30, 60);
+  doc.rect(0, 0, pageW, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.text(titulo, 14, 14);
+  doc.setFontSize(10);
+  if (ctx.hotel) doc.text(ctx.hotel, 14, 22);
+  if (ctx.hotelDireccion || ctx.hotelTelefono) {
+    doc.setFontSize(8);
+    doc.text([ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean).join(' · '), 14, 27);
+  }
+  doc.setTextColor(0, 0, 0);
+}
+
+function nombreCompleto(c: ClienteMin) {
+  return [c.nombre, c.apellido_paterno, c.apellido_materno].filter(Boolean).join(' ') || '—';
+}
+
+/**
+ * Comprobante / confirmación de reserva.
+ * Para enviar al huésped al confirmar (email, WhatsApp, descarga).
+ */
+export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
+  reserva: ReservaMin;
+  cliente: ClienteMin;
+  action?: 'save' | 'blob';
+}): Blob | void {
+  const { reserva, cliente, currency = 'MXN', action = 'save' } = opts;
+  const doc = new jsPDF();
+  buildHeader(doc, opts, 'Confirmación de Reserva');
+
+  let y = 40;
+  doc.setFontSize(10);
+  doc.text(`Reserva: ${reserva.numero_reserva || '—'}`, 14, y);
+  doc.text(`Emitido: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 140, y);
+  y += 8;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Huésped', 'Contacto', 'Documento']],
+    body: [[
+      nombreCompleto(cliente),
+      [cliente.email, cliente.telefono].filter(Boolean).join('\n') || '—',
+      [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ') || '—',
+    ]],
+    theme: 'grid',
+    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
+    styles: { fontSize: 9, cellPadding: 3 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 4;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Check-in', 'Check-out', 'Noches', 'Habitación', 'Tipo', 'Huéspedes']],
+    body: [[
+      `${format(new Date(reserva.fecha_checkin), 'dd MMM yyyy', { locale: es })}${reserva.hora_llegada ? '\n' + reserva.hora_llegada : ''}`,
+      format(new Date(reserva.fecha_checkout), 'dd MMM yyyy', { locale: es }),
+      String(reserva.noches || 1),
+      reserva.habitacion_numero ? `Hab. ${reserva.habitacion_numero}` : '—',
+      reserva.tipo_habitacion_nombre || '—',
+      `${reserva.adultos || 0} adultos${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`,
+    ]],
+    theme: 'grid',
+    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
+    styles: { fontSize: 9, cellPadding: 3 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 4;
+
+  const subtotal = Number(reserva.subtotal_hospedaje || 0);
+  const desc = Number(reserva.descuento || 0);
+  const imp = Number(reserva.total_impuestos || 0);
+  const total = Number(reserva.total || 0);
+  const saldo = Number(reserva.saldo_pendiente ?? total);
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Concepto', 'Monto']],
+    body: [
+      ['Subtotal hospedaje', fmtMoney(subtotal, currency)],
+      ['Descuento', `- ${fmtMoney(desc, currency)}`],
+      ['Impuestos', fmtMoney(imp, currency)],
+      [{ content: 'TOTAL', styles: { fontStyle: 'bold' } }, { content: fmtMoney(total, currency), styles: { fontStyle: 'bold' } }],
+      ['Pagado', fmtMoney(total - saldo, currency)],
+      [{ content: 'Saldo pendiente', styles: { fontStyle: 'bold', textColor: [180, 40, 40] } }, { content: fmtMoney(saldo, currency), styles: { fontStyle: 'bold', textColor: [180, 40, 40] } }],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
+    styles: { fontSize: 10, cellPadding: 3 },
+    columnStyles: { 1: { halign: 'right' } },
+  });
+  y = (doc as any).lastAutoTable.finalY + 6;
+
+  if (reserva.solicitudes_especiales) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Solicitudes especiales', 14, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const lines = doc.splitTextToSize(reserva.solicitudes_especiales, 180);
+    doc.text(lines, 14, y);
+    y += lines.length * 4 + 4;
+  }
+
+  // Footer
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.text('Este documento es una confirmación de reserva. Consérvelo para presentar al check-in.', 14, pageH - 10);
+
+  const filename = `reserva_${reserva.numero_reserva || 'sin-numero'}.pdf`;
+  if (action === 'blob') return doc.output('blob');
+  doc.save(filename);
+}
+
+/**
+ * Tarjeta de registro de huésped con firma digital.
+ * Genera el PDF al completar el check-in.
+ */
+export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
+  reserva: ReservaMin;
+  cliente: ClienteMin;
+  firmaDataUrl?: string | null;
+  aceptaTerminos?: boolean;
+  action?: 'save' | 'blob';
+}): Blob | void {
+  const { reserva, cliente, firmaDataUrl, aceptaTerminos, currency = 'MXN', action = 'save' } = opts;
+  const doc = new jsPDF();
+  buildHeader(doc, opts, 'Tarjeta de Registro de Huésped');
+
+  let y = 40;
+  doc.setFontSize(10);
+  doc.text(`Reserva: ${reserva.numero_reserva || '—'}`, 14, y);
+  doc.text(`Registrado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 130, y);
+  y += 6;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Datos del huésped', '']],
+    body: [
+      ['Nombre', nombreCompleto(cliente)],
+      ['Documento', [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ') || '—'],
+      ['Nacionalidad', cliente.nacionalidad || '—'],
+      ['Email', cliente.email || '—'],
+      ['Teléfono', cliente.telefono || '—'],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } },
+  });
+  y = (doc as any).lastAutoTable.finalY + 4;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Estancia', '']],
+    body: [
+      ['Habitación', reserva.habitacion_numero ? `Hab. ${reserva.habitacion_numero} — ${reserva.tipo_habitacion_nombre || ''}` : '—'],
+      ['Check-in', `${format(new Date(reserva.fecha_checkin), 'dd MMM yyyy', { locale: es })}${reserva.hora_llegada ? ' · ' + reserva.hora_llegada : ''}`],
+      ['Check-out', format(new Date(reserva.fecha_checkout), 'dd MMM yyyy', { locale: es })],
+      ['Noches', String(reserva.noches || 1)],
+      ['Huéspedes', `${reserva.adultos || 0} adultos${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`],
+      ['Total', fmtMoney(Number(reserva.total || 0), currency)],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } },
+  });
+  y = (doc as any).lastAutoTable.finalY + 6;
+
+  // Términos
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Términos y condiciones', 14, y);
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  const terminos =
+    'El huésped declara que los datos consignados son verídicos y acepta las políticas del establecimiento, ' +
+    'incluyendo horarios de check-in/out, política de cancelación, cargos por daños y responsabilidad por objetos ' +
+    'personales. Se autoriza el tratamiento de datos personales conforme al aviso de privacidad del hotel.';
+  const tLines = doc.splitTextToSize(terminos, 180);
+  doc.text(tLines, 14, y);
+  y += tLines.length * 3.5 + 4;
+
+  if (aceptaTerminos) {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 120, 30);
+    doc.text('✓ El huésped acepta los términos y condiciones', 14, y);
+    doc.setTextColor(0, 0, 0);
+    y += 6;
+  }
+
+  // Firma
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Firma del huésped', 14, y);
+  y += 3;
+  const firmaW = 90;
+  const firmaH = 30;
+  doc.setDrawColor(200, 200, 200);
+  doc.rect(14, y, firmaW, firmaH);
+  if (firmaDataUrl) {
+    try {
+      doc.addImage(firmaDataUrl, 'PNG', 15, y + 1, firmaW - 2, firmaH - 2);
+    } catch (err) {
+      console.warn('No se pudo insertar la firma:', err);
+    }
+  }
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Firmado el ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, y + firmaH + 4);
+  doc.setTextColor(0, 0, 0);
+
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setFontSize(7);
+  doc.setTextColor(120, 120, 120);
+  doc.text('Documento firmado digitalmente. La firma queda almacenada como imagen y hace fe del acto de registro.', 14, pageH - 8);
+
+  const filename = `registro_${reserva.numero_reserva || 'sin-numero'}.pdf`;
+  if (action === 'blob') return doc.output('blob');
+  doc.save(filename);
+}
+
 /**
  * Reporte de INGRESOS
  * - Desglose por método de pago, por concepto/tipo y por día.
