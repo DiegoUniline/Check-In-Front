@@ -48,6 +48,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import Chats from "./pages/Chats";
 import WhatsAppAgente from "./pages/WhatsAppAgente";
 import WhatsAppConexion from "./pages/WhatsAppConexion";
+import Temporadas from "./pages/Temporadas";
 
 const queryClient = new QueryClient();
 
@@ -238,6 +239,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="catalogos">
           <Catalogos />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/temporadas"
+      element={
+        <ProtectedRoute viewKey="catalogos">
+          <Temporadas />
         </ProtectedRoute>
       }
     />

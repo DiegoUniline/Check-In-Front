@@ -37,6 +37,7 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 import { resolveImpuestosDefault } from '@/lib/impuestosDefault';
+import { resolverPrecioTemporada, describirAjuste } from '@/lib/temporadas';
 
 export interface ReservationPreload {
   habitacion?: any;
@@ -305,7 +306,14 @@ const noches = differenceInDays(
     (selectedHabitacion ? { precio_base: selectedHabitacion.precio_base, nombre: selectedHabitacion.tipo_nombre } : null);
 
   const tarifaNoche = selectedTipo?.precio_base || 0;
-  const subtotalHospedaje = tarifaNoche * noches;
+  const { precio: tarifaTemporada, temporada: temporadaAplicable } = resolverPrecioTemporada(
+    tarifaNoche,
+    format(formData.fechaCheckin, 'yyyy-MM-dd'),
+    formData.tipoHabitacion,
+    formData.habitacionId,
+  );
+  const tarifaEfectiva = temporadaAplicable ? tarifaTemporada : tarifaNoche;
+  const subtotalHospedaje = tarifaEfectiva * noches;
   const totalPersonaExtra = formData.personasExtra * formData.cargoPersonaExtra * noches;
   const totalCargosExtras = formData.cargos.reduce((sum, c) => sum + c.total, 0);
   const subtotal = subtotalHospedaje + totalPersonaExtra + totalCargosExtras;
@@ -1036,6 +1044,14 @@ const noches = differenceInDays(
                       <span>Hospedaje ({noches} {noches === 1 ? 'noche' : 'noches'})</span>
                       <span>${fmt(subtotalHospedaje)}</span>
                     </div>
+                    {temporadaAplicable && (
+                      <div className="flex justify-between text-xs opacity-90 -mt-1">
+                        <span className="italic">
+                          Temporada: {temporadaAplicable.nombre} ({describirAjuste(temporadaAplicable)})
+                        </span>
+                        <span>${fmt(tarifaEfectiva)}/noche</span>
+                      </div>
+                    )}
                     {totalPersonaExtra > 0 && (
                       <div className="flex justify-between opacity-80">
                         <span>Persona extra ({formData.personasExtra})</span>

@@ -27,6 +27,7 @@ import {
   ,LogOut
   ,MessageCircle
   ,Bot
+  ,CalendarRange
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
@@ -75,6 +76,7 @@ const salesNavItems = [
   { title: 'POS', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
   { title: 'Productos', url: '/productos', icon: Package, viewKey: 'inventario' },
   { title: 'Inventario', url: '/inventario', icon: Package, viewKey: 'inventario' },
+  { title: 'Temporadas', url: '/temporadas', icon: CalendarRange, viewKey: 'catalogos' },
   { title: 'Ajustes de Stock', url: '/ajustes-stock', icon: ArrowUpDown, viewKey: 'inventario' },
   { title: 'Historial de Ajustes', url: '/historial-ajustes', icon: History, viewKey: 'inventario' },
   { title: 'Compras', url: '/compras', icon: ShoppingBag, viewKey: 'compras' },
