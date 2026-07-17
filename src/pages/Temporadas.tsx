@@ -16,6 +16,7 @@ import {
   TipoAjuste,
   AlcanceTemporada,
   listTemporadas,
+  loadTemporadas,
   upsertTemporada,
   deleteTemporada,
   describirAjuste,
@@ -45,10 +46,10 @@ export default function Temporadas() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Temporada>(emptyForm());
 
-  const reload = () => setItems(listTemporadas().sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio)));
+  const reload = () => setItems([...listTemporadas()].sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio)));
 
   useEffect(() => {
-    reload();
+    loadTemporadas().then(reload).catch(() => reload());
     Promise.all([api.getTiposHabitacion().catch(() => []), api.getHabitaciones().catch(() => [])]).then(([t, h]) => {
       setTipos(Array.isArray(t) ? t : []);
       setHabitaciones(Array.isArray(h) ? h : []);
@@ -64,21 +65,29 @@ export default function Temporadas() {
   const openNew = () => { setForm(emptyForm()); setOpen(true); };
   const openEdit = (t: Temporada) => { setForm({ ...t }); setOpen(true); };
 
-  const save = () => {
+  const save = async () => {
     if (!form.nombre.trim()) return toast.error('Ponle un nombre a la temporada');
     if (form.fecha_fin < form.fecha_inicio) return toast.error('La fecha fin no puede ser antes que la de inicio');
     if (form.alcance === 'tipo' && !form.tipo_habitacion_id) return toast.error('Elige un tipo de habitación');
     if (form.alcance === 'habitacion' && !form.habitacion_id) return toast.error('Elige la habitación');
-    upsertTemporada({ ...form, valor: Number(form.valor) || 0, prioridad: Number(form.prioridad) || 0 });
-    reload();
-    setOpen(false);
-    toast.success('Temporada guardada');
+    try {
+      await upsertTemporada({ ...form, valor: Number(form.valor) || 0, prioridad: Number(form.prioridad) || 0 });
+      reload();
+      setOpen(false);
+      toast.success('Temporada guardada');
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo guardar la temporada');
+    }
   };
 
-  const remove = (id: string) => {
+  const remove = async (id: string) => {
     if (!confirm('¿Eliminar esta temporada?')) return;
-    deleteTemporada(id);
-    reload();
+    try {
+      await deleteTemporada(id);
+      reload();
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo eliminar');
+    }
   };
 
   const previewNumero = useMemo(() => {
