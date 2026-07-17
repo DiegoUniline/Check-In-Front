@@ -185,7 +185,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const descuentoMonto = safeNumber(r.descuento_monto);
   const totalCargos = r.cargos?.reduce((sum: number, c: any) => sum + safeNumber(c.total), 0) || 0;
   const subtotalBase = subtotalHospedaje + totalPersonaExtra + totalCargos - descuentoMonto;
-  const impuestos = editMode ? (subtotalBase * 0.16) : safeNumber(r.total_impuestos);
+  // No aplicar IVA automático: se respetan los impuestos configurados en la reserva.
+  const impuestos = safeNumber(r.total_impuestos);
   const total = editMode ? (subtotalBase + impuestos) : safeNumber(r.total);
   const pagado = safeNumber(r.total_pagado);
   const saldoPendiente = total - pagado;
@@ -369,7 +370,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     const cantidad = safeNumber(cargoCantidad, 1);
     const precioUnitario = safeNumber(cargoMonto);
     const subtotal = cantidad * precioUnitario;
-    const impuesto = concepto?.aplica_iva ? subtotal * 0.16 : 0;
+    // Los impuestos por cargo dependen del concepto configurado; sin tasa fija por defecto.
+    const impuesto = 0;
     
     setProcessing(true);
     try {
@@ -1194,10 +1196,12 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     <span>-{formatCurrency(descuentoMonto)}</span>
                   </div>
                 )}
-                <div className="flex justify-between opacity-80">
-                  <span>IVA (16%)</span>
-                  <span>{formatCurrency(impuestos)}</span>
-                </div>
+                {impuestos > 0 && (
+                  <div className="flex justify-between opacity-80">
+                    <span>Impuestos</span>
+                    <span>{formatCurrency(impuestos)}</span>
+                  </div>
+                )}
                 <Separator className="bg-primary-foreground/20" />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>

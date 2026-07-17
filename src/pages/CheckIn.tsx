@@ -150,8 +150,8 @@ export default function CheckIn() {
 
   const noches = reserva.noches || Math.ceil((new Date(reserva.fecha_checkout).getTime() - new Date(reserva.fecha_checkin).getTime()) / (1000 * 60 * 60 * 24));
   const total = reserva.total || reserva.monto_total || 0;
-  const subtotal = reserva.subtotal || total * 0.84;
-  const impuestos = reserva.impuestos || total * 0.16;
+  const impuestos = Number(reserva.impuestos ?? reserva.total_impuestos ?? 0) || 0;
+  const subtotal = Number(reserva.subtotal ?? reserva.subtotal_hospedaje ?? (total - impuestos)) || 0;
   const saldoRestante = Math.max(0, total - totalPagos);
 
   return (
