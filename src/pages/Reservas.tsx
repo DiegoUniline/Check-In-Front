@@ -812,7 +812,7 @@ export default function Reservas() {
 
       {/* Modal: Llegadas de hoy */}
       <Dialog open={modalLlegadas} onOpenChange={setModalLlegadas}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[calc(100dvh-1rem)] sm:max-h-[80dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Llegadas de hoy</DialogTitle>
           </DialogHeader>
@@ -849,7 +849,7 @@ export default function Reservas() {
 
       {/* Modal: Salidas de hoy */}
       <Dialog open={modalSalidas} onOpenChange={setModalSalidas}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[calc(100dvh-1rem)] sm:max-h-[80dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Salidas de hoy</DialogTitle>
           </DialogHeader>
