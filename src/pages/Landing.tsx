@@ -174,6 +174,43 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* HOTELES REALES - fotografía lifestyle */}
+      <section className="container mx-auto px-4 py-24">
+        <div className="max-w-2xl mx-auto text-center mb-14">
+          <div className="text-sm font-semibold text-primary mb-3">HECHO PARA HOTELES REALES</div>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">Diseñado para tu equipo, no para consultores</h2>
+          <p className="text-muted-foreground text-lg">Hoteles boutique, posadas, cadenas pequeñas y medianas. Si hospedas, HospedApp está pensado para ti.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-5">
+          {hotelesReales.map((h, i) => (
+            <motion.article
+              key={h.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="group relative overflow-hidden rounded-3xl border bg-card shadow-sm hover:shadow-xl transition-all"
+            >
+              <div className="relative aspect-[4/5] overflow-hidden">
+                <img
+                  src={h.img}
+                  alt={h.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#04122C]/95 via-[#04122C]/30 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+                  <div className="text-xs font-semibold tracking-wider text-primary/90 mb-2">{h.tag}</div>
+                  <h3 className="text-xl font-bold mb-2 leading-tight">{h.title}</h3>
+                  <p className="text-sm text-white/80 leading-relaxed">{h.desc}</p>
+                </div>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+      </section>
+
       {/* FUNCIONES */}
       <section id="funciones" className="container mx-auto px-4 py-24">
         <div className="max-w-2xl mx-auto text-center mb-16">
