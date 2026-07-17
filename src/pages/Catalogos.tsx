@@ -207,9 +207,11 @@ export default function Catalogos() {
 
       if (editingTipo) {
         await api.updateTipoHabitacion(editingTipo.id, data);
+        setTipoDefault(editingTipo.id, usarImpuestosHotel ? null : formTipoImpuestos);
         toast({ title: 'Tipo actualizado', description: `${data.nombre} guardado correctamente` });
       } else {
-        await api.createTipoHabitacion(data);
+        const created = await api.createTipoHabitacion(data);
+        if (created?.id) setTipoDefault(created.id, usarImpuestosHotel ? null : formTipoImpuestos);
         toast({ title: 'Tipo creado', description: `${data.nombre} creado exitosamente` });
       }
 
