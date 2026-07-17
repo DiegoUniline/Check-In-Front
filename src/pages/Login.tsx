@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Logo } from '@/components/Logo';
+import { LogoFull } from '@/components/Logo';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -75,10 +75,9 @@ export default function Login() {
       <Card className="relative w-full max-w-md shadow-lg">
         <CardHeader className="text-center pb-2">
           {/* Logo */}
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
-            <Logo size={64} className="text-primary" />
+          <div className="mx-auto mb-2 flex items-center justify-center">
+            <LogoFull height={140} />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">HospedApp</CardTitle>
           <CardDescription>Sistema de Gestión Hotelera</CardDescription>
         </CardHeader>
         
