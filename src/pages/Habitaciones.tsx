@@ -739,6 +739,30 @@ export default function Habitaciones() {
                 maxImages={10}
               />
             </div>
+
+            {/* Override de impuestos por habitación */}
+            <div className="rounded-md border p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-medium">Usar impuestos del tipo de habitación</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Si está activo, esta habitación hereda los impuestos configurados en su tipo (o en el hotel).
+                  </p>
+                </div>
+                <Switch
+                  checked={usarImpuestosTipo}
+                  onCheckedChange={(v) => setUsarImpuestosTipo(v)}
+                />
+              </div>
+              {!usarImpuestosTipo && (
+                <ImpuestosEditor
+                  value={formImpuestos}
+                  onChange={setFormImpuestos}
+                  title="Impuestos específicos de esta habitación"
+                  hint="Sobrescribe los impuestos del tipo. Se prellenan al crear una reserva de esta habitación."
+                />
+              )}
+            </div>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setModalOpen(false)} disabled={isSaving}>Cancelar</Button>
