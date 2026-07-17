@@ -33,6 +33,8 @@ import { useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Sidebar,
   SidebarContent,
