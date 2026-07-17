@@ -45,6 +45,14 @@ import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import { MultiImageUpload } from '@/components/ui/multi-image-upload';
 import { formatCurrency } from '@/lib/currency';
+import { ImpuestosEditor } from '@/components/ImpuestosEditor';
+import {
+  getTipoDefault,
+  setTipoDefault,
+  getHotelDefault,
+  setHotelDefault,
+  type ImpuestoDefault,
+} from '@/lib/impuestosDefault';
 
 export default function Catalogos() {
   const { toast } = useToast();
@@ -70,6 +78,20 @@ export default function Catalogos() {
     publicar_web: true,
     fotos: [] as string[],
   });
+  // Impuestos por defecto aplicables al crear reservas de este tipo.
+  // Se guardan por tipo_id en localStorage (schema-less) al guardar el tipo.
+  const [formTipoImpuestos, setFormTipoImpuestos] = useState<ImpuestoDefault[]>([]);
+  const [usarImpuestosHotel, setUsarImpuestosHotel] = useState(true);
+
+  // Impuestos por defecto a nivel hotel (fallback global si un tipo no define los suyos).
+  const [impuestosHotel, setImpuestosHotelState] = useState<ImpuestoDefault[]>(
+    () => getHotelDefault() || []
+  );
+  const guardarImpuestosHotel = (list: ImpuestoDefault[]) => {
+    setImpuestosHotelState(list);
+    setHotelDefault(list);
+    toast({ title: 'Impuestos por defecto guardados', description: 'Se aplicarán a nuevas reservas del hotel' });
+  };
 
   // Categorías Productos
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -141,6 +163,8 @@ export default function Catalogos() {
       publicar_web: true,
       fotos: [] as string[],
     });
+    setFormTipoImpuestos([]);
+    setUsarImpuestosHotel(true);
     setModalTipoOpen(true);
   };
 
@@ -159,6 +183,9 @@ export default function Catalogos() {
       publicar_web: tipo.publicar_web !== false,
       fotos: Array.isArray(tipo.fotos) ? tipo.fotos : [],
     });
+    const impuestos = getTipoDefault(tipo.id);
+    setUsarImpuestosHotel(impuestos === null);
+    setFormTipoImpuestos(impuestos || []);
     setModalTipoOpen(true);
   };
 
@@ -180,9 +207,11 @@ export default function Catalogos() {
 
       if (editingTipo) {
         await api.updateTipoHabitacion(editingTipo.id, data);
+        setTipoDefault(editingTipo.id, usarImpuestosHotel ? null : formTipoImpuestos);
         toast({ title: 'Tipo actualizado', description: `${data.nombre} guardado correctamente` });
       } else {
-        await api.createTipoHabitacion(data);
+        const created = await api.createTipoHabitacion(data);
+        if (created?.id) setTipoDefault(created.id, usarImpuestosHotel ? null : formTipoImpuestos);
         toast({ title: 'Tipo creado', description: `${data.nombre} creado exitosamente` });
       }
 
@@ -489,6 +518,21 @@ export default function Catalogos() {
 
         {/* TAB: Tipos de Habitación */}
         <TabsContent value="tipos-habitacion">
+          {/* Impuestos por defecto del hotel */}
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-base">Impuestos por defecto del hotel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ImpuestosEditor
+                value={impuestosHotel}
+                onChange={guardarImpuestosHotel}
+                title="Se aplican a todos los tipos de habitación (salvo que un tipo defina los suyos)"
+                hint="Deja la lista vacía para no aplicar ningún impuesto automáticamente al crear reservas."
+              />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Tipos de Habitación</CardTitle>
@@ -1014,6 +1058,30 @@ export default function Catalogos() {
               <p className="text-xs text-muted-foreground">
                 Las fotos se cargan por habitación individual desde la pantalla de <strong>Habitaciones</strong>.
               </p>
+            </div>
+
+            {/* Impuestos por defecto para este tipo de habitación */}
+            <div className="rounded-md border p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-semibold">Usar impuestos generales del hotel</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Si está activo, este tipo hereda los impuestos por defecto del hotel.
+                  </p>
+                </div>
+                <Switch
+                  checked={usarImpuestosHotel}
+                  onCheckedChange={(v) => setUsarImpuestosHotel(v)}
+                />
+              </div>
+              {!usarImpuestosHotel && (
+                <ImpuestosEditor
+                  value={formTipoImpuestos}
+                  onChange={setFormTipoImpuestos}
+                  title="Impuestos específicos de este tipo"
+                  hint="Se prellenan al crear una reserva. El usuario puede editarlos en la reserva."
+                />
+              )}
             </div>
           </div>
           <DialogFooter>

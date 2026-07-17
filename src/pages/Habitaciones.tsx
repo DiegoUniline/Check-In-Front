@@ -13,6 +13,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { ImpuestosEditor } from '@/components/ImpuestosEditor';
+import { getHabDefault, setHabDefault, type ImpuestoDefault } from '@/lib/impuestosDefault';
 import {
   Select,
   SelectContent,
@@ -94,6 +96,10 @@ export default function Habitaciones() {
     excluida_publica: false,
     fotos: [] as string[],
   });
+  // Override de impuestos para esta habitación (opcional).
+  // null = usar los del tipo/hotel; array = sobrescribir.
+  const [formImpuestos, setFormImpuestos] = useState<ImpuestoDefault[]>([]);
+  const [usarImpuestosTipo, setUsarImpuestosTipo] = useState(true);
 
   // Loading flags para evitar doble-click
   const [isSaving, setIsSaving] = useState(false);
@@ -285,6 +291,8 @@ export default function Habitaciones() {
       excluida_publica: false,
       fotos: [] as string[],
     });
+    setFormImpuestos([]);
+    setUsarImpuestosTipo(true);
     setModalOpen(true);
   };
 
@@ -300,6 +308,9 @@ export default function Habitaciones() {
       excluida_publica: !!hab.excluida_publica,
       fotos: Array.isArray(hab.fotos) ? hab.fotos : [],
     });
+    const impuestos = getHabDefault(hab.id);
+    setUsarImpuestosTipo(impuestos === null);
+    setFormImpuestos(impuestos || []);
     setModalOpen(true);
   };
 
@@ -319,9 +330,11 @@ export default function Habitaciones() {
       
       if (editingHab) {
         await api.updateHabitacion(editingHab.id, data);
+        setHabDefault(editingHab.id, usarImpuestosTipo ? null : formImpuestos);
         toast({ title: 'Habitación actualizada', description: `Habitación ${formData.numero} guardada` });
       } else {
-        await api.createHabitacion(data);
+        const created = await api.createHabitacion(data);
+        if (created?.id) setHabDefault(created.id, usarImpuestosTipo ? null : formImpuestos);
         toast({ title: 'Habitación creada', description: `Habitación ${formData.numero} creada exitosamente` });
       }
       
@@ -725,6 +738,30 @@ export default function Habitaciones() {
                 folder="habitaciones"
                 maxImages={10}
               />
+            </div>
+
+            {/* Override de impuestos por habitación */}
+            <div className="rounded-md border p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-medium">Usar impuestos del tipo de habitación</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Si está activo, esta habitación hereda los impuestos configurados en su tipo (o en el hotel).
+                  </p>
+                </div>
+                <Switch
+                  checked={usarImpuestosTipo}
+                  onCheckedChange={(v) => setUsarImpuestosTipo(v)}
+                />
+              </div>
+              {!usarImpuestosTipo && (
+                <ImpuestosEditor
+                  value={formImpuestos}
+                  onChange={setFormImpuestos}
+                  title="Impuestos específicos de esta habitación"
+                  hint="Sobrescribe los impuestos del tipo. Se prellenan al crear una reserva de esta habitación."
+                />
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2">
