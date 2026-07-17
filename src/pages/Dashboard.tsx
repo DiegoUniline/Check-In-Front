@@ -19,8 +19,7 @@ export default function Dashboard() {
   const [ventas, setVentas] = useState<any>({ total: 0, alojamiento: 0, alimentos: 0, servicios: 0 });
   const [tareasCriticas, setTareasCriticas] = useState<any>({ limpieza: [], mantenimiento: [] });
 
-  useEffect(() => {
-    const cargarDatos = async () => {
+  const cargarDatos = async () => {
       try {
         // Cargar datos básicos - algunos endpoints pueden no existir
         const results = await Promise.allSettled([
@@ -126,8 +125,22 @@ export default function Dashboard() {
       } finally {
         setLoading(false);
       }
-    };
+  };
+
+  useEffect(() => {
     cargarDatos();
+  }, []);
+
+  // Realtime: refresca dashboard cuando el bridge global recibe cambios relevantes.
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const t = (e as CustomEvent).detail?.table;
+      if (t === 'reservas' || t === 'habitaciones' || t === 'pagos' || t === 'tareas_limpieza' || t === 'tareas_mantenimiento') {
+        cargarDatos();
+      }
+    };
+    window.addEventListener('data:changed', onChange);
+    return () => window.removeEventListener('data:changed', onChange);
   }, []);
 
   const handleCheckin = (reservaId: string) => {

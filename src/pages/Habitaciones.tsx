@@ -109,6 +109,18 @@ export default function Habitaciones() {
     cargarDatos();
   }, []);
 
+  // Realtime: refrescar cuando el bridge global detecta cambios en habitaciones o reservas.
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.table === 'habitaciones' || detail?.table === 'reservas') {
+        cargarDatos();
+      }
+    };
+    window.addEventListener('data:changed', onChange);
+    return () => window.removeEventListener('data:changed', onChange);
+  }, []);
+
   const cargarDatos = async () => {
     try {
       const [habData, tiposData] = await Promise.all([
