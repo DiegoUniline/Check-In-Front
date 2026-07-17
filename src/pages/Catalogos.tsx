@@ -163,6 +163,8 @@ export default function Catalogos() {
       publicar_web: true,
       fotos: [] as string[],
     });
+    setFormTipoImpuestos([]);
+    setUsarImpuestosHotel(true);
     setModalTipoOpen(true);
   };
 
@@ -181,6 +183,9 @@ export default function Catalogos() {
       publicar_web: tipo.publicar_web !== false,
       fotos: Array.isArray(tipo.fotos) ? tipo.fotos : [],
     });
+    const impuestos = getTipoDefault(tipo.id);
+    setUsarImpuestosHotel(impuestos === null);
+    setFormTipoImpuestos(impuestos || []);
     setModalTipoOpen(true);
   };
 
