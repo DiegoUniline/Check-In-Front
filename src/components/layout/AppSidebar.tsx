@@ -50,7 +50,7 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from "@/contexts/useAuth"; // Importante para detectar a Diego
 import { canAccess } from '@/lib/permissions';
-import { Logo } from '@/components/Logo';
+import { Logo, LogoHorizontal } from '@/components/Logo';
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, viewKey: 'dashboard' },
