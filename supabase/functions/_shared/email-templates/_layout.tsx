@@ -9,11 +9,15 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+
+export const LOGO_URL =
+  'https://hospedapp.com/__l5e/assets-v1/7584dfcc-ca95-44ac-a08d-2392a453ad0f/hospedapp-icon.png'
 
 // HospedApp brand palette
 export const brand = {
@@ -46,10 +50,25 @@ export const EmailLayout = ({ preview, hotelName, children }: LayoutProps) => (
           <table width="100%" cellPadding={0} cellSpacing={0} role="presentation">
             <tr>
               <td style={{ verticalAlign: 'middle' }}>
-                <Text style={brandLogo}>
-                  <span style={{ color: brand.turquoise }}>H</span>
-                  <span style={{ color: '#FFFFFF' }}>ospedApp</span>
-                </Text>
+                <table cellPadding={0} cellSpacing={0} role="presentation">
+                  <tr>
+                    <td style={{ verticalAlign: 'middle', paddingRight: '12px' }}>
+                      <Img
+                        src={LOGO_URL}
+                        width="40"
+                        height="40"
+                        alt="HospedApp"
+                        style={{ display: 'block', borderRadius: '8px' }}
+                      />
+                    </td>
+                    <td style={{ verticalAlign: 'middle' }}>
+                      <Text style={brandLogo}>
+                        <span style={{ color: brand.turquoise }}>H</span>
+                        <span style={{ color: '#FFFFFF' }}>ospedApp</span>
+                      </Text>
+                    </td>
+                  </tr>
+                </table>
               </td>
               {hotelName ? (
                 <td style={{ verticalAlign: 'middle', textAlign: 'right' as const }}>
