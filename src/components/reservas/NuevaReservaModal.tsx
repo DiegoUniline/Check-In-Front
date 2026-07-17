@@ -38,6 +38,7 @@ import api from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 import { resolveImpuestosDefault } from '@/lib/impuestosDefault';
 import { resolverPrecioTemporada, describirAjuste, loadTemporadas } from '@/lib/temporadas';
+import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
 
 export interface ReservationPreload {
   habitacion?: any;
@@ -512,6 +513,32 @@ const noches = differenceInDays(
         title: origen === 'Recepcion' ? '✅ Check-in completado' : '✅ Reserva creada',
         description: `Habitación ${selectedHabitacion?.numero} - ${formData.clienteData?.nombre || formData.nuevoCliente.nombre}`,
       });
+
+      // Envío de confirmación por WhatsApp (no bloquea la UI si falla)
+      try {
+        const telefono = formData.clienteData?.telefono || formData.nuevoCliente.telefono;
+        const nombreCli = formData.clienteData?.nombre || formData.nuevoCliente.nombre || '';
+        const isCheckin = origen === 'Recepcion';
+        await enviarWhatsAppReserva({
+          hotel_id: reserva.hotel_id,
+          telefono,
+          reserva_id: reserva.id,
+          template_key: isCheckin ? 'bienvenida_checkin' : 'confirmacion_reserva',
+          mensajeFallback: isCheckin ? MENSAJES_DEFAULT.bienvenida_checkin : MENSAJES_DEFAULT.confirmacion_reserva,
+          vars: {
+            nombre: nombreCli,
+            numero_reserva: reserva.numero_reserva || '',
+            tipo_habitacion: selectedHabitacion?.tipo_habitacion?.nombre || '',
+            habitacion: selectedHabitacion?.numero || '',
+            fecha_checkin: format(formData.fechaCheckin, 'dd MMM yyyy', { locale: es }),
+            fecha_checkout: format(formData.fechaCheckout, 'dd MMM yyyy', { locale: es }),
+            noches,
+            total: formatCurrency(total),
+          },
+        });
+      } catch (err) {
+        console.warn('WhatsApp confirmación falló:', err);
+      }
 
       onOpenChange(false);
       onSuccess?.();

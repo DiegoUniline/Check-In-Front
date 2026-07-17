@@ -23,6 +23,20 @@ const sb = supabase as any;
 
 const TEMPLATES_DEFAULT = [
   {
+    template_key: 'confirmacion_reserva',
+    nombre: 'Confirmación de reserva (al crearla)',
+    mensaje:
+      '¡Hola {{nombre}}! 🎉\nTu reserva en *{{hotel}}* está confirmada ✅\n\n📄 Reserva: {{numero_reserva}}\n🛏️ Habitación: {{tipo_habitacion}}\n📅 Check-in: {{fecha_checkin}}\n📅 Check-out: {{fecha_checkout}}\n🌙 Noches: {{noches}}\n💰 Total: {{total}}\n\n¡Te esperamos!',
+    descripcion: 'Se envía al huésped inmediatamente al crear la reserva.',
+  },
+  {
+    template_key: 'bienvenida_checkin',
+    nombre: 'Bienvenida (al hacer check-in)',
+    mensaje:
+      '¡Bienvenido {{nombre}}! 🏨\nTu check-in en *{{hotel}}* está completo ✅\n\n🛏️ Habitación: {{habitacion}}\n📅 Check-out: {{fecha_checkout}} (12:00 hrs)\n\nEsperamos que disfrutes tu estancia. 🙌',
+    descripcion: 'Se envía cuando se registra el ingreso del huésped.',
+  },
+  {
     template_key: 'recordatorio_checkin',
     nombre: 'Recordatorio (1 día antes del check-in)',
     mensaje:
@@ -38,7 +52,7 @@ const TEMPLATES_DEFAULT = [
   },
 ];
 
-const VARIABLES = ['nombre', 'hotel', 'numero_reserva', 'fecha_checkin', 'fecha_checkout', 'habitacion'];
+const VARIABLES = ['nombre', 'hotel', 'numero_reserva', 'fecha_checkin', 'fecha_checkout', 'habitacion', 'tipo_habitacion', 'noches', 'total'];
 
 export function WhatsAppConfig() {
   const { toast } = useToast();

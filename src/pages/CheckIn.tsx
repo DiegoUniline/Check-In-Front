@@ -28,6 +28,7 @@ import { PagosMultiplesGrid, type PagoItem } from '@/components/PagosMultiplesGr
 import { formatCurrency } from '@/lib/currency';
 import { SignaturePad } from '@/components/SignaturePad';
 import { exportarRegistroHuesped } from '@/lib/pdfExport';
+import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
 
 export default function CheckIn() {
   const { id } = useParams();
@@ -163,6 +164,28 @@ export default function CheckIn() {
         title: '✅ Check-in completado',
         description: `${formData.nombre} ${formData.apellidoPaterno} - Hab. ${selectedHabitacion?.numero}`,
       });
+
+      // Mensaje de bienvenida por WhatsApp (fallo silencioso)
+      try {
+        const tel = reserva.cliente?.telefono || reserva.clientes?.telefono;
+        if (tel && reserva.hotel_id) {
+          await enviarWhatsAppReserva({
+            hotel_id: reserva.hotel_id,
+            telefono: tel,
+            reserva_id: reserva.id,
+            template_key: 'bienvenida_checkin',
+            mensajeFallback: MENSAJES_DEFAULT.bienvenida_checkin,
+            vars: {
+              nombre: formData.nombre,
+              habitacion: selectedHabitacion?.numero || '',
+              fecha_checkout: reserva.fecha_checkout || '',
+              numero_reserva: reserva.numero_reserva || '',
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('WhatsApp bienvenida falló:', err);
+      }
 
       navigate('/dashboard');
     } catch (error: any) {
