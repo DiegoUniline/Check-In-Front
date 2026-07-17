@@ -330,9 +330,11 @@ export default function Habitaciones() {
       
       if (editingHab) {
         await api.updateHabitacion(editingHab.id, data);
+        setHabDefault(editingHab.id, usarImpuestosTipo ? null : formImpuestos);
         toast({ title: 'Habitación actualizada', description: `Habitación ${formData.numero} guardada` });
       } else {
-        await api.createHabitacion(data);
+        const created = await api.createHabitacion(data);
+        if (created?.id) setHabDefault(created.id, usarImpuestosTipo ? null : formImpuestos);
         toast({ title: 'Habitación creada', description: `Habitación ${formData.numero} creada exitosamente` });
       }
       
