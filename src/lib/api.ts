@@ -466,6 +466,27 @@ class ApiClient {
     const impuestos = Math.max(0, Number(data.total_impuestos ?? data.impuestos ?? 0));
     const total = base + impuestos;
     const totalPagado = Number(data.total_pagado || 0);
+    // Validación de overbooking: si se asigna habitación específica, verificar
+    // que no exista otra reserva activa que solape las fechas. Los estados que
+    // "bloquean" la habitación son Confirmada y CheckIn. Cancelada/NoShow/CheckOut
+    // no bloquean.
+    if (data.habitacion_id && data.fecha_checkin && data.fecha_checkout) {
+      const { data: conflictos, error: errConf } = await supabase
+        .from('reservas')
+        .select('id, numero_reserva, fecha_checkin, fecha_checkout, estado')
+        .eq('hotel_id', this.hid())
+        .eq('habitacion_id', data.habitacion_id)
+        .in('estado', ['Confirmada', 'CheckIn'])
+        .lt('fecha_checkin', data.fecha_checkout)
+        .gt('fecha_checkout', data.fecha_checkin);
+      if (errConf) throw errConf;
+      if (conflictos && conflictos.length > 0) {
+        const c = conflictos[0];
+        throw new Error(
+          `Overbooking: la habitación ya tiene una reserva ${c.numero_reserva || ''} del ${c.fecha_checkin} al ${c.fecha_checkout} (${c.estado}).`
+        );
+      }
+    }
     const payload = {
       ...data,
       hotel_id: this.hid(),
