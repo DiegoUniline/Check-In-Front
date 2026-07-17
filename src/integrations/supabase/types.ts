@@ -1504,6 +1504,79 @@ export type Database = {
           },
         ]
       }
+      temporadas: {
+        Row: {
+          activo: boolean
+          alcance: string
+          created_at: string
+          fecha_fin: string
+          fecha_inicio: string
+          habitacion_id: string | null
+          hotel_id: string
+          id: string
+          nombre: string
+          prioridad: number
+          tipo_ajuste: string
+          tipo_habitacion_id: string | null
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          activo?: boolean
+          alcance?: string
+          created_at?: string
+          fecha_fin: string
+          fecha_inicio: string
+          habitacion_id?: string | null
+          hotel_id: string
+          id?: string
+          nombre: string
+          prioridad?: number
+          tipo_ajuste: string
+          tipo_habitacion_id?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          activo?: boolean
+          alcance?: string
+          created_at?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          habitacion_id?: string | null
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          prioridad?: number
+          tipo_ajuste?: string
+          tipo_habitacion_id?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporadas_habitacion_id_fkey"
+            columns: ["habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "habitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporadas_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporadas_tipo_habitacion_id_fkey"
+            columns: ["tipo_habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_habitacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tipos_habitacion: {
         Row: {
           amenidades: string[] | null
