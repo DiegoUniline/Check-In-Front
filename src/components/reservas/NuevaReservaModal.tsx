@@ -209,6 +209,26 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     });
   }, [open, formData.tipoHabitacion, tiposHabitacion]);
 
+  // Prellena los impuestos configurados por defecto para la habitación/tipo/hotel
+  // cuando el usuario selecciona un tipo o una habitación. Genera IDs efímeros para
+  // que el editor pueda manipular la lista libremente.
+  useEffect(() => {
+    if (!open) return;
+    const defaults = resolveImpuestosDefault(
+      formData.tipoHabitacion,
+      formData.habitacionId,
+    );
+    setFormData((prev) => ({
+      ...prev,
+      impuestos: defaults.map((d, i) => ({
+        id: `def-${Date.now()}-${i}`,
+        nombre: d.nombre,
+        tasa: Number(d.tasa) || 0,
+      })),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, formData.tipoHabitacion, formData.habitacionId]);
+
   const cargarDatos = async () => {
     try {
       const [tiposData, entregablesData, conceptosData, clientesData] = await Promise.all([
