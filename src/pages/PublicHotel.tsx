@@ -116,6 +116,7 @@ export default function PublicHotel() {
       ]);
       setTipos((tps || []) as any);
       setHabitaciones((hbs || []) as any);
+      loadTemporadas(h.id).catch(() => {});
       setLoading(false);
     })();
   }, [slug]);

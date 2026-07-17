@@ -182,6 +182,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   useEffect(() => {
     if (open) {
       cargarDatos();
+      loadTemporadas().catch(() => {});
       setStep(1);
       setOrigen(preload?.origen || 'Reserva');
       setCrearNuevoCliente(false);
