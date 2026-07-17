@@ -298,6 +298,51 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* TESTIMONIOS */}
+      <section className="border-y bg-gradient-to-b from-muted/30 to-background">
+        <div className="container mx-auto px-4 py-24">
+          <div className="max-w-2xl mx-auto text-center mb-14">
+            <div className="text-sm font-semibold text-primary mb-3">TESTIMONIOS</div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Hoteleros que ya duermen mejor</h2>
+            <p className="text-muted-foreground text-lg">Recepción, gerencia y dueños usando HospedApp todos los días.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {testimonios.map((t, i) => (
+              <motion.figure
+                key={t.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="rounded-2xl border bg-card p-8 shadow-sm hover:shadow-lg hover:border-primary/40 transition-all flex flex-col"
+              >
+                <div className="flex items-center gap-1 text-primary mb-4">
+                  {[0, 1, 2, 3, 4].map((n) => (
+                    <Star key={n} className="h-4 w-4 fill-current" />
+                  ))}
+                </div>
+                <blockquote className="text-base leading-relaxed text-foreground/90 mb-6 flex-1">
+                  “{t.quote}”
+                </blockquote>
+                <figcaption className="flex items-center gap-3 pt-4 border-t">
+                  <img
+                    src={t.avatar}
+                    alt={t.name}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20"
+                  />
+                  <div>
+                    <div className="font-semibold text-sm">{t.name}</div>
+                    <div className="text-xs text-muted-foreground">{t.role}</div>
+                  </div>
+                </figcaption>
+              </motion.figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA final */}
       <section className="container mx-auto px-4 py-24">
         <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/10 via-card to-accent/20 p-10 md:p-16 text-center">
