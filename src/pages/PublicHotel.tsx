@@ -511,7 +511,9 @@ export default function PublicHotel() {
             const fotos = habitacionesConFotos(bookingHab);
             const ocupados = diasOcupadosPorHab[bookingHab.id] || new Set();
             const disponible = isHabDisponibleEnRango(bookingHab.id, bookingRange);
-            const tarifa = Number(t.precio_base) || 0;
+            const tarifaBase = Number(t.precio_base) || 0;
+            const fechaRef = bookingRange?.from ? format(bookingRange.from, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+            const { precio: tarifa, temporada: tempReserva } = resolverPrecioTemporada(tarifaBase, fechaRef, t.id, bookingHab.id, hotel?.id);
             const totalEstim = tarifa * nsBooking;
             return (
               <>
@@ -581,6 +583,12 @@ export default function PublicHotel() {
 
                     <div className="rounded-xl border border-stone-200 p-3 bg-stone-50 text-sm space-y-1">
                       <div className="flex justify-between text-stone-600"><span>Tarifa por noche</span><span className="font-medium text-stone-900">{formatCurrency(tarifa)}</span></div>
+                      {tempReserva && (
+                        <div className="flex justify-between text-emerald-700 text-xs">
+                          <span className="italic">Temporada: {tempReserva.nombre}</span>
+                          <span>Tarifa base {formatCurrency(tarifaBase)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-stone-600"><span>Noches</span><span className="font-medium text-stone-900">{nsBooking}</span></div>
                       <div className="flex justify-between font-serif text-base border-t border-stone-200 pt-2 mt-1">
                         <span>Total</span><span>{formatCurrency(totalEstim)}</span>
