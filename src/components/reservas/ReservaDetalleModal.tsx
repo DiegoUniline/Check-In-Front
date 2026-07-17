@@ -1196,10 +1196,12 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     <span>-{formatCurrency(descuentoMonto)}</span>
                   </div>
                 )}
-                <div className="flex justify-between opacity-80">
-                  <span>IVA (16%)</span>
-                  <span>{formatCurrency(impuestos)}</span>
-                </div>
+                {impuestos > 0 && (
+                  <div className="flex justify-between opacity-80">
+                    <span>Impuestos</span>
+                    <span>{formatCurrency(impuestos)}</span>
+                  </div>
+                )}
                 <Separator className="bg-primary-foreground/20" />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>

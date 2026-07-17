@@ -197,12 +197,14 @@ export default function CheckOut() {
                     <TableCell className="text-right">{formatCurrency(subtotal)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(subtotal)}</TableCell>
                   </TableRow>
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">IVA (16%)</TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
-                    <TableCell className="text-right">{formatCurrency(impuestos)}</TableCell>
-                  </TableRow>
+                  {impuestos > 0 && (
+                    <TableRow>
+                      <TableCell className="text-muted-foreground">Impuestos</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right">{formatCurrency(impuestos)}</TableCell>
+                    </TableRow>
+                  )}
                   
                   {cargosExtra.length > 0 && (
                     <>
