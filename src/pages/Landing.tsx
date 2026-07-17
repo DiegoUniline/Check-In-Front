@@ -270,6 +270,45 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* GALERÍA EN ACCIÓN — bento con fotos reales */}
+      <section className="border-y bg-gradient-to-b from-background via-muted/20 to-background">
+        <div className="container mx-auto px-4 py-24">
+          <div className="max-w-2xl mx-auto text-center mb-14">
+            <div className="text-sm font-semibold text-primary mb-3">HOSPEDAPP EN ACCIÓN</div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Un día en un hotel con HospedApp</h2>
+            <p className="text-muted-foreground text-lg">
+              Huéspedes reservando desde su celular, recepción atendiendo sin estrés, housekeeping actualizando cuartos y gerencia mirando todo en vivo.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[180px] md:auto-rows-[220px] gap-3">
+            {galeriaAccion.map((g, i) => (
+              <motion.article
+                key={g.title}
+                initial={{ opacity: 0, scale: 0.96 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: (i % 4) * 0.06 }}
+                className={`group relative overflow-hidden rounded-2xl border bg-card shadow-sm hover:shadow-xl transition-all ${g.span}`}
+              >
+                <img
+                  src={g.img}
+                  alt={g.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#04122C]/95 via-[#04122C]/40 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                  <div className="text-[10px] font-semibold tracking-wider text-primary/90 mb-1">{g.tag}</div>
+                  <h3 className="text-sm md:text-base font-bold leading-tight mb-1">{g.title}</h3>
+                  <p className="text-xs text-white/75 leading-snug hidden md:block">{g.desc}</p>
+                </div>
+              </motion.article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FUNCIONES */}
       <section id="funciones" className="container mx-auto px-4 py-24">
         <div className="max-w-2xl mx-auto text-center mb-16">
