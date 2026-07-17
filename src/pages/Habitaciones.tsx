@@ -13,6 +13,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { ImpuestosEditor } from '@/components/ImpuestosEditor';
+import { getHabDefault, setHabDefault, type ImpuestoDefault } from '@/lib/impuestosDefault';
 import {
   Select,
   SelectContent,
