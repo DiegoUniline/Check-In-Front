@@ -518,6 +518,21 @@ export default function Catalogos() {
 
         {/* TAB: Tipos de Habitación */}
         <TabsContent value="tipos-habitacion">
+          {/* Impuestos por defecto del hotel */}
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-base">Impuestos por defecto del hotel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ImpuestosEditor
+                value={impuestosHotel}
+                onChange={guardarImpuestosHotel}
+                title="Se aplican a todos los tipos de habitación (salvo que un tipo defina los suyos)"
+                hint="Deja la lista vacía para no aplicar ningún impuesto automáticamente al crear reservas."
+              />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Tipos de Habitación</CardTitle>
