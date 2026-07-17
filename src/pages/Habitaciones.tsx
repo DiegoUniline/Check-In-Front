@@ -291,6 +291,8 @@ export default function Habitaciones() {
       excluida_publica: false,
       fotos: [] as string[],
     });
+    setFormImpuestos([]);
+    setUsarImpuestosTipo(true);
     setModalOpen(true);
   };
 
@@ -306,6 +308,9 @@ export default function Habitaciones() {
       excluida_publica: !!hab.excluida_publica,
       fotos: Array.isArray(hab.fotos) ? hab.fotos : [],
     });
+    const impuestos = getHabDefault(hab.id);
+    setUsarImpuestosTipo(impuestos === null);
+    setFormImpuestos(impuestos || []);
     setModalOpen(true);
   };
 
