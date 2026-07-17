@@ -148,7 +148,14 @@ export default function Habitaciones() {
     const matchSearch = numero.toLowerCase().includes(searchQuery.toLowerCase());
     const matchPiso = filterPiso === 'all' || (h.piso != null && h.piso.toString() === filterPiso);
     const matchTipo = filterTipo === 'all' || h.tipo_habitacion_id === filterTipo;
-    const matchEstado = filterEstado === 'all' || h.estado_habitacion === filterEstado;
+    let matchEstado = true;
+    if (filterEstado === 'Limpieza') {
+      matchEstado = h.estado_limpieza !== 'Limpia' && h.estado_mantenimiento === 'OK';
+    } else if (filterEstado === 'Mantenimiento') {
+      matchEstado = h.estado_mantenimiento !== 'OK';
+    } else if (filterEstado !== 'all') {
+      matchEstado = h.estado_habitacion === filterEstado && h.estado_limpieza === 'Limpia' && h.estado_mantenimiento === 'OK';
+    }
     return matchSearch && matchPiso && matchTipo && matchEstado;
   });
 
