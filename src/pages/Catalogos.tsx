@@ -45,6 +45,14 @@ import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import { MultiImageUpload } from '@/components/ui/multi-image-upload';
 import { formatCurrency } from '@/lib/currency';
+import { ImpuestosEditor } from '@/components/ImpuestosEditor';
+import {
+  getTipoDefault,
+  setTipoDefault,
+  getHotelDefault,
+  setHotelDefault,
+  type ImpuestoDefault,
+} from '@/lib/impuestosDefault';
 
 export default function Catalogos() {
   const { toast } = useToast();
@@ -70,6 +78,20 @@ export default function Catalogos() {
     publicar_web: true,
     fotos: [] as string[],
   });
+  // Impuestos por defecto aplicables al crear reservas de este tipo.
+  // Se guardan por tipo_id en localStorage (schema-less) al guardar el tipo.
+  const [formTipoImpuestos, setFormTipoImpuestos] = useState<ImpuestoDefault[]>([]);
+  const [usarImpuestosHotel, setUsarImpuestosHotel] = useState(true);
+
+  // Impuestos por defecto a nivel hotel (fallback global si un tipo no define los suyos).
+  const [impuestosHotel, setImpuestosHotelState] = useState<ImpuestoDefault[]>(
+    () => getHotelDefault() || []
+  );
+  const guardarImpuestosHotel = (list: ImpuestoDefault[]) => {
+    setImpuestosHotelState(list);
+    setHotelDefault(list);
+    toast({ title: 'Impuestos por defecto guardados', description: 'Se aplicarán a nuevas reservas del hotel' });
+  };
 
   // Categorías Productos
   const [categorias, setCategorias] = useState<any[]>([]);
