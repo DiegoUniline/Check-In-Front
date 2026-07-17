@@ -4,8 +4,9 @@ import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, CircleDollarSign } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+import { getEstadoConfig } from './estadoConfig';
 
 interface TimelineGridProps {
   habitaciones: any[];
@@ -72,15 +73,7 @@ export function TimelineGrid({
     return 'middle';
   };
 
-  const getStatusColor = (reserva: any) => {
-    switch (reserva.estado) {
-      case 'CheckIn': return 'bg-orange-500 hover:bg-orange-600';
-      case 'Confirmada': return 'bg-blue-500 hover:bg-blue-600';
-      case 'Pendiente': return 'bg-yellow-400 hover:bg-yellow-500';
-      case 'CheckOut': return 'bg-gray-400';
-      default: return 'bg-gray-500';
-    }
-  };
+  const getStatusClasses = (reserva: any) => getEstadoConfig(reserva.estado).block;
 
   const handleMouseDown = (habitacionId: string, dayIndex: number) => {
     if (getReservationForCell(habitacionId, dayIndex)) return;
@@ -199,6 +192,9 @@ export function TimelineGrid({
                     const isToday = isSameDay(day, today);
 
                     if (reserva && position) {
+                      const estadoCfg = getEstadoConfig(reserva.estado);
+                      const EstadoIcon = estadoCfg.icon;
+                      const tienesSaldo = parseFloat(reserva.saldo_pendiente) > 0;
                       return (
                         <TooltipProvider key={dayIndex}>
                           <Tooltip>
@@ -208,18 +204,23 @@ export function TimelineGrid({
                                   "border-r border-b cursor-pointer transition-all flex-shrink-0",
                                   cellWidth,
                                   cellHeight,
-                                  getStatusColor(reserva),
+                                  estadoCfg.block,
                                   position === 'start' && 'rounded-l',
                                   position === 'end' && 'rounded-r',
                                   isToday && "ring-2 ring-primary ring-inset"
                                 )}
                                 onClick={() => onReservationClick(reserva)}
+                                aria-label={`Reserva ${reserva.cliente_nombre || ''} — ${estadoCfg.label}`}
                               >
                                 {position === 'start' && (
-                                  <div className="h-full flex items-center px-1 overflow-hidden">
-                                    <span className={cn("text-white font-medium truncate", isCompact ? "text-[8px]" : "text-[10px]")}>
+                                  <div className="h-full flex items-center gap-1 px-1 overflow-hidden">
+                                    <EstadoIcon className={cn('flex-shrink-0', isCompact ? 'h-2.5 w-2.5' : 'h-3 w-3')} aria-hidden="true" />
+                                    <span className={cn("font-medium truncate flex-1", isCompact ? "text-[8px]" : "text-[10px]")}>
                                       {reserva.cliente_nombre} {reserva.apellido_paterno?.charAt(0)}.
                                     </span>
+                                    {tienesSaldo && !isCompact && (
+                                      <CircleDollarSign className="h-3 w-3 flex-shrink-0" aria-label="Saldo pendiente" />
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -240,10 +241,11 @@ export function TimelineGrid({
                                     </p>
                                   )}
                                   <div className="flex gap-2 items-center">
-                                    <Badge className={cn("mt-1", getStatusColor(reserva))}>
-                                      {reserva.estado}
+                                    <Badge className={cn("mt-1 gap-1", estadoCfg.block)}>
+                                      <EstadoIcon className="h-3 w-3" />
+                                      {estadoCfg.label}
                                     </Badge>
-                                    {parseFloat(reserva.saldo_pendiente) > 0 && (
+                                    {tienesSaldo && (
                                       <span className="text-xs text-destructive font-bold">
                                         Debe: {formatCurrency(Number(reserva.saldo_pendiente))}
                                       </span>
@@ -281,11 +283,12 @@ export function TimelineGrid({
       </div>
 
       {/* Footer fijo */}
-      <div className="flex-shrink-0 p-2 bg-muted/30 border-t flex items-center justify-between text-[10px] text-muted-foreground">
+      <div className="flex-shrink-0 p-2 bg-muted/30 border-t flex items-center justify-between text-[10px] text-muted-foreground gap-2 flex-wrap">
         <div className="flex gap-2 flex-wrap">
-          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-orange-500"></div> Ocupada</span>
-          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-blue-500"></div> Confirmada</span>
-          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-yellow-400"></div> Pendiente</span>
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-emerald-500"></div> Check-In</span>
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-sky-500"></div> Confirmada</span>
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500"></div> Pendiente</span>
+          <span className="flex items-center gap-1"><CircleDollarSign className="h-3 w-3" /> Saldo</span>
         </div>
         <span className="hidden sm:inline">Arrastra para crear reserva</span>
       </div>
