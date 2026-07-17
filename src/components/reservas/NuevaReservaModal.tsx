@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
+import { resolveImpuestosDefault } from '@/lib/impuestosDefault';
 
 export interface ReservationPreload {
   habitacion?: any;
