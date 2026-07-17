@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   User, CreditCard, BedDouble, Check,
-  Loader2,
+  Loader2, PenLine, FileDown,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -25,6 +26,8 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { PagosMultiplesGrid, type PagoItem } from '@/components/PagosMultiplesGrid';
 import { formatCurrency } from '@/lib/currency';
+import { SignaturePad } from '@/components/SignaturePad';
+import { exportarRegistroHuesped } from '@/lib/pdfExport';
 
 export default function CheckIn() {
   const { id } = useParams();
@@ -46,6 +49,8 @@ export default function CheckIn() {
   });
 
   const [pagos, setPagos] = useState<PagoItem[]>([]);
+  const [firma, setFirma] = useState<string | null>(null);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -97,6 +102,22 @@ export default function CheckIn() {
       });
       return;
     }
+    if (!aceptaTerminos) {
+      toast({
+        variant: 'destructive',
+        title: 'Términos requeridos',
+        description: 'El huésped debe aceptar los términos y condiciones.',
+      });
+      return;
+    }
+    if (!firma) {
+      toast({
+        variant: 'destructive',
+        title: 'Firma requerida',
+        description: 'Solicite la firma del huésped para completar el check-in.',
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -112,6 +133,30 @@ export default function CheckIn() {
           referencia: pago.referencia,
           concepto: 'Pago en Check-in',
         });
+      }
+
+      // Generar tarjeta de registro con firma digital
+      try {
+        const hab = habitacionesDisponibles.find(h => h.id === formData.habitacionId);
+        exportarRegistroHuesped({
+          hotel: reserva.hotel?.nombre,
+          reserva: {
+            ...reserva,
+            habitacion_numero: hab?.numero || reserva.habitacion_numero,
+            tipo_habitacion_nombre: reserva.tipo_habitacion_nombre || reserva.tipo_habitacion?.nombre,
+          },
+          cliente: {
+            nombre: formData.nombre,
+            apellido_paterno: formData.apellidoPaterno,
+            email: formData.email,
+            numero_documento: formData.documento,
+            nacionalidad: formData.nacionalidad,
+          },
+          firmaDataUrl: firma,
+          aceptaTerminos,
+        });
+      } catch (err) {
+        console.warn('No se pudo generar el PDF de registro:', err);
       }
 
       toast({
