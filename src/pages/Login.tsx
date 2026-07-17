@@ -75,8 +75,8 @@ export default function Login() {
       <Card className="relative w-full max-w-md shadow-lg">
         <CardHeader className="text-center pb-2">
           {/* Logo */}
-          <div className="mx-auto mb-2 flex items-center justify-center">
-            <LogoFull height={140} />
+          <div className="mx-auto -mb-2 flex items-center justify-center">
+            <LogoFull height={240} />
           </div>
           <CardDescription>Sistema de Gestión Hotelera</CardDescription>
         </CardHeader>
