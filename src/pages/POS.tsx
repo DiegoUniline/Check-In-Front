@@ -125,8 +125,9 @@ export default function POS() {
     const cantidad = parseInt(String(item.cantidad)) || 0;
     return sum + (precio * cantidad);
   }, 0);
-  const iva = Math.round(subtotal * 0.16 * 100) / 100;
-  const total = Math.round((subtotal + iva) * 100) / 100;
+  // El precio registrado es el total de venta. No se agrega IVA fijo.
+  const impuestos = 0;
+  const total = Math.round(subtotal * 100) / 100;
 
   const safeNumber = (value: any, defaultValue: number = 0): number => {
     if (value === null || value === undefined || value === '') return defaultValue;
@@ -155,7 +156,7 @@ export default function POS() {
       });
 
       const ventaSubtotal = safeNumber(subtotal, 0);
-      const ventaImpuestos = safeNumber(iva, 0);
+      const ventaImpuestos = safeNumber(impuestos, 0);
       const ventaTotal = safeNumber(total, 0);
 
       const habitacionSeleccionada = habitaciones.find(h => h.id === selectedRoom);
@@ -191,8 +192,8 @@ export default function POS() {
           const precio = safeNumber(item.producto.precio_venta, 0);
           const cantidad = safeNumber(item.cantidad, 1);
           const itemSubtotal = Math.round(precio * cantidad * 100) / 100;
-          const itemImpuesto = Math.round(itemSubtotal * 0.16 * 100) / 100;
-          const itemTotal = Math.round((itemSubtotal + itemImpuesto) * 100) / 100;
+          const itemImpuesto = 0;
+          const itemTotal = itemSubtotal;
           
           // Enviar habitacion_id - el backend buscará la reserva activa
           const cargoPayload = {
@@ -399,10 +400,12 @@ export default function POS() {
                 <span className="text-muted-foreground">Subtotal</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">IVA (16%)</span>
-                <span>{formatCurrency(iva)}</span>
-              </div>
+              {impuestos > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Impuestos</span>
+                  <span>{formatCurrency(impuestos)}</span>
+                </div>
+              )}
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
