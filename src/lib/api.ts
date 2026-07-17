@@ -5,8 +5,6 @@ import { setHotelCurrency, formatCurrency } from '@/lib/currency';
 import { withOfflineCache } from '@/lib/offlineCache';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
-const IVA_RATE = 0.16;
-
 // Zona horaria del hotel activo (cacheada). Se actualiza al cargar el hotel.
 let HOTEL_TZ: string = 'America/Mexico_City';
 export const setHotelTimezone = (tz?: string | null) => {
@@ -463,7 +461,9 @@ class ApiClient {
       Math.min(subtotal, esPorcentaje ? subtotal * (descuentoValor / 100) : descuentoValor),
     );
     const base = Math.max(0, subtotal - descuento);
-    const impuestos = base * IVA_RATE;
+    // Los impuestos se eligen al crear la reserva. Si no se envían, no se
+    // aplica ninguna tasa automática.
+    const impuestos = Math.max(0, Number(data.total_impuestos ?? data.impuestos ?? 0));
     const total = base + impuestos;
     const totalPagado = Number(data.total_pagado || 0);
     const payload = {

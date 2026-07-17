@@ -456,6 +456,7 @@ const noches = differenceInDays(
         noches,
         tarifa_noche: tarifaConExtras,
         descuento: descuentoMonto,
+        total_impuestos: totalImpuestos,
         solicitudes_especiales: formData.solicitudesEspeciales,
         notas: notasCombinadas || null,
         origen,

@@ -528,7 +528,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     // Cálculos para el form inline
     const faltantesForm = cantEntregada - safeNumber(devolucionForm.cantidadDevolver, 0);
     const costoForm = safeNumber(devolucionForm.costoUnitario, 0);
-    const totalCargoForm = faltantesForm * costoForm * 1.16;
+    const totalCargoForm = faltantesForm * costoForm;
 
     return (
       <div className={`border rounded-lg overflow-hidden transition-all duration-200 ${estaExpandido ? 'border-primary ring-2 ring-primary/20' : ''}`}>
@@ -665,7 +665,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 {devolucionForm.crearCargo && costoForm > 0 && (
                   <div className="p-2 bg-red-50 border border-red-200 rounded dark:bg-red-950/30 dark:border-red-800">
                     <p className="text-sm text-red-800 dark:text-red-200">
-                      <strong>Cargo:</strong> {faltantesForm} × {formatCurrency(costoForm)} + IVA = 
+                      <strong>Cargo:</strong> {faltantesForm} × {formatCurrency(costoForm)} = 
                       <strong> {formatCurrency(totalCargoForm)}</strong>
                     </p>
                   </div>
