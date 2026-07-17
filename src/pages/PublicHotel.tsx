@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import { format, addDays, differenceInCalendarDays, eachDayOfInterval, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
-import { resolverPrecioTemporada } from '@/lib/temporadas';
+import { resolverPrecioTemporada, loadTemporadas } from '@/lib/temporadas';
 import bannerImg from '@/assets/hotel-banner.jpg';
 import room1 from '@/assets/room-1.jpg';
 import room2 from '@/assets/room-2.jpg';
