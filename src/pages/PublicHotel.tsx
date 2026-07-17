@@ -390,8 +390,10 @@ export default function PublicHotel() {
             const idx = carruselIdx[h.id] || 0;
             const fotoActual = fotos[idx];
             const disponible = isHabDisponibleEnRango(h.id, range);
-            const precio = Number(t.precio_base) || 0;
-            const precioOriginal = Math.round(precio * 1.18);
+            const precioBase = Number(t.precio_base) || 0;
+            const fechaRefTarjeta = range?.from ? format(range.from, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+            const { precio, temporada: tempTarjeta } = resolverPrecioTemporada(precioBase, fechaRefTarjeta, t.id, h.id, hotel?.id);
+            const precioOriginal = tempTarjeta ? precioBase : Math.round(precio * 1.18);
             const total = precio * Math.max(1, ns || 1);
             return (
               <Card key={h.id} className="group flex flex-col overflow-hidden border border-stone-200 bg-white rounded-xl hover:shadow-2xl transition-all duration-300">
