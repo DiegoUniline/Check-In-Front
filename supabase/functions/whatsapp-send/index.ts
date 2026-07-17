@@ -49,14 +49,11 @@ Deno.serve(async (req) => {
         .select('mensaje, activo')
         .eq('hotel_id', hotel_id)
         .eq('template_key', template_key)
-        .single();
-      if (!tpl || !tpl.activo) {
-        return new Response(JSON.stringify({ error: 'Plantilla no encontrada o inactiva' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        .maybeSingle();
+      if (tpl?.activo && tpl?.mensaje) {
+        message = tpl.mensaje;
       }
-      message = tpl.mensaje;
+      // si no existe/inactiva, se usa el `message` inline si vino en el body
     }
     if (!message) {
       return new Response(JSON.stringify({ error: 'message o template_key requerido' }), {
