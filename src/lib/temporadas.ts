@@ -5,7 +5,9 @@
 // tarifas de forma síncrona en los formularios.
 // Prioridad al resolver: habitación específica > tipo de habitación > todas.
 // Si varias temporadas coinciden por fecha, gana la de mayor `prioridad`, luego la más específica.
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase: any = supabaseClient;
 
 export type TipoAjuste = 'porcentaje' | 'monto' | 'absoluto';
 export type AlcanceTemporada = 'todos' | 'tipo' | 'habitacion';
