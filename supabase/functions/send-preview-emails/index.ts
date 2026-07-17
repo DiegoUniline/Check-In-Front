@@ -80,8 +80,8 @@ Deno.serve(async (req) => {
       const { error } = await supabase.rpc('enqueue_email', {
         queue_name: 'auth_emails',
         payload: {
-          run_id: crypto.randomUUID(),
           message_id: messageId,
+          idempotency_key: `preview-${type}-${messageId}`,
           to,
           from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
