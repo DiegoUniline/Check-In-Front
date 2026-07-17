@@ -92,7 +92,7 @@ const galeriaAccion = [
     span: 'md:col-span-2 md:row-span-2',
   },
   {
-    img: 'https://images.unsplash.com/photo-1512txmp/photo-1556742044-3c52d6e88c62?w=800&q=80&auto=format&fit=crop',
+    img: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80&auto=format&fit=crop',
     tag: 'RESERVAS ONLINE',
     title: 'Reservan desde el celular',
     desc: 'Tu página web recibe reservas 24/7.',
