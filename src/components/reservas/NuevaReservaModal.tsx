@@ -1044,6 +1044,14 @@ const noches = differenceInDays(
                       <span>Hospedaje ({noches} {noches === 1 ? 'noche' : 'noches'})</span>
                       <span>${fmt(subtotalHospedaje)}</span>
                     </div>
+                    {temporadaAplicable && (
+                      <div className="flex justify-between text-xs opacity-90 -mt-1">
+                        <span className="italic">
+                          Temporada: {temporadaAplicable.nombre} ({describirAjuste(temporadaAplicable)})
+                        </span>
+                        <span>${fmt(tarifaEfectiva)}/noche</span>
+                      </div>
+                    )}
                     {totalPersonaExtra > 0 && (
                       <div className="flex justify-between opacity-80">
                         <span>Persona extra ({formData.personasExtra})</span>
