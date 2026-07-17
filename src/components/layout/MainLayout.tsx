@@ -3,7 +3,6 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Header } from './Header';
 import { AlertaSuscripcion } from '@/components/AlertaSuscripcion';
-import { MobileBottomNav } from './MobileBottomNav';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { CommandPalette } from '@/components/CommandPalette';
 
@@ -45,13 +44,12 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           <Header title={title} subtitle={subtitle} />
           <main
             data-scroll-container
-            className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-6"
+            className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0"
             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
           >
             {children}
           </main>
         </SidebarInset>
-        <MobileBottomNav />
       </div>
     </SidebarProvider>
   );
