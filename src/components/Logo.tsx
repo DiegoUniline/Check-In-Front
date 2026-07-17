@@ -41,3 +41,31 @@ export function LogoFull({ className, height = 48 }: { className?: string; heigh
     />
   );
 }
+
+/**
+ * Versión horizontal: isotipo + wordmark "HospedApp" con split bicolor
+ * (Hosped en azul marino #04122C, App en turquesa #0B9F91) — cumple el manual
+ * de identidad para barra superior, encabezados y espacios reducidos.
+ */
+export function LogoHorizontal({
+  className,
+  size = 36,
+  wordmarkClassName,
+}: {
+  className?: string;
+  size?: number;
+  wordmarkClassName?: string;
+}) {
+  return (
+    <div className={cn('flex items-center gap-2.5', className)}>
+      <Logo size={size} />
+      <span
+        className={cn('font-heading font-bold tracking-tight leading-none', wordmarkClassName)}
+        style={{ fontSize: size * 0.62 }}
+      >
+        <span className="text-[#04122C] dark:text-white">Hosped</span>
+        <span className="text-primary">App</span>
+      </span>
+    </div>
+  );
+}

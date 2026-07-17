@@ -7,7 +7,7 @@ import {
   Users, Wrench, Sparkle, ShoppingCart, Package, BarChart3,
   ClipboardCheck, DollarSign, Globe, Clock, Check, Star, MessageCircle, Phone,
 } from 'lucide-react';
-import { Logo } from '@/components/Logo';
+import { Logo, LogoHorizontal } from '@/components/Logo';
 
 /**
  * Landing pública (vista principal en "/")
@@ -47,10 +47,9 @@ export default function Landing() {
       {/* NAV */}
       <header className="border-b bg-background/70 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2 font-bold text-lg">
-            <Logo size={32} />
-            HospedApp
-          </div>
+          <Link to="/" aria-label="HospedApp inicio">
+            <LogoHorizontal size={40} />
+          </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#funciones" className="hover:text-foreground transition">Funciones</a>
             <a href="#capturas" className="hover:text-foreground transition">Capturas</a>

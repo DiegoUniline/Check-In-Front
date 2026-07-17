@@ -6,8 +6,8 @@
 
 @layer base {
   :root {
-    /* Primary - Hotel Green #04936B */
-    --primary: 160 95% 30%;
+    /* Primary - HospedApp Turquesa #0B9F91 */
+    --primary: 173 87% 33%;
     --primary-foreground: 0 0% 100%;
     
     /* Backgrounds */
@@ -29,9 +29,9 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
     
-    /* Accent */
-    --accent: 160 95% 95%;
-    --accent-foreground: 160 95% 25%;
+    /* Accent - Menta suave */
+    --accent: 173 45% 92%;
+    --accent-foreground: 173 87% 28%;
     
     /* Destructive */
     --destructive: 0 84% 60%;
@@ -40,19 +40,19 @@
     /* Borders & Inputs */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 160 95% 30%;
+    --ring: 173 87% 33%;
     
     --radius: 0.5rem;
     
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 9%;
-    --sidebar-primary: 160 95% 30%;
+    --sidebar-primary: 173 87% 33%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 160 95% 95%;
-    --sidebar-accent-foreground: 160 95% 25%;
+    --sidebar-accent: 173 45% 92%;
+    --sidebar-accent-foreground: 173 87% 28%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 160 95% 30%;
+    --sidebar-ring: 173 87% 33%;
     
     /* Semantic Colors */
     --success: 160 84% 39%;
@@ -71,8 +71,8 @@
   }
 
   .dark {
-    /* Primary - Hotel Green (brighter for dark mode) */
-    --primary: 160 84% 45%;
+    /* Primary - HospedApp Turquesa (brighter for dark mode) */
+    --primary: 172 87% 42%;
     --primary-foreground: 0 0% 100%;
     
     /* Backgrounds - Dark theme */
@@ -95,8 +95,8 @@
     --muted-foreground: 215 20% 65%;
     
     /* Accent */
-    --accent: 160 50% 15%;
-    --accent-foreground: 160 84% 60%;
+    --accent: 173 50% 15%;
+    --accent-foreground: 172 87% 55%;
     
     /* Destructive */
     --destructive: 0 63% 31%;
@@ -105,17 +105,17 @@
     /* Borders & Inputs */
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 160 84% 45%;
+    --ring: 172 87% 42%;
     
     /* Sidebar */
     --sidebar-background: 222 47% 9%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 160 84% 45%;
+    --sidebar-primary: 172 87% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 160 50% 15%;
-    --sidebar-accent-foreground: 160 84% 60%;
+    --sidebar-accent: 173 50% 15%;
+    --sidebar-accent-foreground: 172 87% 55%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 160 84% 45%;
+    --sidebar-ring: 172 87% 42%;
     
     /* Semantic Colors */
     --success: 160 84% 45%;
@@ -148,11 +148,16 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Manrope', system-ui, sans-serif;
+    font-family: 'Inter', 'Manrope', system-ui, sans-serif;
     overflow-x: hidden;
     width: 100%;
     max-width: 100vw;
     min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Sora', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.01em;
   }
 
   /* Prevent horizontal scroll on all containers */
