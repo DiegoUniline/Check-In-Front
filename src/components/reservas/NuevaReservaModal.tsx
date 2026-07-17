@@ -319,7 +319,7 @@ const noches = differenceInDays(
   const totalImpuestos = impuestosCalculados.reduce((s, i) => s + i.monto, 0);
   const totalBruto = subtotal + totalImpuestos;
 
-  // Descuento se aplica sobre el TOTAL (subtotal + IVA)
+  // Descuento se aplica sobre el total con los impuestos seleccionados.
   let descuentoMonto = 0;
   if (formData.descuentoTipo === 'Monto') descuentoMonto = formData.descuentoValor;
   else if (formData.descuentoTipo === 'Porcentaje') descuentoMonto = totalBruto * (formData.descuentoValor / 100);
