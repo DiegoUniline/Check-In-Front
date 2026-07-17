@@ -84,9 +84,9 @@ export default function CheckOut() {
   }
 
   const noches = reserva.noches || Math.ceil((new Date(reserva.fecha_checkout).getTime() - new Date(reserva.fecha_checkin).getTime()) / (1000 * 60 * 60 * 24));
-  const subtotal = reserva.subtotal || reserva.total * 0.84 || 0;
-  const impuestos = reserva.impuestos || reserva.total * 0.16 || 0;
   const total = reserva.total || reserva.monto_total || 0;
+  const impuestos = Number(reserva.impuestos ?? reserva.total_impuestos ?? 0) || 0;
+  const subtotal = Number(reserva.subtotal ?? reserva.subtotal_hospedaje ?? (total - impuestos)) || 0;
   const totalPagado = pagos.reduce((sum, p) => sum + (Number(p.monto) || 0), 0);
   const totalCargosExtra = cargosExtra.reduce((sum, c) => sum + (Number(c.precio) * (c.cantidad || 1)), 0);
   const saldoPendiente = total + totalCargosExtra - totalPagado;
