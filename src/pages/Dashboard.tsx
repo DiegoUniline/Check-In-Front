@@ -57,8 +57,13 @@ export default function Dashboard() {
         
         // Stats
         if (statsResult.status === 'fulfilled' && statsResult.value) {
+          const s: any = statsResult.value;
           setStats({
-            ...statsResult.value,
+            ...s,
+            ocupadas: s.ocupadas ?? s.habitaciones_ocupadas ?? 0,
+            disponibles: s.disponibles ?? s.habitaciones_disponibles ?? 0,
+            total_habitaciones: s.total_habitaciones ?? s.habitaciones_total ?? habitaciones.length ?? 0,
+            ocupacion_porcentaje: s.ocupacion_porcentaje ?? s.ocupacion ?? 0,
             // Sobrescribimos sólo estos dos campos para reflejar el dato real sin backend changes.
             pendientes_limpieza: pendientesLimpiezaCalculado,
             pendientes_mantenimiento: pendientesMantenimientoCalculado,
