@@ -693,7 +693,36 @@ class ApiClient {
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
   };
   createTareaLimpieza = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('tareas_limpieza').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
-  updateEstadoLimpieza = async (id: string, estado: string): Promise<any> => { const { data: r, error } = await supabase.from('tareas_limpieza').update({ estado }).eq('id', id).select().single(); if (error) throw error; return r; };
+  updateEstadoLimpieza = async (id: string, estado: string): Promise<any> => {
+    const { data: r, error } = await supabase.from('tareas_limpieza').update({ estado }).eq('id', id).select().single();
+    if (error) throw error;
+    // Reflejar el estado en la habitación asociada
+    try {
+      if (r?.habitacion_id) {
+        const { data: hab } = await supabase.from('habitaciones').select('estado_habitacion').eq('id', r.habitacion_id).maybeSingle();
+        const patch: any = {};
+        if (estado === 'EnProceso' || estado === 'En Proceso') {
+          patch.estado_limpieza = 'EnLimpieza';
+        } else if (estado === 'Completada' || estado === 'Verificada') {
+          patch.estado_limpieza = 'Limpia';
+          // Si la habitación no está ocupada/reservada/mantenimiento, marcarla Disponible
+          if (hab && !['Ocupada', 'Reservada', 'Mantenimiento', 'FueraDeServicio'].includes(hab.estado_habitacion)) {
+            patch.estado_habitacion = 'Disponible';
+          }
+        } else if (estado === 'Pendiente') {
+          patch.estado_limpieza = 'Sucia';
+        }
+        if (Object.keys(patch).length) {
+          await supabase.from('habitaciones').update(patch).eq('id', r.habitacion_id);
+        }
+      }
+    } catch { /* noop */ }
+    try {
+      const prefix = 'hospedapp:cache:';
+      Object.keys(localStorage).filter(k => k.startsWith(prefix) && (k.includes(':tareas_limpieza:') || k.includes(':habitaciones:'))).forEach(k => localStorage.removeItem(k));
+    } catch { /* noop */ }
+    return r;
+  };
   asignarLimpieza = async (id: string, asignadoA: string, asignadoNombre: string): Promise<any> => { const { data: r, error } = await supabase.from('tareas_limpieza').update({ asignado_a: asignadoA, asignado_nombre: asignadoNombre }).eq('id', id).select().single(); if (error) throw error; return r; };
   deleteTareaLimpieza = async (id: string): Promise<any> => { const { error } = await supabase.from('tareas_limpieza').delete().eq('id', id); if (error) throw error; return { ok: true }; };
 
