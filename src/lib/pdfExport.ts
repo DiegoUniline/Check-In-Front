@@ -206,6 +206,8 @@ interface ReservaPdfCtx {
   hotel?: string;
   hotelDireccion?: string;
   hotelTelefono?: string;
+  hotelEmail?: string;
+  hotelCiudad?: string;
   hotelLogoUrl?: string;
   currency?: string;
 }
