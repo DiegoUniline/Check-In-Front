@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import foxIcon from '@/assets/hospedapp-icon.png';
+import wordmark from '@/assets/vulo-wordmark.png';
 
 /**
  * VULO — Landing pública
@@ -37,9 +38,7 @@ function Nav() {
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-6 lg:px-10">
         <Link to="/" className="flex items-center gap-2.5">
           <Logo size={40} />
-          <span className="text-[22px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
-            vulo<span style={{ color: BRAND_ORANGE }}>.</span>
-          </span>
+          <img src={wordmark} alt="VULO" className="h-6 w-auto object-contain md:h-7" />
         </Link>
         <nav className="hidden items-center gap-8 md:flex">
           {['Producto', 'Reservas', 'IA', 'Precios'].map((l) => (
@@ -71,9 +70,7 @@ function Hero() {
         <motion.div initial="hidden" animate="show" className="mx-auto max-w-4xl text-center">
           <motion.div variants={fadeUp} custom={0} className="mb-10 flex flex-col items-center gap-4">
             <img src={foxIcon} alt="VULO" width={140} height={140} className="h-[120px] w-[120px] object-contain md:h-[140px] md:w-[140px]" />
-            <span className="text-[28px] font-bold tracking-[-0.04em] md:text-[34px]" style={{ color: BRAND_NAVY }}>
-              vulo<span style={{ color: BRAND_ORANGE }}>.</span>
-            </span>
+            <img src={wordmark} alt="VULO" className="h-10 w-auto object-contain md:h-14" />
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-700">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} />
               Nuevo · IA para operaciones de hotel
@@ -139,7 +136,7 @@ function DashboardMockup() {
             </div>
             <span className="ml-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
               <img src={foxIcon} alt="" width={16} height={16} className="h-4 w-4 object-contain" />
-              vulo.app · Hotel Plaza Real
+              vulo · Hotel Plaza Real
             </span>
           </div>
           <div className="hidden items-center gap-2 md:flex">
@@ -653,9 +650,7 @@ function Footer() {
         <div className="flex flex-wrap items-center justify-between gap-8">
           <div className="flex items-center gap-2.5">
             <Logo size={40} />
-            <span className="text-[20px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
-              vulo<span style={{ color: BRAND_ORANGE }}>.</span>
-            </span>
+            <img src={wordmark} alt="VULO" className="h-6 w-auto object-contain" />
           </div>
           <nav className="flex flex-wrap items-center gap-x-8 gap-y-3 text-[13px] text-slate-500">
             <a href="#producto" className="hover:text-slate-900">Producto</a>
@@ -684,9 +679,7 @@ function Banner() {
             <div>
               <div className="mb-6 flex items-center gap-4">
                 <img src={foxIcon} alt="VULO" width={96} height={96} className="h-20 w-20 object-contain md:h-24 md:w-24" />
-                <span className="text-[36px] font-bold tracking-[-0.03em] text-white md:text-[44px]">
-                  vulo<span style={{ color: BRAND_ORANGE }}>.</span>
-                </span>
+                <img src={wordmark} alt="VULO" className="h-10 w-auto object-contain brightness-0 invert md:h-14" />
               </div>
               <span className="inline-block rounded-full border border-white/30 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80">
                 Software para hoteles
