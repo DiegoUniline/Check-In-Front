@@ -492,7 +492,7 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   let headerX = M;
   if (opts.hotelLogoUrl) {
     try {
-      const logoData = await loadImageDataUrl(opts.hotelLogoUrl);
+      const logoData = await loadImageAsPng(opts.hotelLogoUrl);
       doc.addImage(logoData, 'PNG', M, y, 18, 18, undefined, 'FAST');
       headerX = M + 22;
     } catch { /* noop */ }
@@ -748,7 +748,7 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   let headerX = M;
   if (opts.hotelLogoUrl) {
     try {
-      const logoData = await loadImageDataUrl(opts.hotelLogoUrl);
+      const logoData = await loadImageAsPng(opts.hotelLogoUrl);
       doc.addImage(logoData, 'PNG', M, y, 18, 18, undefined, 'FAST');
       headerX = M + 22;
     } catch { /* noop */ }
