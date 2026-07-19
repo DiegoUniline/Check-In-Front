@@ -19,12 +19,12 @@ export const ReauthenticationEmail = ({ token, hotelName }: ReauthenticationEmai
       <Text
         style={{
           display: 'inline-block',
-          fontFamily: "'Sora', 'Inter', monospace",
+          fontFamily: "'Inter', monospace",
           fontSize: '32px',
           fontWeight: 700,
           letterSpacing: '0.4em',
           color: brand.navy,
-          background: '#F0FBF9',
+          background: '#FFF4EC',
           border: `1px solid ${brand.turquoise}`,
           borderRadius: '12px',
           padding: '18px 26px',

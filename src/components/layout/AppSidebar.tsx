@@ -220,18 +220,18 @@ export function AppSidebar() {
                     ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
                     : "text-sidebar-foreground hover:bg-sidebar-accent/50",
                   // Estilo azul si es el botón de SaaS
-                  item.url === '/admin-plataforma' && "text-blue-600 font-bold"
+                  item.url === '/admin-plataforma' && "text-[#F97316] font-semibold"
                 )}
               >
-                <item.icon className={cn("h-5 w-5 shrink-0", item.url === '/admin-plataforma' && "text-blue-600")} />
+                <item.icon className={cn("h-5 w-5 shrink-0", item.url === '/admin-plataforma' && "text-[#F97316]")} />
                 {!collapsed && <span className="flex-1">{item.title}</span>}
                 {!collapsed && badgeValue > 0 && (
-                  <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold">
+                  <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-[#F97316] text-white text-[10px] font-bold">
                     {badgeValue}
                   </span>
                 )}
                 {collapsed && badgeValue > 0 && (
-                  <span className="absolute top-1 right-1 inline-flex items-center justify-center w-2 h-2 rounded-full bg-yellow-400" />
+                  <span className="absolute top-1 right-1 inline-flex items-center justify-center w-2 h-2 rounded-full bg-[#F97316]" />
                 )}
               </NavLink>
             </SidebarMenuButton>
@@ -251,8 +251,8 @@ export function AppSidebar() {
               <Logo size={36} />
             ) : (
               <div className="flex flex-col min-w-0">
-                <LogoHorizontal size={34} />
-                <span className="text-xs text-muted-foreground mt-1 ml-12">Sistema de Gestión</span>
+                <LogoHorizontal size={34} invert />
+                <span className="text-[11px] font-medium text-white/60 mt-1 ml-12 tracking-wide">Software para hoteles</span>
               </div>
             )}
           </NavLink>
@@ -273,7 +273,7 @@ export function AppSidebar() {
         {/* SECCIÓN PARA DIEGO - Solo aparece si el correo coincide */}
         {user?.email === 'diego.leon@uniline.mx' && (
           <SidebarGroup>
-            {!collapsed && <SidebarGroupLabel className="text-blue-600 font-bold">Administración Maestro</SidebarGroupLabel>}
+            {!collapsed && <SidebarGroupLabel className="text-[#F97316] font-semibold">Administración Maestro</SidebarGroupLabel>}
             <SidebarGroupContent>
               {renderNavItems(adminSaaSItem)}
             </SidebarGroupContent>
@@ -281,12 +281,12 @@ export function AppSidebar() {
         )}
 
         {[
-          { key: 'chat', label: 'WhatsApp Chat', items: chatTopItem, labelClass: 'text-green-600 font-semibold', defaultOpen: true },
+          { key: 'chat', label: 'WhatsApp Chat', items: chatTopItem, labelClass: 'text-[#F97316]', defaultOpen: true },
           { key: 'principal', label: 'Principal', items: mainNavItems, defaultOpen: true },
           { key: 'operaciones', label: 'Operaciones', items: operationsNavItems, defaultOpen: false },
           { key: 'ventas', label: 'Ventas', items: salesNavItems, defaultOpen: false },
           { key: 'sistema', label: 'Sistema', items: configNavItems, defaultOpen: false },
-          { key: 'whatsapp', label: 'WhatsApp', items: whatsappNavItems, labelClass: 'text-green-600 font-semibold', defaultOpen: false },
+          { key: 'whatsapp', label: 'WhatsApp', items: whatsappNavItems, labelClass: 'text-[#F97316]', defaultOpen: false },
         ].map((g) => {
           const rendered = renderNavItems(g.items);
           if (!rendered) return null;

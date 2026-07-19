@@ -15,7 +15,7 @@ export const InviteEmail = ({ confirmationUrl, hotelName }: InviteEmailProps) =>
   <EmailLayout preview={`Te invitaron a unirte${hotelName ? ` a ${hotelName}` : ''}`} hotelName={hotelName}>
     <Heading style={h1}>Te invitaron al equipo 🎉</Heading>
     <Text style={p}>
-      Has sido invitado a colaborar{hotelName ? ` en ${hotelName}` : ''} a través de HospedApp. Acepta la invitación para crear tu cuenta y empezar a trabajar con el equipo.
+      Has sido invitado a colaborar{hotelName ? ` en ${hotelName}` : ''} a través de VULO. Acepta la invitación para crear tu cuenta y empezar a trabajar con el equipo.
     </Text>
     <CTA href={confirmationUrl}>Aceptar invitación</CTA>
     <Highlight>
