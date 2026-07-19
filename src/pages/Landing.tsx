@@ -1,59 +1,71 @@
 import { Link } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import {
-  Calendar, MessageSquare, Sparkles, Bot, ArrowUpRight, Check,
-  BedDouble, Users, BarChart3, Zap, BrainCircuit, MousePointerClick,
-  CreditCard, ShieldCheck, Wand2, Globe2, Clock, TrendingUp,
+  ArrowRight, ChevronDown, Check, Calendar, ClipboardList, Sparkles,
+  Wallet, FileText, MessageSquare, BarChart3, Building2, ShieldCheck,
+  Wifi, Smartphone, Users, LifeBuoy,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
-import foxIcon from '@/assets/vulo-fox.png';
 import wordmark from '@/assets/vulo-wordmark.png';
 
 /**
- * VULO — Landing pública
- * Filosofía: Apple + Stripe + Linear. Blanco 80%, Navy 15%, Naranja 5%.
- * Vende tranquilidad, no funciones. Muestra, no explica.
+ * VULO — Landing (ES-MX)
+ * Regla de oro: solo se afirma lo que el sistema hace. Datos por verificar → [DATO REAL].
+ * Sin fotos de stock. Mockups en HTML/CSS puros.
  */
 
-const BRAND_NAVY = '#10233F';
-const BRAND_ORANGE = '#F97316';
-
+const NAVY = '#10233F';
+const ORANGE = '#F97316';
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  show: (i: number = 0) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.7, delay: i * 0.06, ease },
-  }),
+  hidden: { opacity: 0, y: 24 },
+  show: (i: number = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.7, delay: i * 0.05, ease } }),
 };
 
-/* ────────────────────────────────────────────────────────────────
-   NAV
-   ────────────────────────────────────────────────────────────── */
+function SectionTag({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-6 text-[12px] font-semibold uppercase tracking-[0.24em]" style={{ color: ORANGE }}>
+      {children}
+    </div>
+  );
+}
+
+function BrowserFrame({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)]">
+      <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+        <span className="ml-3 text-[11px] font-medium text-slate-500">{title}</span>
+      </div>
+      <div className="p-5 md:p-6">{children}</div>
+    </div>
+  );
+}
+
+/* ══════════════════ NAV ══════════════════ */
 function Nav() {
   return (
-    <header className="sticky top-0 z-50 border-b border-transparent bg-white/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-6 lg:px-10">
+    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-6 lg:px-10">
         <Link to="/" className="flex items-center gap-2.5">
-          <Logo size={40} />
-          <img src={wordmark} alt="VULO" className="h-6 w-auto object-contain md:h-7" />
+          <Logo size={36} />
+          <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain md:h-6" />
         </Link>
-        <nav className="hidden items-center gap-8 md:flex">
-          {['Producto', 'Reservas', 'IA', 'Precios'].map((l) => (
-            <a key={l} href={`#${l.toLowerCase()}`} className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">
-              {l}
-            </a>
-          ))}
+        <nav className="hidden items-center gap-9 md:flex">
+          <a href="#funciones" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Funciones</a>
+          <a href="#precios" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Precios</a>
+          <a href="#contacto" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Contacto</a>
         </nav>
         <div className="flex items-center gap-3">
-          <Link to="/login" className="hidden text-[14px] font-medium text-slate-600 transition hover:text-slate-900 sm:block">
-            Iniciar sesión
-          </Link>
-          <Button asChild size="sm" className="h-10 rounded-full bg-[#F97316] px-5 text-[14px] font-medium text-white shadow-none hover:bg-[#ea6a10]">
-            <Link to="/registro">Empezar gratis</Link>
+          <Link to="/login" className="hidden text-[14px] font-medium text-slate-600 transition hover:text-slate-900 sm:block">Iniciar sesión</Link>
+          <Button asChild size="sm" className="h-10 rounded-full px-5 text-[14px] font-medium text-white shadow-none hover:opacity-95" style={{ background: NAVY }}>
+            <a href="#contacto">Agendar demo</a>
           </Button>
         </div>
       </div>
@@ -61,230 +73,216 @@ function Nav() {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   HERO — pantalla completa, texto enorme, tranquilo
-   ────────────────────────────────────────────────────────────── */
+/* ══════════════════ 1. HERO ══════════════════ */
 function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="mx-auto max-w-[1440px] px-6 pb-24 pt-20 lg:px-10 lg:pb-32 lg:pt-28">
-        <motion.div initial="hidden" animate="show" className="mx-auto max-w-4xl text-center">
-          <motion.div variants={fadeUp} custom={0} className="mb-10 flex flex-col items-center gap-4">
-            <img src={foxIcon} alt="VULO" width={140} height={140} className="h-[120px] w-[120px] object-contain md:h-[140px] md:w-[140px]" />
-            <img src={wordmark} alt="VULO" className="h-10 w-auto object-contain md:h-14" />
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-700">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} />
-              Nuevo · IA para operaciones de hotel
-            </div>
-          </motion.div>
+    <section className="relative overflow-hidden bg-white">
+      <div className="mx-auto grid max-w-[1280px] gap-14 px-6 pb-20 pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:px-10 lg:pb-28 lg:pt-24">
+        <motion.div initial="hidden" animate="show" className="flex flex-col justify-center">
+          <motion.div variants={fadeUp} custom={0}><SectionTag>Software para hoteles</SectionTag></motion.div>
           <motion.h1
             variants={fadeUp}
             custom={1}
-            className="mx-auto max-w-4xl text-[44px] font-bold leading-[1.02] tracking-[-0.04em] text-slate-900 md:text-[68px] lg:text-[84px]"
+            className="text-[40px] font-bold leading-[1.03] tracking-[-0.035em] text-slate-900 md:text-[60px] lg:text-[68px]"
           >
-            Gestiona tu hotel.
+            Tu hotel no necesita más apps.
             <br />
-            <span className="text-slate-400">Como debería funcionar</span>
-            <br />
-            <span style={{ color: BRAND_NAVY }}>en 2026.</span>
+            <span className="text-slate-400">Necesita una sola que sí funcione.</span>
           </motion.h1>
-          <motion.p variants={fadeUp} custom={2} className="mx-auto mt-8 max-w-2xl text-[18px] leading-relaxed text-slate-600 md:text-[20px]">
-            Reservas, recepción, IA, WhatsApp. Todo conectado. Todo automático.
-            Un solo lugar para operar tu hotel sin ruido.
+          <motion.p variants={fadeUp} custom={2} className="mt-7 max-w-xl text-[17px] leading-relaxed text-slate-600 md:text-[19px]">
+            Reservas, recepción, habitaciones, cobros y WhatsApp en un mismo lugar.
+            Deja de perseguir la información: que la información te encuentre a ti.
           </motion.p>
-          <motion.div variants={fadeUp} custom={3} className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild size="lg" className="h-[52px] rounded-full bg-[#F97316] px-8 text-[15px] font-medium text-white shadow-none hover:bg-[#ea6a10]">
-              <Link to="/registro">Empezar gratis <ArrowUpRight className="ml-1 h-4 w-4" /></Link>
+          <motion.div variants={fadeUp} custom={3} className="mt-9 flex flex-wrap items-center gap-4">
+            <Button asChild size="lg" className="h-[52px] rounded-full px-7 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: NAVY }}>
+              <a href="#contacto">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></a>
             </Button>
-            <Button asChild size="lg" variant="outline" className="h-[52px] rounded-full border-slate-200 bg-white px-8 text-[15px] font-medium text-slate-900 hover:bg-slate-50">
-              <Link to="/login">Ver demostración</Link>
-            </Button>
+            <a href="#funciones" className="group inline-flex items-center gap-1.5 text-[15px] font-medium text-slate-700 hover:text-slate-900">
+              Ver funciones <ChevronDown className="h-4 w-4 transition group-hover:translate-y-0.5" />
+            </a>
           </motion.div>
-          <motion.p variants={fadeUp} custom={4} className="mt-6 text-[13px] text-slate-500">
-            14 días · sin tarjeta · configuración en minutos
-          </motion.p>
         </motion.div>
 
-        {/* Mockup dashboard vivo */}
-        <motion.div
-          initial={{ opacity: 0, y: 60 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 1, ease }}
-          className="relative mx-auto mt-20 max-w-6xl"
-        >
-          <DashboardMockup />
+        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease, delay: 0.2 }}>
+          <HeroMockup />
         </motion.div>
       </div>
     </section>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   MOCKUP dashboard — no screenshot, dashboard vivo
-   ────────────────────────────────────────────────────────────── */
-function DashboardMockup() {
+function HeroMockup() {
+  const rows = [
+    { room: '101', name: 'García M.', start: 0, len: 3, state: 'Confirmada' },
+    { room: '102', name: 'López R.', start: 1, len: 4, state: 'Check-in' },
+    { room: '103', name: 'Kim J.', start: 2, len: 2, state: 'Pendiente' },
+    { room: '104', name: 'Torres A.', start: 0, len: 5, state: 'Confirmada' },
+    { room: '208', name: 'Ruiz D.', start: 3, len: 2, state: 'Check-in' },
+  ];
+  const stateColor = (s: string) =>
+    s === 'Check-in' ? ORANGE : s === 'Pendiente' ? '#94A3B8' : NAVY;
+
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_30px_80px_-20px_rgba(15,23,42,0.15)]">
-      <div className="rounded-[18px] bg-slate-50 p-6 md:p-8">
-        {/* Header interno */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-slate-300" />
-              <span className="h-3 w-3 rounded-full bg-slate-300" />
-              <span className="h-3 w-3 rounded-full bg-slate-300" />
+    <BrowserFrame title="vulo · panel">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <div className="text-[13px] font-semibold text-slate-900">Reservas · esta semana</div>
+          <div className="text-[11px] text-slate-500">Lun 20 — Dom 26 Jul</div>
+        </div>
+        <span className="rounded-full px-2.5 py-0.5 text-[10px] font-medium text-white" style={{ background: ORANGE }}>Live</span>
+      </div>
+
+      <div className="space-y-1.5">
+        {rows.map((r, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <span className="w-8 text-[11px] font-medium text-slate-500">{r.room}</span>
+            <div className="relative h-7 flex-1 rounded-md bg-slate-100">
+              <div
+                className="absolute top-0 flex h-7 items-center rounded-md px-2.5 text-[11px] font-medium text-white"
+                style={{ left: `${r.start * 14}%`, width: `${r.len * 14}%`, background: stateColor(r.state) }}
+              >
+                {r.name}
+              </div>
             </div>
-            <span className="ml-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
-              <img src={foxIcon} alt="" width={16} height={16} className="h-4 w-4 object-contain" />
-              vulo · Hotel Plaza Real
+            <span className="hidden w-20 text-right text-[10.5px] font-medium md:inline" style={{ color: stateColor(r.state) }}>
+              {r.state}
             </span>
           </div>
-          <div className="hidden items-center gap-2 md:flex">
-            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm">Hoy · Lun 20 Jul</span>
-          </div>
-        </div>
-
-        {/* KPIs */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[
-            { label: 'Ocupación', value: '87%', delta: '+12%', color: BRAND_ORANGE },
-            { label: 'Ingresos hoy', value: '$48,320', delta: '+8%', color: BRAND_NAVY },
-            { label: 'Check-ins', value: '14', delta: 'de 16', color: BRAND_NAVY },
-            { label: 'ADR', value: '$1,842', delta: 'MXN', color: BRAND_NAVY },
-          ].map((k, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08, ease }}
-              className="rounded-[14px] border border-slate-200 bg-white p-4"
-            >
-              <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">{k.label}</div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-[22px] font-bold tracking-tight" style={{ color: k.color }}>{k.value}</span>
-                <span className="text-[11px] font-medium text-slate-500">{k.delta}</span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Timeline reservas */}
-        <div className="mt-4 rounded-[14px] border border-slate-200 bg-white p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-[14px] font-semibold text-slate-900">Reservas · Timeline</div>
-              <div className="text-[12px] text-slate-500">Semana en curso</div>
-            </div>
-            <span className="rounded-full px-3 py-1 text-[11px] font-medium text-white" style={{ background: BRAND_ORANGE }}>En vivo</span>
-          </div>
-
-          <div className="space-y-2">
-            {[
-              { room: '101', name: 'García M.', start: 0, len: 3, tone: 'navy' },
-              { room: '102', name: 'López R.', start: 1, len: 4, tone: 'navy' },
-              { room: '103', name: 'Booking · Kim', start: 2, len: 2, tone: 'orange' },
-              { room: '104', name: 'Web · Torres', start: 0, len: 5, tone: 'navy' },
-              { room: '105', name: 'Directo · Ruiz', start: 3, len: 2, tone: 'navy' },
-            ].map((r, i) => (
-              <motion.div
-                key={r.room}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4 + i * 0.06, ease }}
-                className="flex items-center gap-3"
-              >
-                <span className="w-10 text-[12px] font-medium text-slate-500">{r.room}</span>
-                <div className="relative flex-1">
-                  <div className="h-8 rounded-lg bg-slate-100" />
-                  <div
-                    className="absolute top-0 flex h-8 items-center rounded-lg px-3 text-[12px] font-medium text-white"
-                    style={{
-                      left: `${r.start * 14}%`,
-                      width: `${r.len * 14}%`,
-                      background: r.tone === 'orange' ? BRAND_ORANGE : BRAND_NAVY,
-                    }}
-                  >
-                    {r.name}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
-    </div>
+
+      <div className="mt-5 grid grid-cols-3 gap-2.5">
+        {[
+          { l: 'Ocupación', v: '—', h: '[DATO REAL]' },
+          { l: 'ADR', v: '—', h: '[DATO REAL]' },
+          { l: 'Ingresos semana', v: '—', h: '[DATO REAL]' },
+        ].map((m) => (
+          <div key={m.l} className="rounded-[10px] border border-slate-100 bg-slate-50 p-3">
+            <div className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500">{m.l}</div>
+            <div className="mt-1 text-[18px] font-bold tracking-tight" style={{ color: NAVY }}>{m.v}</div>
+            <div className="text-[9.5px] text-slate-400">{m.h}</div>
+          </div>
+        ))}
+      </div>
+    </BrowserFrame>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   STORY — cómo entra una reserva y todo se activa solo
-   ────────────────────────────────────────────────────────────── */
-function Story() {
-  const steps = [
+/* ══════════════════ 2. DOLORES ══════════════════ */
+function Pains() {
+  const items = [
     {
-      icon: Calendar,
-      title: 'Entra una reserva',
-      desc: 'Desde tu web, Booking o WhatsApp. Se registra sola. Sin captura manual.',
+      t: 'La reserva llegó por WhatsApp… y nadie la capturó.',
+      d: 'Booking en una pestaña, Airbnb en otra, mensajes directos en el celular del dueño. Una reserva perdida es una habitación vacía — o peor, un overbooking.',
     },
     {
-      icon: BedDouble,
-      title: 'Limpieza recibe aviso',
-      desc: 'La habitación asignada aparece en la ruta de housekeeping con hora exacta.',
+      t: 'Recepción no sabe qué habitaciones están listas.',
+      d: 'Housekeeping avisa por radio o por mensajito. El huésped espera en el lobby mientras alguien va a revisar el piso.',
     },
     {
-      icon: Users,
-      title: 'Recepción está lista',
-      desc: 'Perfil del huésped, preferencias y check-in preparado antes de que llegue.',
+      t: 'El corte de caja nunca cuadra a la primera.',
+      d: 'Cobros en efectivo, tarjeta y transferencia anotados en tres lugares distintos. Conciliar toma horas y siempre hay un faltante misterioso.',
     },
     {
-      icon: MessageSquare,
-      title: 'WhatsApp responde',
-      desc: 'Confirmación, recordatorio, ubicación. Automático. Con tu marca.',
+      t: 'Los reportes se hacen a mano el día 30.',
+      d: 'Nadie sabe la ocupación real ni el ADR hasta que ya no se puede hacer nada al respecto.',
     },
   ];
-
   return (
-    <section className="border-t border-slate-100 bg-white py-32">
-      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease }}
-          className="mx-auto max-w-3xl text-center"
-        >
-          <div className="mb-6 text-[13px] font-semibold uppercase tracking-[0.2em]" style={{ color: BRAND_ORANGE }}>
-            Cómo funciona
-          </div>
-          <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[56px]">
-            Una reserva entra.
-            <br />
-            <span className="text-slate-400">Todo lo demás se activa solo.</span>
-          </h2>
+    <section className="border-t border-slate-100 bg-white py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}>
+          <motion.div variants={fadeUp}><SectionTag>Te suena</SectionTag></motion.div>
+          <motion.h2 variants={fadeUp} custom={1} className="max-w-3xl text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Así se ve un hotel operando sin sistema.
+          </motion.h2>
         </motion.div>
 
-        <div className="mt-20 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s, i) => (
+        <div className="mt-14 grid gap-5 md:grid-cols-2">
+          {items.map((it, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: i * 0.1, duration: 0.7, ease }}
-              className="group relative"
+              transition={{ delay: (i % 2) * 0.08, duration: 0.7, ease }}
+              className="rounded-[20px] border border-slate-200 bg-white p-7 md:p-8"
             >
-              <div className="mb-6 flex items-baseline gap-3">
-                <span className="text-[13px] font-mono font-medium text-slate-400">0{i + 1}</span>
-                <div className="h-px flex-1 bg-slate-200" />
+              <div className="mb-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold" style={{ background: '#FFF3EB', color: ORANGE }}>
+                {i + 1}
               </div>
-              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-[12px] bg-slate-50 transition group-hover:bg-slate-100">
-                <s.icon className="h-5 w-5" style={{ color: BRAND_NAVY }} strokeWidth={1.75} />
+              <h3 className="text-[19px] font-semibold tracking-tight text-slate-900 md:text-[21px]">{it.t}</h3>
+              <p className="mt-3 text-[15px] leading-relaxed text-slate-600">{it.d}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease }}
+          className="mx-auto mt-16 max-w-3xl text-center text-[24px] font-semibold leading-snug tracking-[-0.02em] text-slate-900 md:text-[32px]"
+        >
+          Nada de esto es culpa de tu equipo.
+          <br />
+          <span className="text-slate-400">Es culpa de operar con herramientas sueltas.</span>
+        </motion.p>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════ 3. CÓMO FUNCIONA (3 momentos) ══════════════════ */
+function HowItWorks() {
+  const blocks = [
+    {
+      n: '01',
+      title: 'La reserva entra sola, venga de donde venga.',
+      body: 'Canales conectados y reservas directas caen al mismo tablero, sin capturas dobles ni overbooking.',
+      mockup: <MockInbox />,
+    },
+    {
+      n: '02',
+      title: 'El equipo sabe exactamente qué toca hacer.',
+      body: 'Al confirmar la reserva se asigna habitación, housekeeping recibe su lista del día y recepción ve la llegada preparada. Todos ven lo mismo, al mismo tiempo.',
+      mockup: <MockHousekeeping />,
+    },
+    {
+      n: '03',
+      title: 'El cierre cuadra y queda registrado.',
+      body: 'Cobros registrados por método de pago, cuenta del huésped clara al hacer check-out, y corte del día que cuadra sin perseguir papelitos.',
+      mockup: <MockCheckout />,
+    },
+  ];
+  return (
+    <section id="funciones" className="border-t border-slate-100 bg-slate-50/60 py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionTag>Cómo funciona</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Tres momentos que definen
+            <br />
+            <span className="text-slate-400">si el huésped vuelve.</span>
+          </h2>
+        </div>
+
+        <div className="mt-20 space-y-24">
+          {blocks.map((b, i) => (
+            <motion.div
+              key={b.n}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.8, ease }}
+              className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}
+            >
+              <div>
+                <div className="mb-4 text-[13px] font-mono font-semibold" style={{ color: ORANGE }}>{b.n}</div>
+                <h3 className="text-[26px] font-bold tracking-[-0.025em] text-slate-900 md:text-[34px]">{b.title}</h3>
+                <p className="mt-4 max-w-lg text-[16px] leading-relaxed text-slate-600 md:text-[17px]">{b.body}</p>
               </div>
-              <h3 className="mb-2 text-[18px] font-semibold tracking-tight text-slate-900">{s.title}</h3>
-              <p className="text-[15px] leading-relaxed text-slate-600">{s.desc}</p>
+              <div>{b.mockup}</div>
             </motion.div>
           ))}
         </div>
@@ -293,289 +291,159 @@ function Story() {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   IA — no dice que tiene IA, la muestra
-   ────────────────────────────────────────────────────────────── */
-function BrandStrip() {
+function MockInbox() {
+  const rows = [
+    { origen: 'Booking', badge: NAVY, huesped: 'Kim, J.', fechas: '24 – 26 Jul', hab: '103', estado: 'Confirmada' },
+    { origen: 'WhatsApp', badge: ORANGE, huesped: 'López, R.', fechas: '22 – 25 Jul', hab: '102', estado: 'Nueva' },
+    { origen: 'Directa', badge: '#0F766E', huesped: 'Torres, A.', fechas: '20 – 25 Jul', hab: '104', estado: 'Confirmada' },
+    { origen: 'Airbnb', badge: '#B91C1C', huesped: 'Ruiz, D.', fechas: '23 – 24 Jul', hab: '208', estado: 'Confirmada' },
+    { origen: 'WhatsApp', badge: ORANGE, huesped: 'García, M.', fechas: '20 – 23 Jul', hab: '101', estado: 'Pendiente' },
+  ];
   return (
-    <section className="border-t border-slate-100 bg-white py-16">
-      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        <div className="flex flex-col items-center gap-6">
-          <div className="text-[12px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-            Diseñado con la calma del zorro
-          </div>
-          <div className="flex items-center justify-center gap-10 opacity-80 md:gap-16">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <img
-                key={i}
-                src={foxIcon}
-                alt=""
-                width={96}
-                height={96}
-                className={i === 2 ? 'h-24 w-24 object-contain' : 'h-12 w-12 object-contain'}
-                style={{ opacity: i === 2 ? 1 : 0.35 }}
-              />
-            ))}
-          </div>
-          <div className="max-w-xl text-center text-[15px] leading-relaxed text-slate-500">
-            Silencioso, preciso, siempre atento. Así opera tu hotel con VULO.
-          </div>
+    <BrowserFrame title="vulo · reservas / bandeja">
+      <div className="overflow-hidden rounded-lg border border-slate-100">
+        <div className="grid grid-cols-[80px_1fr_90px_50px_90px] gap-3 border-b border-slate-100 bg-slate-50 px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">
+          <div>Origen</div><div>Huésped</div><div>Fechas</div><div>Hab.</div><div>Estado</div>
         </div>
-      </div>
-    </section>
-  );
-}
-
-function IABlock() {
-  return (
-    <section id="ia" className="border-t border-slate-100 bg-slate-50 py-32">
-      <div className="mx-auto grid max-w-[1440px] gap-16 px-6 lg:grid-cols-2 lg:gap-24 lg:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease }}
-          className="flex flex-col justify-center"
-        >
-          <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[12px] font-medium text-slate-700">
-            <Bot className="h-3.5 w-3.5" style={{ color: BRAND_ORANGE }} />
-            Inteligencia integrada
-          </div>
-          <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
-            Pregúntale a tu hotel.
-          </h2>
-          <p className="mt-6 max-w-lg text-[17px] leading-relaxed text-slate-600">
-            Sin dashboards eternos. Sin reportes que nadie lee.
-            Escribe una pregunta. Recibe una respuesta.
-          </p>
-          <div className="mt-8 space-y-3 text-[15px] text-slate-700">
-            {['Predice ocupación con 7 días de antelación', 'Detecta habitaciones subvaluadas', 'Sugiere tarifas por temporada automáticamente'].map((t) => (
-              <div key={t} className="flex items-start gap-3">
-                <Check className="mt-0.5 h-5 w-5 shrink-0" style={{ color: BRAND_ORANGE }} strokeWidth={2.5} />
-                <span>{t}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.9, ease }}
-          className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.15)] md:p-8"
-        >
-          <div className="mb-6 flex items-center gap-2.5 border-b border-slate-100 pb-4">
-            <img src={foxIcon} alt="" width={32} height={32} className="h-8 w-8 object-contain" />
-            <span className="text-[13px] font-semibold text-slate-900">VULO Assistant</span>
-            <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} /> online
+        {rows.map((r, i) => (
+          <div key={i} className="grid grid-cols-[80px_1fr_90px_50px_90px] items-center gap-3 border-b border-slate-100 px-3 py-2.5 text-[12px] last:border-b-0">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-700">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: r.badge }} />{r.origen}
+            </span>
+            <span className="font-medium text-slate-900">{r.huesped}</span>
+            <span className="text-slate-600">{r.fechas}</span>
+            <span className="text-slate-600">{r.hab}</span>
+            <span className={r.estado === 'Nueva' ? 'font-semibold' : 'text-slate-500'} style={r.estado === 'Nueva' ? { color: ORANGE } : undefined}>
+              {r.estado}
             </span>
           </div>
-
-          <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="flex justify-end"
-            >
-              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-slate-100 px-4 py-3 text-[14px] text-slate-800">
-                ¿Cuánto venderemos mañana?
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.9 }}
-              className="flex justify-start"
-            >
-              <div className="max-w-[90%] rounded-2xl rounded-bl-md border border-slate-100 bg-white px-4 py-3 text-[14px] leading-relaxed text-slate-800">
-                Mañana proyecto <b>$52,400 MXN</b>. Ocupación esperada <b>91%</b> (14 llegadas, 3 salidas).
-                Recomiendo subir la tarifa de suites <span style={{ color: BRAND_ORANGE }}>+8%</span> · queda alta demanda.
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 1.5 }}
-              className="flex items-center gap-2 pt-2 text-[12px] text-slate-400"
-            >
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full" style={{ background: BRAND_ORANGE }} />
-              Analizando reservas históricas...
-            </motion.div>
-          </div>
-        </motion.div>
+        ))}
       </div>
-    </section>
+    </BrowserFrame>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   WHATSAPP — conversaciones reales
-   ────────────────────────────────────────────────────────────── */
-function WhatsApp() {
-  const msgs = [
-    { from: 'bot', text: 'Hola Diego, tu reserva en Hotel Plaza Real está confirmada ✨' },
-    { from: 'bot', text: 'Check-in: Vie 24 Jul · 15:00 · Habitación 208' },
-    { from: 'user', text: '¿Puedo llegar antes?' },
-    { from: 'bot', text: 'Sí, tu habitación estará lista desde las 13:00. Te aviso cuando termine el aseo.' },
-    { from: 'user', text: 'Perfecto, gracias 🙌' },
+function MockHousekeeping() {
+  const rooms = [
+    { h: '101', s: 'Limpia', c: '#059669' },
+    { h: '102', s: 'En proceso', c: ORANGE },
+    { h: '103', s: 'Por revisar', c: '#64748B' },
+    { h: '104', s: 'Limpia', c: '#059669' },
+    { h: '208', s: 'En proceso', c: ORANGE },
+    { h: '209', s: 'Por revisar', c: '#64748B' },
   ];
-
+  const tasks = [
+    { camarista: 'María', hab: '102', tarea: 'Cambio de ropa de cama' },
+    { camarista: 'María', hab: '208', tarea: 'Limpieza salida + amenities' },
+    { camarista: 'Luis', hab: '209', tarea: 'Revisión post-check-out' },
+  ];
   return (
-    <section className="border-t border-slate-100 bg-white py-32">
-      <div className="mx-auto grid max-w-[1440px] gap-16 px-6 lg:grid-cols-2 lg:gap-24 lg:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.8, ease }}
-          className="order-2 mx-auto w-full max-w-md rounded-[32px] border border-slate-200 bg-slate-50 p-4 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.15)] lg:order-1"
-        >
-          <div className="mb-4 flex items-center gap-3 border-b border-slate-200 pb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white">
-              <img src={foxIcon} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
-            </div>
-            <div>
-              <div className="text-[14px] font-semibold text-slate-900">Hotel Plaza Real · VULO</div>
-              <div className="text-[11px] text-slate-500">en línea · automatizado</div>
+    <BrowserFrame title="vulo · housekeeping">
+      <div className="grid grid-cols-3 gap-2">
+        {rooms.map((r) => (
+          <div key={r.h} className="rounded-lg border border-slate-100 p-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Hab. {r.h}</div>
+            <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-semibold" style={{ color: r.c }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: r.c }} />{r.s}
             </div>
           </div>
-          <div className="space-y-2">
-            {msgs.map((m, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 8 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.25, ease }}
-                className={m.from === 'user' ? 'flex justify-end' : 'flex justify-start'}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[13.5px] leading-snug ${
-                    m.from === 'user' ? 'rounded-br-sm bg-[#dcf8c6] text-slate-900' : 'rounded-bl-sm bg-white text-slate-800'
-                  }`}
-                >
-                  {m.text}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease }}
-          className="order-1 flex flex-col justify-center lg:order-2"
-        >
-          <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[12px] font-medium text-slate-700">
-            <MessageSquare className="h-3.5 w-3.5" style={{ color: BRAND_ORANGE }} />
-            WhatsApp nativo
-          </div>
-          <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
-            Tus huéspedes escriben.
-            <br />
-            <span className="text-slate-400">Tu hotel responde solo.</span>
-          </h2>
-          <p className="mt-6 max-w-lg text-[17px] leading-relaxed text-slate-600">
-            Confirmaciones, recordatorios, check-in y preguntas frecuentes.
-            Todo con la voz de tu hotel. Sin robots incómodos.
-          </p>
-        </motion.div>
+        ))}
       </div>
-    </section>
+      <div className="mt-4 rounded-lg border border-slate-100">
+        <div className="border-b border-slate-100 px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Tareas asignadas</div>
+        {tasks.map((t, i) => (
+          <div key={i} className="flex items-center justify-between border-b border-slate-100 px-3 py-2 text-[12px] last:border-b-0">
+            <span className="font-medium text-slate-900">{t.camarista}</span>
+            <span className="text-slate-600">Hab. {t.hab} · {t.tarea}</span>
+          </div>
+        ))}
+      </div>
+    </BrowserFrame>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   MÉTRICAS
-   ────────────────────────────────────────────────────────────── */
-function Metrics() {
-  const items = [
-    { value: '32 s', label: 'promedio para completar un check-in' },
-    { value: '87 %', label: 'de reservas web sin captura manual' },
-    { value: '3.4×', label: 'más rápido cerrar el día' },
+function MockCheckout() {
+  const cargos = [
+    { d: '2 noches · Hab. 208', v: '[DATO REAL]' },
+    { d: 'Consumo restaurante', v: '[DATO REAL]' },
+    { d: 'Lavandería', v: '[DATO REAL]' },
+  ];
+  const corte = [
+    { m: 'Efectivo', v: '[DATO REAL]' },
+    { m: 'Tarjeta', v: '[DATO REAL]' },
+    { m: 'Transferencia', v: '[DATO REAL]' },
   ];
   return (
-    <section className="border-t border-slate-100 bg-slate-50 py-24">
-      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        <div className="grid gap-12 md:grid-cols-3">
-          {items.map((m, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, ease, duration: 0.7 }}
-              className="text-center md:text-left"
-            >
-              <div className="text-[56px] font-bold tracking-[-0.04em] text-slate-900 md:text-[80px]">
-                {m.value}
-              </div>
-              <p className="mt-2 max-w-xs text-[15px] text-slate-600">{m.label}</p>
-            </motion.div>
+    <BrowserFrame title="vulo · check-out">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <div className="text-[13px] font-semibold text-slate-900">Cuenta · Ruiz, D.</div>
+          <div className="text-[11px] text-slate-500">Hab. 208 · check-out 12:00</div>
+        </div>
+        <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold text-white" style={{ background: NAVY }}>Por cobrar</span>
+      </div>
+      <div className="rounded-lg border border-slate-100">
+        {cargos.map((c, i) => (
+          <div key={i} className="flex items-center justify-between border-b border-slate-100 px-3 py-2 text-[12.5px] last:border-b-0">
+            <span className="text-slate-700">{c.d}</span>
+            <span className="font-medium text-slate-500">{c.v}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 rounded-lg bg-slate-50 p-3">
+        <div className="mb-2 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Corte del día · por método</div>
+        <div className="grid grid-cols-3 gap-2">
+          {corte.map((c) => (
+            <div key={c.m} className="rounded-md bg-white p-2 text-center">
+              <div className="text-[10.5px] text-slate-500">{c.m}</div>
+              <div className="text-[13px] font-bold" style={{ color: NAVY }}>{c.v}</div>
+            </div>
           ))}
         </div>
       </div>
-    </section>
+    </BrowserFrame>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   FEATURES — grid limpio
-   ────────────────────────────────────────────────────────────── */
+/* ══════════════════ 4. FUNCIONES ══════════════════ */
 function Features() {
   const items = [
-    { icon: Calendar, title: 'Reservas', desc: 'Timeline visual. Drag & drop. Tiempo real.' },
-    { icon: BedDouble, title: 'Habitaciones', desc: 'Estado en vivo por habitación y planta.' },
-    { icon: Users, title: 'Recepción', desc: 'Check-in en 30 segundos con firma digital.' },
-    { icon: MessageSquare, title: 'WhatsApp', desc: 'Conversaciones automáticas y humanas.' },
-    { icon: Bot, title: 'IA', desc: 'Predicción, pricing y respuestas inteligentes.' },
-    { icon: BarChart3, title: 'Reportes', desc: 'Ocupación, ADR y RevPAR sin abrir Excel.' },
-    { icon: Zap, title: 'POS', desc: 'Cargos a la habitación. Métodos múltiples.' },
-    { icon: Sparkles, title: 'Housekeeping', desc: 'Rutas asignadas y checklist digital.' },
+    { icon: Calendar, t: 'Reservas y calendario', d: 'Timeline visual por habitación, arrastrar y soltar, bloqueos y tarifas por temporada.' },
+    { icon: Users, t: 'Recepción · check-in/out', d: 'Llegadas del día, asignación de habitación y cuenta del huésped en un solo lugar.' },
+    { icon: Sparkles, t: 'Housekeeping', d: 'Estados de habitación en tiempo real y tareas por camarista.' },
+    { icon: Wallet, t: 'Cobros y caja', d: 'Pagos por efectivo, tarjeta o transferencia; corte de caja diario por método.' },
+    { icon: FileText, t: 'Facturación CFDI', d: 'Factura al huésped que la pida, timbrada desde el sistema.' },
+    { icon: MessageSquare, t: 'WhatsApp integrado', d: 'Conversaciones con huéspedes ligadas a su reserva, sin salir del sistema.' },
+    { icon: BarChart3, t: 'Reportes', d: 'Ocupación, ADR, RevPAR e ingresos por periodo, sin armar Excel a mano.' },
+    { icon: Building2, t: 'Multi-propiedad', d: 'Varias propiedades, un solo acceso, reportes consolidados.' },
   ];
   return (
-    <section id="producto" className="border-t border-slate-100 bg-white py-32">
-      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease }}
-          className="mx-auto mb-16 max-w-3xl text-center"
-        >
-          <div className="mb-6 text-[13px] font-semibold uppercase tracking-[0.2em]" style={{ color: BRAND_ORANGE }}>
-            Todo en un lugar
-          </div>
-          <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
-            Un solo software.
+    <section className="border-t border-slate-100 bg-white py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionTag>Funciones</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Todo lo que mueve tu hotel,
             <br />
-            <span className="text-slate-400">Todo tu hotel.</span>
+            <span className="text-slate-400">en un solo sistema.</span>
           </h2>
-        </motion.div>
+        </div>
 
-        <div className="grid gap-px overflow-hidden rounded-[24px] border border-slate-200 bg-slate-200 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-16 grid gap-px overflow-hidden rounded-[22px] border border-slate-200 bg-slate-200 md:grid-cols-2 lg:grid-cols-4">
           {items.map((it, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: (i % 4) * 0.06, ease }}
-              className="group flex flex-col gap-3 bg-white p-8 transition hover:bg-slate-50"
+              transition={{ delay: (i % 4) * 0.06, duration: 0.6, ease }}
+              className="flex flex-col gap-3 bg-white p-7 transition hover:bg-slate-50"
             >
-              <it.icon className="h-6 w-6" style={{ color: BRAND_NAVY }} strokeWidth={1.75} />
-              <h3 className="text-[17px] font-semibold tracking-tight text-slate-900">{it.title}</h3>
-              <p className="text-[14px] leading-relaxed text-slate-600">{it.desc}</p>
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: '#FFF3EB' }}>
+                <it.icon className="h-5 w-5" style={{ color: ORANGE }} strokeWidth={1.75} />
+              </div>
+              <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">{it.t}</h3>
+              <p className="text-[13.5px] leading-relaxed text-slate-600">{it.d}</p>
             </motion.div>
           ))}
         </div>
@@ -584,445 +452,329 @@ function Features() {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   CTA FINAL
-   ────────────────────────────────────────────────────────────── */
+/* ══════════════════ 5. PARA QUIÉN ══════════════════ */
+function ForWho() {
+  const items = [
+    {
+      icon: Building2,
+      t: 'Hotel boutique / independiente',
+      d: 'Un equipo chico que necesita orden sin burocracia. El sistema sustituye planillas, WhatsApps sueltos y libretas.',
+    },
+    {
+      icon: ClipboardList,
+      t: 'Hotel de paso / alta rotación',
+      d: 'Muchas entradas y salidas al día. Check-in rápido, limpieza al ritmo y caja que cuadra.',
+    },
+    {
+      icon: BarChart3,
+      t: 'Grupo con varias propiedades',
+      d: 'Cada propiedad con su equipo y sus tarifas; la dirección con la foto consolidada.',
+    },
+  ];
+  return (
+    <section className="border-t border-slate-100 bg-slate-50/60 py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionTag>Para quién</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Distintos hoteles.
+            <br />
+            <span className="text-slate-400">La misma tranquilidad.</span>
+          </h2>
+        </div>
+
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
+          {items.map((it, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ delay: i * 0.08, duration: 0.7, ease }}
+              className="rounded-[20px] border border-slate-200 bg-white p-7"
+            >
+              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-[12px]" style={{ background: NAVY }}>
+                <it.icon className="h-5 w-5 text-white" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-[19px] font-semibold tracking-tight text-slate-900">{it.t}</h3>
+              <p className="mt-3 text-[14.5px] leading-relaxed text-slate-600">{it.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════ 6. INTEGRACIONES ══════════════════ */
+function Integrations() {
+  const live = ['Booking.com', 'WhatsApp Business', 'Stripe', 'SAT · CFDI 4.0'];
+  const soon = ['Airbnb', 'Expedia', 'Google Hotel Ads'];
+  return (
+    <section className="border-t border-slate-100 bg-white py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionTag>Ecosistema</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Conecta con lo que ya usas.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-[14px] text-slate-500">
+            [LISTA REAL — verificar y ajustar antes de publicar]
+          </p>
+        </div>
+
+        <div className="mx-auto mt-12 max-w-4xl">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+            {live.map((name) => (
+              <div key={name} className="rounded-[14px] border border-slate-200 bg-white p-4 text-center text-[13.5px] font-semibold text-slate-800">
+                {name}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Próximamente</div>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              {soon.map((name) => (
+                <div key={name} className="rounded-[14px] border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-[13px] font-medium text-slate-500">
+                  {name}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════ 7. CONFIANZA ══════════════════ */
+function Trust() {
+  const items = [
+    {
+      icon: Sparkles,
+      t: 'Te lo mostramos con tus datos',
+      d: 'La demo se hace cargando habitaciones y tarifas reales del hotel interesado. Nada de ejemplos abstractos.',
+    },
+    {
+      icon: BarChart3,
+      t: 'Datos del producto',
+      d: '[DATO REAL: hoteles operando · habitaciones gestionadas · reservas procesadas]',
+    },
+    {
+      icon: ShieldCheck,
+      t: 'Seguridad',
+      d: 'Respaldos automáticos y accesos por rol: recepción no ve lo que ve gerencia.',
+    },
+    {
+      icon: LifeBuoy,
+      t: 'Acompañamiento',
+      d: 'Implementación guiada y soporte por WhatsApp con humano real. [Ajustar canal]',
+    },
+  ];
+  return (
+    <section className="border-t border-slate-100 bg-slate-50/60 py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionTag>Confianza</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Sin testimonios inventados.
+            <br />
+            <span className="text-slate-400">Solo lo que sí podemos probar.</span>
+          </h2>
+        </div>
+
+        <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          {items.map((it, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ delay: i * 0.06, duration: 0.7, ease }}
+              className="rounded-[18px] border border-slate-200 bg-white p-6"
+            >
+              <it.icon className="mb-4 h-6 w-6" style={{ color: ORANGE }} strokeWidth={1.75} />
+              <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">{it.t}</h3>
+              <p className="mt-2 text-[13.5px] leading-relaxed text-slate-600">{it.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════ 8. FAQ ══════════════════ */
+function FAQ() {
+  const qs = [
+    { q: '¿Cuánto tarda la implementación?', a: 'Depende del tamaño del hotel. Un hotel boutique suele quedar operando en cuestión de días; grupos multi-propiedad pueden llevar un par de semanas. [DATO REAL: rango típico]' },
+    { q: '¿Qué pasa con mis datos si me quiero ir?', a: 'Son tuyos. Exportas tu información (reservas, huéspedes, historial de cobros) en formatos estándar cuando lo pidas. Sin candado.' },
+    { q: '¿Funciona en celular y tablet en recepción?', a: 'Sí. La interfaz está pensada para escritorio, tablet y celular. Recepción puede operar desde una tablet sin problema.' },
+    { q: '¿Necesito internet todo el tiempo?', a: 'Sí, es un sistema en la nube. Con una conexión estable en recepción es suficiente. [Ajustar si existe modo offline]' },
+    { q: '¿Cómo se cobra?', a: '[MODELO REAL: mensualidad por propiedad o por habitación activa. Definir antes de publicar.]' },
+    { q: '¿Migran mi información actual?', a: 'Sí. Si vienes de otro sistema o de hojas de cálculo, te ayudamos a subir habitaciones, tarifas, huéspedes y reservas activas en la implementación.' },
+  ];
+  const [open, setOpen] = useState<number | null>(0);
+  return (
+    <section id="precios" className="border-t border-slate-100 bg-white py-28">
+      <div className="mx-auto max-w-[880px] px-6 lg:px-10">
+        <div className="text-center">
+          <SectionTag>Preguntas frecuentes</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Lo que suelen preguntarnos.
+          </h2>
+        </div>
+
+        <div className="mt-12 divide-y divide-slate-200 rounded-[20px] border border-slate-200 bg-white">
+          {qs.map((it, i) => {
+            const isOpen = open === i;
+            return (
+              <div key={i}>
+                <button
+                  onClick={() => setOpen(isOpen ? null : i)}
+                  className="flex w-full items-center justify-between gap-6 px-6 py-5 text-left transition hover:bg-slate-50"
+                >
+                  <span className="text-[16px] font-semibold text-slate-900 md:text-[17px]">{it.q}</span>
+                  <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className="px-6 pb-6 text-[15px] leading-relaxed text-slate-600">{it.a}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════ 9. CTA FINAL ══════════════════ */
 function FinalCTA() {
   return (
-    <section className="border-t border-slate-100 py-32" style={{ background: BRAND_NAVY }}>
-      <div className="mx-auto max-w-4xl px-6 text-center lg:px-10">
-        <motion.img
-          src={foxIcon}
-          alt="VULO"
-          width={160}
-          height={160}
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease }}
-          className="mx-auto mb-8 h-[140px] w-[140px] object-contain md:h-[160px] md:w-[160px]"
-        />
+    <section id="contacto" className="border-t border-slate-100 py-32" style={{ background: NAVY }}>
+      <div className="mx-auto max-w-3xl px-6 text-center lg:px-10">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease }}
-          className="text-[40px] font-bold tracking-[-0.03em] text-white md:text-[64px]"
+          className="text-[38px] font-bold tracking-[-0.03em] text-white md:text-[60px]"
         >
-          El próximo estándar
+          Un hotel más tranquilo
           <br />
-          <span className="text-white/50">para hoteles.</span>
+          <span className="text-white/50">empieza con una conversación.</span>
         </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.1, ease }}
-          className="mx-auto mt-6 max-w-xl text-[17px] text-white/70"
-        >
-          Empieza gratis. Sin tarjeta. Configura tu hotel en menos de 10 minutos.
-        </motion.p>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.2, ease }}
-          className="mt-10 flex flex-wrap items-center justify-center gap-3"
-        >
-          <Button asChild size="lg" className="h-[52px] rounded-full bg-[#F97316] px-8 text-[15px] font-medium text-white shadow-none hover:bg-[#ea6a10]">
-            <Link to="/registro">Empezar ahora <ArrowUpRight className="ml-1 h-4 w-4" /></Link>
+        <p className="mx-auto mt-6 max-w-xl text-[17px] leading-relaxed text-white/70">
+          Te mostramos el sistema con tus habitaciones y tus tarifas. Sin compromiso.
+        </p>
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <Button asChild size="lg" className="h-[52px] rounded-full px-8 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
+            <a href="mailto:hola@vulo.mx?subject=Agendar%20demo%20VULO">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></a>
           </Button>
-          <Button asChild size="lg" variant="outline" className="h-[52px] rounded-full border-white/20 bg-transparent px-8 text-[15px] font-medium text-white hover:bg-white/5 hover:text-white">
-            <Link to="/login">Ver demostración</Link>
-          </Button>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────
-   SKILLS — capacidades clave de VULO con iconografía rica
-   ────────────────────────────────────────────────────────────── */
-function Skills() {
-  const hero = {
-    icon: BrainCircuit,
-    tag: 'IA integrada · WhatsApp',
-    title: 'Una IA que atiende WhatsApp por ti.',
-    desc: 'VULO entiende, responde y agenda solo. Cotiza tarifas, confirma reservas, envía recordatorios y escala a recepción cuando hace falta — todo en el mismo chat, con la voz de tu hotel.',
-    bullets: [
-      'Responde en segundos, 24/7, en el idioma del huésped',
-      'Detecta intención: reservar, pedir factura, cambiar fechas',
-      'Se conecta al calendario y bloquea la habitación al confirmar',
-    ],
-  };
-
-  const skills = [
-    { icon: MousePointerClick, title: 'Super intuitiva', desc: 'Diseñada para no leer manual. Todo en dos clics: check-in, cargo, cambio de habitación.' },
-    { icon: Wand2, title: 'Automatizaciones', desc: 'Confirmaciones, recordatorios y limpieza se disparan solos con cada reserva.' },
-    { icon: Bot, title: 'Asistente IA', desc: 'Pregúntale por ocupación, ingresos o tarifas. Responde en lenguaje humano.' },
-    { icon: TrendingUp, title: 'Pricing dinámico', desc: 'Sugerencias de tarifa por temporada y demanda, sin hojas de cálculo.' },
-    { icon: Clock, title: 'Tiempo real', desc: 'Cambios reflejados al instante en cada dispositivo, sin refrescar nada.' },
-    { icon: CreditCard, title: 'Cobros y POS', desc: 'Cargos a la habitación, múltiples métodos, cierre de caja limpio.' },
-    { icon: Globe2, title: 'Reservas online', desc: 'Motor web propio + sincronización con Booking, Expedia y Airbnb.' },
-    { icon: ShieldCheck, title: 'Seguro por diseño', desc: 'Datos aislados por hotel, roles granulares, respaldos automáticos.' },
-  ];
-
-  return (
-    <section id="skills" className="border-t border-slate-100 bg-white py-32">
-      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease }}
-          className="mx-auto mb-16 max-w-3xl text-center"
-        >
-          <div className="mb-6 text-[13px] font-semibold uppercase tracking-[0.2em]" style={{ color: BRAND_ORANGE }}>
-            Skills de VULO
-          </div>
-          <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
-            Lo que VULO hace por ti,
-            <br />
-            <span className="text-slate-400">mientras tú atiendes al huésped.</span>
-          </h2>
-        </motion.div>
-
-        {/* Skill destacada: IA + WhatsApp */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.8, ease }}
-          className="relative overflow-hidden rounded-[28px] border border-slate-200 p-8 md:p-12 lg:p-14"
-          style={{ background: BRAND_NAVY }}
-        >
-          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_1fr]">
-            <div>
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[12px] font-medium text-white/85">
-                <hero.icon className="h-3.5 w-3.5" style={{ color: BRAND_ORANGE }} strokeWidth={2} />
-                {hero.tag}
-              </div>
-              <h3 className="text-[32px] font-bold leading-[1.05] tracking-[-0.03em] text-white md:text-[44px]">
-                {hero.title}
-              </h3>
-              <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-white/70 md:text-[17px]">
-                {hero.desc}
-              </p>
-              <div className="mt-7 space-y-3">
-                {hero.bullets.map((b) => (
-                  <div key={b} className="flex items-start gap-3 text-[14.5px] text-white/85">
-                    <Check className="mt-0.5 h-5 w-5 shrink-0" style={{ color: BRAND_ORANGE }} strokeWidth={2.5} />
-                    <span>{b}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Mini chat IA + WhatsApp */}
-            <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
-              <div className="mb-3 flex items-center gap-2.5 border-b border-white/10 pb-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
-                  <img src={foxIcon} alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
-                </div>
-                <div className="leading-tight">
-                  <div className="text-[12.5px] font-semibold text-white">VULO AI · WhatsApp</div>
-                  <div className="text-[10.5px] text-white/50">respondiendo por Hotel Plaza Real</div>
-                </div>
-                <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium text-white/60">
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} /> auto
-                </span>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { f: 'user', t: 'Hola, ¿tienen habitación este fin?' },
-                  { f: 'bot', t: 'Sí, quedan 2 King disponibles Vie–Dom. Tarifa $1,842 MXN por noche. ¿Reservo?' },
-                  { f: 'user', t: 'Sí porfa, a nombre de Diego León.' },
-                  { f: 'bot', t: 'Listo Diego ✨ Reserva RES-2026-0184 confirmada. Te mandé el comprobante y la ubicación.' },
-                ].map((m, i) => (
-                  <div key={i} className={m.f === 'user' ? 'flex justify-end' : 'flex justify-start'}>
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-3 py-2 text-[12.5px] leading-snug ${
-                        m.f === 'user'
-                          ? 'rounded-br-sm bg-[#dcf8c6] text-slate-900'
-                          : 'rounded-bl-sm bg-white/95 text-slate-800'
-                      }`}
-                    >
-                      {m.t}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 flex items-center gap-2 text-[10.5px] text-white/50">
-                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: BRAND_ORANGE }} />
-                bloqueando habitación y enviando confirmación...
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Grid de skills */}
-        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {skills.map((s, i) => (
-            <motion.div
-              key={s.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ delay: (i % 4) * 0.06, duration: 0.6, ease }}
-              className="group rounded-[20px] border border-slate-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_50px_-25px_rgba(15,23,42,0.2)]"
-            >
-              <div
-                className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-[12px] transition group-hover:scale-105"
-                style={{ background: 'rgba(249,115,22,0.08)' }}
-              >
-                <s.icon className="h-5 w-5" style={{ color: BRAND_ORANGE }} strokeWidth={1.9} />
-              </div>
-              <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">{s.title}</h3>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-slate-600">{s.desc}</p>
-            </motion.div>
-          ))}
         </div>
       </div>
     </section>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   FOOTER
-   ────────────────────────────────────────────────────────────── */
+/* ══════════════════ FOOTER ══════════════════ */
 function Footer() {
+  const cols = [
+    { t: 'Producto', l: [['Funciones', '#funciones'], ['Precios', '#precios'], ['Integraciones', '#funciones']] },
+    { t: 'Empresa', l: [['Sobre VULO', '#'], ['Contacto', '#contacto']] },
+    { t: 'Recursos', l: [['Centro de ayuda', '#'], ['Estado del sistema', '#']] },
+    { t: 'Legal', l: [['Términos', '#'], ['Privacidad', '#']] },
+  ];
   return (
     <footer className="border-t border-slate-100 bg-white py-16">
-      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-8">
-          <div className="flex items-center gap-2.5">
-            <Logo size={40} />
-            <img src={wordmark} alt="VULO" className="h-6 w-auto object-contain" />
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(4,1fr)]">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <Logo size={36} />
+              <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain" />
+            </div>
+            <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-slate-500">
+              Software para hoteles. Hecho en México.
+            </p>
           </div>
-          <nav className="flex flex-wrap items-center gap-x-8 gap-y-3 text-[13px] text-slate-500">
-            <a href="#producto" className="hover:text-slate-900">Producto</a>
-            <a href="#ia" className="hover:text-slate-900">IA</a>
-            <Link to="/login" className="hover:text-slate-900">Iniciar sesión</Link>
-            <Link to="/registro" className="hover:text-slate-900">Empezar gratis</Link>
-          </nav>
-          <div className="text-[12px] text-slate-400">
-            © {new Date().getFullYear()} VULO · Hecho en México
-          </div>
+          {cols.map((c) => (
+            <div key={c.t}>
+              <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">{c.t}</div>
+              <ul className="space-y-2">
+                {c.l.map(([label, href]) => (
+                  <li key={label}><a href={href} className="text-[13.5px] text-slate-600 hover:text-slate-900">{label}</a></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6 text-[12px] text-slate-400">
+          <div>© {new Date().getFullYear()} VULO · CDMX, México</div>
+          <div className="inline-flex items-center gap-2"><span>Idioma:</span> <span className="font-medium text-slate-600">Español (México)</span></div>
         </div>
       </div>
     </footer>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────
-   PÁGINA
-   ────────────────────────────────────────────────────────────── */
-function Banner() {
-  return (
-    <section className="relative overflow-hidden border-b border-slate-100 bg-white">
-      <div className="mx-auto max-w-[1440px] px-6 pt-6 lg:px-10">
-        <div className="relative overflow-hidden rounded-[24px] border border-slate-200 p-8 md:p-12 lg:p-16" style={{ background: BRAND_NAVY }}>
-          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
-            <div>
-              <div className="mb-6 flex items-center gap-4">
-                <img src={foxIcon} alt="VULO" width={96} height={96} className="h-20 w-20 object-contain md:h-24 md:w-24" />
-                <img src={wordmark} alt="VULO" className="h-10 w-auto object-contain brightness-0 invert md:h-14" />
-              </div>
-              <span className="inline-block rounded-full border border-white/30 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80">
-                Software para hoteles
-              </span>
-              <h2 className="mt-5 max-w-xl text-[32px] font-bold leading-[1.05] tracking-[-0.03em] text-white md:text-[48px] lg:text-[54px]">
-                La operación de tu hotel,
-                <br />
-                <span className="text-white/60">tan tranquila como debería ser.</span>
-              </h2>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Button asChild size="sm" className="h-11 rounded-full bg-[#F97316] px-6 text-[14px] font-medium text-white shadow-none hover:bg-[#ea6a10]">
-                  <Link to="/registro">Empezar gratis</Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="h-11 rounded-full border-white/30 bg-transparent px-6 text-[14px] font-medium text-white hover:bg-white/10 hover:text-white">
-                  <Link to="/login">Ver demostración</Link>
-                </Button>
-              </div>
-            </div>
-            {/* Producto: vista rápida de KPIs */}
-            <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
-              <div className="mb-4 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-white/60">
-                <img src={foxIcon} alt="" width={18} height={18} className="h-4 w-4 object-contain" />
-                vulo · panel en vivo
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { l: 'Ocupación', v: '87%', c: BRAND_ORANGE },
-                  { l: 'Ingresos hoy', v: '$48.3k' },
-                  { l: 'Check-ins', v: '14 / 16' },
-                  { l: 'ADR', v: '$1,842' },
-                ].map((k) => (
-                  <div key={k.l} className="rounded-[12px] border border-white/10 bg-white/[0.03] p-3">
-                    <div className="text-[10px] font-medium uppercase tracking-wider text-white/50">{k.l}</div>
-                    <div className="mt-1 text-[20px] font-bold tracking-tight" style={{ color: k.c || '#fff' }}>{k.v}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 space-y-1.5">
-                {[
-                  { room: '101', name: 'García M.', s: 0, l: 3, o: false },
-                  { room: '103', name: 'Booking · Kim', s: 2, l: 2, o: true },
-                  { room: '104', name: 'Web · Torres', s: 0, l: 5, o: false },
-                ].map((r) => (
-                  <div key={r.room} className="flex items-center gap-2">
-                    <span className="w-8 text-[10px] font-medium text-white/50">{r.room}</span>
-                    <div className="relative flex-1">
-                      <div className="h-6 rounded-md bg-white/[0.06]" />
-                      <div className="absolute top-0 flex h-6 items-center rounded-md px-2 text-[10px] font-medium text-white" style={{ left: `${r.s * 14}%`, width: `${r.l * 14}%`, background: r.o ? BRAND_ORANGE : '#3D5A80' }}>
-                        {r.name}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ProductGallery() {
-  return (
-    <section className="border-t border-slate-100 bg-white py-32">
-      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease }}
-          className="mx-auto mb-16 flex max-w-3xl flex-col items-center gap-4 text-center"
-        >
-          <img src={foxIcon} alt="" width={88} height={88} className="h-20 w-20 object-contain md:h-[88px] md:w-[88px]" />
-          <div className="text-[13px] font-semibold uppercase tracking-[0.2em]" style={{ color: BRAND_ORANGE }}>
-            Lo que ves cuando abres VULO
-          </div>
-          <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
-            El software que
-            <br />
-            <span className="text-slate-400">reemplaza tu Excel y tus notas.</span>
-          </h2>
-        </motion.div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Reservas timeline */}
-          <MockCard title="Reservas · Timeline" desc="Arrastra, mueve, confirma. Todo tu inventario visible.">
-            <div className="space-y-1.5">
-              {[
-                { room: '101', name: 'García', s: 0, l: 3, o: false },
-                { room: '102', name: 'López', s: 1, l: 4, o: false },
-                { room: '103', name: 'Booking', s: 2, l: 2, o: true },
-                { room: '104', name: 'Torres', s: 0, l: 5, o: false },
-                { room: '105', name: 'Ruiz', s: 3, l: 2, o: false },
-              ].map((r) => (
-                <div key={r.room} className="flex items-center gap-2">
-                  <span className="w-7 text-[10px] font-medium text-slate-400">{r.room}</span>
-                  <div className="relative flex-1">
-                    <div className="h-6 rounded-md bg-slate-100" />
-                    <div className="absolute top-0 flex h-6 items-center rounded-md px-2 text-[10px] font-medium text-white" style={{ left: `${r.s * 14}%`, width: `${r.l * 14}%`, background: r.o ? BRAND_ORANGE : BRAND_NAVY }}>
-                      {r.name}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </MockCard>
-
-          {/* WhatsApp */}
-          <MockCard title="WhatsApp automático" desc="Confirmaciones y respuestas con la voz de tu hotel.">
-            <div className="space-y-2 rounded-[12px] bg-slate-50 p-3">
-              {[
-                { f: 'bot', t: 'Reserva confirmada · Hab. 208 · Vie 24 Jul' },
-                { f: 'user', t: '¿Puedo llegar antes?' },
-                { f: 'bot', t: 'Sí, lista desde 13:00. Te aviso.' },
-                { f: 'user', t: 'Gracias 🙌' },
-              ].map((m, i) => (
-                <div key={i} className={m.f === 'user' ? 'flex justify-end' : 'flex justify-start'}>
-                  <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-[11.5px] leading-snug ${m.f === 'user' ? 'rounded-br-sm bg-[#dcf8c6] text-slate-900' : 'rounded-bl-sm bg-white text-slate-800 border border-slate-100'}`}>
-                    {m.t}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </MockCard>
-
-          {/* Housekeeping */}
-          <MockCard title="Housekeeping en vivo" desc="Tareas asignadas, checklist digital, sin papeles.">
-            <div className="space-y-2">
-              {[
-                { h: '101', s: 'Limpia', d: true },
-                { h: '102', s: 'En proceso', d: false },
-                { h: '103', s: 'Salida 12:00', d: false },
-                { h: '104', s: 'Limpia', d: true },
-                { h: '208', s: 'Preparar 13:00', d: false, tag: true },
-              ].map((t) => (
-                <div key={t.h} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className={`h-4 w-4 rounded-full border-2 ${t.d ? 'border-transparent' : 'border-slate-300'}`} style={t.d ? { background: BRAND_ORANGE } : undefined} />
-                    <span className="text-[12px] font-medium text-slate-800">Hab. {t.h}</span>
-                  </div>
-                  <span className={`text-[11px] font-medium ${t.tag ? '' : 'text-slate-500'}`} style={t.tag ? { color: BRAND_ORANGE } : undefined}>{t.s}</span>
-                </div>
-              ))}
-            </div>
-          </MockCard>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function MockCard({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.7, ease }}
-      className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_10px_40px_-20px_rgba(15,23,42,0.15)]"
-    >
-      <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
-        <img src={foxIcon} alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
-        <span className="text-[12px] font-semibold text-slate-900">vulo · {title.split(' · ')[0]}</span>
-        <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium text-slate-500">
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} /> live
-        </span>
-      </div>
-      <div className="p-5">{children}</div>
-      <div className="border-t border-slate-100 p-5">
-        <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">{title}</h3>
-        <p className="mt-1 text-[13.5px] leading-relaxed text-slate-600">{desc}</p>
-      </div>
-    </motion.div>
-  );
-}
-
+/* ══════════════════ PÁGINA ══════════════════ */
 export default function Landing() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'VULO',
+    description:
+      'Sistema de gestión hotelera todo-en-uno: reservas, check-in, housekeeping, cobros y reportes. Hecho para hoteles en México.',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    url: 'https://vulo.mx/',
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'MXN',
+      price: '0',
+      availability: 'https://schema.org/InStock',
+      description: 'Agenda una demo · precios por propiedad.',
+    },
+  };
+
   return (
     <div className="min-h-screen bg-white text-slate-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <Helmet>
+        <html lang="es-MX" />
+        <title>Software para Hoteles en México | VULO — Reservas, Recepción y Cobros</title>
+        <meta
+          name="description"
+          content="Sistema de gestión hotelera: reservas, check-in, housekeeping, cobros y reportes en un solo lugar. Hecho para hoteles en México. Agenda una demo."
+        />
+        <link rel="canonical" href="https://vulo.mx/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://vulo.mx/" />
+        <meta property="og:title" content="Software para Hoteles en México | VULO" />
+        <meta property="og:description" content="Reservas, recepción, housekeeping, cobros y reportes en un solo lugar." />
+        <meta name="twitter:card" content="summary_large_image" />
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      </Helmet>
+
       <Nav />
       <main>
-        <Banner />
         <Hero />
-        <Story />
-        <Skills />
-        <BrandStrip />
-        <IABlock />
-        <ProductGallery />
-        <WhatsApp />
-        <Metrics />
+        <Pains />
+        <HowItWorks />
         <Features />
+        <ForWho />
+        <Integrations />
+        <Trust />
+        <FAQ />
         <FinalCTA />
       </main>
       <Footer />
     </div>
   );
 }
+
+// Unused import guards (kept intentionally minimal to avoid stray icon imports)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _unused = { Check, Wifi, Smartphone };
