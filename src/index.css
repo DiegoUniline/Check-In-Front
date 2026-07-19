@@ -85,23 +85,23 @@
     --brand-orange-foreground: 0 0% 100%;
     
     /* Backgrounds - Dark */
-    --background: 213 68% 9%;
+    --background: 213 55% 8%;
     --foreground: 210 40% 98%;
     
     /* Cards & Surfaces */
-    --card: 216 60% 15%;
+    --card: 216 45% 13%;
     --card-foreground: 210 40% 98%;
     
-    --popover: 216 60% 15%;
+    --popover: 216 45% 13%;
     --popover-foreground: 210 40% 98%;
     
     /* Secondary */
-    --secondary: 217 33% 17%;
+    --secondary: 216 34% 18%;
     --secondary-foreground: 210 40% 98%;
     
     /* Muted */
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 216 30% 17%;
+    --muted-foreground: 215 20% 70%;
     
     /* Accent — naranja */
     --accent: 24 95% 55%;
@@ -112,8 +112,8 @@
     --destructive-foreground: 210 40% 98%;
     
     /* Borders & Inputs */
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    --border: 216 28% 28%;
+    --input: 216 28% 26%;
     --ring: 24 95% 55%;
     
     /* Sidebar */
