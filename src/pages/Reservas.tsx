@@ -398,7 +398,7 @@ export default function Reservas() {
           <TabsContent value="timeline" className="space-y-3 mt-3">
             {/* Selector Timeline / Card / Tabla */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="inline-flex bg-muted p-0.5 rounded-lg">
+              <div className="inline-flex bg-muted p-1 rounded-xl">
                 {([
                   { key: 'timeline', label: 'Calendario' },
                   { key: 'card', label: 'Card' },
@@ -408,7 +408,7 @@ export default function Reservas() {
                     key={opt.key}
                     variant={reservasSubView === opt.key ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-8 px-3 text-xs"
+                    className="h-10 w-28 sm:w-32 px-4 text-sm font-medium"
                     onClick={() => setReservasSubView(opt.key)}
                   >
                     {opt.label}
