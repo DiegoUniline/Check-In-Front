@@ -312,9 +312,9 @@ function BrandStrip() {
                 key={i}
                 src={foxIcon}
                 alt=""
-                width={40}
-                height={40}
-                className="h-10 w-10 object-contain"
+                width={96}
+                height={96}
+                className={i === 2 ? 'h-24 w-24 object-contain' : 'h-12 w-12 object-contain'}
                 style={{ opacity: i === 2 ? 1 : 0.35 }}
               />
             ))}
@@ -596,13 +596,13 @@ function FinalCTA() {
         <motion.img
           src={foxIcon}
           alt="VULO"
-          width={72}
-          height={72}
+          width={160}
+          height={160}
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease }}
-          className="mx-auto mb-8 h-[72px] w-[72px] object-contain"
+          className="mx-auto mb-8 h-[140px] w-[140px] object-contain md:h-[160px] md:w-[160px]"
         />
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
@@ -652,8 +652,8 @@ function Footer() {
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         <div className="flex flex-wrap items-center justify-between gap-8">
           <div className="flex items-center gap-2.5">
-            <Logo size={26} />
-            <span className="text-[17px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
+            <Logo size={40} />
+            <span className="text-[20px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
               vulo<span style={{ color: BRAND_ORANGE }}>.</span>
             </span>
           </div>
