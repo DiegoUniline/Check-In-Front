@@ -249,79 +249,177 @@ const VULO_TEXT: [number, number, number] = [17, 24, 39];
 const VULO_MUTED: [number, number, number] = [100, 116, 139];
 const VULO_BORDER: [number, number, number] = [226, 232, 240];
 
-function buildHeader(doc: jsPDF, ctx: ReservaPdfCtx, titulo: string, subtitulo?: string) {
+// Constantes de layout (mm). A4 = 210x297.
+const HEADER_H = 34; // banda navy superior
+const CONTENT_TOP = 46; // inicio de contenido debajo del header
+const FOOTER_H = 16;
+const MARGIN_X = 14;
+
+interface HeaderAssets {
+  fox: string;
+  wordmark: string;
+}
+
+/**
+ * Dibuja el header profesional en la página actual.
+ * Banda navy con logo VULO (isotipo + wordmark) e info del hotel.
+ */
+function drawHeader(
+  doc: jsPDF,
+  ctx: ReservaPdfCtx,
+  titulo: string,
+  subtitulo: string | undefined,
+  assets: HeaderAssets,
+) {
   const pageW = doc.internal.pageSize.getWidth();
-  // Fondo blanco; delgada barra naranja izquierda
+
+  // Banda navy
+  doc.setFillColor(...VULO_NAVY);
+  doc.rect(0, 0, pageW, HEADER_H, 'F');
+
+  // Acento naranja delgado abajo del header
   doc.setFillColor(...VULO_ORANGE);
-  doc.rect(0, 0, 3, 40, 'F');
+  doc.rect(0, HEADER_H, pageW, 1.2, 'F');
 
-  // Marca VULO (wordmark tipográfico)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...VULO_NAVY);
-  doc.text('VULO', 14, 14);
+  // Isotipo (fox) — cuadrado 18mm
+  try {
+    doc.addImage(assets.fox, 'PNG', MARGIN_X, 8, 18, 18, undefined, 'FAST');
+  } catch { /* noop */ }
+
+  // Wordmark VULO (proporción 1280x480 => 8mm alto, ~21.3mm ancho)
+  try {
+    doc.addImage(assets.wordmark, 'PNG', MARGIN_X + 22, 11, 22, 8, undefined, 'FAST');
+  } catch { /* noop */ }
+
+  // Tagline debajo del wordmark
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(...VULO_MUTED);
-  doc.text('Software para hoteles', 27, 14);
+  doc.setFontSize(6.5);
+  doc.setTextColor(203, 213, 225); // slate-300
+  doc.text('SOFTWARE PARA HOTELES', MARGIN_X + 22, 23);
 
-  // Info hotel a la derecha
+  // Info del hotel a la derecha (dentro de la banda)
   if (ctx.hotel) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(...VULO_NAVY);
-    doc.text(ctx.hotel, pageW - 14, 14, { align: 'right' });
-    const parts = [ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean).join(' · ');
-    if (parts) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(...VULO_MUTED);
-      doc.text(parts, pageW - 14, 19, { align: 'right' });
-    }
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text(ctx.hotel, pageW - MARGIN_X, 13, { align: 'right' });
+    const parts = [ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(203, 213, 225);
+    if (parts[0]) doc.text(String(parts[0]), pageW - MARGIN_X, 19, { align: 'right' });
+    if (parts[1]) doc.text(String(parts[1]), pageW - MARGIN_X, 23.5, { align: 'right' });
   }
 
-  // Título principal
+  // Título del documento debajo del header
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
+  doc.setFontSize(18);
   doc.setTextColor(...VULO_NAVY);
-  doc.text(titulo, 14, 30);
+  doc.text(titulo, MARGIN_X, HEADER_H + 8);
 
   if (subtitulo) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...VULO_MUTED);
-    doc.text(subtitulo, 14, 36);
+    doc.text(subtitulo, MARGIN_X, HEADER_H + 13);
   }
-
-  // Línea divisora
-  doc.setDrawColor(...VULO_BORDER);
-  doc.setLineWidth(0.3);
-  doc.line(14, 42, pageW - 14, 42);
 
   doc.setTextColor(...VULO_TEXT);
   doc.setFont('helvetica', 'normal');
+}
+
+/**
+ * Dibuja el footer profesional con paginación (Página X de Y).
+ */
+function drawFooter(
+  doc: jsPDF,
+  texto: string,
+  pageNum: number,
+  pageCount: number,
+) {
+  const pageH = doc.internal.pageSize.getHeight();
+  const pageW = doc.internal.pageSize.getWidth();
+  const yTop = pageH - FOOTER_H;
+
+  // Línea divisora superior
+  doc.setDrawColor(...VULO_BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN_X, yTop, pageW - MARGIN_X, yTop);
+
+  // Bloque de texto
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...VULO_MUTED);
+  doc.text(texto, MARGIN_X, yTop + 5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...VULO_NAVY);
+  doc.text('VULO', pageW / 2, yTop + 5, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...VULO_MUTED);
+  doc.text('vulo.mx', pageW / 2, yTop + 9, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...VULO_MUTED);
+  doc.text(`Página ${pageNum} de ${pageCount}`, pageW - MARGIN_X, yTop + 5, { align: 'right' });
+  doc.setFontSize(6.5);
+  doc.text(`Generado ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageW - MARGIN_X, yTop + 9, { align: 'right' });
+
+  // Cuadro de acento naranja abajo
+  doc.setFillColor(...VULO_ORANGE);
+  doc.rect(MARGIN_X, pageH - 3, 8, 1, 'F');
+
+  doc.setTextColor(...VULO_TEXT);
+}
+
+/**
+ * Rellena headers y footers en todas las páginas al final.
+ * Debe llamarse una sola vez, después de generar todo el contenido.
+ */
+function paintChrome(
+  doc: jsPDF,
+  ctx: ReservaPdfCtx,
+  titulo: string,
+  subtitulo: string | undefined,
+  assets: HeaderAssets,
+  footerText: string,
+) {
+  const count = doc.getNumberOfPages();
+  for (let i = 1; i <= count; i++) {
+    doc.setPage(i);
+    drawHeader(doc, ctx, titulo, subtitulo, assets);
+    drawFooter(doc, footerText, i, count);
+  }
 }
 
 function sectionLabel(doc: jsPDF, text: string, y: number) {
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(8.5);
   doc.setTextColor(...VULO_ORANGE);
   doc.text(text.toUpperCase(), 14, y);
+  // línea decorativa fina
+  const w = doc.getTextWidth(text.toUpperCase());
+  doc.setDrawColor(...VULO_ORANGE);
+  doc.setLineWidth(0.5);
+  doc.line(14 + w + 3, y - 1.2, 14 + w + 12, y - 1.2);
   doc.setTextColor(...VULO_TEXT);
-  return y + 4;
+  return y + 5;
 }
 
-function brandFooter(doc: jsPDF, texto: string) {
-  const pageH = doc.internal.pageSize.getHeight();
-  const pageW = doc.internal.pageSize.getWidth();
+/** Chip informativo (etiqueta pequeña + valor grande) */
+function drawInfoChip(doc: jsPDF, x: number, y: number, w: number, label: string, value: string) {
   doc.setDrawColor(...VULO_BORDER);
-  doc.setLineWidth(0.3);
-  doc.line(14, pageH - 14, pageW - 14, pageH - 14);
+  doc.setFillColor(248, 250, 252);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(x, y, w, 15, 2, 2, 'FD');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
+  doc.setFontSize(6.5);
   doc.setTextColor(...VULO_MUTED);
-  doc.text(texto, 14, pageH - 9);
-  doc.text('Generado con VULO · vulo.mx', pageW - 14, pageH - 9, { align: 'right' });
+  doc.text(label.toUpperCase(), x + 3, y + 5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...VULO_NAVY);
+  doc.text(value, x + 3, y + 11);
   doc.setTextColor(...VULO_TEXT);
 }
 
