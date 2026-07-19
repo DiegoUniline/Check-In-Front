@@ -1,100 +1,118 @@
+## Objetivo
 
-# Plan: Features gratis (sin cuentas externas)
+Que la IA de WhatsApp opere como un recepcionista real: consulte disponibilidad, cotice, aparte habitaciones, cree clientes, informe sobre reservas existentes y sepa cuándo pasar al humano dejando un resumen listo.
 
-Voy a entregar en **3 tandas** para que puedas validar después de cada una. Si algo no te gusta, paramos antes de seguir.
+## Alcance
 
----
+**Sí incluye**
+- Motor de intención + tool-calling (Gemini 3 flash preview).
+- 7 herramientas de negocio conectadas a la base real del hotel.
+- Detección de handoff con resumen automático.
+- Panel en `/chats` para ver estado (IA / humano) y "tomar conversación".
+- Configuración por hotel (activar IA, horarios, políticas).
 
-## TANDA 1 — UX móvil nativa y tiempo real (lo más impactante)
+**No incluye (fase 2)**
+- Cobros en línea desde WhatsApp.
+- Voz / audio inbound (Whisper).
+- Reglas de yield / tarifa dinámica automática.
 
-### 1. Sincronización en tiempo real (Supabase Realtime)
-- Migración: `ALTER PUBLICATION supabase_realtime ADD TABLE` para `reservas`, `habitaciones`, `tareas_limpieza`, `tareas_mantenimiento`, `pagos`, `notificaciones`.
-- Hook nuevo `src/hooks/useRealtimeSync.ts` que invalida queries de React Query cuando llega un cambio.
-- Se monta una sola vez en `MainLayout`. Si dos recepcionistas trabajan al mismo tiempo, los cambios aparecen al instante.
+## Arquitectura
 
-### 2. Modo offline básico
-- Persistir queries críticas (reservas, habitaciones, tareas) en `localStorage` usando el persister de React Query (`@tanstack/react-query-persist-client` + `@tanstack/query-sync-storage-persister`).
-- Banner sticky superior cuando `navigator.onLine === false`: "Sin conexión — viendo datos guardados. Los cambios se sincronizarán al reconectar."
-- Cola simple de mutaciones offline en `localStorage` que se reintenta al volver online (solo para acciones idempotentes: cambiar estado de habitación, completar tarea de limpieza). Las acciones complejas (crear reserva, cobrar) se bloquean offline con mensaje claro.
+```text
+WhatsApp (Evolution API webhook)
+        │
+        ▼
+edge fn: wa-webhook (existente)
+        │  guarda mensaje en wa_mensajes
+        ▼
+edge fn: wa-ai-agent           ← NUEVO
+   ├─ carga historial (últimos 20 msgs)
+   ├─ carga contexto hotel (habitaciones, tarifas, políticas)
+   ├─ llama Lovable AI (google/gemini-3-flash-preview)
+   │     con 7 tools definidas abajo
+   ├─ ejecuta tool_calls sobre Supabase
+   ├─ responde por Evolution API
+   └─ si detecta handoff → marca chat + notifica recepción
+```
 
-### 3. Drawers móviles (bottom sheet)
-- Componente `ResponsiveDialog` (`src/components/ui/responsive-dialog.tsx`) que usa shadcn `Drawer` (vaul) en móvil y `Dialog` en desktop. Misma API que Dialog.
-- Reemplazar en: Nueva Reserva, Detalle de Reserva, Registrar Pago, Nueva Tarea, Detalle Habitación.
+## Herramientas expuestas al modelo
 
-### 4. Gestos swipe
-- Componente `SwipeableCard` con `framer-motion` drag horizontal.
-- Reserva: swipe → izquierda = Check-out, derecha = Check-in (con confirmación + haptic feedback vía `navigator.vibrate`).
-- Tarea de limpieza: swipe derecha = Completar.
-- Solo activo en viewport `< 768px`.
+| Tool | Descripción | Efecto en BD |
+|---|---|---|
+| `buscar_disponibilidad` | Recibe `fecha_checkin`, `fecha_checkout`, `huespedes`, `tipo?` → devuelve habitaciones libres con tarifa aplicando **temporadas**. | read |
+| `cotizar_estancia` | Recibe habitación + fechas → total con impuestos y desglose por noche. | read |
+| `crear_cliente` | Nombre, teléfono normalizado (521…), documento opcional. | insert `clientes` |
+| `crear_reserva_tentativa` | Crea reserva estado `pendiente` con expiración 30 min. | insert `reservas` |
+| `confirmar_reserva` | Pasa reserva de `pendiente` → `confirmada` tras aceptación explícita. | update `reservas` |
+| `consultar_reserva` | Por folio (`RES-YYYY-XXXX`) o teléfono → detalle + saldo. | read |
+| `solicitar_humano` | La IA la invoca cuando detecta queja, negociación fuera de política, problema operativo, o el huésped lo pide. | update `wa_chats.handoff = true` + inserta nota resumen |
 
----
+Cada tool valida `hotel_id` desde el chat y respeta multi-tenant (nunca cruza hoteles).
 
-## TANDA 2 — Operación y documentos
+## Reglas del agente (system prompt)
 
-### 5. Firma digital del huésped
-- Componente `SignaturePad` con `<canvas>` táctil (sin librería, ~80 líneas).
-- En el modal de check-in: aparece después de verificar datos. Se guarda como base64 PNG en `reservas.firma_huesped` (nueva columna `text`).
-- Botón "Limpiar" y "Confirmar firma".
+- Idioma: español mexicano, tono cálido, breve, no "florido".
+- Fechas: siempre `dd/mm/yyyy` en respuesta al huésped.
+- No inventar habitaciones ni precios: si no hay disponibilidad, propone alternativa real.
+- No promete descuentos: si el cliente los pide, invoca `solicitar_humano`.
+- Al apartar: pide **nombre completo** antes de crear el cliente/reserva.
+- Confirma explícitamente antes de `confirmar_reserva` ("¿Confirmo la reserva del 20/12 al 22/12 por $2,400?").
+- Al finalizar reserva confirmada: envía el folio y menciona que llegará el comprobante.
 
-### 6. Reportes PDF
-- Librería: `jspdf` + `jspdf-autotable` (todo client-side, sin edge functions).
-- 3 reportes desde `/reportes`:
-  - **Ocupación**: % por día, habitaciones ocupadas vs disponibles, gráfico simple.
-  - **Ingresos**: por método de pago, por concepto, total del período.
-  - **Corte de caja**: por turno/usuario, ingresos - egresos del día.
-- Cada uno con logo del hotel, rango de fechas configurable, botón "Descargar PDF".
+## Handoff inteligente
 
-### 7. Compartir por WhatsApp (sin API, solo deep link)
-- Botón "Compartir por WhatsApp" en detalle de reserva → abre `https://wa.me/<telefono>?text=<mensaje>` con plantilla precargada (confirmación de reserva, link al recibo, etc.).
-- Plantillas configurables ya existen (`whatsapp_templates`), solo hay que conectar el botón.
-- No requiere API de WhatsApp Business, usa el handler nativo del SO.
+Se dispara con `solicitar_humano` cuando:
+- El huésped escribe "gerente", "queja", "reclamo", "cancelar y reembolso".
+- La IA falla 2 veces en entender.
+- Fuera de horario de auto-atención (config del hotel).
 
----
+Efectos:
+- `wa_chats.handoff = true`, `handoff_at = now()`.
+- Se inserta un `wa_notas` con resumen: **motivo + últimos 6 mensajes resumidos + datos del cliente + reserva vinculada**.
+- Notificación push en `notificaciones` para rol Recepción.
+- La IA deja de responder ese chat hasta que recepción presione "Devolver a IA".
 
-## TANDA 3 — Configuración avanzada
+## Cambios en base de datos
 
-### 8. Multi-idioma ES/EN
-- Librería: `react-i18next`.
-- Archivos `src/locales/es.json` y `src/locales/en.json`.
-- Switch en perfil de usuario + auto-detección por `navigator.language`.
-- Cobertura: toda la UI pública (`/hotel/:slug`, landing, login, signup) y los textos del huésped en check-in. La parte administrativa interna queda solo en ES por ahora (es para staff mexicano).
+Migración con **GRANTs** + RLS:
 
-### 9. Tarifas dinámicas
-- Nueva tabla `tarifas_dinamicas` (hotel_id, tipo_habitacion_id, regla_tipo `temporada|dia_semana|ocupacion`, fecha_inicio, fecha_fin, dia_semana, umbral_ocupacion, multiplicador, precio_fijo, prioridad).
-- Función SQL `calcular_precio_dinamico(tipo_habitacion_id, fecha_checkin, fecha_checkout)` que aplica reglas por prioridad.
-- UI en `/configuracion/tarifas`: crear/editar reglas con preview de precio resultante.
-- Al crear reserva se llama la función y se muestra "Tarifa base $X → Tarifa aplicada $Y (temporada alta)".
+```text
+ALTER TABLE wa_chats
+  ADD COLUMN handoff boolean DEFAULT false,
+  ADD COLUMN handoff_at timestamptz,
+  ADD COLUMN handoff_motivo text,
+  ADD COLUMN ai_activa boolean DEFAULT true;
 
-### 10. Backups y exportación
-- Botón "Exportar todo" en SuperAdmin/Admin: dispara edge function `exportar-hotel` que genera un ZIP con todas las tablas del hotel en JSON + CSV.
-- Backups automáticos diarios: cron job (pg_cron) que guarda snapshot JSON en bucket de Storage `backups-hotel` (nuevo, privado), retención 30 días.
-- UI muestra lista de backups con botón descargar.
+ALTER TABLE wa_agent_config
+  ADD COLUMN horario_ai_inicio time DEFAULT '00:00',
+  ADD COLUMN horario_ai_fin    time DEFAULT '23:59',
+  ADD COLUMN permite_apartar   boolean DEFAULT true,
+  ADD COLUMN reserva_expira_min int DEFAULT 30;
+```
 
----
+## Edge functions
 
-## Detalles técnicos
+- **wa-ai-agent** (nuevo): recibe `{ chat_id, hotel_id }`, orquesta el loop de tool-calling (máx 8 pasos), guarda cada tool_call en `wa_mensajes` con `tipo='tool'` para auditoría.
+- **wa-webhook** (modificar): tras persistir el mensaje entrante, si `wa_chats.ai_activa && !handoff` invoca `wa-ai-agent`.
+- **wa-liberar-tentativas** (cron cada 5 min): cancela reservas `pendiente` con `expira_at < now()`.
 
-**Dependencias nuevas:**
-- `@tanstack/react-query-persist-client`, `@tanstack/query-sync-storage-persister` (offline)
-- `jspdf`, `jspdf-autotable` (PDFs)
-- `react-i18next`, `i18next`, `i18next-browser-languagedetector` (i18n)
-- (`vaul` ya está incluido por shadcn Drawer; `framer-motion` ya está)
+## UI
 
-**Migraciones SQL:**
-- Habilitar realtime en 6 tablas
-- Columna `firma_huesped` en `reservas`
-- Tabla `tarifas_dinamicas` + función `calcular_precio_dinamico`
-- Bucket `backups-hotel` + edge function `exportar-hotel` + cron
+- `/chats`: badge "IA" / "Humano" por conversación; botón **"Tomar conversación"** y **"Devolver a IA"**; ver resumen del handoff.
+- `/configuracion → WhatsApp AI`: switch global, horario, permitir apartar sí/no, minutos de expiración, política que el modelo debe respetar (textarea).
+- `/reservas` (calendario): las reservas creadas por IA muestran chip naranja `IA`.
 
-**Riesgos:**
-- Offline + Realtime conviven bien si invalidamos el cache de RQ al reconectar.
-- Swipe puede chocar con scroll vertical — uso `drag="x"` con `dragConstraints` estrictos.
-- PDFs grandes (>500 reservas) pueden tardar 3-5s en cliente; añado loader.
+## Seguridad
 
----
+- `wa-ai-agent` valida JWT del webhook (Evolution firma).
+- Cada tool ejecuta con `service_role` pero filtra por `hotel_id` del chat.
+- Rate limit: máx 12 tool_calls por conversación / 5 min.
+- Nunca expone `LOVABLE_API_KEY` ni datos de otros hoteles.
 
-## ¿Procedemos?
+## Entrega en 3 pasos
 
-Empiezo con **Tanda 1** completa (Realtime + Offline + Drawers + Swipe). Cuando confirmes que funciona bien, sigo con Tanda 2 y 3.
+1. **DB + config**: migración, panel de configuración en `/configuracion`.
+2. **Agente core**: edge function `wa-ai-agent` con las 7 tools + integración al webhook + cron de liberación.
+3. **UI de handoff**: badges, botón tomar/devolver, resumen automático en `/chats`.
 
-Si quieres reordenar algo o saltar alguna feature, dímelo ahora.
+¿Arranco con el paso 1?
