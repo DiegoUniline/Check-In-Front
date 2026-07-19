@@ -7,6 +7,7 @@ import {
   BedDouble, Users, BarChart3, Zap,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import foxIcon from '@/assets/hospedapp-icon.png';
 
 /**
  * VULO — Landing pública
@@ -66,13 +67,14 @@ function Nav() {
 function Hero() {
   return (
     <section className="relative overflow-hidden">
-      {/* Halo naranja tenue */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full opacity-[0.06] blur-3xl" style={{ background: BRAND_ORANGE }} />
       <div className="mx-auto max-w-[1440px] px-6 pb-24 pt-20 lg:px-10 lg:pb-32 lg:pt-28">
         <motion.div initial="hidden" animate="show" className="mx-auto max-w-4xl text-center">
-          <motion.div variants={fadeUp} custom={0} className="mb-8 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-700">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} />
-            Nuevo · IA para operaciones de hotel
+          <motion.div variants={fadeUp} custom={0} className="mb-10 flex flex-col items-center gap-4">
+            <img src={foxIcon} alt="VULO" width={72} height={72} className="h-[72px] w-[72px] object-contain" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-700">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} />
+              Nuevo · IA para operaciones de hotel
+            </div>
           </motion.div>
           <motion.h1
             variants={fadeUp}
@@ -132,7 +134,10 @@ function DashboardMockup() {
               <span className="h-3 w-3 rounded-full bg-slate-300" />
               <span className="h-3 w-3 rounded-full bg-slate-300" />
             </div>
-            <span className="ml-3 text-[12px] font-medium text-slate-500">vulo.app · Hotel Plaza Real</span>
+            <span className="ml-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
+              <img src={foxIcon} alt="" width={16} height={16} className="h-4 w-4 object-contain" />
+              vulo.app · Hotel Plaza Real
+            </span>
           </div>
           <div className="hidden items-center gap-2 md:flex">
             <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm">Hoy · Lun 20 Jul</span>
@@ -290,6 +295,36 @@ function Story() {
 /* ────────────────────────────────────────────────────────────────
    IA — no dice que tiene IA, la muestra
    ────────────────────────────────────────────────────────────── */
+function BrandStrip() {
+  return (
+    <section className="border-t border-slate-100 bg-white py-16">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
+        <div className="flex flex-col items-center gap-6">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+            Diseñado con la calma del zorro
+          </div>
+          <div className="flex items-center justify-center gap-10 opacity-80 md:gap-16">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <img
+                key={i}
+                src={foxIcon}
+                alt=""
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+                style={{ opacity: i === 2 ? 1 : 0.35 }}
+              />
+            ))}
+          </div>
+          <div className="max-w-xl text-center text-[15px] leading-relaxed text-slate-500">
+            Silencioso, preciso, siempre atento. Así opera tu hotel con VULO.
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function IABlock() {
   return (
     <section id="ia" className="border-t border-slate-100 bg-slate-50 py-32">
@@ -329,11 +364,12 @@ function IABlock() {
           transition={{ duration: 0.9, ease }}
           className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.15)] md:p-8"
         >
-          <div className="mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: BRAND_NAVY }}>
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-[13px] font-medium text-slate-900">VULO Assistant</span>
+          <div className="mb-6 flex items-center gap-2.5 border-b border-slate-100 pb-4">
+            <img src={foxIcon} alt="" width={32} height={32} className="h-8 w-8 object-contain" />
+            <span className="text-[13px] font-semibold text-slate-900">VULO Assistant</span>
+            <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} /> online
+            </span>
           </div>
 
           <div className="space-y-4">
@@ -402,9 +438,11 @@ function WhatsApp() {
           className="order-2 mx-auto w-full max-w-md rounded-[32px] border border-slate-200 bg-slate-50 p-4 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.15)] lg:order-1"
         >
           <div className="mb-4 flex items-center gap-3 border-b border-slate-200 pb-3">
-            <div className="h-10 w-10 rounded-full" style={{ background: BRAND_NAVY }} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white">
+              <img src={foxIcon} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+            </div>
             <div>
-              <div className="text-[14px] font-semibold text-slate-900">Hotel Plaza Real</div>
+              <div className="text-[14px] font-semibold text-slate-900">Hotel Plaza Real · VULO</div>
               <div className="text-[11px] text-slate-500">en línea · automatizado</div>
             </div>
           </div>
@@ -552,6 +590,17 @@ function FinalCTA() {
   return (
     <section className="border-t border-slate-100 py-32" style={{ background: BRAND_NAVY }}>
       <div className="mx-auto max-w-4xl px-6 text-center lg:px-10">
+        <motion.img
+          src={foxIcon}
+          alt="VULO"
+          width={72}
+          height={72}
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease }}
+          className="mx-auto mb-8 h-[72px] w-[72px] object-contain"
+        />
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -630,6 +679,7 @@ export default function Landing() {
       <main>
         <Hero />
         <Story />
+        <BrandStrip />
         <IABlock />
         <WhatsApp />
         <Metrics />
