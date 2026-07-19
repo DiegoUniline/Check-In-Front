@@ -48,6 +48,9 @@ import {
 } from '@/components/reservas/ReservasFiltersSheet';
 import { getEstadoConfig } from '@/components/reservas/estadoConfig';
 import { cn } from '@/lib/utils';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { addMonths } from 'date-fns';
 
 // Chips reutilizables para filtro de tipo de habitación
 const TipoChips = ({
