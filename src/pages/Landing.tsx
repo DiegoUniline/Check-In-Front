@@ -8,10 +8,6 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import foxIcon from '@/assets/hospedapp-icon.png';
-import bannerImg from '@/assets/vulo-banner.jpg';
-import people1 from '@/assets/vulo-people-1.jpg';
-import people2 from '@/assets/vulo-people-2.jpg';
-import people3 from '@/assets/vulo-people-3.jpg';
 
 /**
  * VULO — Landing pública
@@ -40,8 +36,8 @@ function Nav() {
     <header className="sticky top-0 z-50 border-b border-transparent bg-white/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-6 lg:px-10">
         <Link to="/" className="flex items-center gap-2.5">
-          <Logo size={28} />
-          <span className="text-[19px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
+          <Logo size={40} />
+          <span className="text-[22px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
             vulo<span style={{ color: BRAND_ORANGE }}>.</span>
           </span>
         </Link>
@@ -74,7 +70,10 @@ function Hero() {
       <div className="mx-auto max-w-[1440px] px-6 pb-24 pt-20 lg:px-10 lg:pb-32 lg:pt-28">
         <motion.div initial="hidden" animate="show" className="mx-auto max-w-4xl text-center">
           <motion.div variants={fadeUp} custom={0} className="mb-10 flex flex-col items-center gap-4">
-            <img src={foxIcon} alt="VULO" width={72} height={72} className="h-[72px] w-[72px] object-contain" />
+            <img src={foxIcon} alt="VULO" width={140} height={140} className="h-[120px] w-[120px] object-contain md:h-[140px] md:w-[140px]" />
+            <span className="text-[28px] font-bold tracking-[-0.04em] md:text-[34px]" style={{ color: BRAND_NAVY }}>
+              vulo<span style={{ color: BRAND_ORANGE }}>.</span>
+            </span>
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-700">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} />
               Nuevo · IA para operaciones de hotel
@@ -313,9 +312,9 @@ function BrandStrip() {
                 key={i}
                 src={foxIcon}
                 alt=""
-                width={40}
-                height={40}
-                className="h-10 w-10 object-contain"
+                width={96}
+                height={96}
+                className={i === 2 ? 'h-24 w-24 object-contain' : 'h-12 w-12 object-contain'}
                 style={{ opacity: i === 2 ? 1 : 0.35 }}
               />
             ))}
@@ -597,13 +596,13 @@ function FinalCTA() {
         <motion.img
           src={foxIcon}
           alt="VULO"
-          width={72}
-          height={72}
+          width={160}
+          height={160}
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease }}
-          className="mx-auto mb-8 h-[72px] w-[72px] object-contain"
+          className="mx-auto mb-8 h-[140px] w-[140px] object-contain md:h-[160px] md:w-[160px]"
         />
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
@@ -653,8 +652,8 @@ function Footer() {
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         <div className="flex flex-wrap items-center justify-between gap-8">
           <div className="flex items-center gap-2.5">
-            <Logo size={26} />
-            <span className="text-[17px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
+            <Logo size={40} />
+            <span className="text-[20px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
               vulo<span style={{ color: BRAND_ORANGE }}>.</span>
             </span>
           </div>
@@ -680,40 +679,68 @@ function Banner() {
   return (
     <section className="relative overflow-hidden border-b border-slate-100 bg-white">
       <div className="mx-auto max-w-[1440px] px-6 pt-6 lg:px-10">
-        <div className="relative overflow-hidden rounded-[24px] border border-slate-200">
-          <img
-            src={bannerImg}
-            alt="Recepción de hotel operando con VULO"
-            width={1920}
-            height={1080}
-            className="h-[340px] w-full object-cover md:h-[440px] lg:h-[520px]"
-            loading="eager"
-            decoding="async"
-          />
-          {/* Velo navy plano (sin degradado difuminado) */}
-          <div className="absolute inset-0" style={{ background: BRAND_NAVY, opacity: 0.55 }} />
-          <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 lg:p-14">
-            <div className="mb-4 flex items-center gap-3">
-              <img src={foxIcon} alt="" width={44} height={44} className="h-11 w-11 object-contain" />
-              <span className="text-[16px] font-bold tracking-[-0.02em] text-white">
-                vulo<span style={{ color: BRAND_ORANGE }}>.</span>
-              </span>
-              <span className="ml-2 rounded-full border border-white/30 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80">
+        <div className="relative overflow-hidden rounded-[24px] border border-slate-200 p-8 md:p-12 lg:p-16" style={{ background: BRAND_NAVY }}>
+          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
+            <div>
+              <div className="mb-6 flex items-center gap-4">
+                <img src={foxIcon} alt="VULO" width={96} height={96} className="h-20 w-20 object-contain md:h-24 md:w-24" />
+                <span className="text-[36px] font-bold tracking-[-0.03em] text-white md:text-[44px]">
+                  vulo<span style={{ color: BRAND_ORANGE }}>.</span>
+                </span>
+              </div>
+              <span className="inline-block rounded-full border border-white/30 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80">
                 Software para hoteles
               </span>
+              <h2 className="mt-5 max-w-xl text-[32px] font-bold leading-[1.05] tracking-[-0.03em] text-white md:text-[48px] lg:text-[54px]">
+                La operación de tu hotel,
+                <br />
+                <span className="text-white/60">tan tranquila como debería ser.</span>
+              </h2>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Button asChild size="sm" className="h-11 rounded-full bg-[#F97316] px-6 text-[14px] font-medium text-white shadow-none hover:bg-[#ea6a10]">
+                  <Link to="/registro">Empezar gratis</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="h-11 rounded-full border-white/30 bg-transparent px-6 text-[14px] font-medium text-white hover:bg-white/10 hover:text-white">
+                  <Link to="/login">Ver demostración</Link>
+                </Button>
+              </div>
             </div>
-            <h2 className="max-w-3xl text-[28px] font-bold leading-[1.05] tracking-[-0.03em] text-white md:text-[44px] lg:text-[54px]">
-              La operación de tu hotel,
-              <br />
-              <span className="text-white/70">tan tranquila como debería ser.</span>
-            </h2>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Button asChild size="sm" className="h-11 rounded-full bg-[#F97316] px-6 text-[14px] font-medium text-white shadow-none hover:bg-[#ea6a10]">
-                <Link to="/registro">Empezar gratis</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="h-11 rounded-full border-white/30 bg-transparent px-6 text-[14px] font-medium text-white hover:bg-white/10 hover:text-white">
-                <Link to="/login">Ver demostración</Link>
-              </Button>
+            {/* Producto: vista rápida de KPIs */}
+            <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
+              <div className="mb-4 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-white/60">
+                <img src={foxIcon} alt="" width={18} height={18} className="h-4 w-4 object-contain" />
+                vulo · panel en vivo
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { l: 'Ocupación', v: '87%', c: BRAND_ORANGE },
+                  { l: 'Ingresos hoy', v: '$48.3k' },
+                  { l: 'Check-ins', v: '14 / 16' },
+                  { l: 'ADR', v: '$1,842' },
+                ].map((k) => (
+                  <div key={k.l} className="rounded-[12px] border border-white/10 bg-white/[0.03] p-3">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-white/50">{k.l}</div>
+                    <div className="mt-1 text-[20px] font-bold tracking-tight" style={{ color: k.c || '#fff' }}>{k.v}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 space-y-1.5">
+                {[
+                  { room: '101', name: 'García M.', s: 0, l: 3, o: false },
+                  { room: '103', name: 'Booking · Kim', s: 2, l: 2, o: true },
+                  { room: '104', name: 'Web · Torres', s: 0, l: 5, o: false },
+                ].map((r) => (
+                  <div key={r.room} className="flex items-center gap-2">
+                    <span className="w-8 text-[10px] font-medium text-white/50">{r.room}</span>
+                    <div className="relative flex-1">
+                      <div className="h-6 rounded-md bg-white/[0.06]" />
+                      <div className="absolute top-0 flex h-6 items-center rounded-md px-2 text-[10px] font-medium text-white" style={{ left: `${r.s * 14}%`, width: `${r.l * 14}%`, background: r.o ? BRAND_ORANGE : '#3D5A80' }}>
+                        {r.name}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -722,12 +749,7 @@ function Banner() {
   );
 }
 
-function PeopleGallery() {
-  const items = [
-    { img: people1, title: 'Recepción', desc: 'Check-in en 30 segundos con firma digital.' },
-    { img: people2, title: 'Housekeeping', desc: 'Rutas de limpieza asignadas y en vivo.' },
-    { img: people3, title: 'Gerencia', desc: 'Datos, tarifas e IA en una sola pantalla.' },
-  ];
+function ProductGallery() {
   return (
     <section className="border-t border-slate-100 bg-white py-32">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
@@ -738,50 +760,107 @@ function PeopleGallery() {
           transition={{ duration: 0.7, ease }}
           className="mx-auto mb-16 flex max-w-3xl flex-col items-center gap-4 text-center"
         >
-          <img src={foxIcon} alt="" width={44} height={44} className="h-11 w-11 object-contain" />
+          <img src={foxIcon} alt="" width={88} height={88} className="h-20 w-20 object-contain md:h-[88px] md:w-[88px]" />
           <div className="text-[13px] font-semibold uppercase tracking-[0.2em]" style={{ color: BRAND_ORANGE }}>
-            Personas reales · trabajo real
+            Lo que ves cuando abres VULO
           </div>
           <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
-            Hecho para quienes
+            El software que
             <br />
-            <span className="text-slate-400">mueven un hotel cada día.</span>
+            <span className="text-slate-400">reemplaza tu Excel y tus notas.</span>
           </h2>
         </motion.div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {items.map((it, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: i * 0.08, duration: 0.7, ease }}
-              className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-white"
-            >
-              <div className="relative">
-                <img
-                  src={it.img}
-                  alt={it.title}
-                  width={1280}
-                  height={1600}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-[380px] w-full object-cover transition duration-700 group-hover:scale-[1.02]"
-                />
-                <div className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/95 backdrop-blur-sm">
-                  <img src={foxIcon} alt="" width={26} height={26} className="h-[26px] w-[26px] object-contain" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Reservas timeline */}
+          <MockCard title="Reservas · Timeline" desc="Arrastra, mueve, confirma. Todo tu inventario visible.">
+            <div className="space-y-1.5">
+              {[
+                { room: '101', name: 'García', s: 0, l: 3, o: false },
+                { room: '102', name: 'López', s: 1, l: 4, o: false },
+                { room: '103', name: 'Booking', s: 2, l: 2, o: true },
+                { room: '104', name: 'Torres', s: 0, l: 5, o: false },
+                { room: '105', name: 'Ruiz', s: 3, l: 2, o: false },
+              ].map((r) => (
+                <div key={r.room} className="flex items-center gap-2">
+                  <span className="w-7 text-[10px] font-medium text-slate-400">{r.room}</span>
+                  <div className="relative flex-1">
+                    <div className="h-6 rounded-md bg-slate-100" />
+                    <div className="absolute top-0 flex h-6 items-center rounded-md px-2 text-[10px] font-medium text-white" style={{ left: `${r.s * 14}%`, width: `${r.l * 14}%`, background: r.o ? BRAND_ORANGE : BRAND_NAVY }}>
+                      {r.name}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="p-6">
-                <h3 className="text-[18px] font-semibold tracking-tight text-slate-900">{it.title}</h3>
-                <p className="mt-2 text-[14.5px] leading-relaxed text-slate-600">{it.desc}</p>
-              </div>
-            </motion.div>
-          ))}
+              ))}
+            </div>
+          </MockCard>
+
+          {/* WhatsApp */}
+          <MockCard title="WhatsApp automático" desc="Confirmaciones y respuestas con la voz de tu hotel.">
+            <div className="space-y-2 rounded-[12px] bg-slate-50 p-3">
+              {[
+                { f: 'bot', t: 'Reserva confirmada · Hab. 208 · Vie 24 Jul' },
+                { f: 'user', t: '¿Puedo llegar antes?' },
+                { f: 'bot', t: 'Sí, lista desde 13:00. Te aviso.' },
+                { f: 'user', t: 'Gracias 🙌' },
+              ].map((m, i) => (
+                <div key={i} className={m.f === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+                  <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-[11.5px] leading-snug ${m.f === 'user' ? 'rounded-br-sm bg-[#dcf8c6] text-slate-900' : 'rounded-bl-sm bg-white text-slate-800 border border-slate-100'}`}>
+                    {m.t}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </MockCard>
+
+          {/* Housekeeping */}
+          <MockCard title="Housekeeping en vivo" desc="Tareas asignadas, checklist digital, sin papeles.">
+            <div className="space-y-2">
+              {[
+                { h: '101', s: 'Limpia', d: true },
+                { h: '102', s: 'En proceso', d: false },
+                { h: '103', s: 'Salida 12:00', d: false },
+                { h: '104', s: 'Limpia', d: true },
+                { h: '208', s: 'Preparar 13:00', d: false, tag: true },
+              ].map((t) => (
+                <div key={t.h} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`h-4 w-4 rounded-full border-2 ${t.d ? 'border-transparent' : 'border-slate-300'}`} style={t.d ? { background: BRAND_ORANGE } : undefined} />
+                    <span className="text-[12px] font-medium text-slate-800">Hab. {t.h}</span>
+                  </div>
+                  <span className={`text-[11px] font-medium ${t.tag ? '' : 'text-slate-500'}`} style={t.tag ? { color: BRAND_ORANGE } : undefined}>{t.s}</span>
+                </div>
+              ))}
+            </div>
+          </MockCard>
         </div>
       </div>
     </section>
+  );
+}
+
+function MockCard({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.7, ease }}
+      className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_10px_40px_-20px_rgba(15,23,42,0.15)]"
+    >
+      <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
+        <img src={foxIcon} alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
+        <span className="text-[12px] font-semibold text-slate-900">vulo · {title.split(' · ')[0]}</span>
+        <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium text-slate-500">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} /> live
+        </span>
+      </div>
+      <div className="p-5">{children}</div>
+      <div className="border-t border-slate-100 p-5">
+        <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">{title}</h3>
+        <p className="mt-1 text-[13.5px] leading-relaxed text-slate-600">{desc}</p>
+      </div>
+    </motion.div>
   );
 }
 
@@ -795,7 +874,7 @@ export default function Landing() {
         <Story />
         <BrandStrip />
         <IABlock />
-        <PeopleGallery />
+        <ProductGallery />
         <WhatsApp />
         <Metrics />
         <Features />
