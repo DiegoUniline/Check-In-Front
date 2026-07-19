@@ -112,8 +112,17 @@ class ApiClient {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     const { data: profile } = await supabase.from('profiles').select('*, hotels(nombre)').eq('id', data.user.id).maybeSingle();
-    const hotelId = profile?.hotel_id || null;
+    const hotelId = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
     this.setHotelId(hotelId);
+    // Leer el rol real desde user_roles (no asumir Admin)
+    const { data: roleRow } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', data.user.id)
+      .order('role', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const rolReal = (roleRow?.role as string) || 'Recepcion';
     return {
       token: data.session?.access_token || '',
       user: {
@@ -121,7 +130,7 @@ class ApiClient {
         email: data.user.email || email,
         nombre: profile?.nombre || email.split('@')[0],
         apellidoPaterno: profile?.apellido_paterno || '',
-        rol: 'Admin',
+        rol: rolReal,
         hotelNombre: (profile as any)?.hotels?.nombre || (data.user.user_metadata?.hotel_nombre as string) || 'Hotel',
         hotel_id: hotelId,
       },
@@ -151,8 +160,16 @@ class ApiClient {
     }
     // Sesión activa: leer profile creado por el trigger
     const { data: profile } = await supabase.from('profiles').select('*, hotels(nombre)').eq('id', data.user!.id).maybeSingle();
-    const hotelId = profile?.hotel_id || null;
+    const hotelId = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
     if (hotelId) this.setHotelId(hotelId);
+    const { data: roleRow } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', data.user!.id)
+      .order('role', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const rolReal = (roleRow?.role as string) || 'Admin';
     return {
       needsConfirmation: false,
       user: {
@@ -160,7 +177,7 @@ class ApiClient {
         email: data.user!.email || email,
         nombre: profile?.nombre || nombre,
         apellidoPaterno: profile?.apellido_paterno || '',
-        rol: 'Admin',
+        rol: rolReal,
         hotelNombre: (profile as any)?.hotels?.nombre || hotel_nombre,
         hotel_id: hotelId,
       },
@@ -420,7 +437,7 @@ class ApiClient {
     });
   };
   getReserva = async (id: string): Promise<any> => {
-    const { data, error } = await supabase.from('reservas').select('*, clientes(*), habitaciones(*, tipos_habitacion(*)), tipos_habitacion(*), hotel:hotels(*)').eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('reservas').select('*, clientes(*), habitaciones(*, tipos_habitacion(*)), tipos_habitacion(*), hotel:hotels(*)').eq('id', id).eq('hotel_id', this.hid()).maybeSingle();
     if (error) throw error;
     if (!data) return null;
     const [{ data: pagos }, { data: cargos }] = await Promise.all([
