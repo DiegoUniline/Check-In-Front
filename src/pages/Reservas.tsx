@@ -417,24 +417,24 @@ export default function Reservas() {
             {reservasSubView === 'timeline' && (
             <>
             <Card>
-          <CardContent className="p-2">
+          <CardContent className="p-3 space-y-2">
+            {/* Fila 1: navegación de fecha + vista */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => navegarFecha('prev')}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('prev')}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => navegarFecha('today')}>
+                <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-medium" onClick={() => navegarFecha('today')}>
                   Hoy
                 </Button>
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => navegarFecha('next')}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('next')}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs ml-1 gap-1">
+                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-medium ml-1 gap-1.5">
                       <CalendarDays className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">{format(startDate, "d MMM yyyy", { locale: es })}</span>
-                      <span className="sm:hidden">{format(startDate, "d MMM", { locale: es })}</span>
+                      {format(startDate, "d MMM yyyy", { locale: es })}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
@@ -476,32 +476,36 @@ export default function Reservas() {
                 </Popover>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex bg-muted p-0.5 rounded">
-                  {(['Dia', 'Semana', 'Mes'] as ViewMode[]).map(mode => (
-                    <Button
-                      key={mode}
-                      variant={viewMode === mode ? 'default' : 'ghost'}
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setViewMode(mode)}
-                    >
-                      {mode}
-                    </Button>
-                  ))}
-                </div>
-                
-                <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
-                
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                  <Input 
-                    placeholder="Buscar..." 
-                    className="pl-6 h-7 w-[80px] text-xs"
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                  />
-                </div>
+              <div className="inline-flex items-center gap-1 bg-muted p-1 rounded-xl">
+                {(['Dia', 'Semana', 'Mes'] as ViewMode[]).map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setViewMode(mode)}
+                    className={cn(
+                      'h-8 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors',
+                      viewMode === mode
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Fila 2: filtros de tipo + búsqueda */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar habitación..."
+                  className="pl-8 h-8 w-[200px] text-xs"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                />
               </div>
             </div>
           </CardContent>
