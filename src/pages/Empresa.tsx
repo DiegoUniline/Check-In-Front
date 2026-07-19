@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { ArrowRight, MapPin, Heart, Zap, ShieldCheck, Users } from 'lucide-react';
+import { ArrowRight, MapPin, Heart, Zap, ShieldCheck, Users, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageShell, SectionTag, NAVY, ORANGE, ease } from './landing/Chrome';
 
@@ -39,12 +39,35 @@ export default function Empresa() {
 
       <section className="border-t border-slate-100 bg-slate-50/60 py-24">
         <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
-          <div className="mx-auto max-w-3xl text-center">
-            <SectionTag>Cómo pensamos</SectionTag>
+          {/* Sueño */}
+          <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[1fr_1.35fr] lg:items-start">
+            <div>
+              <SectionTag>Nuestro sueño</SectionTag>
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-[14px]" style={{ background: NAVY }}>
+                <Moon className="h-5 w-5 text-white" strokeWidth={1.75} />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-[30px] font-bold tracking-[-0.03em] text-slate-900 md:text-[44px]">
+                Que operar un hotel
+                <br />
+                <span className="text-slate-400">se sienta ligero.</span>
+              </h2>
+              <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-600 md:text-[18px]">
+                Soñamos con hoteles donde el equipo llega tranquilo, el huésped se siente esperado
+                y los dueños duermen sabiendo que todo está en orden. Un hotel más humano, con menos
+                fricción y más huéspedes que vuelven — sostenido por tecnología que no estorba.
+              </p>
+            </div>
+          </div>
+
+          {/* Principios */}
+          <div className="mx-auto mt-24 max-w-3xl text-center">
+            <SectionTag>Principios</SectionTag>
             <h2 className="text-[30px] font-bold tracking-[-0.03em] text-slate-900 md:text-[44px]">
-              Menos fricción.
+              Cómo pensamos,
               <br />
-              <span className="text-slate-400">Más huéspedes que vuelven.</span>
+              <span className="text-slate-400">cómo construimos.</span>
             </h2>
           </div>
           <div className="mt-14 grid gap-5 md:grid-cols-2">
