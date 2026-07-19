@@ -788,7 +788,6 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   doc.setFontSize(9);
   doc.setTextColor(...GRAY_500);
   doc.setCharSpace(0.4);
-  doc.text('TARJETA DE REGISTRO DE HUÉSPED', rightX, y + 5, { align: 'right' });
   doc.setCharSpace(0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
