@@ -536,6 +536,10 @@ function Features() {
             <br />
             <span className="text-slate-400">en un solo sistema.</span>
           </h2>
+          <p className="mx-auto mt-5 max-w-xl text-[15.5px] leading-relaxed text-slate-500">
+            Diseñado para que dé gusto usarlo, todos los días. Cada pantalla existe porque alguien la necesita
+            para trabajar mejor. No hay pestañas de adorno.
+          </p>
         </div>
 
         <div className="mt-16 grid gap-px overflow-hidden rounded-[22px] border border-slate-200 bg-slate-200 md:grid-cols-2 lg:grid-cols-4">
