@@ -494,7 +494,7 @@ export default function HistorialReservas() {
             <>
               {/* Contenedor relativo para scroll horizontal seguro */}
               <div className="relative w-full overflow-x-auto">
-                <Table className="min-w-[800px]">
+                <Table className="min-w-[800px] [&_th]:h-9 [&_th]:py-1 [&_td]:py-1.5 [&_td]:px-2 sm:[&_td]:px-3 [&_th]:px-2 sm:[&_th]:px-3 text-[13px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[40px]">
