@@ -8,10 +8,6 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import foxIcon from '@/assets/hospedapp-icon.png';
-import bannerImg from '@/assets/vulo-banner.jpg';
-import people1 from '@/assets/vulo-people-1.jpg';
-import people2 from '@/assets/vulo-people-2.jpg';
-import people3 from '@/assets/vulo-people-3.jpg';
 
 /**
  * VULO — Landing pública
@@ -40,8 +36,8 @@ function Nav() {
     <header className="sticky top-0 z-50 border-b border-transparent bg-white/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-6 lg:px-10">
         <Link to="/" className="flex items-center gap-2.5">
-          <Logo size={28} />
-          <span className="text-[19px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
+          <Logo size={40} />
+          <span className="text-[22px] font-bold tracking-[-0.03em]" style={{ color: BRAND_NAVY }}>
             vulo<span style={{ color: BRAND_ORANGE }}>.</span>
           </span>
         </Link>
@@ -74,7 +70,10 @@ function Hero() {
       <div className="mx-auto max-w-[1440px] px-6 pb-24 pt-20 lg:px-10 lg:pb-32 lg:pt-28">
         <motion.div initial="hidden" animate="show" className="mx-auto max-w-4xl text-center">
           <motion.div variants={fadeUp} custom={0} className="mb-10 flex flex-col items-center gap-4">
-            <img src={foxIcon} alt="VULO" width={72} height={72} className="h-[72px] w-[72px] object-contain" />
+            <img src={foxIcon} alt="VULO" width={140} height={140} className="h-[120px] w-[120px] object-contain md:h-[140px] md:w-[140px]" />
+            <span className="text-[28px] font-bold tracking-[-0.04em] md:text-[34px]" style={{ color: BRAND_NAVY }}>
+              vulo<span style={{ color: BRAND_ORANGE }}>.</span>
+            </span>
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-700">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} />
               Nuevo · IA para operaciones de hotel
