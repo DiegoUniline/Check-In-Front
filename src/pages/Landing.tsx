@@ -69,14 +69,11 @@ function Nav() {
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Link
             to="/login"
-            className="inline-flex h-9 items-center whitespace-nowrap rounded-lg border px-2.5 text-[12px] font-medium transition hover:opacity-90 sm:h-10 sm:px-4 sm:text-[14px]"
-            style={{ borderColor: '#FDBA74', color: ORANGE, background: '#FFF7ED' }}
+            className="inline-flex h-9 items-center whitespace-nowrap rounded-lg px-3.5 text-[12px] font-semibold text-white shadow-sm transition hover:opacity-95 sm:h-10 sm:px-5 sm:text-[14px]"
+            style={{ background: ORANGE }}
           >
             Iniciar sesión
           </Link>
-          <Button asChild size="sm" className="h-9 rounded-full px-3 text-[12px] font-medium text-white shadow-none hover:opacity-95 sm:h-10 sm:px-5 sm:text-[14px]" style={{ background: NAVY }}>
-            <Link to="/contacto">Agendar demo</Link>
-          </Button>
         </div>
       </div>
     </header>
