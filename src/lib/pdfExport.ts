@@ -723,16 +723,28 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   let y = M;
 
   // IZQUIERDA: nombre y dirección del hotel
+  let headerX = M;
+  if (opts.hotelLogoUrl) {
+    try {
+      const logoData = await loadImageDataUrl(opts.hotelLogoUrl);
+      doc.addImage(logoData, 'PNG', M, y, 18, 18, undefined, 'FAST');
+      headerX = M + 22;
+    } catch { /* noop */ }
+  }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(...BLACK);
-  doc.text(opts.hotel || 'Hotel', M, y + 5);
+  doc.text(opts.hotel || 'Hotel', headerX, y + 5);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...GRAY_600);
   let ly = y + 11;
-  if (opts.hotelDireccion) { doc.text(String(opts.hotelDireccion), M, ly); ly += 4.5; }
-  if (opts.hotelTelefono) { doc.text(`Tel. ${opts.hotelTelefono}`, M, ly); ly += 4.5; }
+  const dirLinea = [opts.hotelDireccion, opts.hotelCiudad].filter(Boolean).join(', ');
+  if (dirLinea) { doc.text(dirLinea, headerX, ly); ly += 4.5; }
+  const contacto = [opts.hotelTelefono ? `Tel. ${opts.hotelTelefono}` : '', opts.hotelEmail || '']
+    .filter(Boolean)
+    .join('  ·  ');
+  if (contacto) { doc.text(contacto, headerX, ly); ly += 4.5; }
 
   // DERECHA: título del documento + folio + fecha
   const rightX = pageW - M;
