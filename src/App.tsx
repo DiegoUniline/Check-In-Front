@@ -43,7 +43,12 @@ import ReservasOnline from "./pages/ReservasOnline";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import Landing from "./pages/Landing";
+import MarketingLayout from "@/marketing/layout/MarketingLayout";
+import Home from "@/marketing/pages/Home";
+import Features from "@/marketing/pages/Features";
+import Pricing from "@/marketing/pages/Pricing";
+import About from "@/marketing/pages/About";
+import Contact from "@/marketing/pages/Contact";
 import PublicHotel from "./pages/PublicHotel";
 import ScrollToTop from "./components/ScrollToTop";
 import Chats from "./pages/Chats";
@@ -79,7 +84,13 @@ const AppRoutes = () => (
     <Route path="/signup" element={<Signup />} />
     <Route path="/forgot-password" element={<ForgotPassword />} />
     <Route path="/reset-password" element={<ResetPassword />} />
-    <Route path="/" element={<Landing />} />
+    <Route element={<MarketingLayout />}>
+      <Route path="/" element={<Home />} />
+      <Route path="/features" element={<Features />} />
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+    </Route>
     <Route path="/h/:slug" element={<PublicHotel />} />
     <Route
       path="/admin-plataforma"
