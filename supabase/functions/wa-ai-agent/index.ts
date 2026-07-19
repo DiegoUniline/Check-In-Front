@@ -12,7 +12,7 @@ import { corsHeaders, evoFetch, json } from "../_shared/evolution.ts";
 
 const LOVABLE_API = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
-const MAX_STEPS = 6;
+const MAX_STEPS = 8;
 
 type Msg = { role: "system" | "user" | "assistant" | "tool"; content: string; tool_call_id?: string; tool_calls?: unknown[]; name?: string };
 
