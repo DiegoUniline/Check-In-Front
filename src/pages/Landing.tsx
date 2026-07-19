@@ -295,6 +295,36 @@ function Story() {
 /* ────────────────────────────────────────────────────────────────
    IA — no dice que tiene IA, la muestra
    ────────────────────────────────────────────────────────────── */
+function BrandStrip() {
+  return (
+    <section className="border-t border-slate-100 bg-white py-16">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
+        <div className="flex flex-col items-center gap-6">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+            Diseñado con la calma del zorro
+          </div>
+          <div className="flex items-center justify-center gap-10 opacity-80 md:gap-16">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <img
+                key={i}
+                src={foxIcon}
+                alt=""
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+                style={{ opacity: i === 2 ? 1 : 0.35 }}
+              />
+            ))}
+          </div>
+          <div className="max-w-xl text-center text-[15px] leading-relaxed text-slate-500">
+            Silencioso, preciso, siempre atento. Así opera tu hotel con VULO.
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function IABlock() {
   return (
     <section id="ia" className="border-t border-slate-100 bg-slate-50 py-32">
