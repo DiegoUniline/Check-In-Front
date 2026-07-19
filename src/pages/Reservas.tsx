@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
@@ -146,7 +146,7 @@ export default function Reservas() {
   const [reservasSubView, setReservasSubView] = useState<ReservasSubView>('timeline');
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
-  const hoyISO = new Date().toISOString().slice(0, 10);
+  const hoyISO = todayLocal();
   const [desdeCheckin, setDesdeCheckin] = useState(hoyISO);
   const [hastaCheckin, setHastaCheckin] = useState(hoyISO);
   const [desdeCheckout, setDesdeCheckout] = useState(hoyISO);
@@ -576,7 +576,7 @@ export default function Reservas() {
                               </TableRow>
                             );
                           }
-                          const hoy = new Date().toISOString().substring(0, 10);
+                          const hoy = todayLocal();
                           return rows.map((h: any) => {
                             const activa = reservas.find((r: any) => {
                               const rid = r.habitacion_id || r.habitaciones?.id;
