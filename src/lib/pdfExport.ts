@@ -564,18 +564,18 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   const valueX = M + labelW;
   filas.forEach((f) => {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10.5);
+    doc.setFontSize(10);
     doc.setTextColor(...GRAY_500);
-    doc.text(f.label, M, y + 4.5);
+    doc.text(f.label, M, y + 3.5);
     doc.setFont('helvetica', f.bold ? 'bold' : 'normal');
     doc.setTextColor(...BLACK);
-    doc.text(f.value, valueX, y + 4.5);
+    doc.text(f.value, valueX, y + 3.5);
     doc.setDrawColor(...GRAY_200);
     doc.setLineWidth(0.15);
-    doc.line(M, y + 7, pageW - M, y + 7);
-    y += 8.5;
+    doc.line(M, y + 5.5, pageW - M, y + 5.5);
+    y += 6.5;
   });
-  y += 6;
+  y += 4;
 
   // --- 3. ESTANCIA ---
   y = sectionTitle('Estancia', y);
@@ -595,11 +595,11 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   doc.setFontSize(9);
   doc.setTextColor(...GRAY_700);
   cols.forEach((c, i) => {
-    doc.text(c, colX[i] + 1, y + 5);
+    doc.text(c, colX[i] + 1, y + 4);
   });
   doc.setDrawColor(...GRAY_400);
   doc.setLineWidth(0.18);
-  doc.line(M, y + 7, pageW - M, y + 7);
+  doc.line(M, y + 6, pageW - M, y + 6);
 
   const hab = reserva.habitacion_numero
     ? `${reserva.habitacion_numero}${reserva.tipo_habitacion_nombre ? ' · ' + reserva.tipo_habitacion_nombre : ''}`
@@ -611,19 +611,19 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   const estado = String(reserva.estado || 'confirmada').replace(/^./, (c) => c.toUpperCase());
   const values = [hab, ci, co, noches, huesp, estado];
 
-  const rowY = y + 14;
+  const rowY = y + 11;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setTextColor(...BLACK);
   values.forEach((v, i) => {
     const maxW = (colX[i + 1] - colX[i]) - 2;
     const lines = doc.splitTextToSize(v, maxW);
     doc.text(lines[0], colX[i] + 1, rowY);
   });
-  y = rowY + 8;
+  y = rowY + 5;
 
   // --- 4. RESUMEN FINANCIERO ---
-  y = sectionTitle('Resumen financiero', y + 4);
+  y = sectionTitle('Resumen financiero', y + 3);
   const subtotal = Number(reserva.subtotal_hospedaje || 0);
   const desc = Number(reserva.descuento || 0);
   const imp = Number(reserva.total_impuestos || 0);
@@ -648,12 +648,12 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
       y += 1;
     }
     doc.setFont('helvetica', f.bold ? 'bold' : 'normal');
-    doc.setFontSize(f.bold ? 11 : 10.5);
+    doc.setFontSize(f.bold ? 10.5 : 10);
     doc.setTextColor(...(f.bold ? BLACK : GRAY_600));
-    doc.text(f.label, M, y + 5);
+    doc.text(f.label, M, y + 4);
     doc.setTextColor(...BLACK);
-    doc.text(f.value, pageW - M, y + 5, { align: 'right' });
-    y += 7;
+    doc.text(f.value, pageW - M, y + 4, { align: 'right' });
+    y += 5.5;
     if (f.separator === 'bottom' || f.separator === 'both') {
       doc.setDrawColor(...BLACK);
       doc.setLineWidth(0.3);
@@ -664,9 +664,9 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
       doc.setLineWidth(0.12);
       doc.line(M, y, pageW - M, y);
     }
-    y += 1.5;
+    y += 0.8;
   });
-  y += 4;
+  y += 3;
 
   // --- 5. SOLICITUDES ---
   if (reserva.solicitudes_especiales) {
@@ -830,19 +830,19 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const valueX = M + labelW;
   filas.forEach((f) => {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10.5);
+    doc.setFontSize(10);
     doc.setTextColor(...GRAY_500);
-    doc.text(f.label, M, y + 4.5);
+    doc.text(f.label, M, y + 3.5);
     doc.setFont('helvetica', f.bold ? 'bold' : 'normal');
     doc.setTextColor(...BLACK);
-    doc.text(f.value, valueX, y + 4.5);
+    doc.text(f.value, valueX, y + 3.5);
     // línea inferior
     doc.setDrawColor(...GRAY_200);
     doc.setLineWidth(0.15);
-    doc.line(M, y + 7, pageW - M, y + 7);
-    y += 8.5;
+    doc.line(M, y + 5.5, pageW - M, y + 5.5);
+    y += 6.5;
   });
-  y += 6;
+  y += 4;
 
   // --- 3. ESTANCIA ---
   y = sectionTitle('Estancia', y);
@@ -868,13 +868,13 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   cols.forEach((c, i) => {
     const align: 'left' | 'right' = i === cols.length - 1 ? 'right' : 'left';
     const x = align === 'right' ? colX[i + 1] : colX[i] + 1;
-    doc.text(c, x, y + 5, { align });
+    doc.text(c, x, y + 4, { align });
   });
 
   // línea bajo headers
   doc.setDrawColor(...GRAY_400);
   doc.setLineWidth(0.18);
-  doc.line(M, y + 7, pageW - M, y + 7);
+  doc.line(M, y + 6, pageW - M, y + 6);
 
   // fila de datos
   const hab = reserva.habitacion_numero
@@ -887,9 +887,9 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const totalStr = fmtMoney(Number(reserva.total || 0), currency);
   const values = [hab, ci, co, noches, huesp, totalStr];
 
-  const rowY = y + 14;
+  const rowY = y + 11;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setTextColor(...BLACK);
   values.forEach((v, i) => {
     const isTotal = i === cols.length - 1;
@@ -906,7 +906,7 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.35);
   doc.line(colX[cols.length - 1] - 30, rowY + 2, colX[cols.length], rowY + 2);
-  y = rowY + 10;
+  y = rowY + 7;
 
   // --- 4. TÉRMINOS Y CONDICIONES ---
   y = sectionTitle('Términos y condiciones', y + 2);
