@@ -45,6 +45,10 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import MarketingLayout from "@/marketing/layout/MarketingLayout";
 import Landing from "@/pages/Landing";
+import Funciones from "@/pages/Funciones";
+import Precios from "@/pages/Precios";
+import Empresa from "@/pages/Empresa";
+import Contacto from "@/pages/Contacto";
 import Features from "@/marketing/pages/Features";
 import Pricing from "@/marketing/pages/Pricing";
 import About from "@/marketing/pages/About";
@@ -85,6 +89,10 @@ const AppRoutes = () => (
     <Route path="/forgot-password" element={<ForgotPassword />} />
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/" element={<Landing />} />
+    <Route path="/funciones" element={<Funciones />} />
+    <Route path="/precios" element={<Precios />} />
+    <Route path="/empresa" element={<Empresa />} />
+    <Route path="/contacto" element={<Contacto />} />
     <Route element={<MarketingLayout />}>
       <Route path="/features" element={<Features />} />
       <Route path="/pricing" element={<Pricing />} />
