@@ -26,6 +26,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 
 interface ReservaDetalleModalProps {
   open: boolean;
@@ -540,7 +541,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               <div>
                 <p className="font-medium">{ent.nombre}</p>
                 <p className="text-xs text-muted-foreground">
-                  Entregado: {ent.fecha_entrega ? format(new Date(ent.fecha_entrega), 'd MMM HH:mm', { locale: es }) : '-'}
+                  Entregado: {ent.fecha_entrega ? formatDateTime(ent.fecha_entrega) : '-'}
                 </p>
               </div>
             </div>
@@ -788,7 +789,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <Label className="text-muted-foreground text-xs">Check-in</Label>
-                      <p className="font-medium">{format(fechaCheckin, "EEE d MMM yyyy", { locale: es })}</p>
+                      <p className="font-medium">{formatDate(fechaCheckin)}</p>
                       {r.hora_llegada && <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{r.hora_llegada}</p>}
                     </div>
                     <div>
@@ -798,7 +799,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                           <PopoverTrigger asChild>
                             <Button variant="outline" className="w-full justify-start text-left font-normal h-9">
                               <Calendar className="mr-2 h-4 w-4" />
-                              {format(fechaCheckout, "d MMM yyyy", { locale: es })}
+                              {formatDate(fechaCheckout)}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -812,7 +813,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                           </PopoverContent>
                         </Popover>
                       ) : (
-                        <p className="font-medium">{format(new Date(r.fecha_checkout), "EEE d MMM yyyy", { locale: es })}</p>
+                        <p className="font-medium">{formatDate(r.fecha_checkout)}</p>
                       )}
                     </div>
                     <div>
@@ -1047,7 +1048,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                             <div className="text-right">
                               <p className="font-medium">{formatCurrency(safeNumber(cargo.total))}</p>
                               <p className="text-xs text-muted-foreground">
-                                {cargo.created_at ? format(new Date(cargo.created_at), 'd MMM HH:mm', { locale: es }) : ''}
+                                {cargo.created_at ? formatDateTime(cargo.created_at) : ''}
                               </p>
                             </div>
                           </div>
@@ -1150,7 +1151,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                               <p className="text-xs text-muted-foreground">{pago.metodo_pago} • {pago.concepto}</p>
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {pago.created_at ? format(new Date(pago.created_at), 'd MMM HH:mm', { locale: es }) : ''}
+                              {pago.created_at ? formatDateTime(pago.created_at) : ''}
                             </span>
                           </div>
                         ))}

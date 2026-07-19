@@ -58,6 +58,7 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 
 export default function HistorialReservas() {
   const { toast } = useToast();
@@ -364,7 +365,7 @@ export default function HistorialReservas() {
                   <Button variant="outline" className="w-full justify-start text-left font-normal h-10 px-3">
                     <Calendar className="mr-2 h-4 w-4" />
                     <span className="truncate">
-                        {fechaDesde ? format(fechaDesde, 'd MMM', { locale: es }) : 'Desde'}
+                        {fechaDesde ? formatDate(fechaDesde) : 'Desde'}
                     </span>
                   </Button>
                 </PopoverTrigger>
@@ -386,7 +387,7 @@ export default function HistorialReservas() {
                   <Button variant="outline" className="w-full justify-start text-left font-normal h-10 px-3">
                     <Calendar className="mr-2 h-4 w-4" />
                     <span className="truncate">
-                        {fechaHasta ? format(fechaHasta, 'd MMM', { locale: es }) : 'Hasta'}
+                        {fechaHasta ? formatDate(fechaHasta) : 'Hasta'}
                     </span>
                   </Button>
                 </PopoverTrigger>
@@ -511,10 +512,10 @@ export default function HistorialReservas() {
                           )}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {format(new Date(reserva.fecha_checkin), 'd MMM yy', { locale: es })}
+                          {formatDate(reserva.fecha_checkin)}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {format(new Date(reserva.fecha_checkout), 'd MMM yy', { locale: es })}
+                          {formatDate(reserva.fecha_checkout)}
                         </TableCell>
                         <TableCell>
                           {reserva.noches || '-'}
@@ -627,7 +628,7 @@ export default function HistorialReservas() {
                         <div>
                           <Label className="text-xs text-muted-foreground">Check-in</Label>
                           <p className="font-medium text-sm">
-                            {format(new Date(detalleCompleto.fecha_checkin), "EEE d MMM yyyy", { locale: es })}
+                            {formatDate(detalleCompleto.fecha_checkin)}
                           </p>
                           {detalleCompleto.checkin_real && (
                             <p className="text-xs text-green-600 mt-1">
@@ -638,7 +639,7 @@ export default function HistorialReservas() {
                         <div>
                           <Label className="text-xs text-muted-foreground">Check-out</Label>
                           <p className="font-medium text-sm">
-                            {format(new Date(detalleCompleto.fecha_checkout), "EEE d MMM yyyy", { locale: es })}
+                            {formatDate(detalleCompleto.fecha_checkout)}
                           </p>
                           {detalleCompleto.checkout_real && (
                             <p className="text-xs text-green-600 mt-1">
@@ -877,7 +878,7 @@ export default function HistorialReservas() {
                             detalleCompleto.cargos.map((cargo: any, idx: number) => (
                               <TableRow key={idx}>
                                 <TableCell className="whitespace-nowrap">
-                                  {cargo.fecha ? format(new Date(cargo.fecha), 'd MMM HH:mm', { locale: es }) : '-'}
+                                  {cargo.fecha ? formatDateTime(cargo.fecha) : '-'}
                                 </TableCell>
                                 <TableCell>{cargo.concepto}</TableCell>
                                 <TableCell>{cargo.cantidad}</TableCell>
@@ -927,7 +928,7 @@ export default function HistorialReservas() {
                             detalleCompleto.pagos.map((pago: any, idx: number) => (
                               <TableRow key={idx}>
                                 <TableCell className="whitespace-nowrap">
-                                  {pago.fecha ? format(new Date(pago.fecha), 'd MMM HH:mm', { locale: es }) : '-'}
+                                  {pago.fecha ? formatDateTime(pago.fecha) : '-'}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">

@@ -29,6 +29,7 @@ import { formatCurrency } from '@/lib/currency';
 import { SignaturePad } from '@/components/SignaturePad';
 import { exportarRegistroHuesped } from '@/lib/pdfExport';
 import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
+import { formatDate } from '@/lib/dateFormat';
 
 export default function CheckIn() {
   const { id } = useParams();
@@ -314,7 +315,7 @@ export default function CheckIn() {
                 <div>
                   <Label className="text-muted-foreground text-sm">Fechas</Label>
                   <p className="font-medium">
-                    {format(new Date(reserva.fecha_checkin), 'd MMM', { locale: es })} - {format(new Date(reserva.fecha_checkout), 'd MMM yyyy', { locale: es })}
+                    {formatDate(reserva.fecha_checkin)} - {formatDate(reserva.fecha_checkout)}
                   </p>
                 </div>
               </div>

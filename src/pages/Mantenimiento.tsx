@@ -36,6 +36,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import api from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
+import { formatDate } from '@/lib/dateFormat';
 
 export default function Mantenimiento() {
   const { toast } = useToast();
@@ -469,7 +470,7 @@ export default function Mantenimiento() {
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" /> 
                           {ticket.fecha_creacion || ticket.created_at 
-                            ? format(new Date(ticket.fecha_creacion || ticket.created_at), 'd MMM yyyy', { locale: es })
+                            ? formatDate(ticket.fecha_creacion || ticket.created_at)
                             : 'Sin fecha'}
                         </span>
                       </div>

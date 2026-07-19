@@ -64,6 +64,7 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 
 const categoriasConfig = [
   { id: 'Operación', nombre: 'Operación', icon: Building, color: 'bg-blue-500' },
@@ -466,7 +467,7 @@ export default function Gastos() {
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{fecha ? format(new Date(fecha), "d MMM", { locale: es }) : '-'}</p>
+                      <p className="font-medium">{fecha ? formatDate(fecha) : '-'}</p>
                       <p className="text-xs text-muted-foreground">{fecha ? format(new Date(fecha), "HH:mm") : ''}</p>
                     </div>
                   </TableCell>
@@ -681,7 +682,7 @@ export default function Gastos() {
                   <p className="text-sm text-muted-foreground">Fecha</p>
                   <p className="font-medium">
                     {detalleModal.gasto.fecha || detalleModal.gasto.created_at
-                      ? format(new Date(detalleModal.gasto.fecha || detalleModal.gasto.created_at), "d MMMM yyyy HH:mm", { locale: es })
+                      ? formatDateTime(detalleModal.gasto.fecha || detalleModal.gasto.created_at)
                       : '-'}
                   </p>
                 </div>

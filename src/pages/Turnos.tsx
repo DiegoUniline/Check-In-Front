@@ -31,6 +31,7 @@ import { es } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/currency';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 
 interface Turno {
   id: string;
@@ -193,7 +194,7 @@ export default function Turnos() {
                     <Badge className="bg-success">Activo</Badge>
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Inicio: {format(turnoActual.fechaInicio, "d MMM yyyy HH:mm", { locale: es })} • {turnoActual.usuario}
+                    Inicio: {formatDateTime(turnoActual.fechaInicio)} • {turnoActual.usuario}
                   </p>
                 </div>
               </div>
@@ -357,7 +358,7 @@ export default function Turnos() {
               {historialTurnos.map(turno => (
                 <TableRow key={turno.id}>
                   <TableCell>
-                    {format(turno.fechaInicio, "d MMM yyyy", { locale: es })}
+                    {formatDate(turno.fechaInicio)}
                   </TableCell>
                   <TableCell>{turno.usuario}</TableCell>
                   <TableCell>{formatCurrency(turno.fondoInicial)}</TableCell>
