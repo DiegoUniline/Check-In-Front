@@ -642,6 +642,153 @@ function FinalCTA() {
 }
 
 /* ────────────────────────────────────────────────────────────────
+   SKILLS — capacidades clave de VULO con iconografía rica
+   ────────────────────────────────────────────────────────────── */
+function Skills() {
+  const hero = {
+    icon: BrainCircuit,
+    tag: 'IA integrada · WhatsApp',
+    title: 'Una IA que atiende WhatsApp por ti.',
+    desc: 'VULO entiende, responde y agenda solo. Cotiza tarifas, confirma reservas, envía recordatorios y escala a recepción cuando hace falta — todo en el mismo chat, con la voz de tu hotel.',
+    bullets: [
+      'Responde en segundos, 24/7, en el idioma del huésped',
+      'Detecta intención: reservar, pedir factura, cambiar fechas',
+      'Se conecta al calendario y bloquea la habitación al confirmar',
+    ],
+  };
+
+  const skills = [
+    { icon: MousePointerClick, title: 'Super intuitiva', desc: 'Diseñada para no leer manual. Todo en dos clics: check-in, cargo, cambio de habitación.' },
+    { icon: Wand2, title: 'Automatizaciones', desc: 'Confirmaciones, recordatorios y limpieza se disparan solos con cada reserva.' },
+    { icon: Bot, title: 'Asistente IA', desc: 'Pregúntale por ocupación, ingresos o tarifas. Responde en lenguaje humano.' },
+    { icon: TrendingUp, title: 'Pricing dinámico', desc: 'Sugerencias de tarifa por temporada y demanda, sin hojas de cálculo.' },
+    { icon: Clock, title: 'Tiempo real', desc: 'Cambios reflejados al instante en cada dispositivo, sin refrescar nada.' },
+    { icon: CreditCard, title: 'Cobros y POS', desc: 'Cargos a la habitación, múltiples métodos, cierre de caja limpio.' },
+    { icon: Globe2, title: 'Reservas online', desc: 'Motor web propio + sincronización con Booking, Expedia y Airbnb.' },
+    { icon: ShieldCheck, title: 'Seguro por diseño', desc: 'Datos aislados por hotel, roles granulares, respaldos automáticos.' },
+  ];
+
+  return (
+    <section id="skills" className="border-t border-slate-100 bg-white py-32">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease }}
+          className="mx-auto mb-16 max-w-3xl text-center"
+        >
+          <div className="mb-6 text-[13px] font-semibold uppercase tracking-[0.2em]" style={{ color: BRAND_ORANGE }}>
+            Skills de VULO
+          </div>
+          <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Lo que VULO hace por ti,
+            <br />
+            <span className="text-slate-400">mientras tú atiendes al huésped.</span>
+          </h2>
+        </motion.div>
+
+        {/* Skill destacada: IA + WhatsApp */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.8, ease }}
+          className="relative overflow-hidden rounded-[28px] border border-slate-200 p-8 md:p-12 lg:p-14"
+          style={{ background: BRAND_NAVY }}
+        >
+          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_1fr]">
+            <div>
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[12px] font-medium text-white/85">
+                <hero.icon className="h-3.5 w-3.5" style={{ color: BRAND_ORANGE }} strokeWidth={2} />
+                {hero.tag}
+              </div>
+              <h3 className="text-[32px] font-bold leading-[1.05] tracking-[-0.03em] text-white md:text-[44px]">
+                {hero.title}
+              </h3>
+              <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-white/70 md:text-[17px]">
+                {hero.desc}
+              </p>
+              <div className="mt-7 space-y-3">
+                {hero.bullets.map((b) => (
+                  <div key={b} className="flex items-start gap-3 text-[14.5px] text-white/85">
+                    <Check className="mt-0.5 h-5 w-5 shrink-0" style={{ color: BRAND_ORANGE }} strokeWidth={2.5} />
+                    <span>{b}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Mini chat IA + WhatsApp */}
+            <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+              <div className="mb-3 flex items-center gap-2.5 border-b border-white/10 pb-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
+                  <img src={foxIcon} alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
+                </div>
+                <div className="leading-tight">
+                  <div className="text-[12.5px] font-semibold text-white">VULO AI · WhatsApp</div>
+                  <div className="text-[10.5px] text-white/50">respondiendo por Hotel Plaza Real</div>
+                </div>
+                <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium text-white/60">
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} /> auto
+                </span>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { f: 'user', t: 'Hola, ¿tienen habitación este fin?' },
+                  { f: 'bot', t: 'Sí, quedan 2 King disponibles Vie–Dom. Tarifa $1,842 MXN por noche. ¿Reservo?' },
+                  { f: 'user', t: 'Sí porfa, a nombre de Diego León.' },
+                  { f: 'bot', t: 'Listo Diego ✨ Reserva RES-2026-0184 confirmada. Te mandé el comprobante y la ubicación.' },
+                ].map((m, i) => (
+                  <div key={i} className={m.f === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3 py-2 text-[12.5px] leading-snug ${
+                        m.f === 'user'
+                          ? 'rounded-br-sm bg-[#dcf8c6] text-slate-900'
+                          : 'rounded-bl-sm bg-white/95 text-slate-800'
+                      }`}
+                    >
+                      {m.t}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-[10.5px] text-white/50">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: BRAND_ORANGE }} />
+                bloqueando habitación y enviando confirmación...
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Grid de skills */}
+        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {skills.map((s, i) => (
+            <motion.div
+              key={s.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ delay: (i % 4) * 0.06, duration: 0.6, ease }}
+              className="group rounded-[20px] border border-slate-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_50px_-25px_rgba(15,23,42,0.2)]"
+            >
+              <div
+                className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-[12px] transition group-hover:scale-105"
+                style={{ background: 'rgba(249,115,22,0.08)' }}
+              >
+                <s.icon className="h-5 w-5" style={{ color: BRAND_ORANGE }} strokeWidth={1.9} />
+              </div>
+              <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">{s.title}</h3>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-slate-600">{s.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────
    FOOTER
    ────────────────────────────────────────────────────────────── */
 function Footer() {
