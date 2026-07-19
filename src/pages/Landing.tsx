@@ -605,8 +605,17 @@ function ForWho() {
 
 /* ══════════════════ 6. INTEGRACIONES ══════════════════ */
 function Integrations() {
-  const live = ['Booking.com', 'WhatsApp Business', 'Stripe', 'SAT · CFDI 4.0'];
-  const soon = ['Airbnb', 'Expedia', 'Google Hotel Ads'];
+  const live = [
+    { name: 'Booking.com', icon: Globe, color: '#003580' },
+    { name: 'WhatsApp Business', icon: MessageSquare, color: '#25D366' },
+    { name: 'Stripe', icon: CreditCard, color: '#635BFF' },
+    { name: 'SAT · CFDI 4.0', icon: Receipt, color: '#B91C1C' },
+  ];
+  const soon = [
+    { name: 'Airbnb', color: '#FF5A5F' },
+    { name: 'Expedia', color: '#FFC72C' },
+    { name: 'Google Hotel Ads', color: '#4285F4' },
+  ];
   return (
     <section className="border-t border-slate-100 bg-white py-28">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
@@ -615,26 +624,41 @@ function Integrations() {
           <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
             Conecta con lo que ya usas.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-[14px] text-slate-500">
-            [LISTA REAL — verificar y ajustar antes de publicar]
+          <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-slate-500">
+            Los canales, cobros y facturación que ya operan tu hotel — hablando entre sí, sin dobles capturas.
           </p>
         </div>
 
         <div className="mx-auto mt-12 max-w-4xl">
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-            {live.map((name) => (
-              <div key={name} className="rounded-[14px] border border-slate-200 bg-white p-4 text-center text-[13.5px] font-semibold text-slate-800">
-                {name}
-              </div>
+            {live.map((it, i) => (
+              <motion.div
+                key={it.name}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.07, duration: 0.6, ease }}
+                whileHover={{ y: -4 }}
+                className="group flex flex-col items-center gap-3 rounded-[16px] border border-slate-200 bg-white p-5 text-center transition hover:shadow-[0_20px_50px_-25px_rgba(15,23,42,0.25)]"
+              >
+                <div className="flex h-11 w-11 items-center justify-center rounded-[12px]" style={{ background: `${it.color}14` }}>
+                  <it.icon className="h-5 w-5" style={{ color: it.color }} strokeWidth={1.75} />
+                </div>
+                <div className="text-[13.5px] font-semibold text-slate-800">{it.name}</div>
+                <div className="inline-flex items-center gap-1 text-[10.5px] font-medium text-emerald-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> conectado
+                </div>
+              </motion.div>
             ))}
           </div>
 
           <div className="mt-8">
             <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Próximamente</div>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-              {soon.map((name) => (
-                <div key={name} className="rounded-[14px] border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-[13px] font-medium text-slate-500">
-                  {name}
+              {soon.map((it) => (
+                <div key={it.name} className="flex items-center justify-center gap-2 rounded-[14px] border border-dashed border-slate-200 bg-slate-50 p-4 text-[13px] font-medium text-slate-500">
+                  <span className="h-2 w-2 rounded-full" style={{ background: it.color }} />
+                  {it.name}
                 </div>
               ))}
             </div>
