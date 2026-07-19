@@ -524,7 +524,6 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   doc.setFontSize(9);
   doc.setTextColor(...GRAY_500);
   doc.setCharSpace(0.4);
-  doc.text('COMPROBANTE DE RESERVA', rightX, y + 5, { align: 'right' });
   doc.setCharSpace(0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
