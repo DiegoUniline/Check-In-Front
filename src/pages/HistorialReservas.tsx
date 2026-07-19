@@ -317,7 +317,7 @@ export default function HistorialReservas() {
               if (o) setRangoBorrador({ from: fechaDesde, to: fechaHasta });
             }}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="h-10 justify-start font-normal gap-2">
+                <Button variant="outline" className="h-10 justify-start font-normal gap-2 !rounded-md">
                   <CalendarRange className="h-4 w-4" />
                   <span className="truncate max-w-[240px]">{etiquetaRango}</span>
                 </Button>
@@ -372,7 +372,7 @@ export default function HistorialReservas() {
 
             {/* Estado */}
             <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-              <SelectTrigger className="h-10 w-[150px]">
+              <SelectTrigger className="h-10 w-[150px] !rounded-md">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
@@ -388,7 +388,7 @@ export default function HistorialReservas() {
 
             {/* Origen */}
             <Select value={origenFiltro} onValueChange={setOrigenFiltro}>
-              <SelectTrigger className="h-10 w-[150px]">
+              <SelectTrigger className="h-10 w-[150px] !rounded-md">
                 <SelectValue placeholder="Origen" />
               </SelectTrigger>
               <SelectContent>
@@ -400,7 +400,7 @@ export default function HistorialReservas() {
 
             {/* Habitación */}
             <Select value={habitacionFiltro} onValueChange={setHabitacionFiltro}>
-              <SelectTrigger className="h-10 w-[140px]">
+              <SelectTrigger className="h-10 w-[140px] !rounded-md">
                 <SelectValue placeholder="Habitación" />
               </SelectTrigger>
               <SelectContent>
@@ -418,7 +418,7 @@ export default function HistorialReservas() {
                 placeholder="Buscar: # reserva, cliente, teléfono, email..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-9 h-10"
+                className="pl-9 h-10 !rounded-md"
               />
             </div>
 
