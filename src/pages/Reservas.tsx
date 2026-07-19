@@ -438,32 +438,6 @@ export default function Reservas() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                    <div className="p-2 border-b flex flex-wrap gap-1">
-                      {[
-                        { label: 'Hoy', months: 0 },
-                        { label: '+1 sem', days: 7 },
-                        { label: '+1 mes', months: 1 },
-                        { label: '+3 meses', months: 3 },
-                        { label: '+6 meses', months: 6 },
-                      ].map(q => (
-                        <Button
-                          key={q.label}
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => {
-                            const base = new Date();
-                            base.setHours(0, 0, 0, 0);
-                            let target = base;
-                            if (q.days) target = addDays(base, q.days);
-                            else if (q.months) target = addMonths(base, q.months);
-                            setStartDate(target);
-                          }}
-                        >
-                          {q.label}
-                        </Button>
-                      ))}
-                    </div>
                     <CalendarPicker
                       mode="single"
                       selected={startDate}
