@@ -32,7 +32,6 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
-import { PublicLinkBanner } from '@/components/PublicLinkBanner';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
@@ -202,44 +201,6 @@ export default function Reservas() {
         className="space-y-3"
         style={{ paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4rem))' }}
       >
-        <PublicLinkBanner />
-        {/* Header premium */}
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                <CalendarDays className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-xl font-bold leading-tight truncate">Reservas</h1>
-                <p className="text-xs text-muted-foreground truncate">
-                  {formatDate(new Date())}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={cargarDatos}
-              disabled={loading}
-              aria-label="Actualizar"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button
-              size="sm"
-              className="h-9 hidden sm:inline-flex"
-              onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Nueva reserva
-            </Button>
-          </div>
-        </div>
-
         {/* KPI compactos, mobile-first */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Card className="p-3">
@@ -927,17 +888,6 @@ export default function Reservas() {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* FAB móvil - Nueva reserva */}
-      <Button
-        size="lg"
-        className="sm:hidden fixed right-4 z-40 h-14 w-14 rounded-full shadow-xl p-0"
-        style={{ bottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4.5rem))' }}
-        onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}
-        aria-label="Nueva reserva"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
 
       {/* Filtros */}
       <ReservasFiltersSheet
