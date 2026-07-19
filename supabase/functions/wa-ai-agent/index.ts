@@ -401,8 +401,84 @@ async function ejecutarTool(admin: any, hotelId: string, chatId: string, name: s
       return { ok: true, reserva_id: reserva?.id, numero_reserva: reserva?.numero_reserva, total: subtotal, noches };
     }
     if (name === "escalar_a_humano") {
+      const motivo = String(args.motivo ?? "El agente solicitó apoyo humano");
+      const resumen = String(args.resumen ?? "").trim();
       await admin.from("wa_chats").update({ estado_bot: "humano" }).eq("id", chatId);
+      // Guardar nota con resumen si la tabla wa_notas existe
+      try {
+        await admin.from("wa_notas").insert({
+          chat_id: chatId,
+          hotel_id: hotelId,
+          contenido: `🤝 HANDOFF automático\nMotivo: ${motivo}${resumen ? `\n\nResumen IA:\n${resumen}` : ""}`,
+        });
+      } catch (_) { /* wa_notas opcional */ }
+      // Notificación para recepción
+      try {
+        await admin.from("notificaciones").insert({
+          hotel_id: hotelId,
+          tipo: "whatsapp_handoff",
+          titulo: "WhatsApp: se requiere atención humana",
+          mensaje: motivo,
+          prioridad: "alta",
+        });
+      } catch (_) { /* notificaciones puede tener otro shape */ }
       return { ok: true, mensaje: "Conversación pasada a un humano." };
+    }
+    if (name === "consultar_reserva") {
+      const folio = String(args.folio ?? "").trim();
+      let query = admin
+        .from("reservas")
+        .select("id, numero_reserva, fecha_checkin, fecha_checkout, noches, adultos, ninos, total, total_pagado, saldo_pendiente, estado, tarifa_noche, tipo_habitacion_id, habitacion_id, cliente_id, clientes(nombre, telefono), habitaciones(numero), tipos_habitacion(nombre)")
+        .eq("hotel_id", hotelId);
+      if (folio) {
+        query = query.eq("numero_reserva", folio);
+      } else {
+        // Buscar por teléfono del chat
+        const { data: chat } = await admin.from("wa_chats").select("phone, cliente_id").eq("id", chatId).single();
+        if (chat?.cliente_id) {
+          query = query.eq("cliente_id", chat.cliente_id);
+        } else if (chat?.phone) {
+          const { data: cli } = await admin.from("clientes").select("id").eq("hotel_id", hotelId).eq("telefono", chat.phone).maybeSingle();
+          if (cli?.id) query = query.eq("cliente_id", cli.id);
+          else return { encontrada: false, mensaje: "No encontré reservas asociadas a este teléfono." };
+        } else {
+          return { encontrada: false, mensaje: "Necesito el folio (por ejemplo RES-2026-0010) para buscar la reserva." };
+        }
+      }
+      const { data: reservas } = await query.order("fecha_checkin", { ascending: false }).limit(5);
+      if (!reservas || reservas.length === 0) return { encontrada: false, mensaje: "No encontré ninguna reserva con esos datos." };
+      return {
+        encontrada: true,
+        reservas: reservas.map((r: any) => ({
+          id: r.id,
+          folio: r.numero_reserva,
+          checkin: r.fecha_checkin,
+          checkout: r.fecha_checkout,
+          noches: r.noches,
+          adultos: r.adultos,
+          ninos: r.ninos,
+          huesped: r.clientes?.nombre ?? null,
+          habitacion: r.habitaciones?.numero ?? null,
+          tipo: r.tipos_habitacion?.nombre ?? null,
+          tarifa_noche: r.tarifa_noche,
+          total: r.total,
+          pagado: r.total_pagado,
+          saldo: r.saldo_pendiente,
+          estado: r.estado,
+        })),
+      };
+    }
+    if (name === "confirmar_reserva") {
+      const reservaId = String(args.reserva_id ?? "");
+      if (!/^[0-9a-f-]{36}$/i.test(reservaId)) return { error: "reserva_id inválido" };
+      const { data: r } = await admin.from("reservas").select("id, hotel_id, estado, numero_reserva").eq("id", reservaId).single();
+      if (!r) return { error: "Reserva no encontrada" };
+      if (r.hotel_id !== hotelId) return { error: "Reserva no pertenece a este hotel" };
+      if (r.estado === "Confirmada") return { ok: true, ya_confirmada: true, folio: r.numero_reserva };
+      if (r.estado !== "Pendiente") return { error: `No se puede confirmar una reserva en estado ${r.estado}` };
+      const { error } = await admin.from("reservas").update({ estado: "Confirmada", updated_at: new Date().toISOString() }).eq("id", reservaId);
+      if (error) return { error: error.message };
+      return { ok: true, folio: r.numero_reserva, mensaje: "Reserva confirmada correctamente." };
     }
     return { error: `tool desconocida: ${name}` };
   } catch (e) {
