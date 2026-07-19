@@ -47,6 +47,48 @@ import {
   type ReservasFilters,
 } from '@/components/reservas/ReservasFiltersSheet';
 import { getEstadoConfig } from '@/components/reservas/estadoConfig';
+import { cn } from '@/lib/utils';
+
+// Chips reutilizables para filtro de tipo de habitación
+const TipoChips = ({
+  value,
+  onChange,
+  tipos,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  tipos: any[];
+}) => (
+  <div className="inline-flex items-center gap-1 bg-muted p-1 rounded-xl overflow-x-auto max-w-full">
+    <button
+      type="button"
+      onClick={() => onChange('all')}
+      className={cn(
+        'h-8 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors',
+        value === 'all'
+          ? 'bg-background text-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground'
+      )}
+    >
+      Todas
+    </button>
+    {tipos.map(t => (
+      <button
+        key={t.id}
+        type="button"
+        onClick={() => onChange(t.id)}
+        className={cn(
+          'h-8 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors',
+          value === t.id
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        {t.nombre}
+      </button>
+    ))}
+  </div>
+);
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
@@ -275,17 +317,7 @@ export default function Reservas() {
             <Card>
               <CardContent className="p-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                    <SelectTrigger className="w-[140px] h-8 text-xs">
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {tiposHabitacion.map(tipo => (
-                        <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
                   <div className="relative">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                     <Input
@@ -414,17 +446,7 @@ export default function Reservas() {
                   ))}
                 </div>
                 
-                <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                  <SelectTrigger className="w-[90px] h-7 text-xs">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {tiposHabitacion.map(tipo => (
-                      <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
                 
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -465,17 +487,7 @@ export default function Reservas() {
                 <Card>
                   <CardContent className="p-2">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                        <SelectTrigger className="w-[140px] h-8 text-xs">
-                          <SelectValue placeholder="Tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas</SelectItem>
-                          {tiposHabitacion.map(tipo => (
-                            <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
                       <div className="relative">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                         <Input
