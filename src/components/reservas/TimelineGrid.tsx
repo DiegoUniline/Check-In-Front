@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { UserPlus, CircleDollarSign } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { getEstadoConfig } from './estadoConfig';
+import { formatDate } from '@/lib/dateFormat';
 
 interface TimelineGridProps {
   habitaciones: any[];
@@ -230,7 +231,7 @@ export function TimelineGrid({
                                 <div className="space-y-1">
                                   <p className="font-semibold text-sm">{reserva.cliente_nombre} {reserva.apellido_paterno}</p>
                                   <p className="text-xs">
-                                    {format(new Date(reserva.fecha_checkin), 'd MMM', { locale: es })} → {format(new Date(reserva.fecha_checkout), 'd MMM', { locale: es })}
+                                    {formatDate(reserva.fecha_checkin)} → {formatDate(reserva.fecha_checkout)}
                                   </p>
                                   <p className="text-xs">
                                     {reserva.adultos} adultos{reserva.ninos > 0 ? ` · ${reserva.ninos} niños` : ''}

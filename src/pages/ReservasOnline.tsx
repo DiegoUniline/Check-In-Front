@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/dateFormat';
 
 export default function ReservasOnline() {
   const { toast } = useToast();
@@ -99,8 +100,8 @@ export default function ReservasOnline() {
                     )}
                     <div className="flex items-center gap-1">
                       <CalendarDays className="h-3 w-3" />
-                      {format(new Date(r.fecha_checkin), 'd MMM', { locale: es })} →{' '}
-                      {format(new Date(r.fecha_checkout), 'd MMM yyyy', { locale: es })}
+                      {formatDate(r.fecha_checkin)} →{' '}
+                      {formatDate(r.fecha_checkout)}
                     </div>
                     <div className="flex items-center gap-1">
                       <Users className="h-3 w-3" /> {r.adultos}A {r.ninos > 0 ? `${r.ninos}N` : ''}

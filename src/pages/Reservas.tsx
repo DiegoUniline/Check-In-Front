@@ -39,6 +39,7 @@ import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/dateFormat';
 import { ReservaCard } from '@/components/reservas/ReservaCard';
 import {
   ReservasFiltersSheet,
@@ -212,7 +213,7 @@ export default function Reservas() {
               <div className="min-w-0">
                 <h1 className="text-lg sm:text-xl font-bold leading-tight truncate">Reservas</h1>
                 <p className="text-xs text-muted-foreground truncate">
-                  {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+                  {formatDate(new Date())}
                 </p>
               </div>
             </div>
@@ -609,8 +610,8 @@ export default function Reservas() {
                                   <Badge variant="outline" className={est.badge}>{est.label}</Badge>
                                 </TableCell>
                                 <TableCell>{cliente}</TableCell>
-                                <TableCell>{activa?.fecha_checkin?.substring(0, 10) || '—'}</TableCell>
-                                <TableCell>{activa?.fecha_checkout?.substring(0, 10) || '—'}</TableCell>
+                                <TableCell>{formatDate(activa?.fecha_checkin)}</TableCell>
+                                <TableCell>{formatDate(activa?.fecha_checkout)}</TableCell>
                                 <TableCell>
                                   <Eye className="h-4 w-4 text-muted-foreground" />
                                 </TableCell>
@@ -828,12 +829,8 @@ export default function Reservas() {
                               </TableCell>
                               <TableCell className="font-medium">{cliente}</TableCell>
                               <TableCell>Hab. {habNum}</TableCell>
-                              <TableCell className="text-xs">
-                                {r.fecha_checkin ? format(new Date(r.fecha_checkin), 'd MMM yyyy', { locale: es }) : '—'}
-                              </TableCell>
-                              <TableCell className="text-xs">
-                                {r.fecha_checkout ? format(new Date(r.fecha_checkout), 'd MMM yyyy', { locale: es }) : '—'}
-                              </TableCell>
+                              <TableCell className="text-xs">{formatDate(r.fecha_checkin)}</TableCell>
+                              <TableCell className="text-xs">{formatDate(r.fecha_checkout)}</TableCell>
                               <TableCell className="text-center">{r.noches || '—'}</TableCell>
                               <TableCell>
                                 <Badge variant="secondary" className={`${estCfg.badge} text-[10px] gap-1`}>

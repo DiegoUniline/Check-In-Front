@@ -48,6 +48,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { splitPhone, joinPhone, DEFAULT_COUNTRY } from '@/lib/phoneCountries';
+import { formatDate } from '@/lib/dateFormat';
 
 interface Cliente {
   id: string;
@@ -462,7 +463,7 @@ export default function Clientes() {
                     <span className="font-medium">{cliente.total_estancias || 0}</span>
                   </TableCell>
                   <TableCell>
-                    {cliente.created_at ? format(new Date(cliente.created_at), 'd MMM yyyy', { locale: es }) : '-'}
+                    {cliente.created_at ? formatDate(cliente.created_at) : '-'}
                   </TableCell>
                   <TableCell>
                     <Badge className={getLoyaltyColor(cliente.nivel_lealtad)}>

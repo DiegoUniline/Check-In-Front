@@ -15,6 +15,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/dateFormat';
 
 interface RecepcionGridProps {
   habitaciones: any[];
@@ -474,7 +475,7 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
 
   const horaLlegada = estado === 'reservada' ? reservaActiva?.hora_llegada : null;
   const fechaSalida = estado === 'ocupada' && reservaActiva?.fecha_checkout
-    ? format(parseISO(reservaActiva.fecha_checkout.substring(0, 10)), 'd MMM', { locale: es })
+    ? formatDate(reservaActiva.fecha_checkout)
     : null;
 
   const isClickable = estado !== 'mantenimiento';
@@ -607,7 +608,7 @@ function RoomTable({ items, onRowClick }: { items: HabitacionStatus[]; onRowClic
 
             const horaLlegada = estado === 'reservada' ? reservaActiva?.hora_llegada : null;
             const fechaSalida = estado === 'ocupada' && reservaActiva?.fecha_checkout
-              ? format(parseISO(reservaActiva.fecha_checkout.substring(0, 10)), 'd MMM', { locale: es })
+              ? formatDate(reservaActiva.fecha_checkout)
               : null;
 
             return (

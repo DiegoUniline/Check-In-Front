@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/dateFormat';
 
 export default function CheckOut() {
   const { id } = useParams();
@@ -157,7 +158,7 @@ export default function CheckOut() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Check-in</p>
-                  <p className="font-medium">{format(new Date(reserva.fecha_checkin), 'd MMM yyyy', { locale: es })}</p>
+                  <p className="font-medium">{formatDate(reserva.fecha_checkin)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Noches</p>

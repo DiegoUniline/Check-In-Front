@@ -1,10 +1,9 @@
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { BedDouble, Users, ArrowRight, MoreVertical, CalendarDays } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/dateFormat';
 import { cn } from '@/lib/utils';
 import { getEstadoConfig } from './estadoConfig';
 
@@ -34,8 +33,7 @@ export function ReservaCard({ reserva: r, onClick, onMoreActions, compact }: Res
     .map((s: string) => s[0]?.toUpperCase())
     .join('') || '?';
 
-  const fmt = (d: string | undefined) =>
-    d ? format(new Date(d), 'd MMM', { locale: es }) : '—';
+  const fmt = (d: string | undefined) => formatDate(d);
 
   return (
     <Card

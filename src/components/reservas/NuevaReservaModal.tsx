@@ -39,6 +39,7 @@ import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 import { resolveImpuestosDefault } from '@/lib/impuestosDefault';
 import { resolverPrecioTemporada, describirAjuste, loadTemporadas } from '@/lib/temporadas';
 import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
+import { formatDate } from '@/lib/dateFormat';
 
 export interface ReservationPreload {
   habitacion?: any;
@@ -530,8 +531,8 @@ const noches = differenceInDays(
             numero_reserva: reserva.numero_reserva || '',
             tipo_habitacion: selectedHabitacion?.tipo_habitacion?.nombre || '',
             habitacion: selectedHabitacion?.numero || '',
-            fecha_checkin: format(formData.fechaCheckin, 'dd MMM yyyy', { locale: es }),
-            fecha_checkout: format(formData.fechaCheckout, 'dd MMM yyyy', { locale: es }),
+            fecha_checkin: formatDate(formData.fechaCheckin),
+            fecha_checkout: formatDate(formData.fechaCheckout),
             noches,
             total: formatCurrency(total),
           },
@@ -614,7 +615,7 @@ const noches = differenceInDays(
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start" disabled={origen === 'Recepcion'}>
                       <CalendarDays className="mr-2 h-4 w-4" />
-                      {format(formData.fechaCheckin, 'd MMM yyyy', { locale: es })}
+                      {formatDate(formData.fechaCheckin)}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -628,7 +629,7 @@ const noches = differenceInDays(
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start">
                       <CalendarDays className="mr-2 h-4 w-4" />
-                      {format(formData.fechaCheckout, 'd MMM yyyy', { locale: es })}
+                      {formatDate(formData.fechaCheckout)}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -697,7 +698,7 @@ const noches = differenceInDays(
         {/* STEP 2 - HABITACIÓN */}
         {step === 2 && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles para {format(formData.fechaCheckin, 'd MMM', { locale: es })} - {format(formData.fechaCheckout, 'd MMM', { locale: es })}</p>
+            <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles para {formatDate(formData.fechaCheckin)} - {formatDate(formData.fechaCheckout)}</p>
             <div className="grid gap-3 max-h-[400px] overflow-y-auto">
               {habitacionesDisponibles.map(hab => (
                 <Card key={hab.id} className={cn("cursor-pointer hover:border-primary transition-colors", formData.habitacionId === hab.id && "border-primary bg-primary/5")} onClick={() => setFormData({ ...formData, habitacionId: hab.id, tipoHabitacion: hab.tipo_habitacion_id || hab.tipo_id || formData.tipoHabitacion })}>
@@ -866,8 +867,8 @@ const noches = differenceInDays(
                   </div>
                   <Separator className="my-3" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div><p className="text-muted-foreground">Check-in</p><p className="font-medium">{format(formData.fechaCheckin, 'd MMM yyyy', { locale: es })}</p></div>
-                    <div><p className="text-muted-foreground">Check-out</p><p className="font-medium">{format(formData.fechaCheckout, 'd MMM yyyy', { locale: es })}</p></div>
+                    <div><p className="text-muted-foreground">Check-in</p><p className="font-medium">{formatDate(formData.fechaCheckin)}</p></div>
+                    <div><p className="text-muted-foreground">Check-out</p><p className="font-medium">{formatDate(formData.fechaCheckout)}</p></div>
                     <div><p className="text-muted-foreground">Noches</p><p className="font-medium">{noches}</p></div>
                     <div><p className="text-muted-foreground">Huéspedes</p><p className="font-medium">{formData.adultos + formData.ninos}</p></div>
                   </div>

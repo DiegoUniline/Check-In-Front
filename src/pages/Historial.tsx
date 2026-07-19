@@ -38,6 +38,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 
 interface Transaccion {
   id: string;
@@ -386,7 +387,7 @@ export default function Historial() {
               >
                 <TableCell>
                   <div>
-                    <p className="font-medium">{trans.fecha ? format(new Date(trans.fecha), "d MMM yyyy", { locale: es }) : '-'}</p>
+                    <p className="font-medium">{trans.fecha ? formatDate(trans.fecha) : '-'}</p>
                     <p className="text-xs text-muted-foreground">{trans.fecha ? format(new Date(trans.fecha), "HH:mm") : ''}</p>
                   </div>
                 </TableCell>
@@ -471,7 +472,7 @@ export default function Historial() {
                   <p className="text-sm text-muted-foreground">Fecha</p>
                   <p className="font-medium">
                     {detalleModal.transaccion.fecha
-                      ? format(new Date(detalleModal.transaccion.fecha), "d MMMM yyyy HH:mm", { locale: es })
+                      ? formatDateTime(detalleModal.transaccion.fecha)
                       : '-'}
                   </p>
                 </div>

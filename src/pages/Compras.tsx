@@ -57,6 +57,7 @@ import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { ComboboxCreatable, ComboboxOption } from '@/components/ui/combobox-creatable';
 import { formatCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/dateFormat';
 
 interface OrderItem {
   producto_id: string;
@@ -533,7 +534,7 @@ export default function Compras() {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de orden</Label>
-                        <Input value={format(new Date(), 'dd/MM/yyyy', { locale: es })} disabled className="bg-muted/40" />
+                        <Input value={formatDate(new Date())} disabled className="bg-muted/40" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado inicial</Label>
@@ -848,7 +849,7 @@ export default function Compras() {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <p className="text-xs text-muted-foreground">Fecha</p>
-                            <p className="font-medium">{fecha ? format(new Date(fecha), "d MMM yyyy", { locale: es }) : '-'}</p>
+                            <p className="font-medium">{fecha ? formatDate(fecha) : '-'}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Total</p>
@@ -936,10 +937,10 @@ export default function Compras() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p>{fecha ? format(new Date(fecha), "d MMM yyyy", { locale: es }) : '-'}</p>
+                            <p>{fecha ? formatDate(fecha) : '-'}</p>
                             {orden.fecha_entrega && (
                               <p className="text-xs text-muted-foreground">
-                                Entrega: {format(new Date(orden.fecha_entrega), "d MMM", { locale: es })}
+                                Entrega: {formatDate(orden.fecha_entrega)}
                               </p>
                             )}
                           </div>
@@ -1116,7 +1117,7 @@ export default function Compras() {
                     <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Fecha</p>
                     <p className="font-semibold">
                       {detalleModal.orden.fecha || detalleModal.orden.created_at
-                        ? format(new Date(detalleModal.orden.fecha || detalleModal.orden.created_at), "d MMM yyyy", { locale: es })
+                        ? formatDate(detalleModal.orden.fecha || detalleModal.orden.created_at)
                         : '-'}
                     </p>
                   </div>
@@ -1233,7 +1234,7 @@ export default function Compras() {
                     <TableBody>
                       {pagosOrden.map((p) => (
                         <TableRow key={p.id}>
-                          <TableCell className="text-sm">{format(new Date(p.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
+                          <TableCell className="text-sm">{formatDate(p.fecha)}</TableCell>
                           <TableCell><Badge variant="secondary">{p.metodo_pago}</Badge></TableCell>
                           <TableCell className="text-sm text-muted-foreground">{p.referencia || '—'}</TableCell>
                           <TableCell className="text-right font-medium">{formatCurrency(Number(p.monto))}</TableCell>
