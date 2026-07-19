@@ -97,6 +97,8 @@ export default function Clientes() {
   const [loading, setLoading] = useState(true);
   const [phoneCountry, setPhoneCountry] = useState<string>(DEFAULT_COUNTRY);
   const [phoneLocal, setPhoneLocal] = useState<string>('');
+  const [historial, setHistorial] = useState<any[]>([]);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   // Normalización de VIP para evitar que React renderice "0".
   // - Qué hace: convierte valores típicos de MySQL (0/1, "0"/"1") a boolean real.
@@ -290,9 +292,19 @@ export default function Clientes() {
     }
   };
 
-  const handleViewCliente = (cliente: Cliente) => {
+  const handleViewCliente = async (cliente: Cliente) => {
     setSelectedCliente(cliente);
     setIsDetailOpen(true);
+    setHistorial([]);
+    setLoadingHistorial(true);
+    try {
+      const data = await api.getClienteReservas(cliente.id);
+      setHistorial(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Error cargando historial:', e);
+    } finally {
+      setLoadingHistorial(false);
+    }
   };
 
   const stats = {
@@ -593,9 +605,40 @@ export default function Clientes() {
             </TabsContent>
             
             <TabsContent value="historial" className="mt-4">
-              <div className="text-center text-muted-foreground py-8">
-                No hay historial disponible
-              </div>
+              {loadingHistorial ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+                </div>
+              ) : historial.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  No hay historial disponible
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                  {historial.map((r: any) => (
+                    <div key={r.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {r.numero_reserva || `RES-${String(r.id).slice(0, 6)}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {r.fecha_checkin ? formatDate(r.fecha_checkin) : '-'}
+                          {r.fecha_checkout ? ` → ${formatDate(r.fecha_checkout)}` : ''}
+                          {r.habitacion_numero ? ` · Hab ${r.habitacion_numero}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {r.estado && <Badge variant="outline">{r.estado}</Badge>}
+                        {r.total != null && (
+                          <span className="text-sm font-semibold">
+                            ${Number(r.total).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="preferencias" className="mt-4">
