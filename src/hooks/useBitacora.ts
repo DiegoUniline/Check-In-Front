@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
+import api from '@/lib/api';
 
 export type BitacoraCategoria =
   | 'General'
@@ -45,7 +46,7 @@ function writeAll(hotelId: string, list: BitacoraEntrada[]) {
 
 export function useBitacora() {
   const { user } = useAuth();
-  const hotelId = user?.hotelId || 'default';
+  const hotelId = api.getHotelId() || 'default';
   const [entradas, setEntradas] = useState<BitacoraEntrada[]>(() => readAll(hotelId));
 
   useEffect(() => {
