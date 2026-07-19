@@ -583,6 +583,10 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const M = 20; // margen 2 cm
   const contentW = pageW - M * 2;
 
+  // Cargar isotipo VULO (para header derecho y footer central)
+  let foxData: string | null = null;
+  try { foxData = await loadImageDataUrl(vuloFoxUrl); } catch { /* noop */ }
+
   const BLACK: [number, number, number] = [17, 24, 39];        // #111827
   const GRAY_600: [number, number, number] = [75, 85, 99];      // #4B5563
   const GRAY_500: [number, number, number] = [107, 114, 128];   // #6B7280
@@ -595,31 +599,46 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const folio = reserva.numero_reserva || '—';
 
   // --- 1. ENCABEZADO ---
+  // Izquierda: datos del hotel (empresa)  ·  Derecha: logo VULO
   let y = M;
-  // Izquierda: VULO wordmark en letter-spacing manual (aprox via texto normal + escala)
+
+  // IZQUIERDA: hotel
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...BLACK);
+  doc.text(opts.hotel || 'Hotel', M, y + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...GRAY_600);
+  let ly = y + 10;
+  if (opts.hotelDireccion) { doc.text(String(opts.hotelDireccion), M, ly); ly += 4.2; }
+  if (opts.hotelTelefono) { doc.text(`Tel. ${opts.hotelTelefono}`, M, ly); ly += 4.2; }
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY_500);
+  doc.text('Tarjeta de registro de huésped', M, ly + 1);
+
+  // DERECHA: logo VULO (fox + wordmark) + folio + fecha
+  const rightX = pageW - M;
+  if (foxData) {
+    try { doc.addImage(foxData, 'PNG', rightX - 40, y, 12, 12, undefined, 'FAST'); } catch { /* noop */ }
+  }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(19);
   doc.setTextColor(...BLACK);
-  doc.setCharSpace(1.4);
-  doc.text('VULO', M, y + 6);
+  doc.setCharSpace(1.2);
+  doc.text('VULO', rightX, y + 9, { align: 'right' });
   doc.setCharSpace(0);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(...GRAY_600);
-  doc.text('Tarjeta de registro de huésped', M, y + 12);
-
-  // Derecha: folio + fecha de generación
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(...BLACK);
-  doc.text(`Folio ${folio}`, pageW - M, y + 6, { align: 'right' });
+  doc.text(`Folio ${folio}`, rightX, y + 15.5, { align: 'right' });
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(...GRAY_500);
-  doc.text(`Generado ${nowLabel}`, pageW - M, y + 11.5, { align: 'right' });
+  doc.text(`Generado ${nowLabel}`, rightX, y + 20, { align: 'right' });
 
   // Línea inferior 2px negro
-  y = M + 16;
+  y = Math.max(ly + 4, y + 24);
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.6);
   doc.line(M, y, pageW - M, y);
