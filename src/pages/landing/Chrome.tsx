@@ -47,14 +47,14 @@ export function LandingNav() {
             );
           })}
         </nav>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="hidden text-[14px] font-medium text-slate-600 transition hover:text-slate-900 sm:block">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link to="/login" className="text-[13px] sm:text-[14px] font-medium text-slate-600 transition hover:text-slate-900">
             Iniciar sesión
           </Link>
           <Button
             asChild
             size="sm"
-            className="h-10 rounded-full px-5 text-[14px] font-medium text-white shadow-none hover:opacity-95"
+            className="h-9 sm:h-10 rounded-full px-4 sm:px-5 text-[13px] sm:text-[14px] font-medium text-white shadow-none hover:opacity-95"
             style={{ background: NAVY }}
           >
             <Link to="/contacto">Agendar demo</Link>
