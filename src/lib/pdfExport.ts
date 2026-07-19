@@ -281,36 +281,42 @@ function drawHeader(
   doc.setFillColor(...VULO_ORANGE);
   doc.rect(0, HEADER_H, pageW, 1.2, 'F');
 
-  // Isotipo (fox) — cuadrado 18mm
-  try {
-    doc.addImage(assets.fox, 'PNG', MARGIN_X, 8, 18, 18, undefined, 'FAST');
-  } catch { /* noop */ }
-
-  // Wordmark VULO en blanco (dibujado por código para contraste sobre navy)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.text('VULO', MARGIN_X + 22, 20);
-
-  // Tagline debajo del wordmark
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(203, 213, 225); // slate-300
-  doc.text('SOFTWARE PARA HOTELES', MARGIN_X + 22, 24.5);
-
-  // Info del hotel a la derecha (dentro de la banda)
+  // ===== IZQUIERDA: datos del hotel (empresa) =====
   if (ctx.hotel) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(13);
     doc.setTextColor(255, 255, 255);
-    doc.text(ctx.hotel, pageW - MARGIN_X, 13, { align: 'right' });
-    const parts = [ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean);
+    doc.text(ctx.hotel, MARGIN_X, 13);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    doc.setTextColor(203, 213, 225);
-    if (parts[0]) doc.text(String(parts[0]), pageW - MARGIN_X, 19, { align: 'right' });
-    if (parts[1]) doc.text(String(parts[1]), pageW - MARGIN_X, 23.5, { align: 'right' });
+    doc.setTextColor(203, 213, 225); // slate-300
+    if (ctx.hotelDireccion) doc.text(String(ctx.hotelDireccion), MARGIN_X, 19);
+    if (ctx.hotelTelefono) doc.text(String(ctx.hotelTelefono), MARGIN_X, 23.5);
+    if (ctx.hotelEmail) doc.text(String(ctx.hotelEmail), MARGIN_X, 28);
+  } else {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Hotel', MARGIN_X, 13);
   }
+
+  // ===== DERECHA: logo VULO (isotipo + wordmark) =====
+  const logoRightX = pageW - MARGIN_X;
+  // Wordmark
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  const wordW = doc.getTextWidth('VULO');
+  doc.text('VULO', logoRightX, 18, { align: 'right' });
+  // Isotipo (fox) a la izquierda del wordmark
+  try {
+    doc.addImage(assets.fox, 'PNG', logoRightX - wordW - 16, 6, 13, 13, undefined, 'FAST');
+  } catch { /* noop */ }
+  // Tagline pequeña debajo
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(203, 213, 225);
+  doc.text('SOFTWARE PARA HOTELES', logoRightX, 23, { align: 'right' });
 
   // Título del documento debajo del header
   doc.setFont('helvetica', 'bold');
