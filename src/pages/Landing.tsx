@@ -59,14 +59,15 @@ function Nav() {
           <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain md:h-6" />
         </Link>
         <nav className="hidden items-center gap-9 md:flex">
-          <a href="#funciones" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Funciones</a>
-          <a href="#precios" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Precios</a>
-          <a href="#contacto" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Contacto</a>
+          <Link to="/funciones" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Funciones</Link>
+          <Link to="/precios" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Precios</Link>
+          <Link to="/empresa" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Empresa</Link>
+          <Link to="/contacto" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Contacto</Link>
         </nav>
         <div className="flex items-center gap-3">
           <Link to="/login" className="hidden text-[14px] font-medium text-slate-600 transition hover:text-slate-900 sm:block">Iniciar sesión</Link>
           <Button asChild size="sm" className="h-10 rounded-full px-5 text-[14px] font-medium text-white shadow-none hover:opacity-95" style={{ background: NAVY }}>
-            <a href="#contacto">Agendar demo</a>
+            <Link to="/contacto">Agendar demo</Link>
           </Button>
         </div>
       </div>
@@ -91,16 +92,17 @@ function Hero() {
             <span className="text-slate-400">Necesita una sola que sí funcione.</span>
           </motion.h1>
           <motion.p variants={fadeUp} custom={2} className="mt-7 max-w-xl text-[17px] leading-relaxed text-slate-600 md:text-[19px]">
-            Reservas, recepción, habitaciones, cobros y WhatsApp en un mismo lugar.
-            Deja de perseguir la información: que la información te encuentre a ti.
+            VULO reúne todo lo que hace mover un hotel — reservas, recepción, habitaciones,
+            cobros y conversaciones — en una experiencia calmada, rápida y hecha por personas
+            que entienden la operación.
           </motion.p>
           <motion.div variants={fadeUp} custom={3} className="mt-9 flex flex-wrap items-center gap-4">
             <Button asChild size="lg" className="h-[52px] rounded-full px-7 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: NAVY }}>
-              <a href="#contacto">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></a>
+              <Link to="/contacto">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
-            <a href="#funciones" className="group inline-flex items-center gap-1.5 text-[15px] font-medium text-slate-700 hover:text-slate-900">
+            <Link to="/funciones" className="group inline-flex items-center gap-1.5 text-[15px] font-medium text-slate-700 hover:text-slate-900">
               Ver funciones <ChevronDown className="h-4 w-4 transition group-hover:translate-y-0.5" />
-            </a>
+            </Link>
           </motion.div>
         </motion.div>
 
@@ -238,6 +240,39 @@ function Pains() {
           <br />
           <span className="text-slate-400">Es culpa de operar con herramientas sueltas.</span>
         </motion.p>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════ 2.5 BAND · MENOS FRICCIÓN ══════════════════ */
+function FrictionBand() {
+  return (
+    <section className="border-t border-slate-100 py-24" style={{ background: NAVY }}>
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease }}
+            className="text-[36px] font-bold tracking-[-0.03em] text-white md:text-[54px]"
+          >
+            Menos fricción.
+            <br />
+            <span style={{ color: ORANGE }}>Más huéspedes que vuelven.</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease, delay: 0.1 }}
+            className="max-w-lg text-[17px] leading-relaxed text-white/70 md:text-[19px]"
+          >
+            Un hotel bien llevado se nota. VULO lo hace más obvio — desde la primera reserva
+            hasta el corte del día, sin pasos que sobren.
+          </motion.p>
+        </div>
       </div>
     </section>
   );
@@ -534,6 +569,10 @@ function Features() {
             <br />
             <span className="text-slate-400">en un solo sistema.</span>
           </h2>
+          <p className="mx-auto mt-5 max-w-xl text-[15.5px] leading-relaxed text-slate-500">
+            Diseñado para que dé gusto usarlo, todos los días. Cada pantalla existe porque alguien la necesita
+            para trabajar mejor. No hay pestañas de adorno.
+          </p>
         </div>
 
         <div className="mt-16 grid gap-px overflow-hidden rounded-[22px] border border-slate-200 bg-slate-200 md:grid-cols-2 lg:grid-cols-4">
@@ -1088,7 +1127,7 @@ function FinalCTA() {
           <span className="text-white/50">empieza con una conversación.</span>
         </motion.h2>
         <p className="mx-auto mt-6 max-w-xl text-[17px] leading-relaxed text-white/70">
-          Te mostramos el sistema con tus habitaciones y tus tarifas. Sin compromiso.
+          Te mostramos VULO con tus datos, sin compromiso.
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="h-[52px] rounded-full px-8 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
@@ -1225,6 +1264,7 @@ export default function Landing() {
       <main>
         <Hero />
         <Pains />
+        <FrictionBand />
         <HowItWorks />
         <Features />
         <Highlights />
