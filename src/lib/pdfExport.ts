@@ -286,16 +286,17 @@ function drawHeader(
     doc.addImage(assets.fox, 'PNG', MARGIN_X, 8, 18, 18, undefined, 'FAST');
   } catch { /* noop */ }
 
-  // Wordmark VULO (proporción 1280x480 => 8mm alto, ~21.3mm ancho)
-  try {
-    doc.addImage(assets.wordmark, 'PNG', MARGIN_X + 22, 11, 22, 8, undefined, 'FAST');
-  } catch { /* noop */ }
+  // Wordmark VULO en blanco (dibujado por código para contraste sobre navy)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  doc.text('VULO', MARGIN_X + 22, 20);
 
   // Tagline debajo del wordmark
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(203, 213, 225); // slate-300
-  doc.text('SOFTWARE PARA HOTELES', MARGIN_X + 22, 23);
+  doc.text('SOFTWARE PARA HOTELES', MARGIN_X + 22, 24.5);
 
   // Info del hotel a la derecha (dentro de la banda)
   if (ctx.hotel) {
