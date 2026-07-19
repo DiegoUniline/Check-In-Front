@@ -195,6 +195,13 @@ export default function HistorialReservas() {
   // Filtrar por búsqueda local
   const reservasFiltradas = reservas.filter(r => {
     if (habitacionFiltro !== 'todos' && String(r.habitacion_numero) !== habitacionFiltro) return false;
+    // Filtro por fecha de check-in (rango inclusivo)
+    if (fechaDesde || fechaHasta) {
+      const ci = r.fecha_checkin ? String(r.fecha_checkin).slice(0, 10) : null;
+      if (!ci) return false;
+      if (fechaDesde && ci < format(fechaDesde, 'yyyy-MM-dd')) return false;
+      if (fechaHasta && ci > format(fechaHasta, 'yyyy-MM-dd')) return false;
+    }
     if (!busqueda) return true;
     const texto = busqueda.toLowerCase();
     return (
