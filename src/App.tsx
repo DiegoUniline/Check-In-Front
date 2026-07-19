@@ -377,6 +377,7 @@ const App = () => (
                 <ScrollToTop />
                 <RealtimeBridge />
                 <AppRoutes />
+                <InstallPrompt />
               </ConfirmProvider>
             </UnsavedChangesProvider>
           </TooltipProvider>
