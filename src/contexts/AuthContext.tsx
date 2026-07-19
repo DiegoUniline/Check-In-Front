@@ -60,15 +60,24 @@ useEffect(() => {
 
           const { data: profile } = await supabase
             .from('profiles')
-            .select('*, hotels(nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale)')
+            .select('*, hotels!profiles_hotel_id_fkey(nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale)')
             .eq('id', session.user.id)
             .maybeSingle();
 
-          if (profile?.hotel_id) api.setHotelId(profile.hotel_id);
+          const activeHotelId = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
+          if (activeHotelId) api.setHotelId(activeHotelId);
           else api.setHotelId(null);
-          const tz = (profile as any)?.hotels?.timezone;
+          let h0: any = (profile as any)?.hotels;
+          if (activeHotelId && activeHotelId !== profile?.hotel_id) {
+            const { data: hActivo } = await supabase
+              .from('hotels')
+              .select('nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale')
+              .eq('id', activeHotelId)
+              .maybeSingle();
+            if (hActivo) h0 = hActivo;
+          }
+          const tz = h0?.timezone;
           if (tz) (await import('@/lib/api')).setHotelTimezone(tz);
-          const h0 = (profile as any)?.hotels;
           if (h0) {
             const { setHotelCurrency } = await import('@/lib/currency');
             setHotelCurrency({ codigo: h0.moneda_codigo, simbolo: h0.moneda_simbolo, locale: h0.moneda_locale });
@@ -88,7 +97,7 @@ useEffect(() => {
             nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
             apellidoPaterno: profile?.apellido_paterno || '',
             rol: (roleRow?.role as string) || 'Admin',
-            hotelNombre: (profile as any)?.hotels?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
+            hotelNombre: h0?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
           };
 
           setUser(hydratedUser);
@@ -164,14 +173,23 @@ useEffect(() => {
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*, hotels(nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale)')
+        .select('*, hotels!profiles_hotel_id_fkey(nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale)')
         .eq('id', session.user.id)
         .maybeSingle();
-      if (profile?.hotel_id) api.setHotelId(profile.hotel_id);
+      const activeHotelId2 = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
+      if (activeHotelId2) api.setHotelId(activeHotelId2);
       else api.setHotelId(null);
-      const tz2 = (profile as any)?.hotels?.timezone;
+      let h2: any = (profile as any)?.hotels;
+      if (activeHotelId2 && activeHotelId2 !== profile?.hotel_id) {
+        const { data: hActivo2 } = await supabase
+          .from('hotels')
+          .select('nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale')
+          .eq('id', activeHotelId2)
+          .maybeSingle();
+        if (hActivo2) h2 = hActivo2;
+      }
+      const tz2 = h2?.timezone;
       if (tz2) (await import('@/lib/api')).setHotelTimezone(tz2);
-      const h2 = (profile as any)?.hotels;
       if (h2) {
         const { setHotelCurrency } = await import('@/lib/currency');
         setHotelCurrency({ codigo: h2.moneda_codigo, simbolo: h2.moneda_simbolo, locale: h2.moneda_locale });
@@ -189,7 +207,7 @@ useEffect(() => {
         nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
         apellidoPaterno: profile?.apellido_paterno || '',
         rol: (roleRow?.role as string) || 'Admin',
-        hotelNombre: (profile as any)?.hotels?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
+        hotelNombre: h2?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
       };
       setUser(u);
       localStorage.setItem('user', JSON.stringify(u));
