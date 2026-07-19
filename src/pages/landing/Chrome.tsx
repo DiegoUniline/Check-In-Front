@@ -48,7 +48,11 @@ export function LandingNav() {
           })}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link to="/login" className="text-[13px] sm:text-[14px] font-medium text-slate-600 transition hover:text-slate-900">
+          <Link
+            to="/login"
+            className="inline-flex h-9 sm:h-10 items-center rounded-lg border px-3 sm:px-4 text-[13px] sm:text-[14px] font-medium transition hover:opacity-90"
+            style={{ borderColor: '#FDBA74', color: ORANGE, background: '#FFF7ED' }}
+          >
             Iniciar sesión
           </Link>
           <Button
