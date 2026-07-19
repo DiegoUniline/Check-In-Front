@@ -560,96 +560,207 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   action?: 'save' | 'blob';
 }): Promise<Blob | void> {
   const { reserva, cliente, firmaDataUrl, aceptaTerminos, currency = 'MXN', action = 'save' } = opts;
-  const doc = new jsPDF();
-  const assets: HeaderAssets = {
-    fox: await loadImageDataUrl(vuloFoxUrl),
-    wordmark: await loadImageDataUrl(vuloWordmarkUrl),
-  };
-  const titulo = 'Tarjeta de registro';
-  const subtitulo = `Folio ${reserva.numero_reserva || '—'} · Registrado ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
-  let y = CONTENT_TOP + 8;
+  // ===== Diseño B/N clásico de documento hotelero =====
+  // Carta (letter): 216 x 279 mm, márgenes de 20mm.
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const M = 20; // margen 2 cm
+  const contentW = pageW - M * 2;
 
-  y = sectionLabel(doc, 'Datos del huésped', y);
-  autoTable(doc, {
-    startY: y,
-    body: [
-      ['Nombre', nombreCompleto(cliente)],
-      ['Documento', [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ') || '—'],
-      ['Nacionalidad', cliente.nacionalidad || '—'],
-      ['Correo', cliente.email || '—'],
-      ['Teléfono', cliente.telefono || '—'],
-    ],
-    theme: 'plain',
-    margin: { top: 46, bottom: 20 },
-    styles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 0 }, textColor: VULO_TEXT },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40, textColor: VULO_MUTED }, 1: { textColor: VULO_TEXT } },
-  });
-  y = (doc as any).lastAutoTable.finalY + 6;
+  const BLACK: [number, number, number] = [17, 24, 39];        // #111827
+  const GRAY_600: [number, number, number] = [75, 85, 99];      // #4B5563
+  const GRAY_500: [number, number, number] = [107, 114, 128];   // #6B7280
+  const GRAY_400: [number, number, number] = [156, 163, 175];   // #9CA3AF
+  const GRAY_200: [number, number, number] = [229, 231, 235];   // #E5E7EB
+  const GRAY_700: [number, number, number] = [55, 65, 81];      // #374151
 
-  y = sectionLabel(doc, 'Estancia', y);
-  autoTable(doc, {
-    startY: y,
-    head: [['Habitación', 'Check-in', 'Check-out', 'Noches', 'Huéspedes', 'Total']],
-    body: [[
-      reserva.habitacion_numero ? `${reserva.habitacion_numero}${reserva.tipo_habitacion_nombre ? '\n' + reserva.tipo_habitacion_nombre : ''}` : '—',
-      `${format(new Date(reserva.fecha_checkin), 'dd/MM/yyyy', { locale: es })}${reserva.hora_llegada ? '\n' + reserva.hora_llegada : ''}`,
-      format(new Date(reserva.fecha_checkout), 'dd/MM/yyyy', { locale: es }),
-      String(reserva.noches || 1),
-      `${reserva.adultos || 0} ad${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`,
-      fmtMoney(Number(reserva.total || 0), currency),
-    ]],
-    theme: 'grid',
-    margin: { top: 46, bottom: 20 },
-    headStyles: { fillColor: [248, 250, 252], textColor: VULO_MUTED, fontSize: 7, fontStyle: 'bold', lineColor: VULO_BORDER, lineWidth: 0.2 },
-    bodyStyles: { fontSize: 9, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.2 },
-    styles: { cellPadding: 3 },
-  });
-  y = (doc as any).lastAutoTable.finalY + 8;
+  const fmtFecha = (d: Date | string) => format(new Date(d), 'dd/MM/yyyy', { locale: es });
+  const nowLabel = format(new Date(), 'dd/MM/yyyy HH:mm');
+  const folio = reserva.numero_reserva || '—';
 
-  // Términos
-  y = sectionLabel(doc, 'Términos y condiciones', y);
+  // --- 1. ENCABEZADO ---
+  let y = M;
+  // Izquierda: VULO wordmark en letter-spacing manual (aprox via texto normal + escala)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(19);
+  doc.setTextColor(...BLACK);
+  doc.setCharSpace(1.4);
+  doc.text('VULO', M, y + 6);
+  doc.setCharSpace(0);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...VULO_MUTED);
+  doc.setFontSize(11);
+  doc.setTextColor(...GRAY_600);
+  doc.text('Tarjeta de registro de huésped', M, y + 12);
+
+  // Derecha: folio + fecha de generación
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BLACK);
+  doc.text(`Folio ${folio}`, pageW - M, y + 6, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...GRAY_500);
+  doc.text(`Generado ${nowLabel}`, pageW - M, y + 11.5, { align: 'right' });
+
+  // Línea inferior 2px negro
+  y = M + 16;
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.6);
+  doc.line(M, y, pageW - M, y);
+  y += 10;
+
+  // --- 2. DATOS DEL HUÉSPED ---
+  const sectionTitle = (label: string, yy: number) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...GRAY_500);
+    doc.setCharSpace(0.5);
+    doc.text(label.toUpperCase(), M, yy);
+    doc.setCharSpace(0);
+    return yy + 6;
+  };
+
+  y = sectionTitle('Datos del huésped', y);
+
+  const filas: Array<{ label: string; value: string; bold?: boolean }> = [];
+  const nombre = nombreCompleto(cliente);
+  if (nombre && nombre !== '—') filas.push({ label: 'Nombre', value: nombre, bold: true });
+  const doc_ = [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ');
+  if (doc_) filas.push({ label: 'Documento', value: doc_ });
+  if (cliente.nacionalidad) filas.push({ label: 'Nacionalidad', value: cliente.nacionalidad });
+  if (cliente.email) filas.push({ label: 'Correo', value: cliente.email });
+  if (cliente.telefono) filas.push({ label: 'Teléfono', value: cliente.telefono });
+
+  const labelW = contentW * 0.3;
+  const valueX = M + labelW;
+  filas.forEach((f) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    doc.setTextColor(...GRAY_500);
+    doc.text(f.label, M, y + 4.5);
+    doc.setFont('helvetica', f.bold ? 'bold' : 'normal');
+    doc.setTextColor(...BLACK);
+    doc.text(f.value, valueX, y + 4.5);
+    // línea inferior
+    doc.setDrawColor(...GRAY_200);
+    doc.setLineWidth(0.15);
+    doc.line(M, y + 7, pageW - M, y + 7);
+    y += 8.5;
+  });
+  y += 6;
+
+  // --- 3. ESTANCIA ---
+  y = sectionTitle('Estancia', y);
+
+  const cols = ['Habitación', 'Check-in', 'Check-out', 'Noches', 'Huéspedes', 'Total'];
+  // anchos proporcionales
+  const weights = [1.1, 1.4, 1.2, 0.8, 1.1, 1.2];
+  const wSum = weights.reduce((a, b) => a + b, 0);
+  const colX: number[] = [];
+  let acc = M;
+  weights.forEach((w) => { colX.push(acc); acc += (w / wSum) * contentW; });
+  colX.push(pageW - M); // borde derecho
+
+  // línea superior 1px negro
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.35);
+  doc.line(M, y, pageW - M, y);
+
+  // encabezados
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY_700);
+  cols.forEach((c, i) => {
+    const align: 'left' | 'right' = i === cols.length - 1 ? 'right' : 'left';
+    const x = align === 'right' ? colX[i + 1] : colX[i] + 1;
+    doc.text(c, x, y + 5, { align });
+  });
+
+  // línea bajo headers
+  doc.setDrawColor(...GRAY_400);
+  doc.setLineWidth(0.18);
+  doc.line(M, y + 7, pageW - M, y + 7);
+
+  // fila de datos
+  const hab = reserva.habitacion_numero
+    ? `${reserva.habitacion_numero}${reserva.tipo_habitacion_nombre ? ' · ' + reserva.tipo_habitacion_nombre : ''}`
+    : '—';
+  const ci = `${fmtFecha(reserva.fecha_checkin)}${reserva.hora_llegada ? ' · ' + reserva.hora_llegada : ''}`;
+  const co = fmtFecha(reserva.fecha_checkout);
+  const noches = String(reserva.noches || 1);
+  const huesp = `${reserva.adultos || 0}${reserva.ninos ? ' + ' + reserva.ninos : ''}`;
+  const totalStr = fmtMoney(Number(reserva.total || 0), currency);
+  const values = [hab, ci, co, noches, huesp, totalStr];
+
+  const rowY = y + 14;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...BLACK);
+  values.forEach((v, i) => {
+    const isTotal = i === cols.length - 1;
+    const align: 'left' | 'right' = isTotal ? 'right' : 'left';
+    if (isTotal) doc.setFont('helvetica', 'bold');
+    const x = align === 'right' ? colX[i + 1] : colX[i] + 1;
+    // truncar a ancho de columna
+    const maxW = (colX[i + 1] - colX[i]) - 2;
+    const lines = doc.splitTextToSize(v, maxW);
+    doc.text(lines[0], x, rowY, { align });
+    if (isTotal) doc.setFont('helvetica', 'normal');
+  });
+  // línea bajo el total
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.35);
+  doc.line(colX[cols.length - 1] - 30, rowY + 2, colX[cols.length], rowY + 2);
+  y = rowY + 10;
+
+  // --- 4. TÉRMINOS Y CONDICIONES ---
+  y = sectionTitle('Términos y condiciones', y + 2);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY_500);
   const terminos =
     'El huésped declara que los datos consignados son verídicos y acepta las políticas del establecimiento, ' +
-    'incluyendo horarios de check-in/out, política de cancelación, cargos por daños y responsabilidad por objetos ' +
-    'personales. Se autoriza el tratamiento de datos personales conforme al aviso de privacidad del hotel.';
-  const tLines = doc.splitTextToSize(terminos, 180);
-  doc.text(tLines, 14, y);
-  y += tLines.length * 3.5 + 6;
-  doc.setTextColor(...VULO_TEXT);
+    'incluyendo horarios de check-in/out, política de cancelación, cargos por daños ocasionados durante la estancia ' +
+    'y responsabilidad por objetos personales. Se autoriza el tratamiento de datos personales conforme al aviso de ' +
+    'privacidad del hotel. La firma al pie hace constar la conformidad con las condiciones de hospedaje.';
+  const tLines = doc.splitTextToSize(terminos, contentW);
+  doc.text(tLines, M, y + 3, { align: 'justify', maxWidth: contentW });
+  y += tLines.length * 4 + 8;
 
-  if (aceptaTerminos) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(22, 163, 74);
-    doc.text('✓ El huésped acepta los términos y condiciones', 14, y);
-    doc.setTextColor(...VULO_TEXT);
-    y += 6;
-  }
+  // --- 5. FIRMA ---
+  // Posición al pie: dejar espacio suficiente por si el contenido queda corto
+  const firmaTop = Math.max(y + 20, pageH - M - 40);
+  const firmaBoxW = 80; // mm ~ 220px
+  const firmaBoxX = M;
+  const lineaY = firmaTop + 10;
 
-  // Firma
-  y = sectionLabel(doc, 'Firma del huésped', y + 2);
-  const firmaW = 90;
-  const firmaH = 32;
-  doc.setDrawColor(...VULO_BORDER);
-  doc.setLineWidth(0.3);
-  doc.rect(14, y, firmaW, firmaH);
+  // Imagen de firma si existe (encima de la línea)
   if (firmaDataUrl) {
     try {
-      doc.addImage(firmaDataUrl, 'PNG', 15, y + 1, firmaW - 2, firmaH - 2);
-    } catch (err) {
-      console.warn('No se pudo insertar la firma:', err);
-    }
+      const imgW = 70;
+      const imgH = 20;
+      doc.addImage(firmaDataUrl, 'PNG', firmaBoxX + (firmaBoxW - imgW) / 2, lineaY - imgH - 1, imgW, imgH);
+    } catch (err) { /* noop */ }
   }
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(...VULO_MUTED);
-  doc.text(`Firmado el ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, y + firmaH + 4);
-  doc.setTextColor(...VULO_TEXT);
+  // Línea de firma
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.35);
+  doc.line(firmaBoxX, lineaY, firmaBoxX + firmaBoxW, lineaY);
 
-  paintChrome(doc, opts, titulo, subtitulo, assets, 'Documento firmado digitalmente · La firma hace fe del acto de registro');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...BLACK);
+  doc.text('Firma del huésped', firmaBoxX + firmaBoxW / 2, lineaY + 5, { align: 'center' });
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY_400);
+  doc.text(`Firmado el ${nowLabel}`, firmaBoxX + firmaBoxW / 2, lineaY + 9.5, { align: 'center' });
+
+  // Derecha: generado con VULO
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY_400);
+  doc.text('Generado con VULO · vulo.mx', pageW - M, lineaY, { align: 'right' });
 
   const filename = `registro_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
