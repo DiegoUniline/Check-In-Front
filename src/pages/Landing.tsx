@@ -60,6 +60,7 @@ function Nav() {
           <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain md:h-6" />
         </Link>
         <nav className="hidden items-center gap-9 md:flex">
+          <Link to="/" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Inicio</Link>
           <Link to="/funciones" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Funciones</Link>
           <Link to="/precios" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Precios</Link>
           <Link to="/empresa" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Empresa</Link>
