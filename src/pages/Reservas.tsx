@@ -213,7 +213,7 @@ export default function Reservas() {
               <div className="min-w-0">
                 <h1 className="text-lg sm:text-xl font-bold leading-tight truncate">Reservas</h1>
                 <p className="text-xs text-muted-foreground truncate">
-                  {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+                  {formatDate(new Date())}
                 </p>
               </div>
             </div>

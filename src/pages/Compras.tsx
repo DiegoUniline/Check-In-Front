@@ -534,7 +534,7 @@ export default function Compras() {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de orden</Label>
-                        <Input value={format(new Date(), 'dd/MM/yyyy', { locale: es })} disabled className="bg-muted/40" />
+                        <Input value={formatDate(new Date())} disabled className="bg-muted/40" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado inicial</Label>
