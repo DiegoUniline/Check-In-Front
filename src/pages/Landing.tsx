@@ -7,6 +7,7 @@ import {
   ArrowRight, ChevronDown, Check, Calendar, ClipboardList, Sparkles,
   Wallet, FileText, MessageSquare, BarChart3, Building2, ShieldCheck,
   Wifi, Smartphone, Users, LifeBuoy, CreditCard, Globe, Receipt, Send,
+  Bot, ScanLine, Phone, MapPin, Zap,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import wordmark from '@/assets/vulo-wordmark.png';
@@ -612,6 +613,296 @@ function ForWho() {
   );
 }
 
+/* ══════════════════ 5.5 HIGHLIGHTS · IA + POS ══════════════════ */
+function Highlights() {
+  return (
+    <section className="border-t border-slate-100 bg-white py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionTag>Lo que nos hace distintos</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            IA que atiende WhatsApp
+            <br />
+            <span className="text-slate-400">y punto de venta integrado.</span>
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-slate-500">
+            Dos cosas que otros sistemas cobran aparte — o simplemente no tienen.
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-6 lg:grid-cols-2">
+          {/* IA card */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.7, ease }}
+            className="overflow-hidden rounded-[22px] border border-slate-200 bg-white p-8 md:p-10"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[12px]" style={{ background: '#FFF3EB' }}>
+                <Bot className="h-5 w-5" style={{ color: ORANGE }} strokeWidth={1.75} />
+              </div>
+              <span className="rounded-full px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider" style={{ background: '#FFF3EB', color: ORANGE }}>
+                Incluido
+              </span>
+            </div>
+            <h3 className="mt-6 text-[24px] font-bold tracking-tight text-slate-900 md:text-[28px]">
+              Un asistente que responde por ti a las 3 AM.
+            </h3>
+            <p className="mt-3 text-[15px] leading-relaxed text-slate-600">
+              La IA lee cada conversación de WhatsApp, entiende la intención, responde con la información real de tu hotel
+              (disponibilidad, tarifas, ubicación) y crea la reserva sola. Tu recepcionista solo interviene cuando importa.
+            </p>
+            <ul className="mt-5 space-y-2.5 text-[14px] text-slate-700">
+              {[
+                'Responde en segundos, 24/7, en el mismo tono del hotel',
+                'Convierte conversaciones en reservas confirmadas',
+                'Se calla y avisa cuando el huésped necesita a un humano',
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2.5">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: ORANGE }} strokeWidth={2.5} />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* POS card */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.7, ease, delay: 0.1 }}
+            className="overflow-hidden rounded-[22px] p-8 text-white md:p-10"
+            style={{ background: NAVY }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-white/10">
+                <ScanLine className="h-5 w-5 text-white" strokeWidth={1.75} />
+              </div>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-white/80">
+                Punto de venta
+              </span>
+            </div>
+            <h3 className="mt-6 text-[24px] font-bold tracking-tight text-white md:text-[28px]">
+              Restaurante, bar o tienda: todo carga al huésped.
+            </h3>
+            <p className="mt-3 text-[15px] leading-relaxed text-white/70">
+              POS táctil para consumos, productos y servicios. Cada venta se puede cobrar al momento o cargar a la habitación,
+              y aparece en la cuenta del huésped al hacer check-out. Corte de caja unificado.
+            </p>
+            <div className="mt-6 rounded-[14px] bg-white/5 p-4">
+              <div className="flex items-center justify-between text-[11.5px] text-white/60">
+                <span>Ticket · Hab. 208</span>
+                <span>19:42</span>
+              </div>
+              {[
+                ['2× Cerveza artesanal', '$180'],
+                ['1× Enchiladas suizas', '$220'],
+                ['1× Postre del día', '$95'],
+              ].map(([l, v]) => (
+                <div key={l} className="mt-2 flex items-center justify-between text-[12.5px]">
+                  <span className="text-white/80">{l}</span>
+                  <span className="font-medium text-white">{v}</span>
+                </div>
+              ))}
+              <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+                <span className="text-[11.5px] uppercase tracking-wider text-white/60">Cargar a habitación</span>
+                <span className="text-[15px] font-bold" style={{ color: ORANGE }}>$495 MXN</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════ 5.6 GALERÍA · POR DENTRO ══════════════════ */
+function Gallery() {
+  const tiles: Array<{
+    tag: string;
+    title: string;
+    body: string;
+    render: React.ReactNode;
+    span?: string;
+  }> = [
+    {
+      tag: 'Reservas',
+      title: 'Matriz visual por fechas.',
+      body: 'Arrastra, extiende y bloquea. Sin planillas, sin dobles capturas.',
+      span: 'lg:col-span-2',
+      render: <TileMatrix />,
+    },
+    {
+      tag: 'IA · WhatsApp',
+      title: 'Conversaciones que se vuelven reservas.',
+      body: 'La IA responde y crea la reserva en el mismo hilo.',
+      render: <TileWA />,
+    },
+    {
+      tag: 'Punto de venta',
+      title: 'POS táctil, cuenta al huésped.',
+      body: 'Cobros al momento o cargados a la habitación.',
+      render: <TilePOS />,
+    },
+    {
+      tag: 'Housekeeping',
+      title: 'Piso a piso, en tiempo real.',
+      body: 'Recepción ve al instante qué está listo.',
+      span: 'lg:col-span-2',
+      render: <TileHK />,
+    },
+  ];
+  return (
+    <section className="border-t border-slate-100 bg-slate-50/60 py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionTag>Por dentro</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Todo lo que mueve tu hotel,
+            <br />
+            <span className="text-slate-400">visto en pantalla.</span>
+          </h2>
+        </div>
+
+        <div className="mt-14 grid gap-5 lg:grid-cols-3">
+          {tiles.map((t, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ delay: (i % 3) * 0.08, duration: 0.7, ease }}
+              className={`group overflow-hidden rounded-[20px] border border-slate-200 bg-white p-6 transition hover:shadow-[0_25px_60px_-30px_rgba(15,23,42,0.28)] ${t.span ?? ''}`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider" style={{ background: '#FFF3EB', color: ORANGE }}>
+                  {t.tag}
+                </span>
+              </div>
+              <h3 className="mt-3 text-[18px] font-semibold tracking-tight text-slate-900">{t.title}</h3>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-slate-500">{t.body}</p>
+              <div className="mt-5 overflow-hidden rounded-[12px] border border-slate-100 bg-slate-50/70 p-3">
+                {t.render}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TileMatrix() {
+  const rooms = ['101', '102', '103', '104', '208'];
+  const bars: Array<{ row: number; start: number; len: number; c: string; label: string }> = [
+    { row: 0, start: 0, len: 3, c: NAVY, label: 'García' },
+    { row: 1, start: 1, len: 4, c: ORANGE, label: 'López' },
+    { row: 2, start: 2, len: 2, c: '#0F766E', label: 'Kim' },
+    { row: 3, start: 0, len: 5, c: NAVY, label: 'Torres' },
+    { row: 4, start: 3, len: 2, c: ORANGE, label: 'Ruiz' },
+  ];
+  return (
+    <div>
+      <div className="mb-2 grid grid-cols-[36px_repeat(7,1fr)] gap-1 text-[9.5px] font-medium text-slate-400">
+        <span />
+        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+          <span key={i} className="text-center">{d}</span>
+        ))}
+      </div>
+      {rooms.map((h, r) => (
+        <div key={h} className="mb-1 grid grid-cols-[36px_1fr] items-center gap-1">
+          <span className="text-[10px] font-semibold text-slate-500">{h}</span>
+          <div className="relative h-5 rounded bg-white">
+            {bars
+              .filter((b) => b.row === r)
+              .map((b, i) => (
+                <div
+                  key={i}
+                  className="absolute top-0 h-5 rounded px-1.5 text-[9.5px] font-medium leading-5 text-white"
+                  style={{ left: `${(b.start / 7) * 100}%`, width: `${(b.len / 7) * 100}%`, background: b.c }}
+                >
+                  {b.label}
+                </div>
+              ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TileWA() {
+  return (
+    <div className="rounded-lg bg-[#ECE5DD] p-2">
+      <div className="mb-1.5 flex justify-start">
+        <div className="max-w-[85%] rounded-lg bg-white px-2 py-1.5 text-[10.5px] text-slate-800 shadow-sm">
+          ¿Tienen habitación este viernes?
+        </div>
+      </div>
+      <div className="mb-1.5 flex justify-end">
+        <div className="max-w-[85%] rounded-lg bg-[#DCF8C6] px-2 py-1.5 text-[10.5px] text-slate-800 shadow-sm">
+          ¡Sí! Doble $2,400 · 22–25 Jul 🌊
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-[9.5px] font-semibold shadow-sm" style={{ color: ORANGE }}>
+          <Sparkles className="h-3 w-3" /> RES-2026-1042 creada
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TilePOS() {
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {['Café', 'Cerveza', 'Snack', 'Desayuno', 'Comida', 'Postre'].map((p, i) => (
+          <div
+            key={p}
+            className="rounded-md border border-slate-100 bg-white p-1.5 text-center text-[10px] font-medium text-slate-700"
+            style={i === 1 ? { background: '#FFF3EB', color: ORANGE, borderColor: '#FED7AA' } : undefined}
+          >
+            {p}
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex items-center justify-between rounded-md bg-white px-2 py-1.5">
+        <span className="text-[10px] text-slate-500">Cargar a Hab. 208</span>
+        <span className="text-[11px] font-bold" style={{ color: NAVY }}>$495</span>
+      </div>
+    </div>
+  );
+}
+
+function TileHK() {
+  const rooms = [
+    { h: '101', s: 'Limpia', c: '#059669' },
+    { h: '102', s: 'En proceso', c: ORANGE },
+    { h: '103', s: 'Por revisar', c: '#64748B' },
+    { h: '104', s: 'Limpia', c: '#059669' },
+    { h: '208', s: 'En proceso', c: ORANGE },
+    { h: '209', s: 'Por revisar', c: '#64748B' },
+    { h: '210', s: 'Limpia', c: '#059669' },
+    { h: '301', s: 'En proceso', c: ORANGE },
+  ];
+  return (
+    <div className="grid grid-cols-4 gap-1.5">
+      {rooms.map((r) => (
+        <div key={r.h} className="rounded-md bg-white p-2">
+          <div className="text-[10px] font-medium text-slate-500">Hab. {r.h}</div>
+          <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold" style={{ color: r.c }}>
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: r.c }} />{r.s}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ══════════════════ 6. INTEGRACIONES ══════════════════ */
 function Integrations() {
   const live = [
@@ -801,8 +1092,16 @@ function FinalCTA() {
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="h-[52px] rounded-full px-8 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
-            <a href="mailto:hola@vulo.mx?subject=Agendar%20demo%20VULO">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></a>
+            <a href="https://wa.me/523171035768?text=Hola%2C%20quiero%20agendar%20una%20demo%20de%20VULO" target="_blank" rel="noreferrer">
+              WhatsApp: 317 103 5768 <ArrowRight className="ml-1 h-4 w-4" />
+            </a>
           </Button>
+          <Button asChild size="lg" variant="outline" className="h-[52px] rounded-full border-white/25 bg-transparent px-7 text-[15px] font-medium text-white hover:bg-white/10 hover:text-white">
+            <a href="mailto:hola@vulo.mx?subject=Agendar%20demo%20VULO">Escríbenos por correo</a>
+          </Button>
+        </div>
+        <div className="mt-8 inline-flex items-center gap-2 text-[13px] text-white/60">
+          <MapPin className="h-4 w-4" /> Autlán de Navarro, Jalisco · México
         </div>
       </div>
     </section>
@@ -811,10 +1110,17 @@ function FinalCTA() {
 
 /* ══════════════════ FOOTER ══════════════════ */
 function Footer() {
-  const cols = [
+  const cols: Array<{ t: string; l: Array<[string, string]> }> = [
     { t: 'Producto', l: [['Funciones', '#funciones'], ['Precios', '#precios'], ['Integraciones', '#funciones']] },
     { t: 'Empresa', l: [['Sobre VULO', '#'], ['Contacto', '#contacto']] },
-    { t: 'Recursos', l: [['Centro de ayuda', '#'], ['Estado del sistema', '#']] },
+    {
+      t: 'Contacto',
+      l: [
+        ['WhatsApp 317 103 5768', 'https://wa.me/523171035768'],
+        ['hola@vulo.mx', 'mailto:hola@vulo.mx'],
+        ['Autlán de Navarro, Jalisco', '#contacto'],
+      ],
+    },
     { t: 'Legal', l: [['Términos', '#'], ['Privacidad', '#']] },
   ];
   return (
@@ -827,8 +1133,16 @@ function Footer() {
               <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain" />
             </div>
             <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-slate-500">
-              Software para hoteles. Hecho en México.
+              Software para hoteles. Hecho en Autlán de Navarro, Jalisco.
             </p>
+            <div className="mt-4 space-y-1.5 text-[13px] text-slate-600">
+              <a href="https://wa.me/523171035768" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-slate-900">
+                <Phone className="h-3.5 w-3.5" /> 317 103 5768
+              </a>
+              <div className="inline-flex items-center gap-2 text-slate-500">
+                <MapPin className="h-3.5 w-3.5" /> Autlán de Navarro, Jalisco
+              </div>
+            </div>
           </div>
           {cols.map((c) => (
             <div key={c.t}>
@@ -842,8 +1156,12 @@ function Footer() {
           ))}
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6 text-[12px] text-slate-400">
-          <div>© {new Date().getFullYear()} VULO · CDMX, México</div>
-          <div className="inline-flex items-center gap-2"><span>Idioma:</span> <span className="font-medium text-slate-600">Español (México)</span></div>
+          <div>© {new Date().getFullYear()} VULO · Autlán de Navarro, Jalisco, México</div>
+          <div className="inline-flex items-center gap-2">
+            <span>Desarrollado por</span>
+            <span className="font-semibold text-slate-700">Uniline</span>
+            <span className="text-slate-400">· Innovación en la nube</span>
+          </div>
         </div>
       </div>
     </footer>
@@ -861,6 +1179,21 @@ export default function Landing() {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     url: 'https://vulo.mx/',
+    author: {
+      '@type': 'Organization',
+      name: 'Uniline · Innovación en la nube',
+    },
+    provider: {
+      '@type': 'Organization',
+      name: 'VULO',
+      telephone: '+52-317-103-5768',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Autlán de Navarro',
+        addressRegion: 'Jalisco',
+        addressCountry: 'MX',
+      },
+    },
     offers: {
       '@type': 'Offer',
       priceCurrency: 'MXN',
@@ -894,6 +1227,8 @@ export default function Landing() {
         <Pains />
         <HowItWorks />
         <Features />
+        <Highlights />
+        <Gallery />
         <ForWho />
         <Integrations />
         <Trust />
