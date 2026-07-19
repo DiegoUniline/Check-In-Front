@@ -63,8 +63,8 @@ export function LogoHorizontal({
         className={cn('font-heading font-bold tracking-tight leading-none', wordmarkClassName)}
         style={{ fontSize: size * 0.62 }}
       >
-        <span className="text-[#04122C] dark:text-white">Hosped</span>
-        <span className="text-primary">App</span>
+        <span className="text-[#04122C] dark:text-white">VU</span>
+        <span className="text-primary">LO</span>
       </span>
     </div>
   );
