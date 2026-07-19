@@ -32,6 +32,8 @@ import { formatCurrency } from '@/lib/currency';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { BitacoraPanel } from '@/components/turnos/BitacoraPanel';
+import { ExportButton } from '@/components/ExportButton';
 
 interface Turno {
   id: string;
