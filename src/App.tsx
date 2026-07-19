@@ -44,7 +44,7 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import MarketingLayout from "@/marketing/layout/MarketingLayout";
-import Home from "@/marketing/pages/Home";
+import Landing from "@/pages/Landing";
 import Features from "@/marketing/pages/Features";
 import Pricing from "@/marketing/pages/Pricing";
 import About from "@/marketing/pages/About";
@@ -84,8 +84,8 @@ const AppRoutes = () => (
     <Route path="/signup" element={<Signup />} />
     <Route path="/forgot-password" element={<ForgotPassword />} />
     <Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/" element={<Landing />} />
     <Route element={<MarketingLayout />}>
-      <Route path="/" element={<Home />} />
       <Route path="/features" element={<Features />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/about" element={<About />} />
