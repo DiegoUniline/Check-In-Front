@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "HospedApp"
+const SITE_NAME = "VULO"
 const SENDER_DOMAIN = "notify.hospedapp.com"
 const ROOT_DOMAIN = "hospedapp.com"
 const FROM_DOMAIN = "hospedapp.com" // Domain shown in From address (may be root or sender subdomain)
@@ -289,7 +289,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     reauthentication: 'Tu código de verificación',
   }
   const subjectBase = baseSubjects[emailType] || EMAIL_SUBJECTS[emailType] || 'Notificación'
-  const subject = hotelName ? `${subjectBase} · ${hotelName}` : `${subjectBase} · HospedApp`
+  const subject = hotelName ? `${subjectBase} · ${hotelName}` : `${subjectBase} · VULO`
 
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({

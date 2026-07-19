@@ -13,7 +13,7 @@ interface SignupEmailProps {
 }
 
 export const SignupEmail = ({ recipient, confirmationUrl, hotelName }: SignupEmailProps) => (
-  <EmailLayout preview={`Confirma tu correo en ${hotelName || 'HospedApp'}`} hotelName={hotelName}>
+  <EmailLayout preview={`Confirma tu correo en ${hotelName || 'VULO'}`} hotelName={hotelName}>
     <Heading style={h1}>¡Bienvenido{hotelName ? ` a ${hotelName}` : ''}! 👋</Heading>
     <Text style={p}>
       Gracias por unirte. Solo falta un paso para activar tu cuenta: confirma tu correo <strong>{recipient}</strong> para empezar a gestionar reservas, habitaciones y huéspedes.

@@ -17,19 +17,20 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 
 export const LOGO_URL =
-  'https://hospedapp.com/__l5e/assets-v1/7584dfcc-ca95-44ac-a08d-2392a453ad0f/hospedapp-icon.png'
+  'https://vulo.mx/__l5e/assets-v1/21b5e767-24fc-469b-a90a-6c43f288322d/vulo-fox.png'
 
-// HospedApp brand palette
+// VULO brand palette
 export const brand = {
-  navy: '#04122C',
-  navySoft: '#0A1F45',
-  turquoise: '#0B9F91',
-  turquoiseDark: '#088577',
-  bg: '#F5F7FA',
+  navy: '#10233F',
+  navySoft: '#1B335A',
+  // Kept `turquoise` key for back-compat with existing templates; it is now the orange accent.
+  turquoise: '#F97316',
+  turquoiseDark: '#EA580C',
+  bg: '#F8FAFC',
   card: '#FFFFFF',
-  border: '#E4E9F2',
-  text: '#0F172A',
-  muted: '#64748B',
+  border: '#E5EAF2',
+  text: '#111827',
+  muted: '#475569',
   softMuted: '#94A3B8',
 }
 
@@ -57,14 +58,13 @@ export const EmailLayout = ({ preview, hotelName, children }: LayoutProps) => (
                         src={LOGO_URL}
                         width="40"
                         height="40"
-                        alt="HospedApp"
+                        alt="VULO"
                         style={{ display: 'block', borderRadius: '8px' }}
                       />
                     </td>
                     <td style={{ verticalAlign: 'middle' }}>
                       <Text style={brandLogo}>
-                        <span style={{ color: brand.turquoise }}>H</span>
-                        <span style={{ color: '#FFFFFF' }}>ospedApp</span>
+                        <span style={{ color: '#FFFFFF' }}>VULO</span>
                       </Text>
                     </td>
                   </tr>
@@ -84,18 +84,18 @@ export const EmailLayout = ({ preview, hotelName, children }: LayoutProps) => (
 
         {/* Footer */}
         <Section style={footerWrap}>
-          <Text style={footerBrand}>HospedApp — Software de gestión hotelera</Text>
+          <Text style={footerBrand}>VULO — Software para hoteles</Text>
           <Text style={footerText}>
-            {hotelName ? `Este correo fue enviado por ${hotelName} a través de HospedApp.` : 'Este correo fue enviado por HospedApp.'}
+            {hotelName ? `Este correo fue enviado por ${hotelName} a través de VULO.` : 'Este correo fue enviado por VULO.'}
           </Text>
           <Text style={footerText}>
-            <Link href="https://hospedapp.com" style={footerLink}>hospedapp.com</Link>
+            <Link href="https://vulo.mx" style={footerLink}>vulo.mx</Link>
             {'  ·  '}
-            <Link href="https://hospedapp.com/soporte" style={footerLink}>Soporte</Link>
+            <Link href="https://vulo.mx/contacto" style={footerLink}>Soporte</Link>
             {'  ·  '}
-            <Link href="https://hospedapp.com/privacidad" style={footerLink}>Privacidad</Link>
+            <Link href="https://vulo.mx/privacidad" style={footerLink}>Privacidad</Link>
           </Text>
-          <Text style={footerSmall}>© {new Date().getFullYear()} HospedApp. Todos los derechos reservados.</Text>
+          <Text style={footerSmall}>© {new Date().getFullYear()} VULO · Autlán de Navarro, Jalisco</Text>
         </Section>
       </Container>
     </Body>
@@ -136,7 +136,7 @@ const header = {
   borderRadius: '14px 14px 0 0',
 }
 const brandLogo = {
-  fontFamily: "'Sora', 'Inter', Arial, sans-serif",
+  fontFamily: "'Inter', Arial, sans-serif",
   fontSize: '22px',
   fontWeight: 700 as const,
   letterSpacing: '-0.02em',
@@ -145,8 +145,8 @@ const brandLogo = {
 }
 const hotelBadge = {
   display: 'inline-block',
-  background: 'rgba(11,159,145,0.18)',
-  color: '#7FE9DD',
+  background: 'rgba(249,115,22,0.18)',
+  color: '#FDBA74',
   border: `1px solid ${brand.turquoise}`,
   padding: '6px 12px',
   borderRadius: '999px',
@@ -164,7 +164,7 @@ const card = {
 }
 
 export const h1: React.CSSProperties = {
-  fontFamily: "'Sora', 'Inter', Arial, sans-serif",
+  fontFamily: "'Inter', Arial, sans-serif",
   fontSize: '24px',
   lineHeight: '1.25',
   fontWeight: 700,
@@ -193,7 +193,7 @@ const ctaBtn: React.CSSProperties = {
   padding: '14px 28px',
   textDecoration: 'none',
   display: 'inline-block',
-  boxShadow: '0 6px 16px rgba(11,159,145,0.28)',
+  boxShadow: '0 6px 16px rgba(249,115,22,0.32)',
 }
 const hr: React.CSSProperties = {
   border: 'none',
@@ -215,7 +215,7 @@ const footerWrap = {
   textAlign: 'center' as const,
 }
 const footerBrand: React.CSSProperties = {
-  fontFamily: "'Sora', 'Inter', Arial, sans-serif",
+  fontFamily: "'Inter', Arial, sans-serif",
   fontSize: '13px',
   fontWeight: 600,
   color: brand.navy,
@@ -241,8 +241,8 @@ const footerSmall: React.CSSProperties = {
 export const Highlight = ({ children }: { children: React.ReactNode }) => (
   <Section
     style={{
-      background: '#F0FBF9',
-      border: `1px solid #B8ECE4`,
+      background: '#FFF4EC',
+      border: `1px solid #FED7AA`,
       borderRadius: '10px',
       padding: '14px 16px',
       margin: '18px 0',
