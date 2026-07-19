@@ -230,8 +230,8 @@ export default function HistorialReservas() {
   };
 
   const getOrigenBadge = (origen: string) => {
-    return origen === 'Recepcion' 
-      ? <Badge variant="outline" className="border-green-500 text-green-600">Walk-in</Badge>
+    return origen === 'Recepcion'
+      ? <Badge variant="outline" className="border-green-500 text-green-600">Recepción</Badge>
       : <Badge variant="outline" className="border-blue-500 text-blue-600">Online</Badge>;
   };
 
@@ -243,6 +243,8 @@ export default function HistorialReservas() {
   // Estadísticas rápidas
   const stats = {
     total: reservas.length,
+    recepcion: reservas.filter(r => r.origen === 'Recepcion').length,
+    online: reservas.filter(r => r.origen && r.origen !== 'Recepcion').length,
     checkin: reservas.filter(r => r.estado === 'CheckIn').length,
     checkout: reservas.filter(r => r.estado === 'CheckOut').length,
     canceladas: reservas.filter(r => r.estado === 'Cancelada').length,
@@ -250,7 +252,7 @@ export default function HistorialReservas() {
   };
 
   return (
-    <MainLayout title="Historial de Reservas" subtitle="Consulta todas las reservas del sistema">
+    <MainLayout title="Historial de Reservas y Recepción" subtitle="Reservas online y walk-ins registrados en recepción">
       
       {/* Stats Cards - Grid responsivo corregido */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
