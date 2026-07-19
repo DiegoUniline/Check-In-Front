@@ -7,6 +7,7 @@ import {
   ArrowRight, ChevronDown, Check, Calendar, ClipboardList, Sparkles,
   Wallet, FileText, MessageSquare, BarChart3, Building2, ShieldCheck,
   Wifi, Smartphone, Users, LifeBuoy, CreditCard, Globe, Receipt, Send,
+  Bot, ScanLine, Phone, MapPin, Zap,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import wordmark from '@/assets/vulo-wordmark.png';
