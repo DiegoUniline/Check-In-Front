@@ -255,7 +255,7 @@ export default function HistorialReservas() {
     <MainLayout title="Historial de Reservas y Recepción" subtitle="Reservas online y walk-ins registrados en recepción">
       
       {/* Stats Cards - Grid responsivo corregido */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <Card>
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between">
@@ -264,6 +264,28 @@ export default function HistorialReservas() {
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
               <FileText className="h-8 w-8 text-muted-foreground opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Recepción</p>
+                <p className="text-2xl font-bold text-green-600">{stats.recepcion}</p>
+              </div>
+              <User className="h-8 w-8 text-green-600 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Online</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.online}</p>
+              </div>
+              <Globe className="h-8 w-8 text-blue-600 opacity-20" />
             </div>
           </CardContent>
         </Card>
@@ -356,8 +378,8 @@ export default function HistorialReservas() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="Recepcion">Walk-in</SelectItem>
-                  <SelectItem value="Online">Online</SelectItem>
+                  <SelectItem value="Recepcion">Recepción (Walk-in)</SelectItem>
+                  <SelectItem value="Web">Online</SelectItem>
                 </SelectContent>
               </Select>
             </div>
