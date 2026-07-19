@@ -830,19 +830,19 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const valueX = M + labelW;
   filas.forEach((f) => {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10.5);
+    doc.setFontSize(10);
     doc.setTextColor(...GRAY_500);
-    doc.text(f.label, M, y + 4.5);
+    doc.text(f.label, M, y + 3.5);
     doc.setFont('helvetica', f.bold ? 'bold' : 'normal');
     doc.setTextColor(...BLACK);
-    doc.text(f.value, valueX, y + 4.5);
+    doc.text(f.value, valueX, y + 3.5);
     // línea inferior
     doc.setDrawColor(...GRAY_200);
     doc.setLineWidth(0.15);
-    doc.line(M, y + 7, pageW - M, y + 7);
-    y += 8.5;
+    doc.line(M, y + 5.5, pageW - M, y + 5.5);
+    y += 6.5;
   });
-  y += 6;
+  y += 4;
 
   // --- 3. ESTANCIA ---
   y = sectionTitle('Estancia', y);
@@ -868,13 +868,13 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   cols.forEach((c, i) => {
     const align: 'left' | 'right' = i === cols.length - 1 ? 'right' : 'left';
     const x = align === 'right' ? colX[i + 1] : colX[i] + 1;
-    doc.text(c, x, y + 5, { align });
+    doc.text(c, x, y + 4, { align });
   });
 
   // línea bajo headers
   doc.setDrawColor(...GRAY_400);
   doc.setLineWidth(0.18);
-  doc.line(M, y + 7, pageW - M, y + 7);
+  doc.line(M, y + 6, pageW - M, y + 6);
 
   // fila de datos
   const hab = reserva.habitacion_numero
@@ -887,9 +887,9 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const totalStr = fmtMoney(Number(reserva.total || 0), currency);
   const values = [hab, ci, co, noches, huesp, totalStr];
 
-  const rowY = y + 14;
+  const rowY = y + 11;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setTextColor(...BLACK);
   values.forEach((v, i) => {
     const isTotal = i === cols.length - 1;
@@ -906,7 +906,7 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.35);
   doc.line(colX[cols.length - 1] - 30, rowY + 2, colX[cols.length], rowY + 2);
-  y = rowY + 10;
+  y = rowY + 7;
 
   // --- 4. TÉRMINOS Y CONDICIONES ---
   y = sectionTitle('Términos y condiciones', y + 2);
