@@ -339,10 +339,28 @@ export default function Turnos() {
       {/* Historical Shifts */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Historial de Turnos
-          </CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Historial de Turnos
+            </CardTitle>
+            <ExportButton
+              rows={() => historialTurnos.map((t) => ({
+                Inicio: formatDateTime(t.fechaInicio),
+                Fin: t.fechaFin ? formatDateTime(t.fechaFin) : '',
+                Usuario: t.usuario,
+                'Fondo Inicial': t.fondoInicial,
+                'Ventas Efectivo': t.ventasEfectivo,
+                'Ventas Tarjeta': t.ventasTarjeta,
+                'Ventas Transferencia': t.ventasTransferencia,
+                'Gastos Efectivo': t.gastosEfectivo,
+                'Fondo Final': t.fondoFinal ?? '',
+                Estado: t.estado,
+              }))}
+              filename="historial_turnos"
+              sheetName="Turnos"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -380,6 +398,10 @@ export default function Turnos() {
           </Table>
         </CardContent>
       </Card>
+
+      <div className="mt-6">
+        <BitacoraPanel turnoId={turnoActual?.id} />
+      </div>
 
       {/* Open Shift Dialog */}
       <Dialog open={isAbrirDialogOpen} onOpenChange={setIsAbrirDialogOpen}>
