@@ -42,6 +42,7 @@ export interface Guia {
   cuando: string;
   pasos: GuiaPaso[];
   tips?: string[];
+  navegable?: boolean;
 }
 
 export const GUIAS: Guia[] = [
@@ -75,6 +76,7 @@ export const GUIAS: Guia[] = [
       { titulo: 'Entregar habitación', detalle: 'Al confirmar, la habitación pasa a "Ocupada" y se registra hora de entrada.' },
     ],
     tips: ['Puedes reimprimir la tarjeta de registro desde el histórico si el huésped la pide de nuevo.'],
+    navegable: false,
   },
   {
     ruta: '/check-out',
@@ -89,6 +91,7 @@ export const GUIAS: Guia[] = [
       { titulo: 'Emitir comprobante', detalle: 'Genera el PDF del comprobante para el huésped e imprímelo si lo requiere.' },
       { titulo: 'Liberar habitación', detalle: 'La habitación pasa a "Sucia" y aparece en Limpieza automáticamente.' },
     ],
+    navegable: false,
   },
   {
     ruta: '/habitaciones',
@@ -408,6 +411,7 @@ export const GUIAS: Guia[] = [
     proposito: 'Panel exclusivo para el equipo VULO — administración de hoteles cliente.',
     cuando: 'Solo super-administradores.',
     pasos: [{ titulo: 'Gestionar hoteles', detalle: 'Alta, suscripciones y estado de cada hotel cliente.' }],
+    navegable: false,
   },
   {
     ruta: '/soporte',
@@ -433,6 +437,15 @@ export const GUIAS: Guia[] = [
 ];
 
 export function guiaPorRuta(pathname: string): Guia {
-  const match = GUIAS.find((g) => g.ruta !== '__default__' && pathname.startsWith(g.ruta));
+  // Alias explícitos para rutas con parámetros
+  if (pathname.startsWith('/checkin')) {
+    return GUIAS.find((g) => g.ruta === '/check-in') as Guia;
+  }
+  if (pathname.startsWith('/checkout')) {
+    return GUIAS.find((g) => g.ruta === '/check-out') as Guia;
+  }
+  const match = GUIAS.find(
+    (g) => g.ruta !== '__default__' && g.ruta.startsWith('/') && pathname.startsWith(g.ruta),
+  );
   return match || (GUIAS.find((g) => g.ruta === '__default__') as Guia);
 }
