@@ -420,7 +420,7 @@ class ApiClient {
     });
   };
   getReserva = async (id: string): Promise<any> => {
-    const { data, error } = await supabase.from('reservas').select('*, clientes(*), habitaciones(*, tipos_habitacion(*)), tipos_habitacion(*)').eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('reservas').select('*, clientes(*), habitaciones(*, tipos_habitacion(*)), tipos_habitacion(*), hotel:hotels(*)').eq('id', id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
     const [{ data: pagos }, { data: cargos }] = await Promise.all([

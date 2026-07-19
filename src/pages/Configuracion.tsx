@@ -30,6 +30,7 @@ import { EvolutionConfig } from '@/components/configuracion/EvolutionConfig';
 import { WhatsAppAgentConfig } from '@/components/configuracion/WhatsAppAgentConfig';
 import { SaveButton, isDirty } from '@/components/ui/save-button';
 import { useUnsavedChanges } from '@/contexts/UnsavedChangesContext';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 const emptyHotel = {
   nombre: '',
@@ -41,6 +42,7 @@ const emptyHotel = {
   pais: 'México',
   telefono: '',
   email: '',
+  logoUrl: '' as string | null | '',
   horaCheckin: '15:00',
   horaCheckout: '12:00',
   estrellas: 3,
@@ -77,6 +79,7 @@ export default function Configuracion() {
       pais: h.pais ?? (hotelData as any).pais ?? 'México',
       telefono: h.telefono ?? hotelData.telefono,
       email: h.email ?? hotelData.email,
+      logoUrl: h.logo_url ?? hotelData.logoUrl ?? '',
       horaCheckin: h.hora_checkin ?? hotelData.horaCheckin,
       horaCheckout: h.hora_checkout ?? hotelData.horaCheckout,
       timezone: h.timezone ?? hotelData.timezone ?? 'America/Mexico_City',
@@ -116,6 +119,7 @@ export default function Configuracion() {
       pais: ui.pais || 'México',
       telefono: ui.telefono,
       email: ui.email,
+      logo_url: ui.logoUrl || null,
       hora_checkin: ui.horaCheckin,
       hora_checkout: ui.horaCheckout,
       timezone: ui.timezone || 'America/Mexico_City',
@@ -234,6 +238,19 @@ export default function Configuracion() {
                 <CardDescription>Datos generales de tu establecimiento</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Logotipo del Hotel</Label>
+                  <ImageUpload
+                    bucket="hotel-logos"
+                    value={hotelData.logoUrl || null}
+                    onChange={(url) => setHotelData({ ...hotelData, logoUrl: url || '' })}
+                    label="Subir logotipo del hotel"
+                    maxWidth={512}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se usa en los documentos (comprobante, tarjeta de registro) y correos con los datos de tu hotel.
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Label>Nombre del Hotel</Label>
                   <Input 
