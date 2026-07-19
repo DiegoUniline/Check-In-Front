@@ -470,6 +470,7 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
       ['Documento', [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ') || '—'],
     ],
     theme: 'plain',
+    margin: { top: 46, bottom: 20 },
     styles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 0 }, textColor: VULO_TEXT },
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 32, textColor: VULO_MUTED }, 1: { textColor: VULO_TEXT } },
   });
@@ -489,6 +490,7 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
       `${reserva.adultos || 0} ad${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`,
     ]],
     theme: 'grid',
+    margin: { top: 46, bottom: 20 },
     headStyles: { fillColor: [248, 250, 252], textColor: VULO_MUTED, fontSize: 7, fontStyle: 'bold', lineColor: VULO_BORDER, lineWidth: 0.2 },
     bodyStyles: { fontSize: 9, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.2 },
     styles: { cellPadding: 3 },
@@ -516,6 +518,7 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
        { content: fmtMoney(saldo, currency), styles: { fontStyle: 'bold', textColor: saldo > 0 ? VULO_ORANGE : [22, 163, 74], halign: 'right' } }],
     ],
     theme: 'plain',
+    margin: { top: 46, bottom: 20 },
     styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 4, right: 4 }, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.15 },
     columnStyles: { 0: { cellWidth: 120, textColor: VULO_MUTED }, 1: { halign: 'right', textColor: VULO_TEXT } },
     didParseCell: (data) => {
@@ -576,6 +579,7 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
       ['Teléfono', cliente.telefono || '—'],
     ],
     theme: 'plain',
+    margin: { top: 46, bottom: 20 },
     styles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 0 }, textColor: VULO_TEXT },
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40, textColor: VULO_MUTED }, 1: { textColor: VULO_TEXT } },
   });
@@ -594,6 +598,7 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
       fmtMoney(Number(reserva.total || 0), currency),
     ]],
     theme: 'grid',
+    margin: { top: 46, bottom: 20 },
     headStyles: { fillColor: [248, 250, 252], textColor: VULO_MUTED, fontSize: 7, fontStyle: 'bold', lineColor: VULO_BORDER, lineWidth: 0.2 },
     bodyStyles: { fontSize: 9, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.2 },
     styles: { cellPadding: 3 },
