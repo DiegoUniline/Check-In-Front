@@ -5,6 +5,7 @@ import {
   RotateCcw, Globe, GlobeLock
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ExportButton } from '@/components/ExportButton';
 import { formatCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -475,6 +476,21 @@ export default function Habitaciones() {
             <span className="hidden sm:inline">Nueva Habitación</span>
             <span className="sm:hidden">Nuevo</span>
           </Button>
+          <ExportButton
+            rows={() => filteredHabitaciones.map((h: any) => ({
+              Número: h.numero,
+              Tipo: h.tipo || h.tipos_habitacion?.nombre || '',
+              Piso: h.piso ?? '',
+              Estado: h.estado_habitacion || '',
+              Limpieza: h.estado_limpieza || '',
+              Mantenimiento: h.estado_mantenimiento || '',
+              'Precio base': h.precio_base ?? h.tipos_habitacion?.precio_base ?? 0,
+              Notas: h.notas || '',
+            }))}
+            filename="habitaciones"
+            sheetName="Habitaciones"
+            label="Exportar"
+          />
         </div>
       </div>
 
