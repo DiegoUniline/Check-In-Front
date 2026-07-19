@@ -60,6 +60,7 @@ import Chats from "./pages/Chats";
 import WhatsAppAgente from "./pages/WhatsAppAgente";
 import WhatsAppConexion from "./pages/WhatsAppConexion";
 import Temporadas from "./pages/Temporadas";
+import Soporte from "./pages/Soporte";
 
 const queryClient = new QueryClient();
 
@@ -268,6 +269,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="catalogos">
           <Temporadas />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/soporte"
+      element={
+        <ProtectedRoute>
+          <Soporte />
         </ProtectedRoute>
       }
     />

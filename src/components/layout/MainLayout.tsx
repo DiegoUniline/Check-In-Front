@@ -6,6 +6,7 @@ import { AlertaSuscripcion } from '@/components/AlertaSuscripcion';
 import { MobileBottomNav } from './MobileBottomNav';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { CommandPalette } from '@/components/CommandPalette';
+import { AsistenteVulo } from '@/components/asistente/AsistenteVulo';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -52,6 +53,7 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           </main>
         </SidebarInset>
         <MobileBottomNav />
+        <AsistenteVulo />
       </div>
     </SidebarProvider>
   );
