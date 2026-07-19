@@ -10,6 +10,7 @@ type RevealProps = {
   delay?: number;
   y?: number;
   className?: string;
+  id?: string;
   as?: "div" | "section" | "article" | "header" | "footer";
 } & Omit<MotionProps, "children">;
 
