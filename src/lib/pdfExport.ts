@@ -292,7 +292,6 @@ function drawHeader(
     doc.setTextColor(203, 213, 225); // slate-300
     if (ctx.hotelDireccion) doc.text(String(ctx.hotelDireccion), MARGIN_X, 19);
     if (ctx.hotelTelefono) doc.text(String(ctx.hotelTelefono), MARGIN_X, 23.5);
-    if (ctx.hotelEmail) doc.text(String(ctx.hotelEmail), MARGIN_X, 28);
   } else {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
