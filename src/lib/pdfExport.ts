@@ -23,6 +23,28 @@ async function loadImageDataUrl(url: string): Promise<string> {
   return dataUrl;
 }
 
+// Carga una imagen y la convierte a PNG data URL (jsPDF no soporta WebP nativo).
+const _pngCache = new Map<string, string>();
+async function loadImageAsPng(url: string): Promise<string> {
+  if (_pngCache.has(url)) return _pngCache.get(url)!;
+  const src = await loadImageDataUrl(url);
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = src;
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('canvas 2d');
+  ctx.drawImage(img, 0, 0);
+  const png = canvas.toDataURL('image/png');
+  _pngCache.set(url, png);
+  return png;
+}
+
 export type PdfKpi = { label: string; value: string };
 export type PdfTable = { title: string; head: string[]; rows: (string | number)[][] };
 
