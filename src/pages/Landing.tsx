@@ -1179,6 +1179,21 @@ export default function Landing() {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     url: 'https://vulo.mx/',
+    author: {
+      '@type': 'Organization',
+      name: 'Uniline · Innovación en la nube',
+    },
+    provider: {
+      '@type': 'Organization',
+      name: 'VULO',
+      telephone: '+52-317-103-5768',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Autlán de Navarro',
+        addressRegion: 'Jalisco',
+        addressCountry: 'MX',
+      },
+    },
     offers: {
       '@type': 'Offer',
       priceCurrency: 'MXN',
