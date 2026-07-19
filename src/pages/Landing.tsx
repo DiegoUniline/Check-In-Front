@@ -1402,6 +1402,7 @@ export default function Landing() {
         <Pains />
         <FrictionBand />
         <HowItWorks />
+        <AIWhatsApp />
         <Features />
         <Highlights />
         <Gallery />
