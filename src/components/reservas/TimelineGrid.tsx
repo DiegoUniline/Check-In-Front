@@ -143,16 +143,16 @@ export function TimelineGrid({
       >
         <div className="min-w-max">
           {/* Fila cabecera: sticky top, se mueve con el scroll horizontal */}
-          <div className="flex sticky top-0 z-20 bg-muted/30 border-b">
+          <div className="flex sticky top-0 z-20 bg-card border-b">
             <div className={cn(
-              "w-24 flex-shrink-0 p-2 border-r bg-muted/50 flex items-center justify-center sticky left-0 z-30"
+              "w-36 flex-shrink-0 p-2 border-r bg-card flex items-center justify-center sticky left-0 z-30"
             )}>
               <span className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
                 Habitación
               </span>
             </div>
             {days.map((day, idx) => (
-              <div key={idx} className={cn("border-r text-center py-1.5 px-1 flex-shrink-0", cellWidth)}>
+              <div key={idx} className={cn("border-r text-center py-1.5 px-1 flex-shrink-0 bg-card", cellWidth)}>
                 <div className={cn("font-medium", isCompact ? "text-[7px]" : "text-[9px]")}>
                   {format(day, 'EEE', { locale: es })}
                 </div>
@@ -169,14 +169,14 @@ export function TimelineGrid({
               {/* Columna sticky de habitación */}
               <div
                 className={cn(
-                  "w-24 flex-shrink-0 border-r border-b bg-muted/30 px-2 py-1 flex flex-col justify-center sticky left-0 z-10",
+                  "w-36 flex-shrink-0 border-r border-b bg-card px-2 py-1 flex flex-col justify-center sticky left-0 z-10",
                   cellHeight
                 )}
               >
                 <div className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
                   {hab.numero}
                 </div>
-                <div className={cn("text-muted-foreground truncate", isCompact ? "text-[8px]" : "text-[10px]")}>
+                <div className={cn("text-muted-foreground truncate", isCompact ? "text-[9px]" : "text-[11px]")}>
                   {hab.tipo_nombre}
                 </div>
               </div>
