@@ -236,7 +236,7 @@ export default function HistorialReservas() {
     const c = config[estado] || { color: 'bg-muted', icon: AlertCircle };
     const Icon = c.icon;
     return (
-      <Badge className={`${c.color} gap-1 rounded-md hover:${c.color}`}>
+      <Badge className={`${c.color} gap-1 rounded-[8px] hover:${c.color}`}>
         <Icon className="h-3 w-3" />
         {estado}
       </Badge>
@@ -245,8 +245,8 @@ export default function HistorialReservas() {
 
   const getOrigenBadge = (origen: string) => {
     return origen === 'Recepcion'
-      ? <Badge variant="outline" className="rounded-md border-green-500 text-green-600">Recepción</Badge>
-      : <Badge variant="outline" className="rounded-md border-blue-500 text-blue-600">Online</Badge>;
+      ? <Badge variant="outline" className="rounded-[8px] border-green-500 text-green-600">Recepción</Badge>
+      : <Badge variant="outline" className="rounded-[8px] border-blue-500 text-blue-600">Online</Badge>;
   };
 
   const safeNumber = (val: any, def: number = 0): number => {
@@ -317,7 +317,7 @@ export default function HistorialReservas() {
               if (o) setRangoBorrador({ from: fechaDesde, to: fechaHasta });
             }}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="h-10 justify-start font-normal gap-2 !rounded-md">
+                <Button variant="outline" className="h-10 justify-start font-normal gap-2 !rounded-[8px]">
                   <CalendarRange className="h-4 w-4" />
                   <span className="truncate max-w-[240px]">{etiquetaRango}</span>
                 </Button>
@@ -372,7 +372,7 @@ export default function HistorialReservas() {
 
             {/* Estado */}
             <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-              <SelectTrigger className="h-10 w-[150px] !rounded-md">
+              <SelectTrigger className="h-10 w-[150px] !rounded-[8px]">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
@@ -388,7 +388,7 @@ export default function HistorialReservas() {
 
             {/* Origen */}
             <Select value={origenFiltro} onValueChange={setOrigenFiltro}>
-              <SelectTrigger className="h-10 w-[150px] !rounded-md">
+              <SelectTrigger className="h-10 w-[150px] !rounded-[8px]">
                 <SelectValue placeholder="Origen" />
               </SelectTrigger>
               <SelectContent>
@@ -400,7 +400,7 @@ export default function HistorialReservas() {
 
             {/* Habitación */}
             <Select value={habitacionFiltro} onValueChange={setHabitacionFiltro}>
-              <SelectTrigger className="h-10 w-[140px] !rounded-md">
+              <SelectTrigger className="h-10 w-[140px] !rounded-[8px]">
                 <SelectValue placeholder="Habitación" />
               </SelectTrigger>
               <SelectContent>
@@ -418,7 +418,7 @@ export default function HistorialReservas() {
                 placeholder="Buscar: # reserva, cliente, teléfono, email..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-9 h-10 !rounded-md"
+                className="pl-9 h-10 !rounded-[8px]"
               />
             </div>
 
