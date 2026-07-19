@@ -229,7 +229,7 @@ export default function HistorialReservas() {
     const c = config[estado] || { color: 'bg-muted', icon: AlertCircle };
     const Icon = c.icon;
     return (
-      <Badge className={`${c.color} gap-1 hover:${c.color}`}>
+      <Badge className={`${c.color} gap-1 rounded-md hover:${c.color}`}>
         <Icon className="h-3 w-3" />
         {estado}
       </Badge>
@@ -238,8 +238,8 @@ export default function HistorialReservas() {
 
   const getOrigenBadge = (origen: string) => {
     return origen === 'Recepcion'
-      ? <Badge variant="outline" className="border-green-500 text-green-600">Recepción</Badge>
-      : <Badge variant="outline" className="border-blue-500 text-blue-600">Online</Badge>;
+      ? <Badge variant="outline" className="rounded-md border-green-500 text-green-600">Recepción</Badge>
+      : <Badge variant="outline" className="rounded-md border-blue-500 text-blue-600">Online</Badge>;
   };
 
   const safeNumber = (val: any, def: number = 0): number => {
@@ -531,7 +531,7 @@ export default function HistorialReservas() {
                         </TableCell>
                         <TableCell>
                           {reserva.habitacion_numero ? (
-                            <Badge variant="outline">{reserva.habitacion_numero}</Badge>
+                            <Badge variant="outline" className="rounded-md">{reserva.habitacion_numero}</Badge>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
@@ -572,28 +572,39 @@ export default function HistorialReservas() {
                   {reservasFiltradas.length > 0 && (
                     <TableFooter>
                       <TableRow className="font-medium bg-muted/40">
-                        <TableCell colSpan={2} className="text-xs uppercase tracking-wide text-muted-foreground">
+                        <TableCell className="text-xs uppercase tracking-wide text-muted-foreground">
                           Totales
                         </TableCell>
                         <TableCell className="text-sm">
-                          {stats.total} reservas
+                          {reservasFiltradas.length}
                         </TableCell>
-                        <TableCell />
-                        <TableCell />
-                        <TableCell />
-                        <TableCell className="text-sm">
-                          {reservasFiltradas.reduce((s: number, r: any) => s + (Number(r.noches) || 0), 0)} noches
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Set(reservasFiltradas.map((r: any) => r.cliente_id || r.cliente_nombre)).size} únicos
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Set(reservasFiltradas.map((r: any) => r.habitacion_numero).filter(Boolean)).size} hab.
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {reservasFiltradas.filter((r: any) => r.fecha_checkin).length} check-ins
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {reservasFiltradas.filter((r: any) => r.fecha_checkout).length} check-outs
+                        </TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">
+                          {reservasFiltradas.reduce((s: number, r: any) => s + (Number(r.noches) || 0), 0)}
                         </TableCell>
                         <TableCell className="whitespace-nowrap font-semibold text-primary">
                           {formatCurrency(reservasFiltradas.reduce((s: number, r: any) => s + safeNumber(r.total), 0))}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {stats.checkin} en estadía · {stats.checkout} completadas · {stats.canceladas} canceladas
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {stats.checkin}/{stats.checkout}/{stats.canceladas}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {stats.recepcion} recep. · {stats.online} online
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {stats.recepcion}/{stats.online}
                         </TableCell>
-                        <TableCell />
+                        <TableCell className="text-right text-xs text-muted-foreground">
+                          {seleccionadas.size > 0 ? `${seleccionadas.size} sel.` : '—'}
+                        </TableCell>
                       </TableRow>
                     </TableFooter>
                   )}
