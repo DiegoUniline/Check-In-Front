@@ -127,7 +127,9 @@ useEffect(() => {
           void bootstrapAuth();
           return;
         }
-      } catch {}
+      } catch (e) {
+        console.error('bootstrapAuth session fallback failed:', e);
+      }
       setIsLoading(false);
     };
 
