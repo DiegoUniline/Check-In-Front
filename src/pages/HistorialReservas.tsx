@@ -62,6 +62,8 @@ import { formatCurrency } from '@/lib/currency';
 import { ExportButton } from '@/components/ExportButton';
 import { formatDate as fmtDate } from '@/lib/dateFormat';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { exportarComprobanteReserva, exportarRegistroHuesped } from '@/lib/pdfExport';
+import { Printer, FileDown } from 'lucide-react';
 
 export default function HistorialReservas() {
   const { toast } = useToast();
@@ -666,6 +668,49 @@ export default function HistorialReservas() {
               </DialogTitle>
               {detalleCompleto && getEstadoBadge(detalleCompleto.estado)}
               {detalleCompleto && getOrigenBadge(detalleCompleto.origen)}
+              {detalleCompleto && (
+                <div className="ml-auto flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="!rounded-[8px] h-8"
+                    onClick={() => {
+                      const cli = detalleCompleto.cliente || detalleCompleto.clientes || {};
+                      exportarComprobanteReserva({
+                        hotel: detalleCompleto.hotel?.nombre,
+                        hotelDireccion: detalleCompleto.hotel?.direccion,
+                        hotelTelefono: detalleCompleto.hotel?.telefono,
+                        currency: detalleCompleto.hotel?.moneda || 'MXN',
+                        reserva: detalleCompleto,
+                        cliente: cli,
+                      });
+                    }}
+                  >
+                    <FileDown className="h-4 w-4 mr-1" />
+                    Comprobante
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="!rounded-[8px] h-8"
+                    onClick={() => {
+                      const cli = detalleCompleto.cliente || detalleCompleto.clientes || {};
+                      exportarRegistroHuesped({
+                        hotel: detalleCompleto.hotel?.nombre,
+                        hotelDireccion: detalleCompleto.hotel?.direccion,
+                        hotelTelefono: detalleCompleto.hotel?.telefono,
+                        currency: detalleCompleto.hotel?.moneda || 'MXN',
+                        reserva: detalleCompleto,
+                        cliente: cli,
+                        firmaDataUrl: detalleCompleto.firma_digital || null,
+                        aceptaTerminos: !!detalleCompleto.acepta_terminos,
+                      });
+                    }}
+                  >
+                    <Printer className="h-4 w-4 mr-1" />
+                    Registro / Imprimir
+                  </Button>
+                </div>
+              )}
             </div>
           </DialogHeader>
 
