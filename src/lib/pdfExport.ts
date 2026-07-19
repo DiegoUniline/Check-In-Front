@@ -222,20 +222,87 @@ interface ClienteMin {
   nacionalidad?: string;
 }
 
-function buildHeader(doc: jsPDF, ctx: ReservaPdfCtx, titulo: string) {
+// VULO brand colors
+const VULO_NAVY: [number, number, number] = [16, 35, 63];
+const VULO_ORANGE: [number, number, number] = [249, 115, 22];
+const VULO_TEXT: [number, number, number] = [17, 24, 39];
+const VULO_MUTED: [number, number, number] = [100, 116, 139];
+const VULO_BORDER: [number, number, number] = [226, 232, 240];
+
+function buildHeader(doc: jsPDF, ctx: ReservaPdfCtx, titulo: string, subtitulo?: string) {
   const pageW = doc.internal.pageSize.getWidth();
-  doc.setFillColor(20, 30, 60);
-  doc.rect(0, 0, pageW, 30, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text(titulo, 14, 14);
-  doc.setFontSize(10);
-  if (ctx.hotel) doc.text(ctx.hotel, 14, 22);
-  if (ctx.hotelDireccion || ctx.hotelTelefono) {
-    doc.setFontSize(8);
-    doc.text([ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean).join(' · '), 14, 27);
+  // Fondo blanco; delgada barra naranja izquierda
+  doc.setFillColor(...VULO_ORANGE);
+  doc.rect(0, 0, 3, 40, 'F');
+
+  // Marca VULO (wordmark tipográfico)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...VULO_NAVY);
+  doc.text('VULO', 14, 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...VULO_MUTED);
+  doc.text('Software para hoteles', 27, 14);
+
+  // Info hotel a la derecha
+  if (ctx.hotel) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...VULO_NAVY);
+    doc.text(ctx.hotel, pageW - 14, 14, { align: 'right' });
+    const parts = [ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean).join(' · ');
+    if (parts) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...VULO_MUTED);
+      doc.text(parts, pageW - 14, 19, { align: 'right' });
+    }
   }
-  doc.setTextColor(0, 0, 0);
+
+  // Título principal
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...VULO_NAVY);
+  doc.text(titulo, 14, 30);
+
+  if (subtitulo) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...VULO_MUTED);
+    doc.text(subtitulo, 14, 36);
+  }
+
+  // Línea divisora
+  doc.setDrawColor(...VULO_BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(14, 42, pageW - 14, 42);
+
+  doc.setTextColor(...VULO_TEXT);
+  doc.setFont('helvetica', 'normal');
+}
+
+function sectionLabel(doc: jsPDF, text: string, y: number) {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...VULO_ORANGE);
+  doc.text(text.toUpperCase(), 14, y);
+  doc.setTextColor(...VULO_TEXT);
+  return y + 4;
+}
+
+function brandFooter(doc: jsPDF, texto: string) {
+  const pageH = doc.internal.pageSize.getHeight();
+  const pageW = doc.internal.pageSize.getWidth();
+  doc.setDrawColor(...VULO_BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(14, pageH - 14, pageW - 14, pageH - 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...VULO_MUTED);
+  doc.text(texto, 14, pageH - 9);
+  doc.text('Generado con VULO · vulo.mx', pageW - 14, pageH - 9, { align: 'right' });
+  doc.setTextColor(...VULO_TEXT);
 }
 
 function nombreCompleto(c: ClienteMin) {
@@ -253,86 +320,89 @@ export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
 }): Blob | void {
   const { reserva, cliente, currency = 'MXN', action = 'save' } = opts;
   const doc = new jsPDF();
-  buildHeader(doc, opts, 'Confirmación de Reserva');
+  buildHeader(doc, opts, 'Confirmación de reserva', `Folio ${reserva.numero_reserva || '—'} · Emitido ${format(new Date(), 'dd/MM/yyyy HH:mm')}`);
 
-  let y = 40;
-  doc.setFontSize(10);
-  doc.text(`Reserva: ${reserva.numero_reserva || '—'}`, 14, y);
-  doc.text(`Emitido: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 140, y);
-  y += 8;
+  let y = 52;
 
+  // Huésped
+  y = sectionLabel(doc, 'Huésped', y);
   autoTable(doc, {
     startY: y,
-    head: [['Huésped', 'Contacto', 'Documento']],
-    body: [[
-      nombreCompleto(cliente),
-      [cliente.email, cliente.telefono].filter(Boolean).join('\n') || '—',
-      [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ') || '—',
-    ]],
-    theme: 'grid',
-    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
-    styles: { fontSize: 9, cellPadding: 3 },
+    body: [
+      ['Nombre', nombreCompleto(cliente)],
+      ['Correo', cliente.email || '—'],
+      ['Teléfono', cliente.telefono || '—'],
+      ['Documento', [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ') || '—'],
+    ],
+    theme: 'plain',
+    styles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 0 }, textColor: VULO_TEXT },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 32, textColor: VULO_MUTED }, 1: { textColor: VULO_TEXT } },
   });
-  y = (doc as any).lastAutoTable.finalY + 4;
+  y = (doc as any).lastAutoTable.finalY + 6;
 
+  // Estancia
+  y = sectionLabel(doc, 'Estancia', y);
   autoTable(doc, {
     startY: y,
     head: [['Check-in', 'Check-out', 'Noches', 'Habitación', 'Tipo', 'Huéspedes']],
     body: [[
-      `${format(new Date(reserva.fecha_checkin), 'dd MMM yyyy', { locale: es })}${reserva.hora_llegada ? '\n' + reserva.hora_llegada : ''}`,
-      format(new Date(reserva.fecha_checkout), 'dd MMM yyyy', { locale: es }),
+      `${format(new Date(reserva.fecha_checkin), 'dd/MM/yyyy', { locale: es })}${reserva.hora_llegada ? '\n' + reserva.hora_llegada : ''}`,
+      format(new Date(reserva.fecha_checkout), 'dd/MM/yyyy', { locale: es }),
       String(reserva.noches || 1),
-      reserva.habitacion_numero ? `Hab. ${reserva.habitacion_numero}` : '—',
+      reserva.habitacion_numero ? String(reserva.habitacion_numero) : '—',
       reserva.tipo_habitacion_nombre || '—',
-      `${reserva.adultos || 0} adultos${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`,
+      `${reserva.adultos || 0} ad${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`,
     ]],
     theme: 'grid',
-    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
-    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [248, 250, 252], textColor: VULO_MUTED, fontSize: 7, fontStyle: 'bold', lineColor: VULO_BORDER, lineWidth: 0.2 },
+    bodyStyles: { fontSize: 9, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.2 },
+    styles: { cellPadding: 3 },
   });
-  y = (doc as any).lastAutoTable.finalY + 4;
+  y = (doc as any).lastAutoTable.finalY + 6;
 
   const subtotal = Number(reserva.subtotal_hospedaje || 0);
   const desc = Number(reserva.descuento || 0);
   const imp = Number(reserva.total_impuestos || 0);
   const total = Number(reserva.total || 0);
   const saldo = Number(reserva.saldo_pendiente ?? total);
+  const pagado = total - saldo;
 
+  y = sectionLabel(doc, 'Resumen financiero', y);
   autoTable(doc, {
     startY: y,
-    head: [['Concepto', 'Monto']],
     body: [
       ['Subtotal hospedaje', fmtMoney(subtotal, currency)],
-      ['Descuento', `- ${fmtMoney(desc, currency)}`],
+      ['Descuento', desc ? `− ${fmtMoney(desc, currency)}` : fmtMoney(0, currency)],
       ['Impuestos', fmtMoney(imp, currency)],
-      [{ content: 'TOTAL', styles: { fontStyle: 'bold' } }, { content: fmtMoney(total, currency), styles: { fontStyle: 'bold' } }],
-      ['Pagado', fmtMoney(total - saldo, currency)],
-      [{ content: 'Saldo pendiente', styles: { fontStyle: 'bold', textColor: [180, 40, 40] } }, { content: fmtMoney(saldo, currency), styles: { fontStyle: 'bold', textColor: [180, 40, 40] } }],
+      [{ content: 'Total', styles: { fontStyle: 'bold', fillColor: [248, 250, 252], textColor: VULO_NAVY } },
+       { content: fmtMoney(total, currency), styles: { fontStyle: 'bold', fillColor: [248, 250, 252], textColor: VULO_NAVY, halign: 'right' } }],
+      ['Pagado', fmtMoney(pagado, currency)],
+      [{ content: 'Saldo pendiente', styles: { fontStyle: 'bold', textColor: saldo > 0 ? VULO_ORANGE : [22, 163, 74] } },
+       { content: fmtMoney(saldo, currency), styles: { fontStyle: 'bold', textColor: saldo > 0 ? VULO_ORANGE : [22, 163, 74], halign: 'right' } }],
     ],
-    theme: 'grid',
-    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
-    styles: { fontSize: 10, cellPadding: 3 },
-    columnStyles: { 1: { halign: 'right' } },
+    theme: 'plain',
+    styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 4, right: 4 }, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.15 },
+    columnStyles: { 0: { cellWidth: 120, textColor: VULO_MUTED }, 1: { halign: 'right', textColor: VULO_TEXT } },
+    didParseCell: (data) => {
+      // línea inferior sutil
+      if (data.section === 'body') {
+        (data.cell.styles as any).lineWidth = { bottom: 0.15, top: 0, left: 0, right: 0 };
+      }
+    },
   });
-  y = (doc as any).lastAutoTable.finalY + 6;
+  y = (doc as any).lastAutoTable.finalY + 8;
 
   if (reserva.solicitudes_especiales) {
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Solicitudes especiales', 14, y);
-    y += 5;
+    y = sectionLabel(doc, 'Solicitudes especiales', y);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
+    doc.setTextColor(...VULO_TEXT);
     const lines = doc.splitTextToSize(reserva.solicitudes_especiales, 180);
     doc.text(lines, 14, y);
     y += lines.length * 4 + 4;
   }
 
-  // Footer
-  const pageH = doc.internal.pageSize.getHeight();
-  doc.setFontSize(8);
-  doc.setTextColor(120, 120, 120);
-  doc.text('Este documento es una confirmación de reserva. Consérvelo para presentar al check-in.', 14, pageH - 10);
+  brandFooter(doc, 'Confirmación de reserva · Presente este documento al check-in');
 
   const filename = `reserva_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
@@ -352,80 +422,74 @@ export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
 }): Blob | void {
   const { reserva, cliente, firmaDataUrl, aceptaTerminos, currency = 'MXN', action = 'save' } = opts;
   const doc = new jsPDF();
-  buildHeader(doc, opts, 'Tarjeta de Registro de Huésped');
+  buildHeader(doc, opts, 'Tarjeta de registro', `Folio ${reserva.numero_reserva || '—'} · Registrado ${format(new Date(), 'dd/MM/yyyy HH:mm')}`);
 
-  let y = 40;
-  doc.setFontSize(10);
-  doc.text(`Reserva: ${reserva.numero_reserva || '—'}`, 14, y);
-  doc.text(`Registrado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 130, y);
-  y += 6;
+  let y = 52;
 
+  y = sectionLabel(doc, 'Datos del huésped', y);
   autoTable(doc, {
     startY: y,
-    head: [['Datos del huésped', '']],
     body: [
       ['Nombre', nombreCompleto(cliente)],
       ['Documento', [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ') || '—'],
       ['Nacionalidad', cliente.nacionalidad || '—'],
-      ['Email', cliente.email || '—'],
+      ['Correo', cliente.email || '—'],
       ['Teléfono', cliente.telefono || '—'],
     ],
-    theme: 'grid',
-    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } },
-  });
-  y = (doc as any).lastAutoTable.finalY + 4;
-
-  autoTable(doc, {
-    startY: y,
-    head: [['Estancia', '']],
-    body: [
-      ['Habitación', reserva.habitacion_numero ? `Hab. ${reserva.habitacion_numero} — ${reserva.tipo_habitacion_nombre || ''}` : '—'],
-      ['Check-in', `${format(new Date(reserva.fecha_checkin), 'dd MMM yyyy', { locale: es })}${reserva.hora_llegada ? ' · ' + reserva.hora_llegada : ''}`],
-      ['Check-out', format(new Date(reserva.fecha_checkout), 'dd MMM yyyy', { locale: es })],
-      ['Noches', String(reserva.noches || 1)],
-      ['Huéspedes', `${reserva.adultos || 0} adultos${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`],
-      ['Total', fmtMoney(Number(reserva.total || 0), currency)],
-    ],
-    theme: 'grid',
-    headStyles: { fillColor: [60, 80, 120], textColor: 255 },
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } },
+    theme: 'plain',
+    styles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 0 }, textColor: VULO_TEXT },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40, textColor: VULO_MUTED }, 1: { textColor: VULO_TEXT } },
   });
   y = (doc as any).lastAutoTable.finalY + 6;
 
+  y = sectionLabel(doc, 'Estancia', y);
+  autoTable(doc, {
+    startY: y,
+    head: [['Habitación', 'Check-in', 'Check-out', 'Noches', 'Huéspedes', 'Total']],
+    body: [[
+      reserva.habitacion_numero ? `${reserva.habitacion_numero}${reserva.tipo_habitacion_nombre ? '\n' + reserva.tipo_habitacion_nombre : ''}` : '—',
+      `${format(new Date(reserva.fecha_checkin), 'dd/MM/yyyy', { locale: es })}${reserva.hora_llegada ? '\n' + reserva.hora_llegada : ''}`,
+      format(new Date(reserva.fecha_checkout), 'dd/MM/yyyy', { locale: es }),
+      String(reserva.noches || 1),
+      `${reserva.adultos || 0} ad${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`,
+      fmtMoney(Number(reserva.total || 0), currency),
+    ]],
+    theme: 'grid',
+    headStyles: { fillColor: [248, 250, 252], textColor: VULO_MUTED, fontSize: 7, fontStyle: 'bold', lineColor: VULO_BORDER, lineWidth: 0.2 },
+    bodyStyles: { fontSize: 9, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.2 },
+    styles: { cellPadding: 3 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 8;
+
   // Términos
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Términos y condiciones', 14, y);
-  y += 5;
+  y = sectionLabel(doc, 'Términos y condiciones', y);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
+  doc.setTextColor(...VULO_MUTED);
   const terminos =
     'El huésped declara que los datos consignados son verídicos y acepta las políticas del establecimiento, ' +
     'incluyendo horarios de check-in/out, política de cancelación, cargos por daños y responsabilidad por objetos ' +
     'personales. Se autoriza el tratamiento de datos personales conforme al aviso de privacidad del hotel.';
   const tLines = doc.splitTextToSize(terminos, 180);
   doc.text(tLines, 14, y);
-  y += tLines.length * 3.5 + 4;
+  y += tLines.length * 3.5 + 6;
+  doc.setTextColor(...VULO_TEXT);
 
   if (aceptaTerminos) {
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 120, 30);
+    doc.setFontSize(8);
+    doc.setTextColor(22, 163, 74);
     doc.text('✓ El huésped acepta los términos y condiciones', 14, y);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(...VULO_TEXT);
     y += 6;
   }
 
   // Firma
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('Firma del huésped', 14, y);
-  y += 3;
+  y = sectionLabel(doc, 'Firma del huésped', y + 2);
   const firmaW = 90;
-  const firmaH = 30;
-  doc.setDrawColor(200, 200, 200);
+  const firmaH = 32;
+  doc.setDrawColor(...VULO_BORDER);
+  doc.setLineWidth(0.3);
   doc.rect(14, y, firmaW, firmaH);
   if (firmaDataUrl) {
     try {
@@ -436,14 +500,11 @@ export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   }
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  doc.setTextColor(120, 120, 120);
+  doc.setTextColor(...VULO_MUTED);
   doc.text(`Firmado el ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, y + firmaH + 4);
-  doc.setTextColor(0, 0, 0);
+  doc.setTextColor(...VULO_TEXT);
 
-  const pageH = doc.internal.pageSize.getHeight();
-  doc.setFontSize(7);
-  doc.setTextColor(120, 120, 120);
-  doc.text('Documento firmado digitalmente. La firma queda almacenada como imagen y hace fe del acto de registro.', 14, pageH - 8);
+  brandFooter(doc, 'Documento firmado digitalmente · La firma hace fe del acto de registro');
 
   const filename = `registro_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
