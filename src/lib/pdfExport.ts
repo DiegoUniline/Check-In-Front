@@ -796,6 +796,24 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   doc.setTextColor(...GRAY_400);
   doc.text('Generado con VULO · vulo.mx', pageW - M, lineaY, { align: 'right' });
 
+  // ===== Footer institucional: Sistema VULO =====
+  const footerY = pageH - M + 4;
+  doc.setDrawColor(...GRAY_200);
+  doc.setLineWidth(0.15);
+  doc.line(M, footerY - 5, pageW - M, footerY - 5);
+  const cX = pageW / 2;
+  if (foxData) {
+    try { doc.addImage(foxData, 'PNG', cX - 20, footerY - 3.8, 5, 5, undefined, 'FAST'); } catch { /* noop */ }
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...BLACK);
+  doc.text('Sistema VULO', cX - 13, footerY, { align: 'left' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...GRAY_400);
+  doc.text('vulo.mx · Software para hoteles', cX, footerY + 4, { align: 'center' });
+
   const filename = `registro_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
   doc.save(filename);
