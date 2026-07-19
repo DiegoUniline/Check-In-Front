@@ -423,10 +423,16 @@ class ApiClient {
     const { data, error } = await supabase.from('reservas').select('*, clientes(*), habitaciones(*, tipos_habitacion(*)), tipos_habitacion(*)').eq('id', id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    const [{ data: pagos }, { data: cargos }] = await Promise.all([
+      supabase.from('pagos').select('*').eq('reserva_id', id).order('fecha', { ascending: false }),
+      supabase.from('cargos').select('*').eq('reserva_id', id).order('created_at', { ascending: false }),
+    ]);
     return {
       ...data,
       cliente_nombre: (data as any).clientes ? `${(data as any).clientes.nombre} ${(data as any).clientes.apellido_paterno || ''}`.trim() : '',
       habitacion_numero: (data as any).habitaciones?.numero,
+      pagos: pagos || [],
+      cargos: cargos || [],
     };
   };
   getCheckinsHoy = async (): Promise<any> => {
