@@ -170,24 +170,24 @@ export function TimelineGrid({
               {/* Columna sticky de habitación */}
               <div
                 className={cn(
-                  "flex-shrink-0 border-r border-b bg-card px-2 py-1 flex flex-col justify-center sticky left-0 z-10",
+                  "flex-shrink-0 border-r border-b bg-card px-2 py-1 flex items-center gap-1.5 sticky left-0 z-10 min-w-0",
                   isCompact ? "w-28" : "w-40",
                   cellHeight
                 )}
               >
-                <div className={cn("font-semibold leading-tight", isCompact ? "text-[11px]" : "text-sm")}>
+                <span className={cn("font-semibold flex-shrink-0", isCompact ? "text-[11px]" : "text-sm")}>
                   {hab.numero}
-                </div>
+                </span>
                 {hab.tipo_nombre && (
-                  <div
+                  <span
                     className={cn(
-                      "text-muted-foreground truncate leading-tight",
+                      "text-muted-foreground truncate",
                       isCompact ? "text-[9px]" : "text-[11px]"
                     )}
                     title={hab.tipo_nombre}
                   >
                     {hab.tipo_nombre}
-                  </div>
+                  </span>
                 )}
               </div>
                   {days.map((day, dayIndex) => {
