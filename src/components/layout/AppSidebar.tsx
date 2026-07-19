@@ -244,15 +244,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r">
-      <SidebarHeader className="border-b px-4 py-4">
+      <SidebarHeader className="border-b border-sidebar-border bg-white px-4 py-4">
         <div className="flex items-center justify-between gap-2">
           <NavLink to="/dashboard" className="flex items-center gap-3 min-w-0">
             {collapsed ? (
               <Logo size={36} />
             ) : (
               <div className="flex flex-col min-w-0">
-                <LogoHorizontal size={34} invert />
-                <span className="text-[11px] font-medium text-white/60 mt-1 ml-12 tracking-wide">Software para hoteles</span>
+                <LogoHorizontal size={34} />
+                <span className="text-[11px] font-medium text-[#475569] mt-1 ml-12 tracking-wide">Software para hoteles</span>
               </div>
             )}
           </NavLink>
@@ -261,7 +261,7 @@ export function AppSidebar() {
               type="button"
               onClick={() => (isMobile ? setOpenMobile(false) : toggleSidebar())}
               aria-label="Contraer menú"
-              className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-md text-[#475569] hover:bg-slate-100 hover:text-[#10233F] transition-colors"
             >
               {isMobile ? <X className="h-5 w-5" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
@@ -326,11 +326,11 @@ export function AppSidebar() {
         {!collapsed ? (
           <div className="rounded-lg bg-sidebar-accent p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-sidebar-foreground">Ocupación Actual</span>
-              <span className="text-lg font-bold text-primary">{occupancyPercent}%</span>
+              <span className="text-xs font-medium text-white">Ocupación Actual</span>
+              <span className="text-lg font-bold text-[#F97316]">{occupancyPercent}%</span>
             </div>
             <Progress value={occupancyPercent} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-white/80 mt-2">
               {ocupadas} de {totalHab} habitaciones
             </p>
           </div>
