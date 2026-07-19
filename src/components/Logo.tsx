@@ -48,10 +48,12 @@ export function LogoFull({ className, height = 48 }: { className?: string; heigh
 export function LogoHorizontal({
   className,
   size = 36,
+  invert = false,
 }: {
   className?: string;
   size?: number;
   wordmarkClassName?: string;
+  invert?: boolean;
 }) {
   return (
     <div className={cn('flex items-center gap-3', className)}>
@@ -60,7 +62,11 @@ export function LogoHorizontal({
         src={wordmark}
         alt="VULO"
         className="object-contain"
-        style={{ height: size * 0.72, width: 'auto' }}
+        style={{
+          height: size * 0.72,
+          width: 'auto',
+          filter: invert ? 'brightness(0) invert(1)' : undefined,
+        }}
         loading="eager"
         decoding="async"
       />
