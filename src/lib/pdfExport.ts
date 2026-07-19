@@ -342,6 +342,7 @@ function drawFooter(
   texto: string,
   pageNum: number,
   pageCount: number,
+  foxDataUrl?: string,
 ) {
   const pageH = doc.internal.pageSize.getHeight();
   const pageW = doc.internal.pageSize.getWidth();
@@ -358,12 +359,21 @@ function drawFooter(
   doc.setTextColor(...VULO_MUTED);
   doc.text(texto, MARGIN_X, yTop + 5);
 
+  // Centro: isotipo VULO + "Sistema VULO"
+  const centerX = pageW / 2;
+  if (foxDataUrl) {
+    try {
+      doc.addImage(foxDataUrl, 'PNG', centerX - 12, yTop + 1.5, 6, 6, undefined, 'FAST');
+    } catch { /* noop */ }
+  }
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
   doc.setTextColor(...VULO_NAVY);
-  doc.text('VULO', pageW / 2, yTop + 5, { align: 'center' });
+  doc.text('Sistema VULO', centerX - 4, yTop + 5.5, { align: 'left' });
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
   doc.setTextColor(...VULO_MUTED);
-  doc.text('vulo.mx', pageW / 2, yTop + 9, { align: 'center' });
+  doc.text('vulo.mx · Software para hoteles', centerX, yTop + 9.5, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...VULO_MUTED);
@@ -394,7 +404,7 @@ function paintChrome(
   for (let i = 1; i <= count; i++) {
     doc.setPage(i);
     drawHeader(doc, ctx, titulo, subtitulo, assets);
-    drawFooter(doc, footerText, i, count);
+    drawFooter(doc, footerText, i, count, assets.fox);
   }
 }
 
