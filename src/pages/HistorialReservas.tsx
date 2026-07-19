@@ -34,6 +34,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
 import {
   Select,
@@ -299,87 +300,6 @@ export default function HistorialReservas() {
   return (
     <MainLayout title="Histórico Entradas" subtitle="Reservas online y walk-ins registrados en recepción">
       
-      {/* Stats Cards - Grid responsivo corregido */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <FileText className="h-8 w-8 text-muted-foreground opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Recepción</p>
-                <p className="text-2xl font-bold text-green-600">{stats.recepcion}</p>
-              </div>
-              <User className="h-8 w-8 text-green-600 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Online</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.online}</p>
-              </div>
-              <Globe className="h-8 w-8 text-blue-600 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">En Estadía</p>
-                <p className="text-2xl font-bold text-green-600">{stats.checkin}</p>
-              </div>
-              <LogIn className="h-8 w-8 text-green-600 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Completadas</p>
-                <p className="text-2xl font-bold text-slate-600">{stats.checkout}</p>
-              </div>
-              <LogOut className="h-8 w-8 text-slate-600 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Canceladas</p>
-                <p className="text-2xl font-bold text-red-600">{stats.canceladas}</p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-600 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="col-span-2 md:col-span-1">
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ingresos (Est.)</p>
-                <p className="text-xl font-bold text-primary">{formatCurrency(stats.ingresos)}</p>
-              </div>
-              <DollarSign className="h-8 w-8 text-primary opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Filtros - barra superior */}
       <Card className="mb-6">
         <CardContent className="p-3">
@@ -649,6 +569,34 @@ export default function HistorialReservas() {
                       </TableRow>
                     )}
                   </TableBody>
+                  {reservasFiltradas.length > 0 && (
+                    <TableFooter>
+                      <TableRow className="font-medium bg-muted/40">
+                        <TableCell colSpan={2} className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Totales
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {stats.total} reservas
+                        </TableCell>
+                        <TableCell />
+                        <TableCell />
+                        <TableCell />
+                        <TableCell className="text-sm">
+                          {reservasFiltradas.reduce((s: number, r: any) => s + (Number(r.noches) || 0), 0)} noches
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap font-semibold text-primary">
+                          {formatCurrency(reservasFiltradas.reduce((s: number, r: any) => s + safeNumber(r.total), 0))}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {stats.checkin} en estadía · {stats.checkout} completadas · {stats.canceladas} canceladas
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {stats.recepcion} recep. · {stats.online} online
+                        </TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableFooter>
+                  )}
                 </Table>
               </div>
 
