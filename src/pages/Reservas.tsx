@@ -400,7 +400,7 @@ export default function Reservas() {
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="inline-flex bg-muted p-0.5 rounded-lg">
                 {([
-                  { key: 'timeline', label: 'Timeline' },
+                  { key: 'timeline', label: 'Calendario' },
                   { key: 'card', label: 'Card' },
                   { key: 'tabla', label: 'Tabla' },
                 ] as { key: ReservasSubView; label: string }[]).map(opt => (
