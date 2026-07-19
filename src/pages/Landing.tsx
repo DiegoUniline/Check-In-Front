@@ -292,34 +292,131 @@ function HowItWorks() {
 }
 
 function MockInbox() {
-  const rows = [
-    { origen: 'Booking', badge: NAVY, huesped: 'Kim, J.', fechas: '24 – 26 Jul', hab: '103', estado: 'Confirmada' },
-    { origen: 'WhatsApp', badge: ORANGE, huesped: 'López, R.', fechas: '22 – 25 Jul', hab: '102', estado: 'Nueva' },
-    { origen: 'Directa', badge: '#0F766E', huesped: 'Torres, A.', fechas: '20 – 25 Jul', hab: '104', estado: 'Confirmada' },
-    { origen: 'Airbnb', badge: '#B91C1C', huesped: 'Ruiz, D.', fechas: '23 – 24 Jul', hab: '208', estado: 'Confirmada' },
-    { origen: 'WhatsApp', badge: ORANGE, huesped: 'García, M.', fechas: '20 – 23 Jul', hab: '101', estado: 'Pendiente' },
+  // Animated WhatsApp thread that materializes into a reservation card
+  const script: Array<{ from: 'g' | 'ia'; text: string }> = [
+    { from: 'g', text: 'Hola! Tienen habitación para 2 personas del 22 al 25 de julio?' },
+    { from: 'ia', text: '¡Hola! Sí, tenemos disponibilidad. Doble con vista al mar $2,400/noche 🌊' },
+    { from: 'g', text: 'Perfecto, la aparto a nombre de Ricardo López' },
+    { from: 'ia', text: 'Listo Ricardo ✅ Reserva RES-2026-1042 creada. Te comparto link de pago…' },
   ];
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    if (step >= script.length) {
+      const r = setTimeout(() => setStep(0), 4200);
+      return () => clearTimeout(r);
+    }
+    const t = setTimeout(() => setStep(step + 1), 1400);
+    return () => clearTimeout(t);
+  }, [step]);
+
   return (
-    <BrowserFrame title="vulo · reservas / bandeja">
-      <div className="overflow-hidden rounded-lg border border-slate-100">
-        <div className="grid grid-cols-[80px_1fr_90px_50px_90px] gap-3 border-b border-slate-100 bg-slate-50 px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">
-          <div>Origen</div><div>Huésped</div><div>Fechas</div><div>Hab.</div><div>Estado</div>
-        </div>
-        {rows.map((r, i) => (
-          <div key={i} className="grid grid-cols-[80px_1fr_90px_50px_90px] items-center gap-3 border-b border-slate-100 px-3 py-2.5 text-[12px] last:border-b-0">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-700">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: r.badge }} />{r.origen}
-            </span>
-            <span className="font-medium text-slate-900">{r.huesped}</span>
-            <span className="text-slate-600">{r.fechas}</span>
-            <span className="text-slate-600">{r.hab}</span>
-            <span className={r.estado === 'Nueva' ? 'font-semibold' : 'text-slate-500'} style={r.estado === 'Nueva' ? { color: ORANGE } : undefined}>
-              {r.estado}
-            </span>
+    <div className="grid gap-5 lg:grid-cols-[1.05fr_1fr]">
+      {/* Phone / WhatsApp */}
+      <div className="mx-auto w-full max-w-[360px] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.35)]">
+        <div className="flex items-center gap-3 bg-[#075E54] px-4 py-3 text-white">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-[13px] font-semibold">RL</div>
+          <div className="flex-1">
+            <div className="text-[13.5px] font-semibold leading-tight">Ricardo López</div>
+            <div className="text-[10.5px] text-white/70">en línea · WhatsApp</div>
           </div>
-        ))}
+          <MessageSquare className="h-4 w-4 opacity-80" />
+        </div>
+        <div className="min-h-[320px] space-y-2 bg-[#ECE5DD] px-3 py-4">
+          <AnimatePresence>
+            {script.slice(0, step).map((m, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.35, ease }}
+                className={`flex ${m.from === 'ia' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-2xl px-3 py-2 text-[12.5px] leading-snug shadow-sm ${
+                    m.from === 'ia' ? 'bg-[#DCF8C6] text-slate-800' : 'bg-white text-slate-800'
+                  }`}
+                >
+                  {m.text}
+                </div>
+              </motion.div>
+            ))}
+            {step < script.length && (
+              <motion.div
+                key="typing"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className={`flex ${step % 2 === 0 ? 'justify-start' : 'justify-end'}`}
+              >
+                <div className={`flex items-center gap-1 rounded-2xl px-3 py-2 shadow-sm ${step % 2 === 0 ? 'bg-white' : 'bg-[#DCF8C6]'}`}>
+                  {[0, 1, 2].map((d) => (
+                    <motion.span
+                      key={d}
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: d * 0.15 }}
+                      className="h-1.5 w-1.5 rounded-full bg-slate-400"
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        <div className="flex items-center gap-2 border-t border-slate-100 bg-white px-3 py-2.5">
+          <div className="flex-1 rounded-full bg-slate-100 px-3 py-1.5 text-[11.5px] text-slate-400">Mensaje…</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: '#25D366' }}>
+            <Send className="h-3.5 w-3.5 text-white" />
+          </div>
+        </div>
       </div>
-    </BrowserFrame>
+
+      {/* Reservation card, appears at end */}
+      <div className="flex items-center">
+        <AnimatePresence mode="wait">
+          {step >= script.length ? (
+            <motion.div
+              key="card"
+              initial={{ opacity: 0, y: 20, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.5, ease }}
+              className="w-full rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-25px_rgba(15,23,42,0.3)]"
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <span className="inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-[10.5px] font-semibold text-white" style={{ background: ORANGE }}>
+                  <Sparkles className="h-3 w-3" /> creada por IA
+                </span>
+                <span className="text-[10.5px] font-medium text-slate-400">hace 2s</span>
+              </div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Reserva</div>
+              <div className="text-[18px] font-bold tracking-tight text-slate-900">RES-2026-1042</div>
+              <div className="mt-3 space-y-1.5 text-[12.5px]">
+                <div className="flex justify-between"><span className="text-slate-500">Huésped</span><span className="font-medium text-slate-900">Ricardo López</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Fechas</span><span className="font-medium text-slate-900">22 – 25 Jul</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Habitación</span><span className="font-medium text-slate-900">Doble · 102</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Origen</span><span className="font-medium" style={{ color: ORANGE }}>WhatsApp</span></div>
+              </div>
+              <div className="mt-4 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                <span className="text-[11px] text-slate-500">Total</span>
+                <span className="text-[15px] font-bold" style={{ color: NAVY }}>$7,200 MXN</span>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="waiting"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="w-full rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center"
+            >
+              <div className="mx-auto mb-3 h-10 w-10 rounded-full border-2 border-dashed border-slate-300" />
+              <div className="text-[13px] font-medium text-slate-500">Esperando la conversación…</div>
+              <div className="mt-1 text-[11.5px] text-slate-400">VULO detectará la intención y creará la reserva sola.</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
 
