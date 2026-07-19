@@ -142,6 +142,11 @@ export default function CheckIn() {
         const hab = habitacionesDisponibles.find(h => h.id === formData.habitacionId);
         await exportarRegistroHuesped({
           hotel: reserva.hotel?.nombre,
+          hotelDireccion: reserva.hotel?.direccion,
+          hotelTelefono: reserva.hotel?.telefono,
+          hotelEmail: reserva.hotel?.email,
+          hotelCiudad: reserva.hotel?.ciudad,
+          hotelLogoUrl: reserva.hotel?.logo_url,
           reserva: {
             ...reserva,
             habitacion_numero: hab?.numero || reserva.habitacion_numero,
