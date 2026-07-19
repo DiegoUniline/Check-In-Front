@@ -42,6 +42,7 @@ export interface Guia {
   cuando: string;
   pasos: GuiaPaso[];
   tips?: string[];
+  navegable?: boolean;
 }
 
 export const GUIAS: Guia[] = [
@@ -75,6 +76,7 @@ export const GUIAS: Guia[] = [
       { titulo: 'Entregar habitación', detalle: 'Al confirmar, la habitación pasa a "Ocupada" y se registra hora de entrada.' },
     ],
     tips: ['Puedes reimprimir la tarjeta de registro desde el histórico si el huésped la pide de nuevo.'],
+    navegable: false,
   },
   {
     ruta: '/check-out',
@@ -89,6 +91,7 @@ export const GUIAS: Guia[] = [
       { titulo: 'Emitir comprobante', detalle: 'Genera el PDF del comprobante para el huésped e imprímelo si lo requiere.' },
       { titulo: 'Liberar habitación', detalle: 'La habitación pasa a "Sucia" y aparece en Limpieza automáticamente.' },
     ],
+    navegable: false,
   },
   {
     ruta: '/habitaciones',
@@ -408,6 +411,7 @@ export const GUIAS: Guia[] = [
     proposito: 'Panel exclusivo para el equipo VULO — administración de hoteles cliente.',
     cuando: 'Solo super-administradores.',
     pasos: [{ titulo: 'Gestionar hoteles', detalle: 'Alta, suscripciones y estado de cada hotel cliente.' }],
+    navegable: false,
   },
   {
     ruta: '/soporte',
