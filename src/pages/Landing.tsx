@@ -134,7 +134,10 @@ function DashboardMockup() {
               <span className="h-3 w-3 rounded-full bg-slate-300" />
               <span className="h-3 w-3 rounded-full bg-slate-300" />
             </div>
-            <span className="ml-3 text-[12px] font-medium text-slate-500">vulo.app · Hotel Plaza Real</span>
+            <span className="ml-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
+              <img src={foxIcon} alt="" width={16} height={16} className="h-4 w-4 object-contain" />
+              vulo.app · Hotel Plaza Real
+            </span>
           </div>
           <div className="hidden items-center gap-2 md:flex">
             <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm">Hoy · Lun 20 Jul</span>
@@ -557,6 +560,18 @@ function FinalCTA() {
   return (
     <section className="border-t border-slate-100 py-32" style={{ background: BRAND_NAVY }}>
       <div className="mx-auto max-w-4xl px-6 text-center lg:px-10">
+        <motion.img
+          src={foxIcon}
+          alt="VULO"
+          width={72}
+          height={72}
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease }}
+          className="mx-auto mb-8 h-[72px] w-[72px] object-contain"
+          style={{ filter: 'brightness(0) invert(1)' }}
+        />
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
