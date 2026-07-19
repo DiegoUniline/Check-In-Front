@@ -495,6 +495,138 @@ export default function Reservas() {
             />
           )}
         </div>
+            </>
+            )}
+
+            {reservasSubView === 'card' && (
+              <>
+                <Card>
+                  <CardContent className="p-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                          <SelectValue placeholder="Tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {tiposHabitacion.map(tipo => (
+                            <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar habitación..."
+                          className="pl-7 h-8 w-[200px] text-xs"
+                          value={busqueda}
+                          onChange={(e) => setBusqueda(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                {loading ? (
+                  <div className="flex items-center justify-center py-12 border rounded-lg bg-card">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <RecepcionGrid
+                    habitaciones={habitacionesFiltradas}
+                    reservas={reservas}
+                    onLibreClick={handleRecepcionLibreClick}
+                    onOcupadaClick={handleReservationClick}
+                    onReservadaClick={handleReservationClick}
+                  />
+                )}
+              </>
+            )}
+
+            {reservasSubView === 'tabla' && (
+              <Card>
+                <CardContent className="p-3 space-y-3">
+                  <div className="relative w-full sm:max-w-sm">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="Buscar reserva, cliente, habitación..."
+                      className="pl-8 h-9 text-sm"
+                      value={busqueda}
+                      onChange={(e) => setBusqueda(e.target.value)}
+                    />
+                  </div>
+                  <div className="border rounded-lg overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Reserva</TableHead>
+                          <TableHead>Cliente</TableHead>
+                          <TableHead>Habitación</TableHead>
+                          <TableHead>Check-in</TableHead>
+                          <TableHead>Check-out</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          const t = busqueda.toLowerCase();
+                          const rows = reservas.filter((r: any) => {
+                            if (!t) return true;
+                            return (
+                              r.numero_reserva?.toLowerCase().includes(t) ||
+                              r.cliente_nombre?.toLowerCase().includes(t) ||
+                              r.clientes?.nombre?.toLowerCase().includes(t) ||
+                              r.clientes?.apellido_paterno?.toLowerCase().includes(t) ||
+                              r.habitacion_numero?.toString().includes(t) ||
+                              r.habitaciones?.numero?.toString().includes(t)
+                            );
+                          });
+                          if (rows.length === 0) {
+                            return (
+                              <TableRow>
+                                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                                  Sin reservas
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+                          return rows.map((r: any) => {
+                            const est = getEstadoConfig(r.estado);
+                            const cliente = r.clientes
+                              ? `${r.clientes.nombre || ''} ${r.clientes.apellido_paterno || ''}`.trim()
+                              : r.cliente_nombre || '—';
+                            const hab = r.habitaciones?.numero || r.habitacion_numero || '—';
+                            return (
+                              <TableRow
+                                key={r.id}
+                                className="cursor-pointer"
+                                onClick={() => handleReservationClick(r)}
+                              >
+                                <TableCell className="font-medium">{r.numero_reserva || '—'}</TableCell>
+                                <TableCell>{cliente}</TableCell>
+                                <TableCell>{hab}</TableCell>
+                                <TableCell>{r.fecha_checkin?.substring(0, 10) || '—'}</TableCell>
+                                <TableCell>{r.fecha_checkout?.substring(0, 10) || '—'}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={est.className}>{r.estado}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {formatCurrency(Number(r.total || 0))}
+                                </TableCell>
+                                <TableCell>
+                                  <Eye className="h-4 w-4 text-muted-foreground" />
+                                </TableCell>
+                              </TableRow>
+                            );
+                          });
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* TAB HISTÓRICO: Tabla con todas las reservas */}
