@@ -547,6 +547,142 @@ function MockCheckout() {
   );
 }
 
+/* ══════════════════ 3.5 IA EN WHATSAPP ══════════════════ */
+function AIWhatsApp() {
+  return (
+    <section className="border-t border-slate-100 bg-white py-24 md:py-32">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="grid gap-14 lg:grid-cols-[1.05fr_1fr] lg:items-center">
+          {/* Copy */}
+          <div>
+            <SectionTag>IA en WhatsApp</SectionTag>
+            <h2 className="text-[34px] font-bold leading-[1.05] tracking-[-0.03em] text-slate-900 md:text-[54px]">
+              El único recepcionista
+              <br />
+              <span className="text-slate-400">que contesta a las 2 de la mañana.</span>
+            </h2>
+            <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-600 md:text-[18px]">
+              WhatsApp es el canal por donde más te buscan los huéspedes — y el peor atendido:
+              recepción está ocupada, el mensaje se queda en visto y esa reserva se va con el
+              hotel que sí contestó. Aquí la IA responde al instante, 24/7, con la información
+              real de tu hotel: consulta disponibilidad, cotiza, crea la reserva en el sistema
+              y confirma. Y cuando el tema requiere un humano, se lo pasa a tu equipo con todo
+              el contexto.
+            </p>
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              {[
+                'Responde 24/7 en segundos',
+                'Reserva directo en el sistema',
+                'Escala a tu equipo cuando hace falta',
+              ].map((t, i) => (
+                <motion.div
+                  key={t}
+                  initial={{ opacity: 0, y: 14 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, ease, delay: i * 0.06 }}
+                  className="rounded-[14px] border border-slate-200 bg-white p-4"
+                >
+                  <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold text-white" style={{ background: ORANGE }}>
+                    {i + 1}
+                  </div>
+                  <div className="text-[13.5px] font-medium leading-snug text-slate-900">{t}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mockup */}
+          <MockAIWhatsApp />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MockAIWhatsApp() {
+  const msgs: Array<{ from: 'g' | 'ia'; t: string; time: string; delay: number }> = [
+    { from: 'g', t: 'Hola, ¿tienen habitación para hoy? Somos 2.', time: '02:14', delay: 0.1 },
+    { from: 'ia', t: 'Hola 👋 Sí, tenemos disponibilidad. ¿Solo esta noche o incluyes mañana?', time: '02:14', delay: 0.35 },
+    { from: 'g', t: 'Solo esta noche.', time: '02:15', delay: 0.65 },
+    { from: 'ia', t: 'Perfecto. Habitación Doble Estándar por $1,290 MXN, incluye desayuno. ¿La aparto?', time: '02:15', delay: 0.9 },
+    { from: 'g', t: 'Sí, apártala por favor.', time: '02:16', delay: 1.2 },
+    { from: 'ia', t: 'Listo ✅ Reserva RES-2026-1042 a nombre tuyo. Te esperamos.', time: '02:16', delay: 1.45 },
+  ];
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.8, ease }}
+      className="relative"
+    >
+      <BrowserFrame label="WhatsApp · Huésped nuevo">
+        <div className="flex flex-col" style={{ background: '#EFE8DE' }}>
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b border-black/5 bg-[#f5efe6] px-4 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-semibold text-white" style={{ background: NAVY }}>
+              H
+            </div>
+            <div className="flex-1">
+              <div className="text-[13px] font-semibold text-slate-900">Huésped · +52 331 428 90…</div>
+              <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                IA respondiendo · 02:14 a.m.
+              </div>
+            </div>
+            <div className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: ORANGE }}>
+              IA
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex flex-col gap-2 px-4 py-5" style={{ minHeight: 320 }}>
+            {msgs.map((m, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35, ease, delay: m.delay }}
+                className={`max-w-[82%] rounded-[14px] px-3 py-2 text-[13px] leading-snug shadow-sm ${
+                  m.from === 'g'
+                    ? 'self-start bg-white text-slate-900'
+                    : 'self-end text-slate-900'
+                }`}
+                style={m.from === 'ia' ? { background: '#D9FDD3' } : undefined}
+              >
+                <div>{m.t}</div>
+                <div className="mt-0.5 text-right text-[10px] text-slate-400">{m.time}</div>
+              </motion.div>
+            ))}
+
+            {/* Success chip */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, ease, delay: 1.8 }}
+              className="mt-3 self-center inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+              Reserva creada en el sistema ✓
+            </motion.div>
+          </div>
+
+          {/* Input bar */}
+          <div className="flex items-center gap-2 border-t border-black/5 bg-[#f5efe6] px-3 py-2.5">
+            <div className="flex-1 rounded-full bg-white px-3 py-1.5 text-[11.5px] text-slate-400">
+              Escribe un mensaje…
+            </div>
+            <div className="h-7 w-7 rounded-full" style={{ background: NAVY }} />
+          </div>
+        </div>
+      </BrowserFrame>
+    </motion.div>
+  );
+}
+
 /* ══════════════════ 4. FUNCIONES ══════════════════ */
 function Features() {
   const items = [
