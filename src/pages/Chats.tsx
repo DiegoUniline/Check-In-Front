@@ -103,9 +103,12 @@ export default function Chats() {
 
   // Cargar chats
   const cargarChats = async () => {
+    const hotelId = api.getHotelId();
+    if (!hotelId) { setChats([]); return []; }
     const { data, error } = await sb
       .from('wa_chats')
       .select('*, clientes:cliente_id(id,nombre,apellido_paterno,apellido_materno)')
+      .eq('hotel_id', hotelId)
       .order('ultima_actividad', { ascending: false })
       .limit(200);
     if (error) {
