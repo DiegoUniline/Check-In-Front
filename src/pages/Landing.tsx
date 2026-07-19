@@ -570,7 +570,6 @@ function FinalCTA() {
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease }}
           className="mx-auto mb-8 h-[72px] w-[72px] object-contain"
-          style={{ filter: 'brightness(0) invert(1)' }}
         />
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
