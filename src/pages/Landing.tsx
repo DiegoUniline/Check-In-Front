@@ -4,7 +4,8 @@ import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Calendar, MessageSquare, Sparkles, Bot, ArrowUpRight, Check,
-  BedDouble, Users, BarChart3, Zap,
+  BedDouble, Users, BarChart3, Zap, BrainCircuit, MousePointerClick,
+  CreditCard, ShieldCheck, Wand2, Globe2, Clock, TrendingUp,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import foxIcon from '@/assets/vulo-fox.png';
@@ -865,6 +866,7 @@ export default function Landing() {
         <Banner />
         <Hero />
         <Story />
+        <Skills />
         <BrandStrip />
         <IABlock />
         <ProductGallery />
