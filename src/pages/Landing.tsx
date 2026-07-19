@@ -92,16 +92,17 @@ function Hero() {
             <span className="text-slate-400">Necesita una sola que sí funcione.</span>
           </motion.h1>
           <motion.p variants={fadeUp} custom={2} className="mt-7 max-w-xl text-[17px] leading-relaxed text-slate-600 md:text-[19px]">
-            Reservas, recepción, habitaciones, cobros y WhatsApp en un mismo lugar.
-            Deja de perseguir la información: que la información te encuentre a ti.
+            VULO reúne todo lo que hace mover un hotel — reservas, recepción, habitaciones,
+            cobros y conversaciones — en una experiencia calmada, rápida y hecha por personas
+            que entienden la operación.
           </motion.p>
           <motion.div variants={fadeUp} custom={3} className="mt-9 flex flex-wrap items-center gap-4">
             <Button asChild size="lg" className="h-[52px] rounded-full px-7 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: NAVY }}>
-              <a href="#contacto">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></a>
+              <Link to="/contacto">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
-            <a href="#funciones" className="group inline-flex items-center gap-1.5 text-[15px] font-medium text-slate-700 hover:text-slate-900">
+            <Link to="/funciones" className="group inline-flex items-center gap-1.5 text-[15px] font-medium text-slate-700 hover:text-slate-900">
               Ver funciones <ChevronDown className="h-4 w-4 transition group-hover:translate-y-0.5" />
-            </a>
+            </Link>
           </motion.div>
         </motion.div>
 
