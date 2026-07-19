@@ -13,7 +13,7 @@ export const setHotelTimezone = (tz?: string | null) => {
 export const getHotelTimezone = () => HOTEL_TZ;
 
 // Fecha "hoy" YYYY-MM-DD en la zona horaria del hotel (no en UTC ni en la del navegador).
-const todayLocal = (): string => {
+export const todayLocal = (): string => {
   try {
     const fmt = new Intl.DateTimeFormat('en-CA', {
       timeZone: HOTEL_TZ,
