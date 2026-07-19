@@ -281,41 +281,29 @@ function drawHeader(
   doc.setFillColor(...VULO_ORANGE);
   doc.rect(0, HEADER_H, pageW, 1.2, 'F');
 
-  // ===== IZQUIERDA: datos del hotel (empresa) =====
-  if (ctx.hotel) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(255, 255, 255);
-    doc.text(ctx.hotel, MARGIN_X, 13);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(203, 213, 225); // slate-300
-    if (ctx.hotelDireccion) doc.text(String(ctx.hotelDireccion), MARGIN_X, 19);
-    if (ctx.hotelTelefono) doc.text(String(ctx.hotelTelefono), MARGIN_X, 23.5);
-  } else {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(255, 255, 255);
-    doc.text('Hotel', MARGIN_X, 13);
-  }
-
-  // ===== DERECHA: logo VULO (isotipo + wordmark) =====
-  const logoRightX = pageW - MARGIN_X;
-  // Wordmark
+  // ===== ENCABEZADO: SOLO datos del hotel =====
+  // Izquierda: nombre + dirección
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
+  doc.setFontSize(15);
   doc.setTextColor(255, 255, 255);
-  const wordW = doc.getTextWidth('VULO');
-  doc.text('VULO', logoRightX, 18, { align: 'right' });
-  // Isotipo (fox) a la izquierda del wordmark
-  try {
-    doc.addImage(assets.fox, 'PNG', logoRightX - wordW - 16, 6, 13, 13, undefined, 'FAST');
-  } catch { /* noop */ }
-  // Tagline pequeña debajo
+  doc.text(ctx.hotel || 'Hotel', MARGIN_X, 13);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
+  doc.setFontSize(8);
+  doc.setTextColor(203, 213, 225); // slate-300
+  if (ctx.hotelDireccion) doc.text(String(ctx.hotelDireccion), MARGIN_X, 19);
+
+  // Derecha: teléfono / contacto
+  if (ctx.hotelTelefono) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Tel. ${ctx.hotelTelefono}`, pageW - MARGIN_X, 13, { align: 'right' });
+  }
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
   doc.setTextColor(203, 213, 225);
-  doc.text('SOFTWARE PARA HOTELES', logoRightX, 23, { align: 'right' });
+  doc.text(format(new Date(), "dd/MM/yyyy · HH:mm"), pageW - MARGIN_X, 19, { align: 'right' });
+  // Nota: se omite el logo/branding VULO en el encabezado — sólo aparece en el pie de página.
 
   // Título del documento debajo del header
   doc.setFont('helvetica', 'bold');
@@ -598,47 +586,40 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const nowLabel = format(new Date(), 'dd/MM/yyyy HH:mm');
   const folio = reserva.numero_reserva || '—';
 
-  // --- 1. ENCABEZADO ---
-  // Izquierda: datos del hotel (empresa)  ·  Derecha: logo VULO
+  // --- 1. ENCABEZADO — SOLO datos del hotel ---
   let y = M;
 
-  // IZQUIERDA: hotel
+  // IZQUIERDA: nombre y dirección del hotel
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setTextColor(...BLACK);
   doc.text(opts.hotel || 'Hotel', M, y + 5);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
+  doc.setFontSize(10);
   doc.setTextColor(...GRAY_600);
-  let ly = y + 10;
-  if (opts.hotelDireccion) { doc.text(String(opts.hotelDireccion), M, ly); ly += 4.2; }
-  if (opts.hotelTelefono) { doc.text(`Tel. ${opts.hotelTelefono}`, M, ly); ly += 4.2; }
-  doc.setFontSize(9);
-  doc.setTextColor(...GRAY_500);
-  doc.text('Tarjeta de registro de huésped', M, ly + 1);
+  let ly = y + 11;
+  if (opts.hotelDireccion) { doc.text(String(opts.hotelDireccion), M, ly); ly += 4.5; }
+  if (opts.hotelTelefono) { doc.text(`Tel. ${opts.hotelTelefono}`, M, ly); ly += 4.5; }
 
-  // DERECHA: logo VULO (fox + wordmark) + folio + fecha
+  // DERECHA: título del documento + folio + fecha
   const rightX = pageW - M;
-  if (foxData) {
-    try { doc.addImage(foxData, 'PNG', rightX - 40, y, 12, 12, undefined, 'FAST'); } catch { /* noop */ }
-  }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(19);
-  doc.setTextColor(...BLACK);
-  doc.setCharSpace(1.2);
-  doc.text('VULO', rightX, y + 9, { align: 'right' });
-  doc.setCharSpace(0);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...BLACK);
-  doc.text(`Folio ${folio}`, rightX, y + 15.5, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...GRAY_500);
-  doc.text(`Generado ${nowLabel}`, rightX, y + 20, { align: 'right' });
+  doc.setCharSpace(0.4);
+  doc.text('TARJETA DE REGISTRO DE HUÉSPED', rightX, y + 5, { align: 'right' });
+  doc.setCharSpace(0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BLACK);
+  doc.text(`Folio ${folio}`, rightX, y + 11.5, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY_500);
+  doc.text(`Generado ${nowLabel}`, rightX, y + 16, { align: 'right' });
 
   // Línea inferior 2px negro
-  y = Math.max(ly + 4, y + 24);
+  y = Math.max(ly + 3, y + 20);
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.6);
   doc.line(M, y, pageW - M, y);
