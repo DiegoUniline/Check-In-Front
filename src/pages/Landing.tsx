@@ -1110,10 +1110,17 @@ function FinalCTA() {
 
 /* ══════════════════ FOOTER ══════════════════ */
 function Footer() {
-  const cols = [
+  const cols: Array<{ t: string; l: Array<[string, string]> }> = [
     { t: 'Producto', l: [['Funciones', '#funciones'], ['Precios', '#precios'], ['Integraciones', '#funciones']] },
     { t: 'Empresa', l: [['Sobre VULO', '#'], ['Contacto', '#contacto']] },
-    { t: 'Recursos', l: [['Centro de ayuda', '#'], ['Estado del sistema', '#']] },
+    {
+      t: 'Contacto',
+      l: [
+        ['WhatsApp 317 103 5768', 'https://wa.me/523171035768'],
+        ['hola@vulo.mx', 'mailto:hola@vulo.mx'],
+        ['Autlán de Navarro, Jalisco', '#contacto'],
+      ],
+    },
     { t: 'Legal', l: [['Términos', '#'], ['Privacidad', '#']] },
   ];
   return (
@@ -1126,8 +1133,16 @@ function Footer() {
               <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain" />
             </div>
             <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-slate-500">
-              Software para hoteles. Hecho en México.
+              Software para hoteles. Hecho en Autlán de Navarro, Jalisco.
             </p>
+            <div className="mt-4 space-y-1.5 text-[13px] text-slate-600">
+              <a href="https://wa.me/523171035768" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-slate-900">
+                <Phone className="h-3.5 w-3.5" /> 317 103 5768
+              </a>
+              <div className="inline-flex items-center gap-2 text-slate-500">
+                <MapPin className="h-3.5 w-3.5" /> Autlán de Navarro, Jalisco
+              </div>
+            </div>
           </div>
           {cols.map((c) => (
             <div key={c.t}>
@@ -1141,8 +1156,12 @@ function Footer() {
           ))}
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6 text-[12px] text-slate-400">
-          <div>© {new Date().getFullYear()} VULO · CDMX, México</div>
-          <div className="inline-flex items-center gap-2"><span>Idioma:</span> <span className="font-medium text-slate-600">Español (México)</span></div>
+          <div>© {new Date().getFullYear()} VULO · Autlán de Navarro, Jalisco, México</div>
+          <div className="inline-flex items-center gap-2">
+            <span>Desarrollado por</span>
+            <span className="font-semibold text-slate-700">Uniline</span>
+            <span className="text-slate-400">· Innovación en la nube</span>
+          </div>
         </div>
       </div>
     </footer>
