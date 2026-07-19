@@ -2,9 +2,9 @@ import { cn } from '@/lib/utils';
 import logoIcon from '@/assets/hospedapp-icon.png';
 import logoFull from '@/assets/hospedapp-logo-full.png';
 
-// VULO Brand — Navy #0D1B2A + Orange #FF6A00
-const BRAND_NAVY = '#0D1B2A';
-const BRAND_ORANGE = '#FF6A00';
+// VULO Brand — Navy #10233F + Orange #F97316
+const BRAND_NAVY = '#10233F';
+const BRAND_ORANGE = '#F97316';
 
 interface LogoProps {
   className?: string;
