@@ -548,7 +548,7 @@ export default function Reservas() {
                   <div className="relative w-full sm:max-w-sm">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                     <Input
-                      placeholder="Buscar reserva, cliente, habitación..."
+                      placeholder="Buscar habitación..."
                       className="pl-8 h-9 text-sm"
                       value={busqueda}
                       onChange={(e) => setBusqueda(e.target.value)}
@@ -558,62 +558,59 @@ export default function Reservas() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Reserva</TableHead>
-                          <TableHead>Cliente</TableHead>
                           <TableHead>Habitación</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Huésped actual</TableHead>
                           <TableHead>Check-in</TableHead>
                           <TableHead>Check-out</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
                           <TableHead className="w-10"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {(() => {
-                          const t = busqueda.toLowerCase();
-                          const rows = reservas.filter((r: any) => {
-                            if (!t) return true;
-                            return (
-                              r.numero_reserva?.toLowerCase().includes(t) ||
-                              r.cliente_nombre?.toLowerCase().includes(t) ||
-                              r.clientes?.nombre?.toLowerCase().includes(t) ||
-                              r.clientes?.apellido_paterno?.toLowerCase().includes(t) ||
-                              r.habitacion_numero?.toString().includes(t) ||
-                              r.habitaciones?.numero?.toString().includes(t)
-                            );
-                          });
+                          const rows = habitacionesFiltradas;
                           if (rows.length === 0) {
                             return (
                               <TableRow>
-                                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                                  Sin reservas
+                                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                                  Sin habitaciones
                                 </TableCell>
                               </TableRow>
                             );
                           }
-                          return rows.map((r: any) => {
-                            const est = getEstadoConfig(r.estado);
-                            const cliente = r.clientes
-                              ? `${r.clientes.nombre || ''} ${r.clientes.apellido_paterno || ''}`.trim()
-                              : r.cliente_nombre || '—';
-                            const hab = r.habitaciones?.numero || r.habitacion_numero || '—';
+                          const hoy = new Date().toISOString().substring(0, 10);
+                          return rows.map((h: any) => {
+                            const activa = reservas.find((r: any) => {
+                              const rid = r.habitacion_id || r.habitaciones?.id;
+                              if (rid !== h.id) return false;
+                              if (['Cancelada', 'NoShow'].includes(r.estado)) return false;
+                              const ci = (r.fecha_checkin || '').substring(0, 10);
+                              const co = (r.fecha_checkout || '').substring(0, 10);
+                              return ci <= hoy && hoy < co;
+                            });
+                            const est = getEstadoConfig(activa?.estado || h.estado_habitacion || 'Libre');
+                            const cliente = activa
+                              ? (activa.clientes
+                                  ? `${activa.clientes.nombre || ''} ${activa.clientes.apellido_paterno || ''}`.trim()
+                                  : activa.cliente_nombre || '—')
+                              : '—';
                             return (
                               <TableRow
-                                key={r.id}
+                                key={h.id}
                                 className="cursor-pointer"
-                                onClick={() => handleReservationClick(r)}
+                                onClick={() => activa
+                                  ? handleReservationClick(activa)
+                                  : handleRecepcionLibreClick(h)}
                               >
-                                <TableCell className="font-medium">{r.numero_reserva || '—'}</TableCell>
-                                <TableCell>{cliente}</TableCell>
-                                <TableCell>{hab}</TableCell>
-                                <TableCell>{r.fecha_checkin?.substring(0, 10) || '—'}</TableCell>
-                                <TableCell>{r.fecha_checkout?.substring(0, 10) || '—'}</TableCell>
+                                <TableCell className="font-medium">{h.numero || '—'}</TableCell>
+                                <TableCell>{h.tipo_nombre || '—'}</TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className={est.badge}>{est.label}</Badge>
                                 </TableCell>
-                                <TableCell className="text-right tabular-nums">
-                                  {formatCurrency(Number(r.total || 0))}
-                                </TableCell>
+                                <TableCell>{cliente}</TableCell>
+                                <TableCell>{activa?.fecha_checkin?.substring(0, 10) || '—'}</TableCell>
+                                <TableCell>{activa?.fecha_checkout?.substring(0, 10) || '—'}</TableCell>
                                 <TableCell>
                                   <Eye className="h-4 w-4 text-muted-foreground" />
                                 </TableCell>
