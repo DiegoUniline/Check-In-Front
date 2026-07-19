@@ -60,7 +60,6 @@ const mainNavItems = [
   { title: 'Reservas', url: '/reservas', icon: CalendarDays, viewKey: 'reservas' },
   { title: 'Check-In', url: '/reservas/checkin', icon: LogIn, viewKey: 'reservas' },
   { title: 'Check-Out', url: '/reservas/checkout', icon: LogOut, viewKey: 'reservas' },
-  { title: 'Timeline', url: '/reservas/timeline', icon: CalendarDays, viewKey: 'reservas' },
   { title: 'Histórico Reservas', url: '/reservas/historico', icon: History, viewKey: 'reservas' },
   { title: 'Reservas Online', url: '/reservas-online', icon: Inbox, viewKey: 'reservas', badgeKey: 'reservas-online' },
   { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
