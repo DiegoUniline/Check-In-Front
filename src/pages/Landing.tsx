@@ -331,11 +331,12 @@ function IABlock() {
           transition={{ duration: 0.9, ease }}
           className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.15)] md:p-8"
         >
-          <div className="mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: BRAND_NAVY }}>
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-[13px] font-medium text-slate-900">VULO Assistant</span>
+          <div className="mb-6 flex items-center gap-2.5 border-b border-slate-100 pb-4">
+            <img src={foxIcon} alt="" width={32} height={32} className="h-8 w-8 object-contain" />
+            <span className="text-[13px] font-semibold text-slate-900">VULO Assistant</span>
+            <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} /> online
+            </span>
           </div>
 
           <div className="space-y-4">
@@ -404,9 +405,11 @@ function WhatsApp() {
           className="order-2 mx-auto w-full max-w-md rounded-[32px] border border-slate-200 bg-slate-50 p-4 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.15)] lg:order-1"
         >
           <div className="mb-4 flex items-center gap-3 border-b border-slate-200 pb-3">
-            <div className="h-10 w-10 rounded-full" style={{ background: BRAND_NAVY }} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white">
+              <img src={foxIcon} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+            </div>
             <div>
-              <div className="text-[14px] font-semibold text-slate-900">Hotel Plaza Real</div>
+              <div className="text-[14px] font-semibold text-slate-900">Hotel Plaza Real · VULO</div>
               <div className="text-[11px] text-slate-500">en línea · automatizado</div>
             </div>
           </div>
