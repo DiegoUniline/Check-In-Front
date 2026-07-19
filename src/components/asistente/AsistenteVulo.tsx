@@ -177,7 +177,9 @@ export function AsistenteVulo() {
                     Explora todos los módulos de VULO. Toca cualquiera para ir y ver su guía.
                   </p>
                   <div className="space-y-1.5">
-                    {GUIAS.filter((g) => g.ruta !== '__default__' && g.ruta !== '/soporte').map((g) => {
+                    {GUIAS.filter(
+                      (g) => g.ruta !== '__default__' && g.ruta !== '/soporte' && g.navegable !== false,
+                    ).map((g) => {
                       const Ic = g.icono;
                       const activo = pathname.startsWith(g.ruta);
                       return (
