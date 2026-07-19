@@ -588,20 +588,30 @@ export default function Clientes() {
                 </div>
               </div>
               <Separator />
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold text-primary">{selectedCliente?.total_estancias || 0}</p>
-                  <p className="text-sm text-muted-foreground">Estancias</p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold text-primary">-</p>
-                  <p className="text-sm text-muted-foreground">Total Gastado</p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold text-primary">-</p>
-                  <p className="text-sm text-muted-foreground">Rating</p>
-                </div>
-              </div>
+              {(() => {
+                const validas = historial.filter((r: any) => r.estado !== 'Cancelada');
+                const totalGastado = validas.reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
+                const totalNoches = validas.reduce((s: number, r: any) => s + (Number(r.noches) || 0), 0);
+                const estancias = validas.length || (selectedCliente?.total_estancias || 0);
+                return (
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="p-4 rounded-lg bg-muted">
+                      <p className="text-2xl font-bold text-primary">{estancias}</p>
+                      <p className="text-sm text-muted-foreground">Estancias</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted">
+                      <p className="text-2xl font-bold text-primary">
+                        ${totalGastado.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Total Gastado</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted">
+                      <p className="text-2xl font-bold text-primary">{totalNoches}</p>
+                      <p className="text-sm text-muted-foreground">Noches</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </TabsContent>
             
             <TabsContent value="historial" className="mt-4">

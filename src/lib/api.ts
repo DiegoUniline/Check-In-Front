@@ -418,7 +418,18 @@ class ApiClient {
   getCliente = async (id: string): Promise<any> => {
     const { data, error } = await supabase.from('clientes').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
-    return this.sanitizeClienteResponse(data);
+    const cliente = this.sanitizeClienteResponse(data);
+    if (cliente) {
+      try {
+        const { count } = await supabase
+          .from('reservas')
+          .select('id', { count: 'exact', head: true })
+          .eq('cliente_id', id)
+          .neq('estado', 'Cancelada');
+        cliente.total_estancias = count ?? cliente.total_estancias ?? 0;
+      } catch { /* usar valor persistido */ }
+    }
+    return cliente;
   };
   getClienteReservas = async (id: string): Promise<any> => {
     const { data } = await supabase.from('reservas').select('*').eq('cliente_id', id).order('fecha_checkin', { ascending: false });
