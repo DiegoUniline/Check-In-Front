@@ -281,41 +281,29 @@ function drawHeader(
   doc.setFillColor(...VULO_ORANGE);
   doc.rect(0, HEADER_H, pageW, 1.2, 'F');
 
-  // ===== IZQUIERDA: datos del hotel (empresa) =====
-  if (ctx.hotel) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(255, 255, 255);
-    doc.text(ctx.hotel, MARGIN_X, 13);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(203, 213, 225); // slate-300
-    if (ctx.hotelDireccion) doc.text(String(ctx.hotelDireccion), MARGIN_X, 19);
-    if (ctx.hotelTelefono) doc.text(String(ctx.hotelTelefono), MARGIN_X, 23.5);
-  } else {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(255, 255, 255);
-    doc.text('Hotel', MARGIN_X, 13);
-  }
-
-  // ===== DERECHA: logo VULO (isotipo + wordmark) =====
-  const logoRightX = pageW - MARGIN_X;
-  // Wordmark
+  // ===== ENCABEZADO: SOLO datos del hotel =====
+  // Izquierda: nombre + dirección
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
+  doc.setFontSize(15);
   doc.setTextColor(255, 255, 255);
-  const wordW = doc.getTextWidth('VULO');
-  doc.text('VULO', logoRightX, 18, { align: 'right' });
-  // Isotipo (fox) a la izquierda del wordmark
-  try {
-    doc.addImage(assets.fox, 'PNG', logoRightX - wordW - 16, 6, 13, 13, undefined, 'FAST');
-  } catch { /* noop */ }
-  // Tagline pequeña debajo
+  doc.text(ctx.hotel || 'Hotel', MARGIN_X, 13);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
+  doc.setFontSize(8);
+  doc.setTextColor(203, 213, 225); // slate-300
+  if (ctx.hotelDireccion) doc.text(String(ctx.hotelDireccion), MARGIN_X, 19);
+
+  // Derecha: teléfono / contacto
+  if (ctx.hotelTelefono) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Tel. ${ctx.hotelTelefono}`, pageW - MARGIN_X, 13, { align: 'right' });
+  }
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
   doc.setTextColor(203, 213, 225);
-  doc.text('SOFTWARE PARA HOTELES', logoRightX, 23, { align: 'right' });
+  doc.text(format(new Date(), "dd/MM/yyyy · HH:mm"), pageW - MARGIN_X, 19, { align: 'right' });
+  // Nota: se omite el logo/branding VULO en el encabezado — sólo aparece en el pie de página.
 
   // Título del documento debajo del header
   doc.setFont('helvetica', 'bold');
