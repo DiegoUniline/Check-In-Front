@@ -45,7 +45,7 @@ export const VIEWS: ViewDef[] = [
   { key: 'gastos', label: 'Gastos', group: 'Compras', path: '/gastos' },
 
   // Reservas
-  { key: 'historial-reservas', label: 'Historial Reservas', group: 'Principal', path: '/historial-reservas' },
+  { key: 'historial-reservas', label: 'Histórico Entradas', group: 'Principal', path: '/historial-reservas' },
 
   // Sistema
   { key: 'usuarios', label: 'Usuarios', group: 'Sistema', path: '/usuarios' },
