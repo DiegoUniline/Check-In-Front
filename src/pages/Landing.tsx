@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import foxIcon from '@/assets/hospedapp-icon.png';
+import bannerImg from '@/assets/vulo-banner.jpg';
+import people1 from '@/assets/vulo-people-1.jpg';
+import people2 from '@/assets/vulo-people-2.jpg';
+import people3 from '@/assets/vulo-people-3.jpg';
 
 /**
  * VULO — Landing pública
@@ -677,10 +681,12 @@ export default function Landing() {
     <div className="min-h-screen bg-white text-slate-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       <Nav />
       <main>
+        <Banner />
         <Hero />
         <Story />
         <BrandStrip />
         <IABlock />
+        <PeopleGallery />
         <WhatsApp />
         <Metrics />
         <Features />
