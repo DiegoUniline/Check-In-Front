@@ -890,17 +890,6 @@ export default function Reservas() {
         </Tabs>
       </div>
 
-      {/* FAB móvil - Nueva reserva */}
-      <Button
-        size="lg"
-        className="sm:hidden fixed right-4 z-40 h-14 w-14 rounded-full shadow-xl p-0"
-        style={{ bottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4.5rem))' }}
-        onClick={() => { setPreloadReserva(undefined); setModalNuevaReserva(true); }}
-        aria-label="Nueva reserva"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
-
       {/* Filtros */}
       <ReservasFiltersSheet
         open={filtrosOpen}
