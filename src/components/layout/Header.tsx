@@ -42,9 +42,12 @@ export function Header({ title, subtitle }: HeaderProps) {
   const handleHotelChange = async (hotelId: string) => {
     try {
       await api.setHotelActivo(hotelId);
-      await refreshUser();
-      await queryClient.invalidateQueries();
+      // Persistimos inmediatamente y recargamos: garantiza que TODAS las
+      // páginas (incluso las que no usan React Query) re-consulten con el
+      // nuevo hotel_id sin quedarse con estado del hotel anterior.
+      queryClient.clear();
       toast.success('Hotel cambiado');
+      setTimeout(() => { window.location.reload(); }, 250);
     } catch (e: any) {
       toast.error(e?.message || 'No se pudo cambiar de hotel');
     }
