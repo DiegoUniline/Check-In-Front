@@ -396,6 +396,29 @@ export default function Reservas() {
 
           {/* TAB RESERVAS: Timeline existente */}
           <TabsContent value="timeline" className="space-y-3 mt-3">
+            {/* Selector Timeline / Card / Tabla */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="inline-flex bg-muted p-0.5 rounded-lg">
+                {([
+                  { key: 'timeline', label: 'Timeline' },
+                  { key: 'card', label: 'Card' },
+                  { key: 'tabla', label: 'Tabla' },
+                ] as { key: ReservasSubView; label: string }[]).map(opt => (
+                  <Button
+                    key={opt.key}
+                    variant={reservasSubView === opt.key ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    onClick={() => setReservasSubView(opt.key)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {reservasSubView === 'timeline' && (
+            <>
             <Card>
           <CardContent className="p-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
