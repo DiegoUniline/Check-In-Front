@@ -245,6 +245,39 @@ function Pains() {
   );
 }
 
+/* ══════════════════ 2.5 BAND · MENOS FRICCIÓN ══════════════════ */
+function FrictionBand() {
+  return (
+    <section className="border-t border-slate-100 py-24" style={{ background: NAVY }}>
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease }}
+            className="text-[36px] font-bold tracking-[-0.03em] text-white md:text-[54px]"
+          >
+            Menos fricción.
+            <br />
+            <span style={{ color: ORANGE }}>Más huéspedes que vuelven.</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease, delay: 0.1 }}
+            className="max-w-lg text-[17px] leading-relaxed text-white/70 md:text-[19px]"
+          >
+            Un hotel bien llevado se nota. VULO lo hace más obvio — desde la primera reserva
+            hasta el corte del día, sin pasos que sobren.
+          </motion.p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ══════════════════ 3. CÓMO FUNCIONA (3 momentos) ══════════════════ */
 function HowItWorks() {
   const blocks = [
