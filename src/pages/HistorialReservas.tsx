@@ -519,7 +519,7 @@ export default function HistorialReservas() {
                       <TableHead>Total</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Origen</TableHead>
-                      <TableHead className="text-right">Ver</TableHead>
+                      <TableHead className="text-right w-[60px]">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -567,14 +567,64 @@ export default function HistorialReservas() {
                         </TableCell>
                         <TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
                         <TableCell>{getOrigenBadge(reserva.origen)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={(e) => { e.stopPropagation(); abrirDetalle(reserva); }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" aria-label="Acciones">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
+                              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                                #{reserva.numero_reserva || reserva.id?.slice(0, 6)}
+                              </DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => abrirDetalle(reserva)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver detalle
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={async () => {
+                                try {
+                                  const det = await api.getReserva(reserva.id);
+                                  const cli = det.cliente || det.clientes || {};
+                                  exportarComprobanteReserva({
+                                    hotel: det.hotel?.nombre,
+                                    hotelDireccion: det.hotel?.direccion,
+                                    hotelTelefono: det.hotel?.telefono,
+                                    currency: det.hotel?.moneda || 'MXN',
+                                    reserva: det,
+                                    cliente: cli,
+                                  });
+                                } catch {
+                                  toast({ title: 'Error', description: 'No se pudo generar el comprobante', variant: 'destructive' });
+                                }
+                              }}>
+                                <FileDown className="h-4 w-4 mr-2" />
+                                Descargar comprobante
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={async () => {
+                                try {
+                                  const det = await api.getReserva(reserva.id);
+                                  const cli = det.cliente || det.clientes || {};
+                                  exportarRegistroHuesped({
+                                    hotel: det.hotel?.nombre,
+                                    hotelDireccion: det.hotel?.direccion,
+                                    hotelTelefono: det.hotel?.telefono,
+                                    currency: det.hotel?.moneda || 'MXN',
+                                    reserva: det,
+                                    cliente: cli,
+                                    firmaDataUrl: det.firma_digital || null,
+                                    aceptaTerminos: !!det.acepta_terminos,
+                                  });
+                                } catch {
+                                  toast({ title: 'Error', description: 'No se pudo generar el registro', variant: 'destructive' });
+                                }
+                              }}>
+                                <Printer className="h-4 w-4 mr-2" />
+                                Tarjeta de registro
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
