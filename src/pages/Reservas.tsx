@@ -157,7 +157,7 @@ export default function Reservas() {
   };
 
   const habitacionesFiltradas = habitaciones.filter(h => {
-    if (filtroTipo !== 'all' && h.tipo_id !== filtroTipo) return false;
+    if (filtroTipo !== 'all' && h.tipo_habitacion_id !== filtroTipo) return false;
     if (busqueda) {
       const search = busqueda.toLowerCase();
       return h.numero?.toLowerCase().includes(search) || h.tipo_nombre?.toLowerCase().includes(search);
