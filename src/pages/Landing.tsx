@@ -7,6 +7,7 @@ import {
   BedDouble, Users, BarChart3, Zap,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import foxIcon from '@/assets/hospedapp-icon.png';
 
 /**
  * VULO — Landing pública
@@ -66,13 +67,14 @@ function Nav() {
 function Hero() {
   return (
     <section className="relative overflow-hidden">
-      {/* Halo naranja tenue */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full opacity-[0.06] blur-3xl" style={{ background: BRAND_ORANGE }} />
       <div className="mx-auto max-w-[1440px] px-6 pb-24 pt-20 lg:px-10 lg:pb-32 lg:pt-28">
         <motion.div initial="hidden" animate="show" className="mx-auto max-w-4xl text-center">
-          <motion.div variants={fadeUp} custom={0} className="mb-8 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-700">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} />
-            Nuevo · IA para operaciones de hotel
+          <motion.div variants={fadeUp} custom={0} className="mb-10 flex flex-col items-center gap-4">
+            <img src={foxIcon} alt="VULO" width={72} height={72} className="h-[72px] w-[72px] object-contain" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-700">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND_ORANGE }} />
+              Nuevo · IA para operaciones de hotel
+            </div>
           </motion.div>
           <motion.h1
             variants={fadeUp}
