@@ -7,7 +7,7 @@ import {
   BedDouble, Users, BarChart3, Zap,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
-import foxIcon from '@/assets/hospedapp-icon.png';
+import foxIcon from '@/assets/vulo-fox.png';
 import wordmark from '@/assets/vulo-wordmark.png';
 
 /**

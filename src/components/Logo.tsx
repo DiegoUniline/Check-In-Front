@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import logoIcon from '@/assets/hospedapp-icon.png';
+import logoIcon from '@/assets/vulo-fox.png';
 import wordmark from '@/assets/vulo-wordmark.png';
 
 interface LogoProps {
