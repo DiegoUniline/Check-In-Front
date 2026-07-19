@@ -420,7 +420,10 @@ class ApiClient {
 
   // ------- Reservas -------
   getReservas = async (params?: Record<string, string>): Promise<any> => {
-    const key = `reservas:${this.hid()}:${params?.estado || 'all'}`;
+    const paramsKey = params
+      ? Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join('|')
+      : 'all';
+    const key = `reservas:${this.hid()}:${paramsKey}`;
     return withOfflineCache(key, async () => {
       let q = supabase.from('reservas').select('*, clientes(*), habitaciones(numero, tipos_habitacion(nombre)), tipos_habitacion(nombre)').eq('hotel_id', this.hid()).order('fecha_checkin', { ascending: false });
       if (params?.estado) q = q.eq('estado', params.estado);
