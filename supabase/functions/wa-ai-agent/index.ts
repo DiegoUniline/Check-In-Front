@@ -272,10 +272,41 @@ function buildTools() {
       type: "function",
       function: {
         name: "escalar_a_humano",
-        description: "Pasa la conversación a un humano cuando el bot no puede resolver.",
+        description: "Pasa la conversación a un humano cuando no puedas resolver (quejas, negociación de descuentos, reclamos, cancelaciones con reembolso, o cuando el huésped lo pide explícitamente).",
         parameters: {
           type: "object",
-          properties: { motivo: { type: "string" } },
+          properties: {
+            motivo: { type: "string", description: "Motivo breve del handoff." },
+            resumen: { type: "string", description: "Resumen de 2-4 líneas de la conversación y lo que el huésped necesita." },
+          },
+          required: ["motivo"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "consultar_reserva",
+        description: "Busca una reserva del huésped por folio (RES-YYYY-XXXX) o por el teléfono del chat actual. Devuelve fechas, habitación, total, saldo y estado.",
+        parameters: {
+          type: "object",
+          properties: {
+            folio: { type: "string", description: "Folio tipo RES-2026-0010. Opcional si se busca por teléfono del chat." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "confirmar_reserva",
+        description: "Cambia una reserva de estado 'Pendiente' a 'Confirmada'. Solo úsala tras confirmación EXPLÍCITA del huésped en el chat.",
+        parameters: {
+          type: "object",
+          properties: {
+            reserva_id: { type: "string", description: "UUID de la reserva a confirmar." },
+          },
+          required: ["reserva_id"],
         },
       },
     },
