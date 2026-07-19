@@ -59,14 +59,15 @@ function Nav() {
           <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain md:h-6" />
         </Link>
         <nav className="hidden items-center gap-9 md:flex">
-          <a href="#funciones" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Funciones</a>
-          <a href="#precios" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Precios</a>
-          <a href="#contacto" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Contacto</a>
+          <Link to="/funciones" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Funciones</Link>
+          <Link to="/precios" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Precios</Link>
+          <Link to="/empresa" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Empresa</Link>
+          <Link to="/contacto" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Contacto</Link>
         </nav>
         <div className="flex items-center gap-3">
           <Link to="/login" className="hidden text-[14px] font-medium text-slate-600 transition hover:text-slate-900 sm:block">Iniciar sesión</Link>
           <Button asChild size="sm" className="h-10 rounded-full px-5 text-[14px] font-medium text-white shadow-none hover:opacity-95" style={{ background: NAVY }}>
-            <a href="#contacto">Agendar demo</a>
+            <Link to="/contacto">Agendar demo</Link>
           </Button>
         </div>
       </div>
