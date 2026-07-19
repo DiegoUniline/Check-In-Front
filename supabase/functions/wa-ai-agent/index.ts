@@ -12,7 +12,7 @@ import { corsHeaders, evoFetch, json } from "../_shared/evolution.ts";
 
 const LOVABLE_API = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
-const MAX_STEPS = 6;
+const MAX_STEPS = 8;
 
 type Msg = { role: "system" | "user" | "assistant" | "tool"; content: string; tool_call_id?: string; tool_calls?: unknown[]; name?: string };
 
@@ -83,13 +83,28 @@ Personalidad: ${cfg.personalidad}
 ${cfg.instrucciones ? `Instrucciones adicionales: ${cfg.instrucciones}` : ""}
 
 Reglas:
-- Responde en el idioma del huésped, breve (2-4 líneas), tono cálido, sin sonar robótico.
-- Usa emojis con moderación.
-- Nunca inventes precios o disponibilidad: consúltalos con las herramientas.
-- Si no sabes algo, ofrece pasar con una persona (usa escalar_a_humano).
-- Fechas en formato YYYY-MM-DD.
-- Check-in ${hotel?.hora_checkin ?? "15:00"}, check-out ${hotel?.hora_checkout ?? "12:00"}.
-- Moneda: ${hotel?.moneda_simbolo ?? "$"}
+- Responde en el idioma del huésped (por defecto español mexicano), breve (2-4 líneas), tono cálido, natural.
+- Usa emojis con moderación (máx 1 por mensaje).
+- Nunca inventes precios ni disponibilidad: SIEMPRE usa las herramientas para consultar datos reales.
+- Al huésped muéstrale las fechas como dd/mm/yyyy. Internamente/en tools usa YYYY-MM-DD.
+- Check-in ${hotel?.hora_checkin ?? "15:00"}, check-out ${hotel?.hora_checkout ?? "12:00"}. Moneda: ${hotel?.moneda_simbolo ?? "$"}.
+
+Flujo de reserva:
+1. Pregunta fechas y número de huéspedes si no las tienes.
+2. Usa consultar_disponibilidad para verificar. Si no hay, propón fechas alternativas reales.
+3. Cotiza con "cotizar" y presenta el total claro.
+4. Pide nombre completo del huésped.
+5. Usa crear_pre_reserva → obtienes un folio con estado Pendiente.
+6. Pide confirmación EXPLÍCITA ("¿Confirmo tu reserva del 20/12 al 22/12 por $2,400?").
+7. Solo cuando el huésped diga "sí, confirmo" (o equivalente claro), llama a confirmar_reserva con el reserva_id. Luego dale su folio.
+
+Consulta de reserva existente:
+- Si el huésped pregunta "cuál es mi reserva", "cuánto debo", "a qué hora llego", usa consultar_reserva (con folio si lo da, o sin argumentos para buscar por su teléfono).
+
+Handoff (escalar_a_humano):
+- Si pide descuento, gerente, queja, reembolso, o algo fuera de tus capacidades, llama a escalar_a_humano con motivo Y resumen de 2-4 líneas de lo que necesita.
+- Después del handoff, despídete brevemente: "En un momento te contacta alguien del equipo 🙌".
+- Nunca prometas descuentos por tu cuenta.
 `;
 
     const messages: Msg[] = [{ role: "system", content: systemPrompt }];
@@ -272,10 +287,41 @@ function buildTools() {
       type: "function",
       function: {
         name: "escalar_a_humano",
-        description: "Pasa la conversación a un humano cuando el bot no puede resolver.",
+        description: "Pasa la conversación a un humano cuando no puedas resolver (quejas, negociación de descuentos, reclamos, cancelaciones con reembolso, o cuando el huésped lo pide explícitamente).",
         parameters: {
           type: "object",
-          properties: { motivo: { type: "string" } },
+          properties: {
+            motivo: { type: "string", description: "Motivo breve del handoff." },
+            resumen: { type: "string", description: "Resumen de 2-4 líneas de la conversación y lo que el huésped necesita." },
+          },
+          required: ["motivo"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "consultar_reserva",
+        description: "Busca una reserva del huésped por folio (RES-YYYY-XXXX) o por el teléfono del chat actual. Devuelve fechas, habitación, total, saldo y estado.",
+        parameters: {
+          type: "object",
+          properties: {
+            folio: { type: "string", description: "Folio tipo RES-2026-0010. Opcional si se busca por teléfono del chat." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "confirmar_reserva",
+        description: "Cambia una reserva de estado 'Pendiente' a 'Confirmada'. Solo úsala tras confirmación EXPLÍCITA del huésped en el chat.",
+        parameters: {
+          type: "object",
+          properties: {
+            reserva_id: { type: "string", description: "UUID de la reserva a confirmar." },
+          },
+          required: ["reserva_id"],
         },
       },
     },
@@ -370,8 +416,84 @@ async function ejecutarTool(admin: any, hotelId: string, chatId: string, name: s
       return { ok: true, reserva_id: reserva?.id, numero_reserva: reserva?.numero_reserva, total: subtotal, noches };
     }
     if (name === "escalar_a_humano") {
+      const motivo = String(args.motivo ?? "El agente solicitó apoyo humano");
+      const resumen = String(args.resumen ?? "").trim();
       await admin.from("wa_chats").update({ estado_bot: "humano" }).eq("id", chatId);
+      // Guardar nota con resumen si la tabla wa_notas existe
+      try {
+        await admin.from("wa_notas").insert({
+          chat_id: chatId,
+          hotel_id: hotelId,
+          contenido: `🤝 HANDOFF automático\nMotivo: ${motivo}${resumen ? `\n\nResumen IA:\n${resumen}` : ""}`,
+        });
+      } catch (_) { /* wa_notas opcional */ }
+      // Notificación para recepción
+      try {
+        await admin.from("notificaciones").insert({
+          hotel_id: hotelId,
+          tipo: "whatsapp_handoff",
+          titulo: "WhatsApp: se requiere atención humana",
+          mensaje: motivo,
+          prioridad: "alta",
+        });
+      } catch (_) { /* notificaciones puede tener otro shape */ }
       return { ok: true, mensaje: "Conversación pasada a un humano." };
+    }
+    if (name === "consultar_reserva") {
+      const folio = String(args.folio ?? "").trim();
+      let query = admin
+        .from("reservas")
+        .select("id, numero_reserva, fecha_checkin, fecha_checkout, noches, adultos, ninos, total, total_pagado, saldo_pendiente, estado, tarifa_noche, tipo_habitacion_id, habitacion_id, cliente_id, clientes(nombre, telefono), habitaciones(numero), tipos_habitacion(nombre)")
+        .eq("hotel_id", hotelId);
+      if (folio) {
+        query = query.eq("numero_reserva", folio);
+      } else {
+        // Buscar por teléfono del chat
+        const { data: chat } = await admin.from("wa_chats").select("phone, cliente_id").eq("id", chatId).single();
+        if (chat?.cliente_id) {
+          query = query.eq("cliente_id", chat.cliente_id);
+        } else if (chat?.phone) {
+          const { data: cli } = await admin.from("clientes").select("id").eq("hotel_id", hotelId).eq("telefono", chat.phone).maybeSingle();
+          if (cli?.id) query = query.eq("cliente_id", cli.id);
+          else return { encontrada: false, mensaje: "No encontré reservas asociadas a este teléfono." };
+        } else {
+          return { encontrada: false, mensaje: "Necesito el folio (por ejemplo RES-2026-0010) para buscar la reserva." };
+        }
+      }
+      const { data: reservas } = await query.order("fecha_checkin", { ascending: false }).limit(5);
+      if (!reservas || reservas.length === 0) return { encontrada: false, mensaje: "No encontré ninguna reserva con esos datos." };
+      return {
+        encontrada: true,
+        reservas: reservas.map((r: any) => ({
+          id: r.id,
+          folio: r.numero_reserva,
+          checkin: r.fecha_checkin,
+          checkout: r.fecha_checkout,
+          noches: r.noches,
+          adultos: r.adultos,
+          ninos: r.ninos,
+          huesped: r.clientes?.nombre ?? null,
+          habitacion: r.habitaciones?.numero ?? null,
+          tipo: r.tipos_habitacion?.nombre ?? null,
+          tarifa_noche: r.tarifa_noche,
+          total: r.total,
+          pagado: r.total_pagado,
+          saldo: r.saldo_pendiente,
+          estado: r.estado,
+        })),
+      };
+    }
+    if (name === "confirmar_reserva") {
+      const reservaId = String(args.reserva_id ?? "");
+      if (!/^[0-9a-f-]{36}$/i.test(reservaId)) return { error: "reserva_id inválido" };
+      const { data: r } = await admin.from("reservas").select("id, hotel_id, estado, numero_reserva").eq("id", reservaId).single();
+      if (!r) return { error: "Reserva no encontrada" };
+      if (r.hotel_id !== hotelId) return { error: "Reserva no pertenece a este hotel" };
+      if (r.estado === "Confirmada") return { ok: true, ya_confirmada: true, folio: r.numero_reserva };
+      if (r.estado !== "Pendiente") return { error: `No se puede confirmar una reserva en estado ${r.estado}` };
+      const { error } = await admin.from("reservas").update({ estado: "Confirmada", updated_at: new Date().toISOString() }).eq("id", reservaId);
+      if (error) return { error: error.message };
+      return { ok: true, folio: r.numero_reserva, mensaje: "Reserva confirmada correctamente." };
     }
     return { error: `tool desconocida: ${name}` };
   } catch (e) {
