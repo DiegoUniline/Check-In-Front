@@ -384,18 +384,7 @@ export default function HistorialReservas() {
       <Card className="mb-6">
         <CardContent className="p-3">
           <div className="flex flex-wrap items-center gap-2">
-            {/* Búsqueda */}
-            <div className="relative flex-1 min-w-[220px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="# reserva, cliente, teléfono, email..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-9 h-10"
-              />
-            </div>
-
-            {/* Rango de fechas con presets */}
+            {/* Filtros izquierda */}
             <Popover open={rangoPopoverOpen} onOpenChange={(o) => {
               setRangoPopoverOpen(o);
               if (o) setRangoBorrador({ from: fechaDesde, to: fechaHasta });
@@ -495,7 +484,18 @@ export default function HistorialReservas() {
               </SelectContent>
             </Select>
 
-            {/* Acciones */}
+            {/* Búsqueda centrada */}
+            <div className="relative flex-1 min-w-[220px] mx-auto max-w-2xl order-last md:order-none">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar: # reserva, cliente, teléfono, email..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-9 h-10"
+              />
+            </div>
+
+            {/* Acciones derecha */}
             <Button variant="ghost" size="sm" onClick={limpiarFiltros} className="h-10 gap-1">
               <X className="h-4 w-4" /> Limpiar
             </Button>
