@@ -2,6 +2,10 @@ import { cn } from '@/lib/utils';
 import logoIcon from '@/assets/hospedapp-icon.png';
 import logoFull from '@/assets/hospedapp-logo-full.png';
 
+// VULO Brand — Navy #0D1B2A + Orange #FF6A00
+const BRAND_NAVY = '#0D1B2A';
+const BRAND_ORANGE = '#FF6A00';
+
 interface LogoProps {
   className?: string;
   size?: number;
@@ -15,7 +19,7 @@ export function Logo({ className, size = 24 }: LogoProps) {
   return (
     <img
       src={logoIcon}
-      alt="HospedApp"
+      alt="VULO"
       width={size}
       height={size}
       className={cn('shrink-0 object-contain', className)}
@@ -33,7 +37,7 @@ export function LogoFull({ className, height = 48 }: { className?: string; heigh
   return (
     <img
       src={logoFull}
-      alt="HospedApp"
+      alt="VULO"
       className={cn('object-contain', className)}
       style={{ height, width: 'auto' }}
       loading="eager"
@@ -60,11 +64,11 @@ export function LogoHorizontal({
     <div className={cn('flex items-center gap-2.5', className)}>
       <Logo size={size} />
       <span
-        className={cn('font-heading font-bold tracking-tight leading-none', wordmarkClassName)}
-        style={{ fontSize: size * 0.62 }}
+        className={cn('font-heading font-extrabold tracking-tight leading-none', wordmarkClassName)}
+        style={{ fontSize: size * 0.68 }}
       >
-        <span className="text-[#04122C] dark:text-white">VU</span>
-        <span className="text-primary">LO</span>
+        <span style={{ color: BRAND_NAVY }} className="dark:text-white">VU</span>
+        <span style={{ color: BRAND_ORANGE }}>LO</span>
       </span>
     </div>
   );
