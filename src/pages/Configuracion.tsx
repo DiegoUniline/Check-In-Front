@@ -239,6 +239,19 @@ export default function Configuracion() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
+                  <Label>Logotipo del Hotel</Label>
+                  <ImageUpload
+                    bucket="hotel-logos"
+                    value={hotelData.logoUrl || null}
+                    onChange={(url) => setHotelData({ ...hotelData, logoUrl: url || '' })}
+                    label="Subir logotipo del hotel"
+                    maxWidth={512}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se usa en los documentos (comprobante, tarjeta de registro) y correos con los datos de tu hotel.
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label>Nombre del Hotel</Label>
                   <Input 
                     value={hotelData.nombre}
