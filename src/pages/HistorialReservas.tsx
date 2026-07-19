@@ -252,7 +252,7 @@ export default function HistorialReservas() {
   };
 
   return (
-    <MainLayout title="Historial de Reservas y Recepción" subtitle="Reservas online y walk-ins registrados en recepción">
+    <MainLayout title="Histórico Entradas" subtitle="Reservas online y walk-ins registrados en recepción">
       
       {/* Stats Cards - Grid responsivo corregido */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
