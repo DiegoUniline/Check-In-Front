@@ -587,7 +587,7 @@ export default function HistorialReservas() {
                                 try {
                                   const det = await api.getReserva(reserva.id);
                                   const cli = det.cliente || det.clientes || {};
-                                  exportarComprobanteReserva({
+                                  await exportarComprobanteReserva({
                                     hotel: det.hotel?.nombre,
                                     hotelDireccion: det.hotel?.direccion,
                                     hotelTelefono: det.hotel?.telefono,
@@ -606,7 +606,7 @@ export default function HistorialReservas() {
                                 try {
                                   const det = await api.getReserva(reserva.id);
                                   const cli = det.cliente || det.clientes || {};
-                                  exportarRegistroHuesped({
+                                  await exportarRegistroHuesped({
                                     hotel: det.hotel?.nombre,
                                     hotelDireccion: det.hotel?.direccion,
                                     hotelTelefono: det.hotel?.telefono,

@@ -2,6 +2,26 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format, eachDayOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
+import vuloFoxUrl from '@/assets/vulo-fox.png';
+import vuloWordmarkUrl from '@/assets/vulo-wordmark.png';
+
+// ============================================================
+// Asset loader (URL -> base64 data URL) — sin html2canvas
+// ============================================================
+const _imageCache = new Map<string, string>();
+async function loadImageDataUrl(url: string): Promise<string> {
+  if (_imageCache.has(url)) return _imageCache.get(url)!;
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  _imageCache.set(url, dataUrl);
+  return dataUrl;
+}
 
 export type PdfKpi = { label: string; value: string };
 export type PdfTable = { title: string; head: string[]; rows: (string | number)[][] };
@@ -229,79 +249,178 @@ const VULO_TEXT: [number, number, number] = [17, 24, 39];
 const VULO_MUTED: [number, number, number] = [100, 116, 139];
 const VULO_BORDER: [number, number, number] = [226, 232, 240];
 
-function buildHeader(doc: jsPDF, ctx: ReservaPdfCtx, titulo: string, subtitulo?: string) {
+// Constantes de layout (mm). A4 = 210x297.
+const HEADER_H = 34; // banda navy superior
+const CONTENT_TOP = 46; // inicio de contenido debajo del header
+const FOOTER_H = 16;
+const MARGIN_X = 14;
+
+interface HeaderAssets {
+  fox: string;
+  wordmark: string;
+}
+
+/**
+ * Dibuja el header profesional en la página actual.
+ * Banda navy con logo VULO (isotipo + wordmark) e info del hotel.
+ */
+function drawHeader(
+  doc: jsPDF,
+  ctx: ReservaPdfCtx,
+  titulo: string,
+  subtitulo: string | undefined,
+  assets: HeaderAssets,
+) {
   const pageW = doc.internal.pageSize.getWidth();
-  // Fondo blanco; delgada barra naranja izquierda
+
+  // Banda navy
+  doc.setFillColor(...VULO_NAVY);
+  doc.rect(0, 0, pageW, HEADER_H, 'F');
+
+  // Acento naranja delgado abajo del header
   doc.setFillColor(...VULO_ORANGE);
-  doc.rect(0, 0, 3, 40, 'F');
+  doc.rect(0, HEADER_H, pageW, 1.2, 'F');
 
-  // Marca VULO (wordmark tipográfico)
+  // Isotipo (fox) — cuadrado 18mm
+  try {
+    doc.addImage(assets.fox, 'PNG', MARGIN_X, 8, 18, 18, undefined, 'FAST');
+  } catch { /* noop */ }
+
+  // Wordmark VULO en blanco (dibujado por código para contraste sobre navy)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...VULO_NAVY);
-  doc.text('VULO', 14, 14);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(...VULO_MUTED);
-  doc.text('Software para hoteles', 27, 14);
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  doc.text('VULO', MARGIN_X + 22, 20);
 
-  // Info hotel a la derecha
+  // Tagline debajo del wordmark
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(203, 213, 225); // slate-300
+  doc.text('SOFTWARE PARA HOTELES', MARGIN_X + 22, 24.5);
+
+  // Info del hotel a la derecha (dentro de la banda)
   if (ctx.hotel) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(...VULO_NAVY);
-    doc.text(ctx.hotel, pageW - 14, 14, { align: 'right' });
-    const parts = [ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean).join(' · ');
-    if (parts) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(...VULO_MUTED);
-      doc.text(parts, pageW - 14, 19, { align: 'right' });
-    }
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text(ctx.hotel, pageW - MARGIN_X, 13, { align: 'right' });
+    const parts = [ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(203, 213, 225);
+    if (parts[0]) doc.text(String(parts[0]), pageW - MARGIN_X, 19, { align: 'right' });
+    if (parts[1]) doc.text(String(parts[1]), pageW - MARGIN_X, 23.5, { align: 'right' });
   }
 
-  // Título principal
+  // Título del documento debajo del header
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
+  doc.setFontSize(18);
   doc.setTextColor(...VULO_NAVY);
-  doc.text(titulo, 14, 30);
+  doc.text(titulo, MARGIN_X, HEADER_H + 8);
 
   if (subtitulo) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...VULO_MUTED);
-    doc.text(subtitulo, 14, 36);
+    doc.text(subtitulo, MARGIN_X, HEADER_H + 13);
   }
-
-  // Línea divisora
-  doc.setDrawColor(...VULO_BORDER);
-  doc.setLineWidth(0.3);
-  doc.line(14, 42, pageW - 14, 42);
 
   doc.setTextColor(...VULO_TEXT);
   doc.setFont('helvetica', 'normal');
+}
+
+/**
+ * Dibuja el footer profesional con paginación (Página X de Y).
+ */
+function drawFooter(
+  doc: jsPDF,
+  texto: string,
+  pageNum: number,
+  pageCount: number,
+) {
+  const pageH = doc.internal.pageSize.getHeight();
+  const pageW = doc.internal.pageSize.getWidth();
+  const yTop = pageH - FOOTER_H;
+
+  // Línea divisora superior
+  doc.setDrawColor(...VULO_BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN_X, yTop, pageW - MARGIN_X, yTop);
+
+  // Bloque de texto
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...VULO_MUTED);
+  doc.text(texto, MARGIN_X, yTop + 5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...VULO_NAVY);
+  doc.text('VULO', pageW / 2, yTop + 5, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...VULO_MUTED);
+  doc.text('vulo.mx', pageW / 2, yTop + 9, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...VULO_MUTED);
+  doc.text(`Página ${pageNum} de ${pageCount}`, pageW - MARGIN_X, yTop + 5, { align: 'right' });
+  doc.setFontSize(6.5);
+  doc.text(`Generado ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageW - MARGIN_X, yTop + 9, { align: 'right' });
+
+  // Cuadro de acento naranja abajo
+  doc.setFillColor(...VULO_ORANGE);
+  doc.rect(MARGIN_X, pageH - 3, 8, 1, 'F');
+
+  doc.setTextColor(...VULO_TEXT);
+}
+
+/**
+ * Rellena headers y footers en todas las páginas al final.
+ * Debe llamarse una sola vez, después de generar todo el contenido.
+ */
+function paintChrome(
+  doc: jsPDF,
+  ctx: ReservaPdfCtx,
+  titulo: string,
+  subtitulo: string | undefined,
+  assets: HeaderAssets,
+  footerText: string,
+) {
+  const count = doc.getNumberOfPages();
+  for (let i = 1; i <= count; i++) {
+    doc.setPage(i);
+    drawHeader(doc, ctx, titulo, subtitulo, assets);
+    drawFooter(doc, footerText, i, count);
+  }
 }
 
 function sectionLabel(doc: jsPDF, text: string, y: number) {
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(8.5);
   doc.setTextColor(...VULO_ORANGE);
   doc.text(text.toUpperCase(), 14, y);
+  // línea decorativa fina
+  const w = doc.getTextWidth(text.toUpperCase());
+  doc.setDrawColor(...VULO_ORANGE);
+  doc.setLineWidth(0.5);
+  doc.line(14 + w + 3, y - 1.2, 14 + w + 12, y - 1.2);
   doc.setTextColor(...VULO_TEXT);
-  return y + 4;
+  return y + 5;
 }
 
-function brandFooter(doc: jsPDF, texto: string) {
-  const pageH = doc.internal.pageSize.getHeight();
-  const pageW = doc.internal.pageSize.getWidth();
+/** Chip informativo (etiqueta pequeña + valor grande) */
+function drawInfoChip(doc: jsPDF, x: number, y: number, w: number, label: string, value: string) {
   doc.setDrawColor(...VULO_BORDER);
-  doc.setLineWidth(0.3);
-  doc.line(14, pageH - 14, pageW - 14, pageH - 14);
+  doc.setFillColor(248, 250, 252);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(x, y, w, 15, 2, 2, 'FD');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
+  doc.setFontSize(6.5);
   doc.setTextColor(...VULO_MUTED);
-  doc.text(texto, 14, pageH - 9);
-  doc.text('Generado con VULO · vulo.mx', pageW - 14, pageH - 9, { align: 'right' });
+  doc.text(label.toUpperCase(), x + 3, y + 5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...VULO_NAVY);
+  doc.text(value, x + 3, y + 11);
   doc.setTextColor(...VULO_TEXT);
 }
 
@@ -313,16 +432,33 @@ function nombreCompleto(c: ClienteMin) {
  * Comprobante / confirmación de reserva.
  * Para enviar al huésped al confirmar (email, WhatsApp, descarga).
  */
-export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
+export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   reserva: ReservaMin;
   cliente: ClienteMin;
   action?: 'save' | 'blob';
-}): Blob | void {
+}): Promise<Blob | void> {
   const { reserva, cliente, currency = 'MXN', action = 'save' } = opts;
   const doc = new jsPDF();
-  buildHeader(doc, opts, 'Confirmación de reserva', `Folio ${reserva.numero_reserva || '—'} · Emitido ${format(new Date(), 'dd/MM/yyyy HH:mm')}`);
+  const assets: HeaderAssets = {
+    fox: await loadImageDataUrl(vuloFoxUrl),
+    wordmark: await loadImageDataUrl(vuloWordmarkUrl),
+  };
 
-  let y = 52;
+  const titulo = 'Confirmación de reserva';
+  const subtitulo = `Folio ${reserva.numero_reserva || '—'} · Emitido ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
+
+  // Reserva espacio del header en autoTable
+  const marginTop = CONTENT_TOP + 8;
+  let y = marginTop;
+
+  // Chips informativos (folio, check-in, check-out, estado)
+  const pageW = doc.internal.pageSize.getWidth();
+  const chipW = (pageW - MARGIN_X * 2 - 6) / 4;
+  drawInfoChip(doc, MARGIN_X + chipW * 0 + 0, y, chipW, 'Folio', `#${reserva.numero_reserva || '—'}`);
+  drawInfoChip(doc, MARGIN_X + chipW * 1 + 2, y, chipW, 'Check-in', format(new Date(reserva.fecha_checkin), 'dd/MM/yyyy'));
+  drawInfoChip(doc, MARGIN_X + chipW * 2 + 4, y, chipW, 'Check-out', format(new Date(reserva.fecha_checkout), 'dd/MM/yyyy'));
+  drawInfoChip(doc, MARGIN_X + chipW * 3 + 6, y, chipW, 'Estado', String(reserva.estado || 'confirmada').replace(/^./, (c) => c.toUpperCase()));
+  y += 22;
 
   // Huésped
   y = sectionLabel(doc, 'Huésped', y);
@@ -335,6 +471,7 @@ export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
       ['Documento', [cliente.tipo_documento, cliente.numero_documento].filter(Boolean).join(' ') || '—'],
     ],
     theme: 'plain',
+    margin: { top: 46, bottom: 20 },
     styles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 0 }, textColor: VULO_TEXT },
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 32, textColor: VULO_MUTED }, 1: { textColor: VULO_TEXT } },
   });
@@ -354,6 +491,7 @@ export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
       `${reserva.adultos || 0} ad${reserva.ninos ? ` + ${reserva.ninos} niños` : ''}`,
     ]],
     theme: 'grid',
+    margin: { top: 46, bottom: 20 },
     headStyles: { fillColor: [248, 250, 252], textColor: VULO_MUTED, fontSize: 7, fontStyle: 'bold', lineColor: VULO_BORDER, lineWidth: 0.2 },
     bodyStyles: { fontSize: 9, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.2 },
     styles: { cellPadding: 3 },
@@ -381,6 +519,7 @@ export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
        { content: fmtMoney(saldo, currency), styles: { fontStyle: 'bold', textColor: saldo > 0 ? VULO_ORANGE : [22, 163, 74], halign: 'right' } }],
     ],
     theme: 'plain',
+    margin: { top: 46, bottom: 20 },
     styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 4, right: 4 }, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.15 },
     columnStyles: { 0: { cellWidth: 120, textColor: VULO_MUTED }, 1: { halign: 'right', textColor: VULO_TEXT } },
     didParseCell: (data) => {
@@ -402,7 +541,7 @@ export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
     y += lines.length * 4 + 4;
   }
 
-  brandFooter(doc, 'Confirmación de reserva · Presente este documento al check-in');
+  paintChrome(doc, opts, titulo, subtitulo, assets, 'Confirmación de reserva · Presente este documento al check-in');
 
   const filename = `reserva_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
@@ -413,18 +552,22 @@ export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
  * Tarjeta de registro de huésped con firma digital.
  * Genera el PDF al completar el check-in.
  */
-export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
+export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   reserva: ReservaMin;
   cliente: ClienteMin;
   firmaDataUrl?: string | null;
   aceptaTerminos?: boolean;
   action?: 'save' | 'blob';
-}): Blob | void {
+}): Promise<Blob | void> {
   const { reserva, cliente, firmaDataUrl, aceptaTerminos, currency = 'MXN', action = 'save' } = opts;
   const doc = new jsPDF();
-  buildHeader(doc, opts, 'Tarjeta de registro', `Folio ${reserva.numero_reserva || '—'} · Registrado ${format(new Date(), 'dd/MM/yyyy HH:mm')}`);
-
-  let y = 52;
+  const assets: HeaderAssets = {
+    fox: await loadImageDataUrl(vuloFoxUrl),
+    wordmark: await loadImageDataUrl(vuloWordmarkUrl),
+  };
+  const titulo = 'Tarjeta de registro';
+  const subtitulo = `Folio ${reserva.numero_reserva || '—'} · Registrado ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
+  let y = CONTENT_TOP + 8;
 
   y = sectionLabel(doc, 'Datos del huésped', y);
   autoTable(doc, {
@@ -437,6 +580,7 @@ export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
       ['Teléfono', cliente.telefono || '—'],
     ],
     theme: 'plain',
+    margin: { top: 46, bottom: 20 },
     styles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 0, right: 0 }, textColor: VULO_TEXT },
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40, textColor: VULO_MUTED }, 1: { textColor: VULO_TEXT } },
   });
@@ -455,6 +599,7 @@ export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
       fmtMoney(Number(reserva.total || 0), currency),
     ]],
     theme: 'grid',
+    margin: { top: 46, bottom: 20 },
     headStyles: { fillColor: [248, 250, 252], textColor: VULO_MUTED, fontSize: 7, fontStyle: 'bold', lineColor: VULO_BORDER, lineWidth: 0.2 },
     bodyStyles: { fontSize: 9, textColor: VULO_TEXT, lineColor: VULO_BORDER, lineWidth: 0.2 },
     styles: { cellPadding: 3 },
@@ -504,7 +649,7 @@ export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   doc.text(`Firmado el ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, y + firmaH + 4);
   doc.setTextColor(...VULO_TEXT);
 
-  brandFooter(doc, 'Documento firmado digitalmente · La firma hace fe del acto de registro');
+  paintChrome(doc, opts, titulo, subtitulo, assets, 'Documento firmado digitalmente · La firma hace fe del acto de registro');
 
   const filename = `registro_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
