@@ -609,7 +609,7 @@ export default function Reservas() {
                                 <TableCell>{r.fecha_checkin?.substring(0, 10) || '—'}</TableCell>
                                 <TableCell>{r.fecha_checkout?.substring(0, 10) || '—'}</TableCell>
                                 <TableCell>
-                                  <Badge variant="outline" className={est.className}>{r.estado}</Badge>
+                                  <Badge variant="outline" className={est.badge}>{est.label}</Badge>
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                   {formatCurrency(Number(r.total || 0))}
