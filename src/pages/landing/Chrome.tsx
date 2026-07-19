@@ -17,6 +17,7 @@ export function SectionTag({ children }: { children: React.ReactNode }) {
 }
 
 const NAV_LINKS: Array<[string, string]> = [
+  ['Inicio', '/'],
   ['Funciones', '/funciones'],
   ['Precios', '/precios'],
   ['Empresa', '/empresa'],
