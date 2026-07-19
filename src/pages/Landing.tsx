@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import wordmark from '@/assets/vulo-wordmark.png';
+import foxIsotype from '@/assets/vulo-fox.png';
 
 /**
  * VULO — Landing (ES-MX)
@@ -124,59 +125,50 @@ function Hero() {
 }
 
 function HeroMockup() {
-  const rows = [
-    { room: '101', name: 'García M.', start: 0, len: 3, state: 'Confirmada' },
-    { room: '102', name: 'López R.', start: 1, len: 4, state: 'Check-in' },
-    { room: '103', name: 'Kim J.', start: 2, len: 2, state: 'Pendiente' },
-    { room: '104', name: 'Torres A.', start: 0, len: 5, state: 'Confirmada' },
-    { room: '208', name: 'Ruiz D.', start: 3, len: 2, state: 'Check-in' },
-  ];
-  const stateColor = (s: string) =>
-    s === 'Check-in' ? ORANGE : s === 'Pendiente' ? '#94A3B8' : NAVY;
-
   return (
-    <BrowserFrame title="vulo · panel">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <div className="text-[13px] font-semibold text-slate-900">Reservas · esta semana</div>
-          <div className="text-[11px] text-slate-500">Lun 20 — Dom 26 Jul</div>
+    <div
+      className="relative overflow-hidden rounded-[28px] border border-slate-100 p-10 md:p-14"
+      style={{
+        background:
+          'radial-gradient(120% 90% at 50% 0%, #FFF4EC 0%, #FFFFFF 55%, #F8FAFC 100%)',
+        boxShadow: '0 30px 80px -30px rgba(15,23,42,0.18)',
+      }}
+    >
+      {/* Halo suave detrás del zorro */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70 blur-3xl"
+        style={{ background: 'radial-gradient(closest-side, rgba(249,115,22,0.22), transparent 70%)' }}
+      />
+
+      <div className="relative flex flex-col items-center text-center">
+        <motion.img
+          src={foxIsotype}
+          alt="VULO — isotipo"
+          className="h-[280px] w-auto object-contain md:h-[340px] lg:h-[380px]"
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+          draggable={false}
+        />
+
+        <div className="mt-8 flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 backdrop-blur">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: ORANGE }} />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: NAVY }}>
+            Hecho en México
+          </span>
         </div>
-        <span className="rounded-full px-2.5 py-0.5 text-[10px] font-medium text-white" style={{ background: ORANGE }}>Live</span>
-      </div>
 
-      <div className="space-y-1.5">
-        {rows.map((r, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <span className="w-8 text-[11px] font-medium text-slate-500">{r.room}</span>
-            <div className="relative h-7 flex-1 rounded-md bg-slate-100">
-              <div
-                className="absolute top-0 flex h-7 items-center rounded-md px-2.5 text-[11px] font-medium text-white"
-                style={{ left: `${r.start * 14}%`, width: `${r.len * 14}%`, background: stateColor(r.state) }}
-              >
-                {r.name}
-              </div>
-            </div>
-            <span className="hidden w-20 text-right text-[10.5px] font-medium md:inline" style={{ color: stateColor(r.state) }}>
-              {r.state}
-            </span>
-          </div>
-        ))}
+        <h3
+          className="mt-6 text-[34px] font-bold leading-none tracking-[-0.03em] md:text-[42px]"
+          style={{ color: NAVY }}
+        >
+          Esto es VULO.
+        </h3>
+        <p className="mt-3 max-w-sm text-[14.5px] leading-relaxed text-slate-600">
+          Software para hoteles diseñado con calma, hecho por personas que entienden la operación.
+        </p>
       </div>
-
-      <div className="mt-5 grid grid-cols-3 gap-2.5">
-        {[
-          { l: 'Ocupación', v: '—', h: '[DATO REAL]' },
-          { l: 'ADR', v: '—', h: '[DATO REAL]' },
-          { l: 'Ingresos semana', v: '—', h: '[DATO REAL]' },
-        ].map((m) => (
-          <div key={m.l} className="rounded-[10px] border border-slate-100 bg-slate-50 p-3">
-            <div className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500">{m.l}</div>
-            <div className="mt-1 text-[18px] font-bold tracking-tight" style={{ color: NAVY }}>{m.v}</div>
-            <div className="text-[9.5px] text-slate-400">{m.h}</div>
-          </div>
-        ))}
-      </div>
-    </BrowserFrame>
+    </div>
   );
 }
 
