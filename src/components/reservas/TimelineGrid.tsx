@@ -145,7 +145,8 @@ export function TimelineGrid({
           {/* Fila cabecera: sticky top, se mueve con el scroll horizontal */}
           <div className="flex sticky top-0 z-20 bg-card border-b">
             <div className={cn(
-              "w-36 flex-shrink-0 p-2 border-r bg-card flex items-center justify-center sticky left-0 z-30"
+              "flex-shrink-0 p-2 border-r bg-card flex items-center justify-center sticky left-0 z-30",
+              isCompact ? "w-28" : "w-40"
             )}>
               <span className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
                 Habitación
@@ -169,16 +170,25 @@ export function TimelineGrid({
               {/* Columna sticky de habitación */}
               <div
                 className={cn(
-                  "w-36 flex-shrink-0 border-r border-b bg-card px-2 py-1 flex flex-col justify-center sticky left-0 z-10",
+                  "flex-shrink-0 border-r border-b bg-card px-2 py-1 flex flex-col justify-center sticky left-0 z-10",
+                  isCompact ? "w-28" : "w-40",
                   cellHeight
                 )}
               >
-                <div className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
+                <div className={cn("font-semibold leading-tight", isCompact ? "text-[11px]" : "text-sm")}>
                   {hab.numero}
                 </div>
-                <div className={cn("text-muted-foreground truncate", isCompact ? "text-[9px]" : "text-[11px]")}>
-                  {hab.tipo_nombre}
-                </div>
+                {hab.tipo_nombre && (
+                  <div
+                    className={cn(
+                      "text-muted-foreground truncate leading-tight",
+                      isCompact ? "text-[9px]" : "text-[11px]"
+                    )}
+                    title={hab.tipo_nombre}
+                  >
+                    {hab.tipo_nombre}
+                  </div>
+                )}
               </div>
                   {days.map((day, dayIndex) => {
                     const reserva = getReservationForCell(hab.id, dayIndex);
