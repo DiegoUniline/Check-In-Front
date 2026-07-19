@@ -506,11 +506,18 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   doc.setTextColor(...GRAY_600);
   let ly = y + 11;
   const dirLinea = [opts.hotelDireccion, opts.hotelCiudad].filter(Boolean).join(', ');
-  if (dirLinea) { doc.text(dirLinea, headerX, ly); ly += 4.5; }
+  const leftMaxW = pageW - M - headerX - 72; // reserva espacio al bloque derecho
+  if (dirLinea) {
+    const wrapped = doc.splitTextToSize(dirLinea, leftMaxW) as string[];
+    wrapped.forEach((ln) => { doc.text(ln, headerX, ly); ly += 4.5; });
+  }
   const contacto = [opts.hotelTelefono ? `Tel. ${opts.hotelTelefono}` : '', opts.hotelEmail || '']
     .filter(Boolean)
     .join('  ·  ');
-  if (contacto) { doc.text(contacto, headerX, ly); ly += 4.5; }
+  if (contacto) {
+    const wrapped = doc.splitTextToSize(contacto, leftMaxW) as string[];
+    wrapped.forEach((ln) => { doc.text(ln, headerX, ly); ly += 4.5; });
+  }
 
   const rightX = pageW - M;
   doc.setFont('helvetica', 'normal');
