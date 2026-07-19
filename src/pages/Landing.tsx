@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight, ChevronDown, Check, Calendar, ClipboardList, Sparkles,
   Wallet, FileText, MessageSquare, BarChart3, Building2, ShieldCheck,
-  Wifi, Smartphone, Users, LifeBuoy,
+  Wifi, Smartphone, Users, LifeBuoy, CreditCard, Globe, Receipt, Send,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import wordmark from '@/assets/vulo-wordmark.png';
