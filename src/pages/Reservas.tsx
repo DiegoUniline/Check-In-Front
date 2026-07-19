@@ -48,6 +48,9 @@ import {
 } from '@/components/reservas/ReservasFiltersSheet';
 import { getEstadoConfig } from '@/components/reservas/estadoConfig';
 import { cn } from '@/lib/utils';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { addMonths } from 'date-fns';
 
 // Chips reutilizables para filtro de tipo de habitación
 const TipoChips = ({
@@ -426,9 +429,51 @@ export default function Reservas() {
                 <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => navegarFecha('next')}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-                <span className="text-xs font-medium ml-1 hidden sm:inline">
-                  {format(startDate, "d MMM yyyy", { locale: es })}
-                </span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs ml-1 gap-1">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">{format(startDate, "d MMM yyyy", { locale: es })}</span>
+                      <span className="sm:hidden">{format(startDate, "d MMM", { locale: es })}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                    <div className="p-2 border-b flex flex-wrap gap-1">
+                      {[
+                        { label: 'Hoy', months: 0 },
+                        { label: '+1 sem', days: 7 },
+                        { label: '+1 mes', months: 1 },
+                        { label: '+3 meses', months: 3 },
+                        { label: '+6 meses', months: 6 },
+                      ].map(q => (
+                        <Button
+                          key={q.label}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => {
+                            const base = new Date();
+                            base.setHours(0, 0, 0, 0);
+                            let target = base;
+                            if (q.days) target = addDays(base, q.days);
+                            else if (q.months) target = addMonths(base, q.months);
+                            setStartDate(target);
+                          }}
+                        >
+                          {q.label}
+                        </Button>
+                      ))}
+                    </div>
+                    <CalendarPicker
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(d) => d && setStartDate(d)}
+                      locale={es}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="flex items-center gap-2">
