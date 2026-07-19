@@ -393,7 +393,26 @@ class ApiClient {
     return withOfflineCache(key, async () => {
       const { data, error } = await supabase.from('clientes').select('*').eq('hotel_id', this.hid()).order('nombre');
       if (error) throw error;
-      return (data || []).map((c: any) => this.sanitizeClienteResponse(c));
+      const clientes = (data || []).map((c: any) => this.sanitizeClienteResponse(c));
+      // Contar estancias reales desde reservas (excluye Canceladas)
+      try {
+        const { data: reservas } = await supabase
+          .from('reservas')
+          .select('cliente_id, estado')
+          .eq('hotel_id', this.hid());
+        const counts = new Map<string, number>();
+        (reservas || []).forEach((r: any) => {
+          if (!r.cliente_id) return;
+          if (r.estado === 'Cancelada') return;
+          counts.set(r.cliente_id, (counts.get(r.cliente_id) || 0) + 1);
+        });
+        return clientes.map((c: any) => ({
+          ...c,
+          total_estancias: counts.get(c.id) ?? c.total_estancias ?? 0,
+        }));
+      } catch {
+        return clientes;
+      }
     });
   };
   getCliente = async (id: string): Promise<any> => {
