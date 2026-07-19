@@ -281,36 +281,41 @@ function drawHeader(
   doc.setFillColor(...VULO_ORANGE);
   doc.rect(0, HEADER_H, pageW, 1.2, 'F');
 
-  // Isotipo (fox) — cuadrado 18mm
-  try {
-    doc.addImage(assets.fox, 'PNG', MARGIN_X, 8, 18, 18, undefined, 'FAST');
-  } catch { /* noop */ }
-
-  // Wordmark VULO en blanco (dibujado por código para contraste sobre navy)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.text('VULO', MARGIN_X + 22, 20);
-
-  // Tagline debajo del wordmark
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(203, 213, 225); // slate-300
-  doc.text('SOFTWARE PARA HOTELES', MARGIN_X + 22, 24.5);
-
-  // Info del hotel a la derecha (dentro de la banda)
+  // ===== IZQUIERDA: datos del hotel (empresa) =====
   if (ctx.hotel) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(13);
     doc.setTextColor(255, 255, 255);
-    doc.text(ctx.hotel, pageW - MARGIN_X, 13, { align: 'right' });
-    const parts = [ctx.hotelDireccion, ctx.hotelTelefono].filter(Boolean);
+    doc.text(ctx.hotel, MARGIN_X, 13);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    doc.setTextColor(203, 213, 225);
-    if (parts[0]) doc.text(String(parts[0]), pageW - MARGIN_X, 19, { align: 'right' });
-    if (parts[1]) doc.text(String(parts[1]), pageW - MARGIN_X, 23.5, { align: 'right' });
+    doc.setTextColor(203, 213, 225); // slate-300
+    if (ctx.hotelDireccion) doc.text(String(ctx.hotelDireccion), MARGIN_X, 19);
+    if (ctx.hotelTelefono) doc.text(String(ctx.hotelTelefono), MARGIN_X, 23.5);
+  } else {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Hotel', MARGIN_X, 13);
   }
+
+  // ===== DERECHA: logo VULO (isotipo + wordmark) =====
+  const logoRightX = pageW - MARGIN_X;
+  // Wordmark
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  const wordW = doc.getTextWidth('VULO');
+  doc.text('VULO', logoRightX, 18, { align: 'right' });
+  // Isotipo (fox) a la izquierda del wordmark
+  try {
+    doc.addImage(assets.fox, 'PNG', logoRightX - wordW - 16, 6, 13, 13, undefined, 'FAST');
+  } catch { /* noop */ }
+  // Tagline pequeña debajo
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(203, 213, 225);
+  doc.text('SOFTWARE PARA HOTELES', logoRightX, 23, { align: 'right' });
 
   // Título del documento debajo del header
   doc.setFont('helvetica', 'bold');
@@ -337,6 +342,7 @@ function drawFooter(
   texto: string,
   pageNum: number,
   pageCount: number,
+  foxDataUrl?: string,
 ) {
   const pageH = doc.internal.pageSize.getHeight();
   const pageW = doc.internal.pageSize.getWidth();
@@ -353,12 +359,21 @@ function drawFooter(
   doc.setTextColor(...VULO_MUTED);
   doc.text(texto, MARGIN_X, yTop + 5);
 
+  // Centro: isotipo VULO + "Sistema VULO"
+  const centerX = pageW / 2;
+  if (foxDataUrl) {
+    try {
+      doc.addImage(foxDataUrl, 'PNG', centerX - 12, yTop + 1.5, 6, 6, undefined, 'FAST');
+    } catch { /* noop */ }
+  }
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
   doc.setTextColor(...VULO_NAVY);
-  doc.text('VULO', pageW / 2, yTop + 5, { align: 'center' });
+  doc.text('Sistema VULO', centerX - 4, yTop + 5.5, { align: 'left' });
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
   doc.setTextColor(...VULO_MUTED);
-  doc.text('vulo.mx', pageW / 2, yTop + 9, { align: 'center' });
+  doc.text('vulo.mx · Software para hoteles', centerX, yTop + 9.5, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...VULO_MUTED);
@@ -389,7 +404,7 @@ function paintChrome(
   for (let i = 1; i <= count; i++) {
     doc.setPage(i);
     drawHeader(doc, ctx, titulo, subtitulo, assets);
-    drawFooter(doc, footerText, i, count);
+    drawFooter(doc, footerText, i, count, assets.fox);
   }
 }
 
@@ -568,6 +583,10 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const M = 20; // margen 2 cm
   const contentW = pageW - M * 2;
 
+  // Cargar isotipo VULO (para header derecho y footer central)
+  let foxData: string | null = null;
+  try { foxData = await loadImageDataUrl(vuloFoxUrl); } catch { /* noop */ }
+
   const BLACK: [number, number, number] = [17, 24, 39];        // #111827
   const GRAY_600: [number, number, number] = [75, 85, 99];      // #4B5563
   const GRAY_500: [number, number, number] = [107, 114, 128];   // #6B7280
@@ -580,31 +599,46 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const folio = reserva.numero_reserva || '—';
 
   // --- 1. ENCABEZADO ---
+  // Izquierda: datos del hotel (empresa)  ·  Derecha: logo VULO
   let y = M;
-  // Izquierda: VULO wordmark en letter-spacing manual (aprox via texto normal + escala)
+
+  // IZQUIERDA: hotel
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...BLACK);
+  doc.text(opts.hotel || 'Hotel', M, y + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...GRAY_600);
+  let ly = y + 10;
+  if (opts.hotelDireccion) { doc.text(String(opts.hotelDireccion), M, ly); ly += 4.2; }
+  if (opts.hotelTelefono) { doc.text(`Tel. ${opts.hotelTelefono}`, M, ly); ly += 4.2; }
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY_500);
+  doc.text('Tarjeta de registro de huésped', M, ly + 1);
+
+  // DERECHA: logo VULO (fox + wordmark) + folio + fecha
+  const rightX = pageW - M;
+  if (foxData) {
+    try { doc.addImage(foxData, 'PNG', rightX - 40, y, 12, 12, undefined, 'FAST'); } catch { /* noop */ }
+  }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(19);
   doc.setTextColor(...BLACK);
-  doc.setCharSpace(1.4);
-  doc.text('VULO', M, y + 6);
+  doc.setCharSpace(1.2);
+  doc.text('VULO', rightX, y + 9, { align: 'right' });
   doc.setCharSpace(0);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(...GRAY_600);
-  doc.text('Tarjeta de registro de huésped', M, y + 12);
-
-  // Derecha: folio + fecha de generación
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(...BLACK);
-  doc.text(`Folio ${folio}`, pageW - M, y + 6, { align: 'right' });
+  doc.text(`Folio ${folio}`, rightX, y + 15.5, { align: 'right' });
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(...GRAY_500);
-  doc.text(`Generado ${nowLabel}`, pageW - M, y + 11.5, { align: 'right' });
+  doc.text(`Generado ${nowLabel}`, rightX, y + 20, { align: 'right' });
 
   // Línea inferior 2px negro
-  y = M + 16;
+  y = Math.max(ly + 4, y + 24);
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.6);
   doc.line(M, y, pageW - M, y);
@@ -761,6 +795,24 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   doc.setFontSize(9);
   doc.setTextColor(...GRAY_400);
   doc.text('Generado con VULO · vulo.mx', pageW - M, lineaY, { align: 'right' });
+
+  // ===== Footer institucional: Sistema VULO =====
+  const footerY = pageH - M + 4;
+  doc.setDrawColor(...GRAY_200);
+  doc.setLineWidth(0.15);
+  doc.line(M, footerY - 5, pageW - M, footerY - 5);
+  const cX = pageW / 2;
+  if (foxData) {
+    try { doc.addImage(foxData, 'PNG', cX - 20, footerY - 3.8, 5, 5, undefined, 'FAST'); } catch { /* noop */ }
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...BLACK);
+  doc.text('Sistema VULO', cX - 13, footerY, { align: 'left' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...GRAY_400);
+  doc.text('vulo.mx · Software para hoteles', cX, footerY + 4, { align: 'center' });
 
   const filename = `registro_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
