@@ -8,6 +8,15 @@ import {
   CheckCircle, XCircle, AlertCircle, LogIn, LogOut,
   User, Globe, Wallet, Trash2, CalendarRange, Filter
 } from 'lucide-react';
+import { MoreVertical, Printer, FileDown } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,7 +72,6 @@ import { ExportButton } from '@/components/ExportButton';
 import { formatDate as fmtDate } from '@/lib/dateFormat';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { exportarComprobanteReserva, exportarRegistroHuesped } from '@/lib/pdfExport';
-import { Printer, FileDown } from 'lucide-react';
 
 export default function HistorialReservas() {
   const { toast } = useToast();
