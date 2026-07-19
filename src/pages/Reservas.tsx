@@ -93,6 +93,50 @@ const TipoChips = ({
   </div>
 );
 
+// Chips para filtro de piso
+const PisoChips = ({
+  value,
+  onChange,
+  pisos,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  pisos: (string | number)[];
+}) => {
+  if (pisos.length === 0) return null;
+  return (
+    <div className="inline-flex items-center gap-1 bg-muted p-1 rounded-xl overflow-x-auto max-w-full">
+      <button
+        type="button"
+        onClick={() => onChange('all')}
+        className={cn(
+          'h-8 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors',
+          value === 'all'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        Todos los pisos
+      </button>
+      {pisos.map(p => (
+        <button
+          key={String(p)}
+          type="button"
+          onClick={() => onChange(String(p))}
+          className={cn(
+            'h-8 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors',
+            value === String(p)
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Piso {p}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
 export default function Reservas() {
@@ -130,6 +174,7 @@ export default function Reservas() {
   const [startDate, setStartDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('Semana');
   const [filtroTipo, setFiltroTipo] = useState<string>('all');
+  const [filtroPiso, setFiltroPiso] = useState<string>('all');
   const [busqueda, setBusqueda] = useState('');
 
   const [modalNuevaReserva, setModalNuevaReserva] = useState(false);
@@ -203,12 +248,17 @@ export default function Reservas() {
 
   const habitacionesFiltradas = habitaciones.filter(h => {
     if (filtroTipo !== 'all' && h.tipo_habitacion_id !== filtroTipo) return false;
+    if (filtroPiso !== 'all' && (h.piso == null || h.piso.toString() !== filtroPiso)) return false;
     if (busqueda) {
       const search = busqueda.toLowerCase();
       return h.numero?.toLowerCase().includes(search) || h.tipo_nombre?.toLowerCase().includes(search);
     }
     return true;
   });
+
+  const pisosDisponibles = [...new Set(
+    habitaciones.map(h => h.piso).filter(p => p != null && p !== '')
+  )].sort((a: any, b: any) => Number(a) - Number(b));
 
   const handleCreateReservation = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
     setPreloadReserva({ habitacion, fechaCheckin, fechaCheckout });
@@ -320,7 +370,10 @@ export default function Reservas() {
             <Card>
               <CardContent className="p-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
+                    <PisoChips value={filtroPiso} onChange={setFiltroPiso} pisos={pisosDisponibles} />
+                  </div>
                   <div className="relative">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                     <Input
@@ -471,7 +524,10 @@ export default function Reservas() {
 
             {/* Fila 2: filtros de tipo + búsqueda */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
+                <PisoChips value={filtroPiso} onChange={setFiltroPiso} pisos={pisosDisponibles} />
+              </div>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
@@ -510,7 +566,10 @@ export default function Reservas() {
                 <Card>
                   <CardContent className="p-2">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
+                        <PisoChips value={filtroPiso} onChange={setFiltroPiso} pisos={pisosDisponibles} />
+                      </div>
                       <div className="relative">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                         <Input
