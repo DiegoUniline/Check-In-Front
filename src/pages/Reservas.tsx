@@ -95,7 +95,10 @@ export default function Reservas() {
   type Vista = typeof validViews[number];
   const tabActiva: Vista = (validViews as readonly string[]).includes(vista || '')
     ? (vista as Vista)
-    : 'recepcion';
+    : 'timeline';
+  // Sub-vista dentro de "Reservas": timeline (default) | card | tabla
+  type ReservasSubView = 'timeline' | 'card' | 'tabla';
+  const [reservasSubView, setReservasSubView] = useState<ReservasSubView>('timeline');
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
   const hoyISO = new Date().toISOString().slice(0, 10);
