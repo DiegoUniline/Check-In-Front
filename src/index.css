@@ -6,13 +6,16 @@
 
 @layer base {
   :root {
-    /* Primary - HospedApp Turquesa #0B9F91 */
-    --primary: 173 87% 33%;
+    /* Brand VULO — Azul Navy #0D1B2A (primary) + Naranja #FF6A00 (accent/CTA) */
+    --primary: 213 53% 11%;
     --primary-foreground: 0 0% 100%;
-    
-    /* Backgrounds */
-    --background: 240 10% 97%;
-    --foreground: 222 47% 9%;
+    --brand-navy: 213 53% 11%;
+    --brand-orange: 25 100% 50%;
+    --brand-orange-foreground: 0 0% 100%;
+
+    /* Backgrounds — blanco, mucho espacio */
+    --background: 0 0% 100%;
+    --foreground: 213 53% 11%;
     
     /* Cards & Surfaces */
     --card: 0 0% 100%;
@@ -22,37 +25,37 @@
     --popover-foreground: 222 47% 9%;
     
     /* Secondary */
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 220 13% 96%;
+    --secondary-foreground: 213 53% 11%;
     
     /* Muted */
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 13% 96%;
+    --muted-foreground: 215 16% 40%;
     
-    /* Accent - Menta suave */
-    --accent: 173 45% 92%;
-    --accent-foreground: 173 87% 28%;
+    /* Accent — Naranja VULO para acciones */
+    --accent: 25 100% 50%;
+    --accent-foreground: 0 0% 100%;
     
     /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
     /* Borders & Inputs */
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 173 87% 33%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 25 100% 50%;
     
     --radius: 0.5rem;
     
     /* Sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 9%;
-    --sidebar-primary: 173 87% 33%;
+    --sidebar-background: 213 53% 11%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 25 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 173 45% 92%;
-    --sidebar-accent-foreground: 173 87% 28%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 173 87% 33%;
+    --sidebar-accent: 213 53% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 213 40% 20%;
+    --sidebar-ring: 25 100% 50%;
     
     /* Semantic Colors */
     --success: 160 84% 39%;
@@ -71,19 +74,22 @@
   }
 
   .dark {
-    /* Primary - HospedApp Turquesa (brighter for dark mode) */
-    --primary: 172 87% 42%;
+    /* Brand VULO dark */
+    --primary: 25 100% 55%;
     --primary-foreground: 0 0% 100%;
+    --brand-navy: 213 53% 11%;
+    --brand-orange: 25 100% 55%;
+    --brand-orange-foreground: 0 0% 100%;
     
     /* Backgrounds - Dark theme */
-    --background: 222 47% 8%;
+    --background: 213 53% 8%;
     --foreground: 210 40% 98%;
     
     /* Cards & Surfaces */
-    --card: 222 47% 11%;
+    --card: 213 53% 11%;
     --card-foreground: 210 40% 98%;
     
-    --popover: 222 47% 11%;
+    --popover: 213 53% 11%;
     --popover-foreground: 210 40% 98%;
     
     /* Secondary */
@@ -94,9 +100,9 @@
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
     
-    /* Accent */
-    --accent: 173 50% 15%;
-    --accent-foreground: 172 87% 55%;
+    /* Accent — naranja */
+    --accent: 25 100% 55%;
+    --accent-foreground: 0 0% 100%;
     
     /* Destructive */
     --destructive: 0 63% 31%;
@@ -105,17 +111,17 @@
     /* Borders & Inputs */
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 172 87% 42%;
+    --ring: 25 100% 55%;
     
     /* Sidebar */
-    --sidebar-background: 222 47% 9%;
+    --sidebar-background: 213 53% 8%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 172 87% 42%;
+    --sidebar-primary: 25 100% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 173 50% 15%;
-    --sidebar-accent-foreground: 172 87% 55%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 172 87% 42%;
+    --sidebar-accent: 213 53% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 213 33% 17%;
+    --sidebar-ring: 25 100% 55%;
     
     /* Semantic Colors */
     --success: 160 84% 45%;
