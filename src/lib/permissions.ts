@@ -33,13 +33,19 @@ export const VIEWS: ViewDef[] = [
 
   // Ventas
   { key: 'pos', label: 'POS', group: 'Ventas', path: '/pos' },
-  { key: 'inventario', label: 'Inventario', group: 'Ventas', path: '/inventario' },
-  { key: 'compras', label: 'Compras', group: 'Ventas', path: '/compras' },
-  { key: 'proveedores', label: 'Proveedores', group: 'Ventas', path: '/proveedores' },
-  { key: 'gastos', label: 'Gastos', group: 'Ventas', path: '/gastos' },
   { key: 'historial', label: 'Historial Ventas', group: 'Ventas', path: '/historial' },
-  { key: 'historial-reservas', label: 'Historial Reservas', group: 'Ventas', path: '/historial-reservas' },
   { key: 'reportes', label: 'Reportes', group: 'Ventas', path: '/reportes' },
+
+  // Inventarios
+  { key: 'inventario', label: 'Inventario', group: 'Inventarios', path: '/inventario' },
+
+  // Compras
+  { key: 'compras', label: 'Compras', group: 'Compras', path: '/compras' },
+  { key: 'proveedores', label: 'Proveedores', group: 'Compras', path: '/proveedores' },
+  { key: 'gastos', label: 'Gastos', group: 'Compras', path: '/gastos' },
+
+  // Reservas
+  { key: 'historial-reservas', label: 'Historial Reservas', group: 'Principal', path: '/historial-reservas' },
 
   // Sistema
   { key: 'usuarios', label: 'Usuarios', group: 'Sistema', path: '/usuarios' },
