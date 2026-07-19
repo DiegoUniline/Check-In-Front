@@ -617,7 +617,7 @@ function MockAIWhatsApp() {
       transition={{ duration: 0.8, ease }}
       className="relative"
     >
-      <BrowserFrame label="WhatsApp · Huésped nuevo">
+      <BrowserFrame title="WhatsApp · Huésped nuevo">
         <div className="flex flex-col" style={{ background: '#EFE8DE' }}>
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-black/5 bg-[#f5efe6] px-4 py-3">
