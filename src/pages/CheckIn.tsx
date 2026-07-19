@@ -140,7 +140,7 @@ export default function CheckIn() {
       // Generar tarjeta de registro con firma digital
       try {
         const hab = habitacionesDisponibles.find(h => h.id === formData.habitacionId);
-        exportarRegistroHuesped({
+        await exportarRegistroHuesped({
           hotel: reserva.hotel?.nombre,
           reserva: {
             ...reserva,
