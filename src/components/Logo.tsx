@@ -1,10 +1,6 @@
 import { cn } from '@/lib/utils';
 import logoIcon from '@/assets/hospedapp-icon.png';
-import logoFull from '@/assets/hospedapp-logo-full.png';
-
-// VULO Brand — Navy #10233F + Orange #F97316
-const BRAND_NAVY = '#10233F';
-const BRAND_ORANGE = '#F97316';
+import wordmark from '@/assets/vulo-wordmark.png';
 
 interface LogoProps {
   className?: string;
@@ -31,12 +27,12 @@ export function Logo({ className, size = 24 }: LogoProps) {
 }
 
 /**
- * Logo completo con wordmark "HospedApp" — para login, landing hero, splash.
+ * Wordmark oficial VULO (imagen). Prohibido reemplazar con texto.
  */
 export function LogoFull({ className, height = 48 }: { className?: string; height?: number }) {
   return (
     <img
-      src={logoFull}
+      src={wordmark}
       alt="VULO"
       className={cn('object-contain', className)}
       style={{ height, width: 'auto' }}
@@ -47,29 +43,27 @@ export function LogoFull({ className, height = 48 }: { className?: string; heigh
 }
 
 /**
- * Versión horizontal: isotipo + wordmark "HospedApp" con split bicolor
- * (Hosped en azul marino #04122C, App en turquesa #0B9F91) — cumple el manual
- * de identidad para barra superior, encabezados y espacios reducidos.
+ * Isotipo + wordmark oficial (imagen). Ambos son intocables por manual de marca.
  */
 export function LogoHorizontal({
   className,
   size = 36,
-  wordmarkClassName,
 }: {
   className?: string;
   size?: number;
   wordmarkClassName?: string;
 }) {
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
+    <div className={cn('flex items-center gap-3', className)}>
       <Logo size={size} />
-      <span
-        className={cn('font-heading font-extrabold tracking-tight leading-none', wordmarkClassName)}
-        style={{ fontSize: size * 0.68 }}
-      >
-        <span style={{ color: BRAND_NAVY }} className="dark:text-white">VU</span>
-        <span style={{ color: BRAND_ORANGE }}>LO</span>
-      </span>
+      <img
+        src={wordmark}
+        alt="VULO"
+        className="object-contain"
+        style={{ height: size * 0.72, width: 'auto' }}
+        loading="eager"
+        decoding="async"
+      />
     </div>
   );
 }
