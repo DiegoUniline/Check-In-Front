@@ -431,16 +431,33 @@ function nombreCompleto(c: ClienteMin) {
  * Comprobante / confirmación de reserva.
  * Para enviar al huésped al confirmar (email, WhatsApp, descarga).
  */
-export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
+export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   reserva: ReservaMin;
   cliente: ClienteMin;
   action?: 'save' | 'blob';
-}): Blob | void {
+}): Promise<Blob | void> {
   const { reserva, cliente, currency = 'MXN', action = 'save' } = opts;
   const doc = new jsPDF();
-  buildHeader(doc, opts, 'Confirmación de reserva', `Folio ${reserva.numero_reserva || '—'} · Emitido ${format(new Date(), 'dd/MM/yyyy HH:mm')}`);
+  const assets: HeaderAssets = {
+    fox: await loadImageDataUrl(vuloFoxUrl),
+    wordmark: await loadImageDataUrl(vuloWordmarkUrl),
+  };
 
-  let y = 52;
+  const titulo = 'Confirmación de reserva';
+  const subtitulo = `Folio ${reserva.numero_reserva || '—'} · Emitido ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
+
+  // Reserva espacio del header en autoTable
+  const marginTop = CONTENT_TOP + 8;
+  let y = marginTop;
+
+  // Chips informativos (folio, check-in, check-out, estado)
+  const pageW = doc.internal.pageSize.getWidth();
+  const chipW = (pageW - MARGIN_X * 2 - 6) / 4;
+  drawInfoChip(doc, MARGIN_X + chipW * 0 + 0, y, chipW, 'Folio', `#${reserva.numero_reserva || '—'}`);
+  drawInfoChip(doc, MARGIN_X + chipW * 1 + 2, y, chipW, 'Check-in', format(new Date(reserva.fecha_checkin), 'dd/MM/yyyy'));
+  drawInfoChip(doc, MARGIN_X + chipW * 2 + 4, y, chipW, 'Check-out', format(new Date(reserva.fecha_checkout), 'dd/MM/yyyy'));
+  drawInfoChip(doc, MARGIN_X + chipW * 3 + 6, y, chipW, 'Estado', String(reserva.estado || 'confirmada').replace(/^./, (c) => c.toUpperCase()));
+  y += 22;
 
   // Huésped
   y = sectionLabel(doc, 'Huésped', y);
@@ -520,7 +537,7 @@ export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
     y += lines.length * 4 + 4;
   }
 
-  brandFooter(doc, 'Confirmación de reserva · Presente este documento al check-in');
+  paintChrome(doc, opts, titulo, subtitulo, assets, 'Confirmación de reserva · Presente este documento al check-in');
 
   const filename = `reserva_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
@@ -531,18 +548,22 @@ export function exportarComprobanteReserva(opts: ReservaPdfCtx & {
  * Tarjeta de registro de huésped con firma digital.
  * Genera el PDF al completar el check-in.
  */
-export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
+export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   reserva: ReservaMin;
   cliente: ClienteMin;
   firmaDataUrl?: string | null;
   aceptaTerminos?: boolean;
   action?: 'save' | 'blob';
-}): Blob | void {
+}): Promise<Blob | void> {
   const { reserva, cliente, firmaDataUrl, aceptaTerminos, currency = 'MXN', action = 'save' } = opts;
   const doc = new jsPDF();
-  buildHeader(doc, opts, 'Tarjeta de registro', `Folio ${reserva.numero_reserva || '—'} · Registrado ${format(new Date(), 'dd/MM/yyyy HH:mm')}`);
-
-  let y = 52;
+  const assets: HeaderAssets = {
+    fox: await loadImageDataUrl(vuloFoxUrl),
+    wordmark: await loadImageDataUrl(vuloWordmarkUrl),
+  };
+  const titulo = 'Tarjeta de registro';
+  const subtitulo = `Folio ${reserva.numero_reserva || '—'} · Registrado ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
+  let y = CONTENT_TOP + 8;
 
   y = sectionLabel(doc, 'Datos del huésped', y);
   autoTable(doc, {
@@ -622,7 +643,7 @@ export function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   doc.text(`Firmado el ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, y + firmaH + 4);
   doc.setTextColor(...VULO_TEXT);
 
-  brandFooter(doc, 'Documento firmado digitalmente · La firma hace fe del acto de registro');
+  paintChrome(doc, opts, titulo, subtitulo, assets, 'Documento firmado digitalmente · La firma hace fe del acto de registro');
 
   const filename = `registro_${reserva.numero_reserva || 'sin-numero'}.pdf`;
   if (action === 'blob') return doc.output('blob');
