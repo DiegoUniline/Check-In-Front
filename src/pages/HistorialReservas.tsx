@@ -519,8 +519,8 @@ export default function HistorialReservas() {
                             aria-label={`Seleccionar reserva ${reserva.numero_reserva}`}
                           />
                         </TableCell>
-                        <TableCell>
-                          <span className="font-mono font-medium text-primary text-sm">
+                        <TableCell className="whitespace-nowrap">
+                          <span className="font-mono font-medium text-primary text-sm whitespace-nowrap">
                             #{reserva.numero_reserva || reserva.id?.slice(0, 6)}
                           </span>
                         </TableCell>
