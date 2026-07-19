@@ -569,6 +569,34 @@ export default function HistorialReservas() {
                       </TableRow>
                     )}
                   </TableBody>
+                  {reservasFiltradas.length > 0 && (
+                    <TableFooter>
+                      <TableRow className="font-medium bg-muted/40">
+                        <TableCell colSpan={2} className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Totales
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {stats.total} reservas
+                        </TableCell>
+                        <TableCell />
+                        <TableCell />
+                        <TableCell />
+                        <TableCell className="text-sm">
+                          {reservasFiltradas.reduce((s: number, r: any) => s + (Number(r.noches) || 0), 0)} noches
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap font-semibold text-primary">
+                          {formatCurrency(reservasFiltradas.reduce((s: number, r: any) => s + safeNumber(r.total), 0))}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {stats.checkin} en estadía · {stats.checkout} completadas · {stats.canceladas} canceladas
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {stats.recepcion} recep. · {stats.online} online
+                        </TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableFooter>
+                  )}
                 </Table>
               </div>
 
