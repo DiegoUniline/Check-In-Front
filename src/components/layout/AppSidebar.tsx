@@ -56,8 +56,7 @@ import { canAccess } from '@/lib/permissions';
 import { Logo, LogoHorizontal } from '@/components/Logo';
 
 const mainNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, viewKey: 'dashboard' },
-  { title: 'Reservas', url: '/reservas', icon: CalendarDays, viewKey: 'reservas' },
+  { title: 'Inicio', url: '/reservas', icon: CalendarDays, viewKey: 'reservas' },
   { title: 'Check-In', url: '/reservas/checkin', icon: LogIn, viewKey: 'reservas' },
   { title: 'Check-Out', url: '/reservas/checkout', icon: LogOut, viewKey: 'reservas' },
   { title: 'Histórico Reservas', url: '/reservas/historico', icon: History, viewKey: 'reservas' },
@@ -72,6 +71,7 @@ const operationsNavItems = [
 ];
 
 const ventasNavItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, viewKey: 'dashboard' },
   { title: 'POS', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
   { title: 'Historial Ventas', url: '/historial', icon: History, viewKey: 'historial' },
   { title: 'Reportes', url: '/reportes', icon: BarChart3, viewKey: 'reportes' },
