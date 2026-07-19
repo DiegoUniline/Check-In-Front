@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import foxIcon from '@/assets/hospedapp-icon.png';
+import bannerImg from '@/assets/vulo-banner.jpg';
+import people1 from '@/assets/vulo-people-1.jpg';
+import people2 from '@/assets/vulo-people-2.jpg';
+import people3 from '@/assets/vulo-people-3.jpg';
 
 /**
  * VULO — Landing pública
@@ -672,15 +676,126 @@ function Footer() {
 /* ────────────────────────────────────────────────────────────────
    PÁGINA
    ────────────────────────────────────────────────────────────── */
+function Banner() {
+  return (
+    <section className="relative overflow-hidden border-b border-slate-100 bg-white">
+      <div className="mx-auto max-w-[1440px] px-6 pt-6 lg:px-10">
+        <div className="relative overflow-hidden rounded-[24px] border border-slate-200">
+          <img
+            src={bannerImg}
+            alt="Recepción de hotel operando con VULO"
+            width={1920}
+            height={1080}
+            className="h-[340px] w-full object-cover md:h-[440px] lg:h-[520px]"
+            loading="eager"
+            decoding="async"
+          />
+          {/* Velo navy plano (sin degradado difuminado) */}
+          <div className="absolute inset-0" style={{ background: BRAND_NAVY, opacity: 0.55 }} />
+          <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 lg:p-14">
+            <div className="mb-4 flex items-center gap-3">
+              <img src={foxIcon} alt="" width={44} height={44} className="h-11 w-11 object-contain" />
+              <span className="text-[16px] font-bold tracking-[-0.02em] text-white">
+                vulo<span style={{ color: BRAND_ORANGE }}>.</span>
+              </span>
+              <span className="ml-2 rounded-full border border-white/30 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80">
+                Software para hoteles
+              </span>
+            </div>
+            <h2 className="max-w-3xl text-[28px] font-bold leading-[1.05] tracking-[-0.03em] text-white md:text-[44px] lg:text-[54px]">
+              La operación de tu hotel,
+              <br />
+              <span className="text-white/70">tan tranquila como debería ser.</span>
+            </h2>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Button asChild size="sm" className="h-11 rounded-full bg-[#F97316] px-6 text-[14px] font-medium text-white shadow-none hover:bg-[#ea6a10]">
+                <Link to="/registro">Empezar gratis</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="h-11 rounded-full border-white/30 bg-transparent px-6 text-[14px] font-medium text-white hover:bg-white/10 hover:text-white">
+                <Link to="/login">Ver demostración</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PeopleGallery() {
+  const items = [
+    { img: people1, title: 'Recepción', desc: 'Check-in en 30 segundos con firma digital.' },
+    { img: people2, title: 'Housekeeping', desc: 'Rutas de limpieza asignadas y en vivo.' },
+    { img: people3, title: 'Gerencia', desc: 'Datos, tarifas e IA en una sola pantalla.' },
+  ];
+  return (
+    <section className="border-t border-slate-100 bg-white py-32">
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease }}
+          className="mx-auto mb-16 flex max-w-3xl flex-col items-center gap-4 text-center"
+        >
+          <img src={foxIcon} alt="" width={44} height={44} className="h-11 w-11 object-contain" />
+          <div className="text-[13px] font-semibold uppercase tracking-[0.2em]" style={{ color: BRAND_ORANGE }}>
+            Personas reales · trabajo real
+          </div>
+          <h2 className="text-[36px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Hecho para quienes
+            <br />
+            <span className="text-slate-400">mueven un hotel cada día.</span>
+          </h2>
+        </motion.div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {items.map((it, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ delay: i * 0.08, duration: 0.7, ease }}
+              className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-white"
+            >
+              <div className="relative">
+                <img
+                  src={it.img}
+                  alt={it.title}
+                  width={1280}
+                  height={1600}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-[380px] w-full object-cover transition duration-700 group-hover:scale-[1.02]"
+                />
+                <div className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/95 backdrop-blur-sm">
+                  <img src={foxIcon} alt="" width={26} height={26} className="h-[26px] w-[26px] object-contain" />
+                </div>
+              </div>
+              <div className="p-6">
+                <h3 className="text-[18px] font-semibold tracking-tight text-slate-900">{it.title}</h3>
+                <p className="mt-2 text-[14.5px] leading-relaxed text-slate-600">{it.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-white text-slate-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       <Nav />
       <main>
+        <Banner />
         <Hero />
         <Story />
         <BrandStrip />
         <IABlock />
+        <PeopleGallery />
         <WhatsApp />
         <Metrics />
         <Features />
