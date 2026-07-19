@@ -54,10 +54,10 @@ function BrowserFrame({ title, children }: { title: string; children: React.Reac
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-6 lg:px-10">
-        <Link to="/" className="flex items-center gap-2.5">
-          <Logo size={36} />
-          <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain md:h-6" />
+      <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-2 px-4 sm:px-6 lg:px-10">
+        <Link to="/" className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+          <Logo size={32} />
+          <img src={wordmark} alt="VULO" className="h-4 w-auto object-contain sm:h-5 md:h-6" />
         </Link>
         <nav className="hidden items-center gap-9 md:flex">
           <Link to="/" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Inicio</Link>
@@ -66,9 +66,15 @@ function Nav() {
           <Link to="/empresa" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Empresa</Link>
           <Link to="/contacto" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Contacto</Link>
         </nav>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="hidden text-[14px] font-medium text-slate-600 transition hover:text-slate-900 sm:block">Iniciar sesión</Link>
-          <Button asChild size="sm" className="h-10 rounded-full px-5 text-[14px] font-medium text-white shadow-none hover:opacity-95" style={{ background: NAVY }}>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <Link
+            to="/login"
+            className="inline-flex h-9 items-center whitespace-nowrap rounded-lg border px-2.5 text-[12px] font-medium transition hover:opacity-90 sm:h-10 sm:px-4 sm:text-[14px]"
+            style={{ borderColor: '#FDBA74', color: ORANGE, background: '#FFF7ED' }}
+          >
+            Iniciar sesión
+          </Link>
+          <Button asChild size="sm" className="h-9 rounded-full px-3 text-[12px] font-medium text-white shadow-none hover:opacity-95 sm:h-10 sm:px-5 sm:text-[14px]" style={{ background: NAVY }}>
             <Link to="/contacto">Agendar demo</Link>
           </Button>
         </div>
