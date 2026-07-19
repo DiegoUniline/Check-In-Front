@@ -72,19 +72,24 @@ const operationsNavItems = [
   { title: 'Mantenimiento', url: '/mantenimiento', icon: Wrench, viewKey: 'mantenimiento' },
 ];
 
-const salesNavItems = [
+const ventasNavItems = [
   { title: 'POS', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
+  { title: 'Historial Ventas', url: '/historial', icon: History, viewKey: 'historial' },
+  { title: 'Reportes', url: '/reportes', icon: BarChart3, viewKey: 'reportes' },
+];
+
+const inventariosNavItems = [
   { title: 'Productos', url: '/productos', icon: Package, viewKey: 'inventario' },
   { title: 'Inventario', url: '/inventario', icon: Package, viewKey: 'inventario' },
-  { title: 'Temporadas', url: '/temporadas', icon: CalendarRange, viewKey: 'catalogos' },
   { title: 'Ajustes de Stock', url: '/ajustes-stock', icon: ArrowUpDown, viewKey: 'inventario' },
   { title: 'Historial de Ajustes', url: '/historial-ajustes', icon: History, viewKey: 'inventario' },
-  { title: 'Compras', url: '/compras', icon: ShoppingBag, viewKey: 'compras' },
+  { title: 'Temporadas', url: '/temporadas', icon: CalendarRange, viewKey: 'catalogos' },
+];
+
+const comprasNavItems = [
+  { title: 'Órdenes de Compra', url: '/compras', icon: ShoppingBag, viewKey: 'compras' },
   { title: 'Proveedores', url: '/proveedores', icon: Truck, viewKey: 'proveedores' },
   { title: 'Gastos', url: '/gastos', icon: Receipt, viewKey: 'gastos' },
-  { title: 'Historial Ventas', url: '/historial', icon: History, viewKey: 'historial' },
-  { title: 'Historial Reservas', url: '/historial-reservas', icon: FileText, viewKey: 'historial-reservas' },
-  { title: 'Reportes', url: '/reportes', icon: BarChart3, viewKey: 'reportes' },
 ];
 
 const configNavItems = [
@@ -284,7 +289,9 @@ export function AppSidebar() {
           { key: 'chat', label: 'WhatsApp Chat', items: chatTopItem, labelClass: 'text-[#F97316]', defaultOpen: true },
           { key: 'principal', label: 'Principal', items: mainNavItems, defaultOpen: true },
           { key: 'operaciones', label: 'Operaciones', items: operationsNavItems, defaultOpen: false },
-          { key: 'ventas', label: 'Ventas', items: salesNavItems, defaultOpen: false },
+          { key: 'ventas', label: 'Ventas', items: ventasNavItems, defaultOpen: false },
+          { key: 'inventarios', label: 'Inventarios', items: inventariosNavItems, defaultOpen: false },
+          { key: 'compras', label: 'Compras', items: comprasNavItems, defaultOpen: false },
           { key: 'sistema', label: 'Sistema', items: configNavItems, defaultOpen: false },
           { key: 'whatsapp', label: 'WhatsApp', items: whatsappNavItems, labelClass: 'text-[#F97316]', defaultOpen: false },
         ].map((g) => {
