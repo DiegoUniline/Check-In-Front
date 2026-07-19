@@ -1094,7 +1094,7 @@ function FinalCTA() {
           <span className="text-white/50">empieza con una conversación.</span>
         </motion.h2>
         <p className="mx-auto mt-6 max-w-xl text-[17px] leading-relaxed text-white/70">
-          Te mostramos el sistema con tus habitaciones y tus tarifas. Sin compromiso.
+          Te mostramos VULO con tus datos, sin compromiso.
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="h-[52px] rounded-full px-8 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
