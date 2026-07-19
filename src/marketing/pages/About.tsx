@@ -36,10 +36,10 @@ const PRINCIPIOS = [
 ];
 
 const EQUIPO = [
-  { name: "Andrés Vidal", role: "Fundador · Producto", photo: "portraitFounder" as const },
-  { name: "Camila Reyes", role: "Diseño · Marca", photo: "portraitDesigner" as const },
-  { name: "Rodrigo Núñez", role: "Ingeniería", photo: "portraitEngineer" as const },
-  { name: "Sofía Marín", role: "Éxito de cliente", photo: "portraitSuccess" as const },
+  { name: "Andrés Vidal", role: "Fundador · Producto", photo: "managerPortrait" as const },
+  { name: "Camila Reyes", role: "Diseño · Marca", photo: "receptionistWoman" as const },
+  { name: "Rodrigo Núñez", role: "Ingeniería", photo: "laptopWorking" as const },
+  { name: "Sofía Marín", role: "Éxito de cliente", photo: "tabletHands" as const },
 ];
 
 const TIMELINE = [
