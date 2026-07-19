@@ -300,6 +300,9 @@ function Story() {
    IA — no dice que tiene IA, la muestra
    ────────────────────────────────────────────────────────────── */
 function BrandStrip() {
+  return _brandStripBody();
+}
+function _brandStripBody() {
   return (
     <section className="border-t border-slate-100 bg-white py-16">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
