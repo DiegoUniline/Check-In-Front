@@ -2,6 +2,26 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format, eachDayOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
+import vuloFoxUrl from '@/assets/vulo-fox.png';
+import vuloWordmarkUrl from '@/assets/vulo-wordmark.png';
+
+// ============================================================
+// Asset loader (URL -> base64 data URL) — sin html2canvas
+// ============================================================
+const _imageCache = new Map<string, string>();
+async function loadImageDataUrl(url: string): Promise<string> {
+  if (_imageCache.has(url)) return _imageCache.get(url)!;
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  _imageCache.set(url, dataUrl);
+  return dataUrl;
+}
 
 export type PdfKpi = { label: string; value: string };
 export type PdfTable = { title: string; head: string[]; rows: (string | number)[][] };
