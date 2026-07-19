@@ -136,40 +136,42 @@ export function TimelineGrid({
 
   return (
     <div className="absolute inset-0 flex flex-col border rounded-lg bg-card overflow-hidden">
-      {/* Header fijo */}
-      <div className="flex-shrink-0 border-b bg-muted/30 sticky top-0 z-20">
-        <div className="flex">
-          <div className="w-24 flex-shrink-0 p-2 border-r bg-muted/50 flex items-center justify-center">
-            <span className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
-              Habitación
-            </span>
-          </div>
-          <div className="flex-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border" ref={scrollRef}>
-            <div className="flex min-w-max">
-              {days.map((day, idx) => (
-                <div key={idx} className={cn("border-r text-center py-1.5 px-1 flex-shrink-0", cellWidth)}>
-                  <div className={cn("font-medium", isCompact ? "text-[7px]" : "text-[9px]")}>
-                    {format(day, 'EEE', { locale: es })}
-                  </div>
-                  <div className={cn("font-bold", isCompact ? "text-[9px]" : "text-xs", isSameDay(day, today) && "text-primary")}>
-                    {format(day, 'd')}
-                  </div>
-                </div>
-              ))}
+      {/* Scroller único: sincroniza cabecera de fechas + columna de habitaciones + celdas */}
+      <div
+        className="flex-1 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border"
+        ref={scrollRef}
+      >
+        <div className="min-w-max">
+          {/* Fila cabecera: sticky top, se mueve con el scroll horizontal */}
+          <div className="flex sticky top-0 z-20 bg-muted/30 border-b">
+            <div className={cn(
+              "w-24 flex-shrink-0 p-2 border-r bg-muted/50 flex items-center justify-center sticky left-0 z-30"
+            )}>
+              <span className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
+                Habitación
+              </span>
             </div>
+            {days.map((day, idx) => (
+              <div key={idx} className={cn("border-r text-center py-1.5 px-1 flex-shrink-0", cellWidth)}>
+                <div className={cn("font-medium", isCompact ? "text-[7px]" : "text-[9px]")}>
+                  {format(day, 'EEE', { locale: es })}
+                </div>
+                <div className={cn("font-bold", isCompact ? "text-[9px]" : "text-xs", isSameDay(day, today) && "text-primary")}>
+                  {format(day, 'd')}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      </div>
 
-      {/* Grid scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
-        <div className="flex">
-          {/* Columna de habitaciones */}
-          <div className="w-24 flex-shrink-0 border-r bg-muted/30">
-            {habitaciones.map((hab) => (
-              <div 
-                key={hab.id}
-                className={cn("border-b px-2 py-1 flex flex-col justify-center", cellHeight)}
+          {/* Filas por habitación */}
+          {habitaciones.map((hab) => (
+            <div key={hab.id} className="flex">
+              {/* Columna sticky de habitación */}
+              <div
+                className={cn(
+                  "w-24 flex-shrink-0 border-r border-b bg-muted/30 px-2 py-1 flex flex-col justify-center sticky left-0 z-10",
+                  cellHeight
+                )}
               >
                 <div className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
                   {hab.numero}
@@ -178,14 +180,6 @@ export function TimelineGrid({
                   {hab.tipo_nombre}
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Celdas de timeline */}
-          <div className="flex-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border">
-            <div className="min-w-max">
-              {habitaciones.map((hab) => (
-                <div key={hab.id} className="flex">
                   {days.map((day, dayIndex) => {
                     const reserva = getReservationForCell(hab.id, dayIndex);
                     const position = reserva ? getReservationPosition(reserva, dayIndex) : null;
@@ -276,10 +270,8 @@ export function TimelineGrid({
                       />
                     );
                   })}
-                </div>
-              ))}
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
