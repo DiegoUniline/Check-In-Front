@@ -649,6 +649,7 @@ export default function Landing() {
       <main>
         <Hero />
         <Story />
+        <BrandStrip />
         <IABlock />
         <WhatsApp />
         <Metrics />
