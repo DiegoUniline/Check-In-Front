@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   Search, Calendar, Eye, Download, RefreshCw, 
   BedDouble, CreditCard, Clock, MapPin, Phone, Mail,
   FileText, DollarSign, X, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, AlertCircle, LogIn, LogOut,
-  User, Globe, Wallet, Trash2
+  User, Globe, Wallet, Trash2, CalendarRange, Filter
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -71,8 +71,11 @@ export default function HistorialReservas() {
   const [busqueda, setBusqueda] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
   const [origenFiltro, setOrigenFiltro] = useState('todos');
+  const [habitacionFiltro, setHabitacionFiltro] = useState('todos');
   const [fechaDesde, setFechaDesde] = useState<Date | undefined>();
   const [fechaHasta, setFechaHasta] = useState<Date | undefined>();
+  const [rangoBorrador, setRangoBorrador] = useState<{ from?: Date; to?: Date }>({});
+  const [rangoPopoverOpen, setRangoPopoverOpen] = useState(false);
   
   // Paginación
   const [pagina, setPagina] = useState(1);
@@ -132,8 +135,10 @@ export default function HistorialReservas() {
     setBusqueda('');
     setEstadoFiltro('todos');
     setOrigenFiltro('todos');
+    setHabitacionFiltro('todos');
     setFechaDesde(undefined);
     setFechaHasta(undefined);
+    setRangoBorrador({});
     setPagina(1);
   };
 
@@ -188,6 +193,7 @@ export default function HistorialReservas() {
 
   // Filtrar por búsqueda local
   const reservasFiltradas = reservas.filter(r => {
+    if (habitacionFiltro !== 'todos' && String(r.habitacion_numero) !== habitacionFiltro) return false;
     if (!busqueda) return true;
     const texto = busqueda.toLowerCase();
     return (
@@ -250,6 +256,45 @@ export default function HistorialReservas() {
     canceladas: reservas.filter(r => r.estado === 'Cancelada').length,
     ingresos: reservas.filter(r => r.estado === 'CheckOut').reduce((sum, r) => sum + safeNumber(r.total_pagado), 0),
   };
+
+  // Habitaciones únicas para el filtro
+  const habitacionesUnicas = Array.from(
+    new Set(reservas.map(r => r.habitacion_numero).filter(Boolean))
+  ).sort((a: any, b: any) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+
+  // Presets de rango de fechas
+  const hoy = new Date();
+  const presetsRango: { label: string; range: () => { from: Date; to: Date } }[] = [
+    { label: 'Hoy', range: () => ({ from: startOfDay(hoy), to: endOfDay(hoy) }) },
+    { label: 'Ayer', range: () => ({ from: startOfDay(subDays(hoy, 1)), to: endOfDay(subDays(hoy, 1)) }) },
+    { label: 'Últimos 7 días', range: () => ({ from: startOfDay(subDays(hoy, 6)), to: endOfDay(hoy) }) },
+    { label: 'Últimos 30 días', range: () => ({ from: startOfDay(subDays(hoy, 29)), to: endOfDay(hoy) }) },
+    { label: 'Esta semana', range: () => ({ from: startOfWeek(hoy, { weekStartsOn: 1 }), to: endOfWeek(hoy, { weekStartsOn: 1 }) }) },
+    { label: 'Este mes', range: () => ({ from: startOfMonth(hoy), to: endOfMonth(hoy) }) },
+    { label: 'Mes pasado', range: () => ({ from: startOfMonth(subMonths(hoy, 1)), to: endOfMonth(subMonths(hoy, 1)) }) },
+    { label: 'Este año', range: () => ({ from: startOfYear(hoy), to: endOfYear(hoy) }) },
+  ];
+
+  const aplicarRango = () => {
+    setFechaDesde(rangoBorrador.from);
+    setFechaHasta(rangoBorrador.to);
+    setRangoPopoverOpen(false);
+    setPagina(1);
+  };
+
+  const limpiarRango = () => {
+    setRangoBorrador({});
+    setFechaDesde(undefined);
+    setFechaHasta(undefined);
+  };
+
+  const etiquetaRango = fechaDesde && fechaHasta
+    ? `${formatDate(fechaDesde)} — ${formatDate(fechaHasta)}`
+    : fechaDesde
+    ? `Desde ${formatDate(fechaDesde)}`
+    : fechaHasta
+    ? `Hasta ${formatDate(fechaHasta)}`
+    : 'Seleccionar rango';
 
   return (
     <MainLayout title="Histórico Entradas" subtitle="Reservas online y walk-ins registrados en recepción">
@@ -335,107 +380,128 @@ export default function HistorialReservas() {
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros - barra superior */}
       <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3 items-end">
-            <div className="sm:col-span-2">
-              <Label className="text-xs text-muted-foreground">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="# reserva, cliente..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+        <CardContent className="p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Búsqueda */}
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="# reserva, cliente, teléfono, email..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-9 h-10"
+              />
             </div>
-            
-            <div>
-              <Label className="text-xs text-muted-foreground">Estado</Label>
-              <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="Pendiente">Pendiente</SelectItem>
-                  <SelectItem value="Confirmada">Confirmada</SelectItem>
-                  <SelectItem value="CheckIn">Check-In</SelectItem>
-                  <SelectItem value="CheckOut">Check-Out</SelectItem>
-                  <SelectItem value="Cancelada">Cancelada</SelectItem>
-                  <SelectItem value="NoShow">No Show</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label className="text-xs text-muted-foreground">Origen</Label>
-              <Select value={origenFiltro} onValueChange={setOrigenFiltro}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="Recepcion">Recepción (Walk-in)</SelectItem>
-                  <SelectItem value="Web">Online</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label className="text-xs text-muted-foreground">Desde</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal h-10 px-3">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    <span className="truncate">
-                        {fechaDesde ? formatDate(fechaDesde) : 'Desde'}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={fechaDesde}
-                    onSelect={setFechaDesde}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div>
-              <Label className="text-xs text-muted-foreground">Hasta</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal h-10 px-3">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    <span className="truncate">
-                        {fechaHasta ? formatDate(fechaHasta) : 'Hasta'}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={fechaHasta}
-                    onSelect={setFechaHasta}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button variant="outline" size="icon" onClick={limpiarFiltros} className="h-10 w-10 shrink-0">
-                <X className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={cargarReservas} disabled={loading} className="h-10 w-10 shrink-0">
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
+
+            {/* Rango de fechas con presets */}
+            <Popover open={rangoPopoverOpen} onOpenChange={(o) => {
+              setRangoPopoverOpen(o);
+              if (o) setRangoBorrador({ from: fechaDesde, to: fechaHasta });
+            }}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-10 justify-start font-normal gap-2">
+                  <CalendarRange className="h-4 w-4" />
+                  <span className="truncate max-w-[240px]">{etiquetaRango}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <div className="flex flex-col sm:flex-row">
+                  <div className="border-b sm:border-b-0 sm:border-r p-2 flex sm:flex-col gap-1 min-w-[160px] overflow-x-auto sm:overflow-visible">
+                    {presetsRango.map((p) => (
+                      <Button
+                        key={p.label}
+                        variant="ghost"
+                        size="sm"
+                        className="justify-start whitespace-nowrap"
+                        onClick={() => setRangoBorrador(p.range())}
+                      >
+                        {p.label}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start whitespace-nowrap text-muted-foreground"
+                      onClick={() => setRangoBorrador({})}
+                    >
+                      Personalizado
+                    </Button>
+                  </div>
+                  <div className="p-2 flex flex-col">
+                    <CalendarComponent
+                      mode="range"
+                      selected={rangoBorrador as any}
+                      onSelect={(r: any) => setRangoBorrador(r || {})}
+                      numberOfMonths={2}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t">
+                      <div className="text-xs text-muted-foreground">
+                        {rangoBorrador.from ? formatDate(rangoBorrador.from) : '—'}
+                        {' → '}
+                        {rangoBorrador.to ? formatDate(rangoBorrador.to) : '—'}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={limpiarRango}>Limpiar</Button>
+                        <Button size="sm" onClick={aplicarRango}>Aplicar</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Estado */}
+            <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+              <SelectTrigger className="h-10 w-[150px]">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los estados</SelectItem>
+                <SelectItem value="Pendiente">Pendiente</SelectItem>
+                <SelectItem value="Confirmada">Confirmada</SelectItem>
+                <SelectItem value="CheckIn">Check-In</SelectItem>
+                <SelectItem value="CheckOut">Check-Out</SelectItem>
+                <SelectItem value="Cancelada">Cancelada</SelectItem>
+                <SelectItem value="NoShow">No Show</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Origen */}
+            <Select value={origenFiltro} onValueChange={setOrigenFiltro}>
+              <SelectTrigger className="h-10 w-[150px]">
+                <SelectValue placeholder="Origen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los orígenes</SelectItem>
+                <SelectItem value="Recepcion">Recepción</SelectItem>
+                <SelectItem value="Web">Online</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Habitación */}
+            <Select value={habitacionFiltro} onValueChange={setHabitacionFiltro}>
+              <SelectTrigger className="h-10 w-[140px]">
+                <SelectValue placeholder="Habitación" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas las hab.</SelectItem>
+                {habitacionesUnicas.map((h: any) => (
+                  <SelectItem key={String(h)} value={String(h)}>Hab. {h}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Acciones */}
+            <Button variant="ghost" size="sm" onClick={limpiarFiltros} className="h-10 gap-1">
+              <X className="h-4 w-4" /> Limpiar
+            </Button>
+            <Button variant="outline" size="icon" onClick={cargarReservas} disabled={loading} className="h-10 w-10 shrink-0">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </CardContent>
       </Card>
