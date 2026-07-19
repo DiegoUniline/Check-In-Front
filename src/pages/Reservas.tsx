@@ -32,7 +32,6 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
-import { PublicLinkBanner } from '@/components/PublicLinkBanner';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
