@@ -1092,8 +1092,16 @@ function FinalCTA() {
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="h-[52px] rounded-full px-8 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
-            <a href="mailto:hola@vulo.mx?subject=Agendar%20demo%20VULO">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></a>
+            <a href="https://wa.me/523171035768?text=Hola%2C%20quiero%20agendar%20una%20demo%20de%20VULO" target="_blank" rel="noreferrer">
+              WhatsApp: 317 103 5768 <ArrowRight className="ml-1 h-4 w-4" />
+            </a>
           </Button>
+          <Button asChild size="lg" variant="outline" className="h-[52px] rounded-full border-white/25 bg-transparent px-7 text-[15px] font-medium text-white hover:bg-white/10 hover:text-white">
+            <a href="mailto:hola@vulo.mx?subject=Agendar%20demo%20VULO">Escríbenos por correo</a>
+          </Button>
+        </div>
+        <div className="mt-8 inline-flex items-center gap-2 text-[13px] text-white/60">
+          <MapPin className="h-4 w-4" /> Autlán de Navarro, Jalisco · México
         </div>
       </div>
     </section>
