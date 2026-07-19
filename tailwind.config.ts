@@ -15,7 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        heading: ['Poppins', 'Inter', 'system-ui', 'sans-serif'],
+        heading: ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -25,7 +25,9 @@ export default {
         foreground: "hsl(var(--foreground))",
         brand: {
           navy: "hsl(var(--brand-navy))",
+          "navy-deep": "hsl(var(--brand-navy-deep))",
           orange: "hsl(var(--brand-orange))",
+          "orange-light": "hsl(var(--brand-orange-light))",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",
@@ -88,9 +90,17 @@ export default {
         },
       },
       borderRadius: {
+        xl: "1.5rem",
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 3px)",
+        sm: "calc(var(--radius) - 6px)",
+      },
+      boxShadow: {
+        soft: "0 10px 40px rgba(15, 23, 42, 0.08)",
+        lift: "0 20px 60px rgba(15, 23, 42, 0.12)",
+      },
+      transitionDuration: {
+        DEFAULT: "250ms",
       },
       keyframes: {
         "accordion-down": {
