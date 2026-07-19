@@ -1264,7 +1264,10 @@ class ApiClient {
     const todosRoles = ['Admin', 'Gerente', 'Recepcion', 'Housekeeping', 'Mantenimiento'];
     for (const [modulo, roles] of Object.entries(matrix)) {
       for (const rol of todosRoles) {
-        rows.push({ hotel_id: hid, rol, modulo, permitido: rol === 'Admin' || (roles || []).includes(rol) });
+        // Persistimos exactamente lo que envía la UI. `canAccess()` sigue dando
+        // bypass a Admin, pero no forzamos el valor en BD para evitar
+        // inconsistencias entre lo mostrado y lo guardado.
+        rows.push({ hotel_id: hid, rol, modulo, permitido: (roles || []).includes(rol) });
       }
     }
     // upsert por (hotel_id, rol, modulo)
