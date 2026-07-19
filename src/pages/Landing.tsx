@@ -1212,6 +1212,8 @@ export default function Landing() {
         <Pains />
         <HowItWorks />
         <Features />
+        <Highlights />
+        <Gallery />
         <ForWho />
         <Integrations />
         <Trust />
