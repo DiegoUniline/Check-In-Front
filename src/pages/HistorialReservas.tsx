@@ -58,6 +58,8 @@ import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/currency';
+import { ExportButton } from '@/components/ExportButton';
+import { formatDate as fmtDate } from '@/lib/dateFormat';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 
 export default function HistorialReservas() {
@@ -419,9 +421,22 @@ export default function HistorialReservas() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle>Reservas ({reservasFiltradas.length})</CardTitle>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Exportar</span>
-            </Button>
+            <ExportButton
+              rows={() => reservasFiltradas.map((r: any) => ({
+                'Número': r.numero_reserva ?? r.id,
+                'Cliente': r.cliente_nombre ?? r.clientes?.nombre ?? '',
+                'Habitación': r.habitacion_numero ?? r.habitaciones?.numero ?? '',
+                'Check-in': r.fecha_checkin ? fmtDate(r.fecha_checkin) : '',
+                'Check-out': r.fecha_checkout ? fmtDate(r.fecha_checkout) : '',
+                'Noches': r.noches ?? '',
+                'Total': r.total ?? r.monto_total ?? 0,
+                'Estado': r.estado ?? '',
+                'Origen': r.origen ?? '',
+              }))}
+              filename="reservas"
+              sheetName="Reservas"
+              label="Exportar"
+            />
           </div>
           {seleccionadas.size > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 mt-3 p-2 rounded-md bg-primary/10 border border-primary/20">

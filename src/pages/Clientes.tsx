@@ -5,6 +5,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ExportButton } from '@/components/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -385,6 +386,21 @@ export default function Clientes() {
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Cliente
         </Button>
+        <ExportButton
+          rows={() => filteredClientes.map((c: any) => ({
+            Nombre: `${c.nombre || ''} ${c.apellido_paterno || ''} ${c.apellido_materno || ''}`.trim(),
+            Email: c.email || '',
+            Teléfono: c.telefono || '',
+            Ciudad: c.ciudad || '',
+            País: c.pais || '',
+            'Total estancias': c.total_estancias || 0,
+            VIP: c.es_vip ? 'Sí' : 'No',
+            Notas: c.notas || '',
+          }))}
+          filename="clientes"
+          sheetName="Clientes"
+          label="Exportar"
+        />
       </div>
 
       {/* Table */}

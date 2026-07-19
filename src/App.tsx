@@ -10,6 +10,7 @@ import { UnsavedChangesProvider } from "@/contexts/UnsavedChangesContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ConfirmProvider } from "@/hooks/useConfirm";
 import { RealtimeBridge } from "@/components/RealtimeBridge";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -376,6 +377,7 @@ const App = () => (
                 <ScrollToTop />
                 <RealtimeBridge />
                 <AppRoutes />
+                <InstallPrompt />
               </ConfirmProvider>
             </UnsavedChangesProvider>
           </TooltipProvider>
