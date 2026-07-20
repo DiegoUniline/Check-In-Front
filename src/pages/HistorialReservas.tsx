@@ -594,7 +594,7 @@ export default function HistorialReservas() {
                                     hotelEmail: det.hotel?.email,
                                     hotelCiudad: det.hotel?.ciudad,
                                     hotelLogoUrl: det.hotel?.logo_url,
-                                    currency: det.hotel?.moneda || 'MXN',
+                                    currency: det.hotel?.moneda_codigo || det.hotel?.moneda || currencyCode(),
                                     reserva: det,
                                     cliente: cli,
                                   });
@@ -616,7 +616,7 @@ export default function HistorialReservas() {
                                     hotelEmail: det.hotel?.email,
                                     hotelCiudad: det.hotel?.ciudad,
                                     hotelLogoUrl: det.hotel?.logo_url,
-                                    currency: det.hotel?.moneda || 'MXN',
+                                    currency: det.hotel?.moneda_codigo || det.hotel?.moneda || currencyCode(),
                                     reserva: det,
                                     cliente: cli,
                                     firmaDataUrl: det.firma_digital || null,
