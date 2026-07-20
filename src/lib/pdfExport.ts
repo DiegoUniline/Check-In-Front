@@ -475,7 +475,7 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   cliente: ClienteMin;
   action?: 'save' | 'blob';
 }): Promise<Blob | void> {
-  const { reserva, cliente, currency = 'MXN', action = 'save' } = opts;
+  const { reserva, cliente, currency = defaultCurrency(), action = 'save' } = opts;
   // ===== Diseño B/N clásico — mismo que la Tarjeta de registro =====
   const doc = new jsPDF({ unit: 'mm', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -734,7 +734,7 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   aceptaTerminos?: boolean;
   action?: 'save' | 'blob';
 }): Promise<Blob | void> {
-  const { reserva, cliente, firmaDataUrl, aceptaTerminos, currency = 'MXN', action = 'save' } = opts;
+  const { reserva, cliente, firmaDataUrl, aceptaTerminos, currency = defaultCurrency(), action = 'save' } = opts;
   // ===== Diseño B/N clásico de documento hotelero =====
   // Carta (letter): 216 x 279 mm, márgenes de 20mm.
   const doc = new jsPDF({ unit: 'mm', format: 'letter' });
@@ -1005,7 +1005,7 @@ export function exportarReporteIngresos(opts: CommonCtx & {
     tipo?: string;
   }>;
 }) {
-  const { desde, hasta, pagos, currency = 'MXN' } = opts;
+  const { desde, hasta, pagos, currency = defaultCurrency() } = opts;
   const total = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
 
   const agrupar = (campo: 'metodo_pago' | 'concepto' | 'tipo') => {
@@ -1096,7 +1096,7 @@ export function exportarCorteCaja(opts: CommonCtx & {
     metodo_pago?: string;
   }>;
 }) {
-  const { desde, hasta, pagos, gastos, turno, currency = 'MXN' } = opts;
+  const { desde, hasta, pagos, gastos, turno, currency = defaultCurrency() } = opts;
 
   // Ingresos por método
   const ingPorMetodo: Record<string, number> = {};
