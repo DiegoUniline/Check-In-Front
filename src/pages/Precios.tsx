@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
@@ -5,12 +6,26 @@ import { Check, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageShell, SectionTag, NAVY, ORANGE, ease } from './landing/Chrome';
 
+// Tipos de cambio referenciales (aprox. mid-2026). Base: MXN.
+// Se actualizan manualmente; se muestra un disclaimer.
+const CURRENCIES = [
+  { code: 'MXN', label: 'México (MXN)',       symbol: '$',   rate: 1,     locale: 'es-MX' },
+  { code: 'USD', label: 'Dólar (USD)',        symbol: 'US$', rate: 0.050, locale: 'en-US' },
+  { code: 'EUR', label: 'España (EUR)',       symbol: '€',   rate: 0.046, locale: 'es-ES' },
+  { code: 'COP', label: 'Colombia (COP)',     symbol: '$',   rate: 220,   locale: 'es-CO' },
+  { code: 'PEN', label: 'Perú (PEN)',         symbol: 'S/',  rate: 0.20,  locale: 'es-PE' },
+  { code: 'CLP', label: 'Chile (CLP)',        symbol: '$',   rate: 50,    locale: 'es-CL' },
+  { code: 'ARS', label: 'Argentina (ARS)',    symbol: '$',   rate: 60,    locale: 'es-AR' },
+] as const;
+
+type CurCode = typeof CURRENCIES[number]['code'];
+
 const plans = [
   {
     name: 'Starter',
     tagline: 'Para hoteles boutique que empiezan a ordenar la operación.',
-    price: 'Desde',
-    priceNote: 'Cotización según habitaciones',
+    priceMXN: 1499,
+    priceNote: 'por propiedad · hasta 20 habitaciones',
     features: [
       'Hasta 20 habitaciones',
       'Reservas y calendario',
@@ -24,8 +39,8 @@ const plans = [
   {
     name: 'Pro',
     tagline: 'La configuración recomendada para hoteles activos.',
-    price: 'Recomendado',
-    priceNote: 'Todo lo importante, incluido',
+    priceMXN: 2499,
+    priceNote: 'por propiedad · habitaciones ilimitadas',
     highlighted: true,
     features: [
       'Habitaciones ilimitadas',
@@ -41,7 +56,7 @@ const plans = [
   {
     name: 'Enterprise',
     tagline: 'Grupos con varias propiedades y reportería consolidada.',
-    price: 'A la medida',
+    priceMXN: null as number | null,
     priceNote: 'Implementación acompañada',
     features: [
       'Multi-propiedad ilimitada',
@@ -63,6 +78,27 @@ const faq = [
 ];
 
 export default function Precios() {
+  const [cur, setCur] = useState<CurCode>('MXN');
+  const current = useMemo(() => CURRENCIES.find((c) => c.code === cur)!, [cur]);
+
+  const fmt = (mxn: number) => {
+    const converted = mxn * current.rate;
+    // Redondeo amigable
+    let rounded: number;
+    if (converted >= 1000) rounded = Math.round(converted / 10) * 10;
+    else if (converted >= 100) rounded = Math.round(converted);
+    else rounded = Math.round(converted * 100) / 100;
+    try {
+      return new Intl.NumberFormat(current.locale, {
+        style: 'currency',
+        currency: current.code,
+        maximumFractionDigits: rounded >= 100 ? 0 : 2,
+      }).format(rounded);
+    } catch {
+      return `${current.symbol}${rounded.toLocaleString()}`;
+    }
+  };
+
   return (
     <PageShell>
       <Helmet>
@@ -80,8 +116,29 @@ export default function Precios() {
             <span className="text-slate-400">al tamaño de tu hotel.</span>
           </h1>
           <p className="mt-6 max-w-2xl text-[17px] leading-relaxed text-slate-600 md:text-[19px]">
-            La cotización se hace con tus habitaciones, tus tarifas y tu operación. Sin letras chiquitas.
+            Sin cargo por usuario. Mes a mes. Cambia la moneda para ver una referencia estimada en tu país.
           </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-2">
+            <span className="text-[12px] font-medium uppercase tracking-wider text-slate-500">Ver en:</span>
+            {CURRENCIES.map((c) => {
+              const active = c.code === cur;
+              return (
+                <button
+                  key={c.code}
+                  onClick={() => setCur(c.code)}
+                  className={`rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition ${
+                    active
+                      ? 'text-white'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  }`}
+                  style={active ? { background: NAVY, borderColor: NAVY } : undefined}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -109,12 +166,31 @@ export default function Precios() {
                 {p.tagline}
               </p>
               <div className="mt-6">
-                <div className={`text-[28px] font-bold ${p.highlighted ? 'text-white' : ''}`} style={!p.highlighted ? { color: NAVY } : undefined}>
-                  {p.price}
-                </div>
-                <div className={`text-[12.5px] ${p.highlighted ? 'text-white/60' : 'text-slate-500'}`}>
-                  {p.priceNote}
-                </div>
+                {p.priceMXN ? (
+                  <>
+                    <div className={`flex items-baseline gap-1.5 ${p.highlighted ? 'text-white' : ''}`} style={!p.highlighted ? { color: NAVY } : undefined}>
+                      <span className="text-[36px] font-bold leading-none">{fmt(p.priceMXN)}</span>
+                      <span className={`text-[13px] font-medium ${p.highlighted ? 'text-white/60' : 'text-slate-500'}`}>/ mes</span>
+                    </div>
+                    {cur !== 'MXN' && (
+                      <div className={`mt-1 text-[11.5px] ${p.highlighted ? 'text-white/50' : 'text-slate-400'}`}>
+                        Equivale a ${p.priceMXN.toLocaleString('es-MX')} MXN
+                      </div>
+                    )}
+                    <div className={`mt-1 text-[12.5px] ${p.highlighted ? 'text-white/60' : 'text-slate-500'}`}>
+                      {p.priceNote}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`text-[28px] font-bold ${p.highlighted ? 'text-white' : ''}`} style={!p.highlighted ? { color: NAVY } : undefined}>
+                      A la medida
+                    </div>
+                    <div className={`text-[12.5px] ${p.highlighted ? 'text-white/60' : 'text-slate-500'}`}>
+                      {p.priceNote}
+                    </div>
+                  </>
+                )}
               </div>
               <ul className="mt-6 flex-1 space-y-2.5 text-[14px]">
                 {p.features.map((f) => (
@@ -138,6 +214,11 @@ export default function Precios() {
         <p className="mx-auto mt-10 max-w-2xl px-6 text-center text-[13.5px] leading-relaxed text-slate-500">
           Todos los planes incluyen respaldos automáticos, actualizaciones y soporte por WhatsApp con humano real.
         </p>
+        {cur !== 'MXN' && (
+          <p className="mx-auto mt-3 max-w-2xl px-6 text-center text-[11.5px] leading-relaxed text-slate-400">
+            Precios facturados en MXN. La conversión a {current.code} es referencial y puede variar según el tipo de cambio del día.
+          </p>
+        )}
       </section>
 
       <section className="border-t border-slate-100 bg-white py-24">
