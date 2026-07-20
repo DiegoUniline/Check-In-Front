@@ -50,6 +50,7 @@ import { es } from 'date-fns/locale';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { splitPhone, joinPhone, DEFAULT_COUNTRY } from '@/lib/phoneCountries';
 import { formatDate } from '@/lib/dateFormat';
+import { formatCurrency } from '@/lib/currency';
 
 interface Cliente {
   id: string;
