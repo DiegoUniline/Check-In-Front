@@ -601,7 +601,7 @@ export default function Clientes() {
                     </div>
                     <div className="p-4 rounded-lg bg-muted">
                       <p className="text-2xl font-bold text-primary">
-                        ${totalGastado.toLocaleString()}
+                        {formatCurrency(totalGastado)}
                       </p>
                       <p className="text-sm text-muted-foreground">Total Gastado</p>
                     </div>
@@ -641,7 +641,7 @@ export default function Clientes() {
                         {r.estado && <Badge variant="outline">{r.estado}</Badge>}
                         {r.total != null && (
                           <span className="text-sm font-semibold">
-                            ${Number(r.total).toLocaleString()}
+                            {formatCurrency(Number(r.total))}
                           </span>
                         )}
                       </div>
