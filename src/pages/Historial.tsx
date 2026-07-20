@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatCurrency } from '@/lib/currency';
 import { 
   Search, Calendar, DollarSign, 
   ArrowDownCircle, ArrowUpCircle, CreditCard, Banknote,
@@ -434,7 +435,7 @@ export default function Historial() {
                   "text-right font-bold",
                   trans.tipo === 'Ingreso' ? 'text-success' : 'text-destructive'
                 )}>
-                  {trans.tipo === 'Ingreso' ? '+' : '-'}${trans.monto.toLocaleString()}
+                  {trans.tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(trans.monto)}
                 </TableCell>
               </TableRow>
             ))}
@@ -495,7 +496,7 @@ export default function Historial() {
                     "font-bold text-lg",
                     detalleModal.transaccion.tipo === 'Ingreso' ? 'text-success' : 'text-destructive'
                   )}>
-                    {detalleModal.transaccion.tipo === 'Ingreso' ? '+' : '-'}${detalleModal.transaccion.monto.toLocaleString()}
+                    {detalleModal.transaccion.tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(detalleModal.transaccion.monto)}
                   </p>
                 </div>
                 <div>
