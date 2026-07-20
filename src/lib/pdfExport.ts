@@ -4,6 +4,11 @@ import { format, eachDayOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import vuloFoxUrl from '@/assets/vulo-fox.png';
 import vuloWordmarkUrl from '@/assets/vulo-wordmark.png';
+import { getHotelCurrency } from '@/lib/currency';
+
+/** Devuelve el código ISO por defecto: el de la moneda activa del hotel. */
+const defaultCurrency = () => getHotelCurrency().codigo || 'MXN';
+const defaultLocale = () => getHotelCurrency().locale || 'es-MX';
 
 // ============================================================
 // Asset loader (URL -> base64 data URL) — sin html2canvas
@@ -135,8 +140,14 @@ export function exportarReportePDF(opts: {
 // REPORTES ESPECIALIZADOS (ocupación, ingresos, corte de caja)
 // ============================================================
 
-const fmtMoney = (n: number, currency = 'MXN') =>
-  new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 2 }).format(n || 0);
+const fmtMoney = (n: number, currency?: string) => {
+  const code = currency || defaultCurrency();
+  try {
+    return new Intl.NumberFormat(defaultLocale(), { style: 'currency', currency: code, maximumFractionDigits: 2 }).format(n || 0);
+  } catch {
+    return `${getHotelCurrency().simbolo}${(n || 0).toFixed(2)}`;
+  }
+};
 
 interface CommonCtx {
   hotel?: string;
