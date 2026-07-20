@@ -268,7 +268,7 @@ export default function Historial() {
               </div>
               <div>
                 <p className={cn("text-2xl font-bold", balance >= 0 ? 'text-success' : 'text-destructive')}>
-                  ${balance.toLocaleString()}
+                  {formatCurrency(balance)}
                 </p>
                 <p className="text-sm text-muted-foreground">Balance</p>
               </div>
