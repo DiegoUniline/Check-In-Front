@@ -67,7 +67,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
-import { formatCurrency } from '@/lib/currency';
+import { formatCurrency, currencyCode } from '@/lib/currency';
 import { ExportButton } from '@/components/ExportButton';
 import { formatDate as fmtDate } from '@/lib/dateFormat';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
@@ -594,7 +594,7 @@ export default function HistorialReservas() {
                                     hotelEmail: det.hotel?.email,
                                     hotelCiudad: det.hotel?.ciudad,
                                     hotelLogoUrl: det.hotel?.logo_url,
-                                    currency: det.hotel?.moneda || 'MXN',
+                                    currency: det.hotel?.moneda_codigo || det.hotel?.moneda || currencyCode(),
                                     reserva: det,
                                     cliente: cli,
                                   });
@@ -616,7 +616,7 @@ export default function HistorialReservas() {
                                     hotelEmail: det.hotel?.email,
                                     hotelCiudad: det.hotel?.ciudad,
                                     hotelLogoUrl: det.hotel?.logo_url,
-                                    currency: det.hotel?.moneda || 'MXN',
+                                    currency: det.hotel?.moneda_codigo || det.hotel?.moneda || currencyCode(),
                                     reserva: det,
                                     cliente: cli,
                                     firmaDataUrl: det.firma_digital || null,

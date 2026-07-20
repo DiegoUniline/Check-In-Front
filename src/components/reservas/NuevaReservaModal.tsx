@@ -339,7 +339,7 @@ const noches = differenceInDays(
   const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = total - totalPagado;
 
-  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n: number) => formatCurrency(n);
 
   // FIX: Solo cambiar checkin a hoy, mantener checkout seleccionado
   const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
@@ -686,7 +686,7 @@ const noches = differenceInDays(
                   onCreate={async (nombre) => {
                     const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
                     setTiposHabitacion([...tiposHabitacion, newTipo]);
-                    return { value: newTipo.id, label: `${newTipo.nombre} - $1,000/noche` };
+                    return { value: newTipo.id, label: `${newTipo.nombre} - ${formatCurrency(1000)}/noche` };
                   }}
                   placeholder="Seleccionar..." searchPlaceholder="Buscar..." createLabel="Crear"
                 />
@@ -999,7 +999,7 @@ const noches = differenceInDays(
                             <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                           </div>
                           <span className="text-sm text-muted-foreground w-28 text-right tabular-nums">
-                            ${fmt(subtotal * (imp.tasa / 100))}
+                            {fmt(subtotal * (imp.tasa / 100))}
                           </span>
                           <Button
                             variant="ghost"
@@ -1071,33 +1071,33 @@ const noches = differenceInDays(
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between opacity-80">
                       <span>Hospedaje ({noches} {noches === 1 ? 'noche' : 'noches'})</span>
-                      <span>${fmt(subtotalHospedaje)}</span>
+                      <span>{fmt(subtotalHospedaje)}</span>
                     </div>
                     {temporadaAplicable && (
                       <div className="flex justify-between text-xs opacity-90 -mt-1">
                         <span className="italic">
                           Temporada: {temporadaAplicable.nombre} ({describirAjuste(temporadaAplicable)})
                         </span>
-                        <span>${fmt(tarifaEfectiva)}/noche</span>
+                        <span>{fmt(tarifaEfectiva)}/noche</span>
                       </div>
                     )}
                     {totalPersonaExtra > 0 && (
                       <div className="flex justify-between opacity-80">
                         <span>Persona extra ({formData.personasExtra})</span>
-                        <span>${fmt(totalPersonaExtra)}</span>
+                        <span>{fmt(totalPersonaExtra)}</span>
                       </div>
                     )}
                     {totalCargosExtras > 0 && (
                       <div className="flex justify-between opacity-80">
                         <span>Cargos extras ({formData.cargos.length})</span>
-                        <span>${fmt(totalCargosExtras)}</span>
+                        <span>{fmt(totalCargosExtras)}</span>
                       </div>
                     )}
                     {impuestosCalculados.map((imp) => (
                       imp.monto > 0 && (
                         <div key={imp.id} className="flex justify-between opacity-80">
                           <span>{imp.nombre} ({imp.tasa}%)</span>
-                          <span>${fmt(imp.monto)}</span>
+                          <span>{fmt(imp.monto)}</span>
                         </div>
                       )
                     ))}
@@ -1106,7 +1106,7 @@ const noches = differenceInDays(
                         <span>
                           Descuento{formData.descuentoTipo === 'Porcentaje' ? ` (${formData.descuentoValor}%)` : ''}
                         </span>
-                        <span>-${fmt(descuentoMonto)}</span>
+                        <span>-{fmt(descuentoMonto)}</span>
                       </div>
                     )}
                   </div>
@@ -1165,7 +1165,7 @@ const noches = differenceInDays(
 
                   <div className="flex justify-between font-bold text-2xl">
                     <span>Total</span>
-                    <span>${fmt(total)}</span>
+                     <span>{fmt(total)}</span>
                   </div>
                   
                   <Separator className="bg-primary-foreground/20" />
@@ -1223,11 +1223,11 @@ const noches = differenceInDays(
                     <div className="p-3 rounded-lg bg-primary-foreground/10 space-y-1">
                       <div className="flex justify-between text-sm">
                         <span>Pagado:</span>
-                        <span>${fmt(totalPagado)}</span>
+                        <span>{fmt(totalPagado)}</span>
                       </div>
                       <div className="flex justify-between font-bold">
                         <span>Saldo pendiente:</span>
-                        <span className={saldoPendiente <= 0 ? 'text-green-300' : 'text-yellow-300'}>${fmt(saldoPendiente)}</span>
+                        <span className={saldoPendiente <= 0 ? 'text-green-300' : 'text-yellow-300'}>{fmt(saldoPendiente)}</span>
                       </div>
                     </div>
                   </div>
