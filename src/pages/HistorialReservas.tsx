@@ -67,7 +67,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
-import { formatCurrency } from '@/lib/currency';
+import { formatCurrency, currencyCode } from '@/lib/currency';
 import { ExportButton } from '@/components/ExportButton';
 import { formatDate as fmtDate } from '@/lib/dateFormat';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
