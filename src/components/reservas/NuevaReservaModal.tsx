@@ -686,7 +686,7 @@ const noches = differenceInDays(
                   onCreate={async (nombre) => {
                     const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
                     setTiposHabitacion([...tiposHabitacion, newTipo]);
-                    return { value: newTipo.id, label: `${newTipo.nombre} - $1,000/noche` };
+                    return { value: newTipo.id, label: `${newTipo.nombre} - ${formatCurrency(1000)}/noche` };
                   }}
                   placeholder="Seleccionar..." searchPlaceholder="Buscar..." createLabel="Crear"
                 />
