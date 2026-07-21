@@ -1359,6 +1359,14 @@ function SystemPreview() {
     { src: shotTarifas, title: 'Tarifas y temporadas', desc: 'Sube precios por temporada, canal y tipo de habitación. Sin fórmulas raras.' },
   ];
   const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const total = shots.length;
+  const go = (n: number) => setIdx((n + total) % total);
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % total), 4000);
+    return () => clearInterval(t);
+  }, [paused, total]);
   const current = shots[idx];
   return (
     <section className="border-t border-slate-100 bg-white py-28">
@@ -1373,49 +1381,70 @@ function SystemPreview() {
           </p>
         </div>
 
-        <div className="mt-14 grid gap-10 lg:grid-cols-[1fr_320px]">
-          <motion.div
-            key={current.src}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease }}
-            className="relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-[0_30px_80px_-30px_rgba(15,35,63,0.35)]"
-          >
-            <div className="flex items-center gap-1.5 border-b border-slate-200 bg-white/80 px-4 py-3">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-              <span className="ml-3 text-xs text-slate-500">app.vulo.mx</span>
+        <div
+          className="mt-12 mx-auto max-w-[880px]"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-[0_20px_60px_-30px_rgba(15,35,63,0.3)]">
+            <div className="flex items-center gap-1.5 border-b border-slate-200 bg-white/80 px-3 py-2">
+              <span className="h-2 w-2 rounded-full bg-slate-300" />
+              <span className="h-2 w-2 rounded-full bg-slate-300" />
+              <span className="h-2 w-2 rounded-full bg-slate-300" />
+              <span className="ml-2 text-[11px] text-slate-500">app.vulo.mx</span>
             </div>
-            <img src={current.src} alt={current.title} className="block w-full" loading="lazy" />
-          </motion.div>
+            <div className="relative aspect-[16/10] bg-white">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={current.src}
+                  src={current.src}
+                  alt={current.title}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4, ease }}
+                  className="absolute inset-0 h-full w-full object-cover object-top"
+                  loading="lazy"
+                />
+              </AnimatePresence>
+            </div>
 
-          <div className="flex flex-col gap-2">
-            {shots.map((s, i) => (
-              <button
-                key={s.title}
-                onClick={() => setIdx(i)}
-                className={`group text-left rounded-2xl border p-4 transition-all duration-200 ${
-                  i === idx
-                    ? 'border-transparent bg-slate-900 text-white shadow-[0_10px_40px_rgba(15,23,42,0.15)]'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                }`}
-                style={i === idx ? { background: NAVY } : undefined}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${i === idx ? 'text-white/60' : 'text-slate-400'}`}>
-                    {String(i + 1).padStart(2, '0')}
-                  </div>
-                  <ArrowRight className={`h-4 w-4 transition-transform ${i === idx ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-60'}`} style={i === idx ? { color: ORANGE } : undefined} />
-                </div>
-                <div className={`mt-2 text-[15px] font-semibold ${i === idx ? 'text-white' : ''}`} style={i !== idx ? { color: NAVY } : undefined}>
-                  {s.title}
-                </div>
-                <div className={`mt-1 text-[13px] leading-snug ${i === idx ? 'text-white/70' : 'text-slate-500'}`}>
-                  {s.desc}
-                </div>
-              </button>
-            ))}
+            <button
+              onClick={() => go(idx - 1)}
+              aria-label="Anterior"
+              className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur border border-slate-200 text-slate-700 hover:bg-white shadow-sm transition"
+            >
+              <ArrowRight className="h-4 w-4 rotate-180" />
+            </button>
+            <button
+              onClick={() => go(idx + 1)}
+              aria-label="Siguiente"
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm transition hover:opacity-90"
+              style={{ background: NAVY }}
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[15px] font-semibold" style={{ color: NAVY }}>{current.title}</div>
+              <div className="mt-0.5 truncate text-sm text-slate-500">{current.desc}</div>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-1.5">
+              {shots.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setIdx(i)}
+                  aria-label={`Ir a slide ${i + 1}`}
+                  className="h-1.5 rounded-full transition-all"
+                  style={{
+                    width: i === idx ? 24 : 8,
+                    background: i === idx ? ORANGE : '#CBD5E1',
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
