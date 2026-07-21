@@ -12,12 +12,12 @@ import {
 import { Logo } from '@/components/Logo';
 import wordmark from '@/assets/vulo-wordmark.png';
 import foxIsotype from '@/assets/vulo-fox.png';
-import shotTimeline from '@/assets/screens/timeline.png';
-import shotHabitaciones from '@/assets/screens/habitaciones.png';
-import shotClientes from '@/assets/screens/clientes.png';
-import shotChats from '@/assets/screens/chats.png';
-import shotReportes from '@/assets/screens/reportes.png';
-import shotTarifas from '@/assets/screens/tarifas.png';
+import shotTimeline from '@/assets/screens/timeline.webp';
+import shotHabitaciones from '@/assets/screens/habitaciones.webp';
+import shotClientes from '@/assets/screens/clientes.webp';
+import shotChats from '@/assets/screens/chats.webp';
+import shotReportes from '@/assets/screens/reportes.webp';
+import shotTarifas from '@/assets/screens/tarifas.webp';
 
 /**
  * VULO — Landing (ES-MX)
