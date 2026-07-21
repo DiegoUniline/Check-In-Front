@@ -54,6 +54,9 @@ import Features from "@/marketing/pages/Features";
 import Pricing from "@/marketing/pages/Pricing";
 import About from "@/marketing/pages/About";
 import Contact from "@/marketing/pages/Contact";
+import Privacidad from "@/marketing/pages/legal/Privacidad";
+import Terminos from "@/marketing/pages/legal/Terminos";
+import Seguridad from "@/marketing/pages/legal/Seguridad";
 import PublicHotel from "./pages/PublicHotel";
 import ScrollToTop from "./components/ScrollToTop";
 import Chats from "./pages/Chats";
@@ -97,6 +100,9 @@ const AppRoutes = () => (
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
+      <Route path="/legal/privacidad" element={<Privacidad />} />
+      <Route path="/legal/terminos" element={<Terminos />} />
+      <Route path="/legal/seguridad" element={<Seguridad />} />
     </Route>
     <Route path="/h/:slug" element={<PublicHotel />} />
     <Route
