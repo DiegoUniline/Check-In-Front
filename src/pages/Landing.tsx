@@ -1393,20 +1393,20 @@ function SystemPreview() {
               <span className="h-2 w-2 rounded-full bg-slate-300" />
               <span className="ml-2 text-[11px] text-slate-500">app.vulo.mx</span>
             </div>
-            <div className="relative bg-white" style={{ paddingTop: '62.5%' }}>
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={current.src}
-                  src={current.src}
-                  alt={current.title}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4, ease }}
-                  className="absolute inset-0 h-full w-full object-cover object-top"
-                  loading="lazy"
+            <div className="relative bg-slate-100" style={{ paddingTop: '62.5%' }}>
+              {shots.map((shot, shotIndex) => (
+                <img
+                  key={shot.src}
+                  src={shot.src}
+                  alt={shot.title}
+                  className={`absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300 ${
+                    shotIndex === idx ? 'opacity-100' : 'pointer-events-none opacity-0'
+                  }`}
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority={shotIndex === 0 ? 'high' : 'auto'}
                 />
-              </AnimatePresence>
+              ))}
             </div>
 
             <button
