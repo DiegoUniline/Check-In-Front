@@ -1,24 +1,28 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { StaticRouter } from "react-router-dom/server";
-import { HelmetProvider, type FilledContext } from "react-helmet-async";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App";
 import "./index.css";
 
 // react-helmet-async: forzar modo servidor (no tocar window/document).
-// @ts-expect-error propiedad estática privada expuesta por la lib
-HelmetProvider.canUseDOM = false;
+(HelmetProvider as unknown as { canUseDOM: boolean }).canUseDOM = false;
 
 export function render(url: string) {
-  const helmetContext: Partial<FilledContext> = {};
+  const helmetContext: Record<string, unknown> = {};
   const html = renderToString(
-    <HelmetProvider context={helmetContext}>
+    <HelmetProvider context={helmetContext as never}>
       <StaticRouter location={url}>
         <App />
       </StaticRouter>
     </HelmetProvider>
   );
-  const helmet = (helmetContext as FilledContext).helmet;
+  const helmet = (helmetContext as { helmet?: {
+    title?: { toString(): string };
+    meta?: { toString(): string };
+    link?: { toString(): string };
+    script?: { toString(): string };
+  } }).helmet;
   const head = helmet
     ? [
         helmet.title?.toString() ?? "",
