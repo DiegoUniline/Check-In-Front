@@ -1462,6 +1462,7 @@ export default function Landing() {
       <Hero />
       <Pains />
       <HowItWorks />
+      <SystemPreview />
       <FrictionBand />
       <Features />
       <Highlights />
