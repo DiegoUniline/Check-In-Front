@@ -1346,6 +1346,84 @@ function FinalCTA() {
 
 /* ══════════════════ FOOTER ══════════════════ */
 function Footer() {
+  return _Footer();
+}
+
+function SystemPreview() {
+  const shots = [
+    { src: shotTimeline, title: 'Timeline de recepción', desc: 'Ve todo tu hotel en una sola pantalla. Arrastra reservas, cambia fechas, filtra por piso o tipo.' },
+    { src: shotHabitaciones, title: 'Gestión de habitaciones', desc: 'Estado en tiempo real: disponible, ocupada, limpieza, mantenimiento. Con canal web listo para publicar.' },
+    { src: shotChats, title: 'WhatsApp con IA', desc: 'La IA responde, cotiza y aparta habitación 24/7. Handoff inteligente al humano cuando toca.' },
+    { src: shotClientes, title: 'CRM de huéspedes', desc: 'Historial completo, contacto directo por WhatsApp y acciones rápidas tipo Stripe.' },
+    { src: shotReportes, title: 'Reportes y caja', desc: 'Ocupación, ingresos, ADR, RevPAR. Cuadre de caja por turno con exportación a Excel.' },
+    { src: shotTarifas, title: 'Tarifas y temporadas', desc: 'Sube precios por temporada, canal y tipo de habitación. Sin fórmulas raras.' },
+  ];
+  const [idx, setIdx] = useState(0);
+  const current = shots[idx];
+  return (
+    <section className="border-t border-slate-100 bg-white py-28">
+      <div className="mx-auto max-w-[1280px] px-6">
+        <div className="max-w-3xl">
+          <SectionTag>Míralo por dentro</SectionTag>
+          <h2 className="text-4xl font-semibold tracking-tight md:text-5xl" style={{ color: NAVY, letterSpacing: '-0.02em' }}>
+            Así se ve VULO operando un hotel real.
+          </h2>
+          <p className="mt-5 text-lg text-slate-600">
+            Screenshots del sistema en vivo. Sin renders inventados, sin humo.
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-10 lg:grid-cols-[1fr_320px]">
+          <motion.div
+            key={current.src}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease }}
+            className="relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-[0_30px_80px_-30px_rgba(15,35,63,0.35)]"
+          >
+            <div className="flex items-center gap-1.5 border-b border-slate-200 bg-white/80 px-4 py-3">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+              <span className="ml-3 text-xs text-slate-500">app.vulo.mx</span>
+            </div>
+            <img src={current.src} alt={current.title} className="block w-full" loading="lazy" />
+          </motion.div>
+
+          <div className="flex flex-col gap-2">
+            {shots.map((s, i) => (
+              <button
+                key={s.title}
+                onClick={() => setIdx(i)}
+                className={`group text-left rounded-2xl border p-4 transition-all duration-200 ${
+                  i === idx
+                    ? 'border-transparent bg-slate-900 text-white shadow-[0_10px_40px_rgba(15,23,42,0.15)]'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                }`}
+                style={i === idx ? { background: NAVY } : undefined}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${i === idx ? 'text-white/60' : 'text-slate-400'}`}>
+                    {String(i + 1).padStart(2, '0')}
+                  </div>
+                  <ArrowRight className={`h-4 w-4 transition-transform ${i === idx ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-60'}`} style={i === idx ? { color: ORANGE } : undefined} />
+                </div>
+                <div className={`mt-2 text-[15px] font-semibold ${i === idx ? 'text-white' : ''}`} style={i !== idx ? { color: NAVY } : undefined}>
+                  {s.title}
+                </div>
+                <div className={`mt-1 text-[13px] leading-snug ${i === idx ? 'text-white/70' : 'text-slate-500'}`}>
+                  {s.desc}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function _Footer() {
   const cols: Array<{ t: string; l: Array<[string, string]> }> = [
     { t: 'Producto', l: [['Funciones', '/funciones'], ['Precios', '/precios'], ['Integraciones', '#integraciones']] },
     { t: 'Empresa', l: [['Sobre VULO', '/empresa'], ['Contacto', '/contacto']] },
