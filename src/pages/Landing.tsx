@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import {
   ArrowRight, ChevronDown, Check, Calendar, ClipboardList, Sparkles,
   Wallet, FileText, MessageSquare, BarChart3, Building2, ShieldCheck,
-  Wifi, Smartphone, Users, LifeBuoy, CreditCard, Globe, Receipt, Send,
-  Bot, ScanLine, Phone, MapPin, Zap,
+  Users, LifeBuoy, CreditCard, Globe, Receipt, Send,
+  Bot, ScanLine, Phone, MapPin, Menu, X,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import wordmark from '@/assets/vulo-wordmark.png';
@@ -15,13 +15,13 @@ import foxIsotype from '@/assets/vulo-fox.png';
 
 /**
  * VULO — Landing (ES-MX)
- * Regla de oro: solo se afirma lo que el sistema hace. Datos por verificar → [DATO REAL].
- * Sin fotos de stock. Mockups en HTML/CSS puros.
+ * Rediseño 2026-07: hero muestra el producto, no la mascota.
  */
 
 const NAVY = '#10233F';
 const ORANGE = '#F97316';
 const ease = [0.22, 1, 0.36, 1] as const;
+const WA_DEMO = 'https://wa.me/523171035768?text=Hola%2C%20quiero%20ver%20una%20demo%20de%20VULO%20con%20los%20datos%20de%20mi%20hotel';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -50,8 +50,47 @@ function BrowserFrame({ title, children }: { title: string; children: React.Reac
   );
 }
 
+/* ── hooks utilitarios ── */
+function useReducedMotion() {
+  const [r, setR] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setR(mq.matches);
+    const h = (e: MediaQueryListEvent) => setR(e.matches);
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, []);
+  return r;
+}
+function usePageVisible() {
+  const [v, setV] = useState(true);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const h = () => setV(!document.hidden);
+    document.addEventListener('visibilitychange', h);
+    return () => document.removeEventListener('visibilitychange', h);
+  }, []);
+  return v;
+}
+
 /* ══════════════════ NAV ══════════════════ */
 function Nav() {
+  const [openMobile, setOpenMobile] = useState(false);
+  useEffect(() => {
+    if (openMobile) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [openMobile]);
+
+  const LINKS: Array<[string, string]> = [
+    ['Inicio', '/'],
+    ['Funciones', '/funciones'],
+    ['Precios', '/precios'],
+    ['Empresa', '/empresa'],
+    ['Contacto', '/contacto'],
+  ];
+
   return (
     <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-2 px-4 sm:px-6 lg:px-10">
@@ -60,167 +99,387 @@ function Nav() {
           <img src={wordmark} alt="VULO" className="h-4 w-auto object-contain sm:h-5 md:h-6" />
         </Link>
         <nav className="hidden items-center gap-9 md:flex">
-          <Link to="/" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Inicio</Link>
-          <Link to="/funciones" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Funciones</Link>
-          <Link to="/precios" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Precios</Link>
-          <Link to="/empresa" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Empresa</Link>
-          <Link to="/contacto" className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">Contacto</Link>
+          {LINKS.map(([label, href]) => (
+            <Link key={href} to={href} className="text-[14px] font-medium text-slate-600 transition hover:text-slate-900">{label}</Link>
+          ))}
         </nav>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
           <Link
             to="/login"
-            className="inline-flex h-9 items-center whitespace-nowrap rounded-lg px-3.5 text-[12px] font-semibold text-white shadow-sm transition hover:opacity-95 sm:h-10 sm:px-5 sm:text-[14px]"
+            className="inline-flex h-10 items-center whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold text-white shadow-sm transition hover:opacity-95"
             style={{ background: ORANGE }}
           >
             Iniciar sesión
           </Link>
+          <a
+            href={WA_DEMO}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-10 items-center whitespace-nowrap rounded-full border-[1.5px] px-4 text-[13.5px] font-semibold transition hover:bg-orange-50"
+            style={{ borderColor: ORANGE, color: ORANGE }}
+          >
+            Agendar demo
+          </a>
         </div>
+        <button
+          type="button"
+          aria-label="Abrir menú"
+          onClick={() => setOpenMobile(true)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 md:hidden"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
       </div>
+
+      {/* Drawer mobile */}
+      <AnimatePresence>
+        {openMobile && (
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm md:hidden"
+              onClick={() => setOpenMobile(false)}
+            />
+            <motion.aside
+              key="drawer"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.35, ease }}
+              className="fixed right-0 top-0 z-[70] flex h-full w-[86%] max-w-[360px] flex-col bg-white shadow-2xl md:hidden"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <Logo size={30} />
+                  <img src={wordmark} alt="VULO" className="h-4 w-auto object-contain" />
+                </div>
+                <button
+                  type="button"
+                  aria-label="Cerrar menú"
+                  onClick={() => setOpenMobile(false)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <nav className="flex-1 overflow-y-auto px-5 py-6">
+                <ul className="space-y-1">
+                  {LINKS.map(([label, href]) => (
+                    <li key={href}>
+                      <Link
+                        to={href}
+                        onClick={() => setOpenMobile(false)}
+                        className="block rounded-xl px-3 py-3 text-[18px] font-semibold text-slate-900 transition hover:bg-slate-50"
+                      >
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              <div className="space-y-2.5 border-t border-slate-100 px-5 py-5">
+                <a
+                  href={WA_DEMO}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-12 w-full items-center justify-center rounded-full border-[1.5px] text-[15px] font-semibold"
+                  style={{ borderColor: ORANGE, color: ORANGE }}
+                >
+                  Agendar demo
+                </a>
+                <Link
+                  to="/login"
+                  onClick={() => setOpenMobile(false)}
+                  className="flex h-12 w-full items-center justify-center rounded-full text-[15px] font-semibold text-white"
+                  style={{ background: ORANGE }}
+                >
+                  Iniciar sesión
+                </Link>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
 
 /* ══════════════════ 1. HERO ══════════════════ */
 function Hero() {
+  const scrollTo = (id: string) => {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   return (
     <section className="relative overflow-hidden bg-white">
-      <div className="mx-auto grid max-w-[1280px] gap-14 px-6 pb-20 pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:px-10 lg:pb-28 lg:pt-24">
+      <div className="mx-auto grid max-w-[1280px] gap-14 px-6 pb-20 pt-14 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:px-10 lg:pb-28 lg:pt-24">
         <motion.div initial="hidden" animate="show" className="flex flex-col justify-center">
-          <motion.div variants={fadeUp} custom={0}><SectionTag>Software para hoteles</SectionTag></motion.div>
+          <motion.div variants={fadeUp} custom={0}><SectionTag>Software para hoteles · con IA</SectionTag></motion.div>
           <motion.h1
             variants={fadeUp}
             custom={1}
-            className="text-[40px] font-bold leading-[1.03] tracking-[-0.035em] text-slate-900 md:text-[60px] lg:text-[68px]"
+            className="text-[38px] font-bold leading-[1.04] tracking-[-0.035em] text-slate-900 md:text-[56px] lg:text-[64px]"
           >
-            Tu hotel no necesita más apps.
+            Mira cómo VULO atiende tu hotel
             <br />
-            <span className="text-slate-400">Necesita una sola que sí funcione.</span>
+            <span className="text-slate-400">mientras tú duermes.</span>
           </motion.h1>
-          <motion.p variants={fadeUp} custom={2} className="mt-7 max-w-xl text-[17px] leading-relaxed text-slate-600 md:text-[19px]">
-            VULO reúne todo lo que hace mover un hotel — reservas, recepción, habitaciones,
-            cobros y conversaciones — en una experiencia calmada, rápida y hecha por personas
-            que entienden la operación.
+          <motion.p variants={fadeUp} custom={2} className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-600 md:text-[18px]">
+            Reservas, recepción, habitaciones, cobros y WhatsApp con IA — un solo sistema
+            que trabaja 24/7. Esto que ves a la derecha está pasando en tiempo real.
           </motion.p>
-          <motion.div variants={fadeUp} custom={3} className="mt-9 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="h-[52px] rounded-full px-7 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: NAVY }}>
-              <Link to="/contacto">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></Link>
+          <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap items-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="h-[52px] rounded-full px-7 text-[15px] font-medium text-white shadow-none hover:opacity-95"
+              style={{ background: ORANGE }}
+            >
+              <a href={WA_DEMO} target="_blank" rel="noreferrer">
+                Ver demo con mis datos <ArrowRight className="ml-1 h-4 w-4" />
+              </a>
             </Button>
-            <Link to="/funciones" className="group inline-flex items-center gap-1.5 text-[15px] font-medium text-slate-700 hover:text-slate-900">
-              Ver funciones <ChevronDown className="h-4 w-4 transition group-hover:translate-y-0.5" />
-            </Link>
+            <button
+              type="button"
+              onClick={() => scrollTo('como-funciona')}
+              className="inline-flex h-[52px] items-center gap-1.5 rounded-full border-[1.5px] px-6 text-[15px] font-medium transition hover:bg-slate-50"
+              style={{ borderColor: NAVY, color: NAVY }}
+            >
+              Cómo funciona <ChevronDown className="h-4 w-4" />
+            </button>
+          </motion.div>
+          <motion.div variants={fadeUp} custom={4} className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-500">
+            <span>Responde en segundos</span>
+            <span aria-hidden>·</span>
+            <span>Crea la reserva sola</span>
+            <span aria-hidden>·</span>
+            <span>Hecho en México <span aria-hidden>🇲🇽</span></span>
           </motion.div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease, delay: 0.2 }}
+          transition={{ duration: 0.9, ease, delay: 0.15 }}
+          className="relative"
         >
-          <motion.div
-            animate={{ y: [0, -8, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <HeroMockup />
-          </motion.div>
+          <HeroDemo />
         </motion.div>
       </div>
     </section>
   );
 }
 
-function HeroMockup() {
+/* Hero interactive demo: WhatsApp animation + Timeline peeking behind */
+function HeroDemo() {
+  const reduced = useReducedMotion();
+  const visible = usePageVisible();
+
+  const msgs: Array<{ from: 'g' | 'ia'; t: string; time: string }> = [
+    { from: 'g', t: 'Hola, ¿tienen habitación para hoy? Somos 2.', time: '02:14' },
+    { from: 'ia', t: 'Hola 👋 Sí, tenemos disponibilidad. ¿Solo esta noche o incluyes mañana?', time: '02:14' },
+    { from: 'g', t: 'Solo esta noche.', time: '02:15' },
+    { from: 'ia', t: 'Perfecto. Doble Estándar $1,290 MXN c/desayuno. ¿La aparto a nombre de López?', time: '02:15' },
+    { from: 'g', t: 'Sí, apártala por favor.', time: '02:16' },
+    { from: 'ia', t: 'Listo ✅ Reserva RES-2026-1042 · Hab. 204. Te esperamos.', time: '02:16' },
+  ];
+  const TOTAL = msgs.length;
+  // step semantics: 0..TOTAL-1 typing / TOTAL success shown, TOTAL+1 fading out
+  const [step, setStep] = useState(reduced ? TOTAL : 0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    if (reduced || !visible) return;
+    if (step < TOTAL) {
+      const t = setTimeout(() => setStep((s) => s + 1), 1200);
+      return () => clearTimeout(t);
+    }
+    // step === TOTAL: mostrar chip éxito, esperar 3s, luego fade out
+    const tFade = setTimeout(() => setFading(true), 3000);
+    const tReset = setTimeout(() => {
+      setFading(false);
+      setStep(0);
+    }, 3800);
+    return () => {
+      clearTimeout(tFade);
+      clearTimeout(tReset);
+    };
+  }, [step, reduced, visible, TOTAL]);
+
+  const reservationCreated = step >= TOTAL;
+
   return (
-    <div
-      className="relative overflow-hidden rounded-[28px] border border-slate-100 p-10 md:p-14"
-      style={{
-        background:
-          'radial-gradient(120% 90% at 50% 0%, #FFF4EC 0%, #FFFFFF 55%, #F8FAFC 100%)',
-        boxShadow: '0 30px 80px -30px rgba(15,23,42,0.18)',
-      }}
-    >
-      {/* Halo suave detrás del zorro */}
+    <div className="relative mx-auto w-full max-w-[520px]">
+      {/* Halo naranja */}
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70 blur-3xl"
         style={{ background: 'radial-gradient(closest-side, rgba(249,115,22,0.22), transparent 70%)' }}
       />
 
-      <div className="relative flex flex-col items-center text-center">
-        <motion.img
-          src={foxIsotype}
-          alt="VULO — isotipo"
-          className="h-[280px] w-auto object-contain md:h-[340px] lg:h-[380px]"
-          animate={{ y: [0, -10, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-          draggable={false}
-        />
-
-        <div className="mt-8 flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 backdrop-blur">
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: ORANGE }} />
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: NAVY }}>
-            Hecho en México
-          </span>
-        </div>
-
-        <h3
-          className="mt-6 text-[34px] font-bold leading-none tracking-[-0.03em] md:text-[42px]"
-          style={{ color: NAVY }}
-        >
-          Esto es VULO.
-        </h3>
-        <p className="mt-3 max-w-sm text-[14.5px] leading-relaxed text-slate-600">
-          Software para hoteles diseñado con calma, hecho por personas que entienden la operación.
-        </p>
+      {/* Timeline peek detrás */}
+      <div
+        className="pointer-events-none absolute -right-4 -top-6 z-0 w-[280px] rotate-[3deg] sm:-right-8 sm:-top-10 sm:w-[320px] md:w-[360px]"
+        style={{ transformOrigin: 'top right' }}
+      >
+        <BrowserFrame title="vulo · calendario">
+          <HeroMatrixPeek highlight={reservationCreated} />
+        </BrowserFrame>
       </div>
+
+      {/* WhatsApp al frente */}
+      <motion.div
+        animate={{ opacity: fading ? 0 : 1, y: fading ? -6 : 0 }}
+        transition={{ duration: 0.6, ease }}
+        className="relative z-10 mt-16 max-h-[400px] sm:mt-24 sm:max-h-none"
+      >
+        <BrowserFrame title="WhatsApp · Huésped nuevo">
+          <div className="flex flex-col" style={{ background: '#EFE8DE' }}>
+            <div className="flex items-center gap-3 border-b border-black/5 bg-[#f5efe6] px-4 py-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-semibold text-white" style={{ background: NAVY }}>H</div>
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold text-slate-900">Huésped · +52 331 428 90…</div>
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  IA respondiendo · 02:14 a.m.
+                </div>
+              </div>
+              <div className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: ORANGE }}>IA</div>
+            </div>
+            <div className="flex min-h-[260px] flex-col gap-2 px-4 py-4 sm:min-h-[320px]">
+              <AnimatePresence initial={false}>
+                {msgs.slice(0, step).map((m, i) => (
+                  <motion.div
+                    key={`${step}-${i}`}
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.3, ease }}
+                    className={`max-w-[82%] rounded-[14px] px-3 py-2 text-[12.5px] leading-snug shadow-sm ${
+                      m.from === 'g' ? 'self-start bg-white text-slate-900' : 'self-end text-slate-900'
+                    }`}
+                    style={m.from === 'ia' ? { background: '#D9FDD3' } : undefined}
+                  >
+                    <div>{m.t}</div>
+                    <div className="mt-0.5 text-right text-[9.5px] text-slate-400">{m.time}</div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {reservationCreated && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease }}
+                  className="mt-2 self-center inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                  Reserva creada en el sistema ✓
+                </motion.div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 border-t border-black/5 bg-[#f5efe6] px-3 py-2.5">
+              <div className="flex-1 rounded-full bg-white px-3 py-1.5 text-[11.5px] text-slate-400">Escribe un mensaje…</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: NAVY }}>
+                <Send className="h-3 w-3 text-white" />
+              </div>
+            </div>
+          </div>
+        </BrowserFrame>
+      </motion.div>
     </div>
   );
 }
 
-/* ══════════════════ 2. DOLORES ══════════════════ */
-function Pains() {
-  const items = [
-    {
-      t: 'La reserva llegó por WhatsApp… y nadie la capturó.',
-      d: 'Booking en una pestaña, Airbnb en otra, mensajes directos en el celular del dueño. Una reserva perdida es una habitación vacía — o peor, un overbooking.',
-    },
-    {
-      t: 'Recepción no sabe qué habitaciones están listas.',
-      d: 'Housekeeping avisa por radio o por mensajito. El huésped espera en el lobby mientras alguien va a revisar el piso.',
-    },
-    {
-      t: 'El corte de caja nunca cuadra a la primera.',
-      d: 'Cobros en efectivo, tarjeta y transferencia anotados en tres lugares distintos. Conciliar toma horas y siempre hay un faltante misterioso.',
-    },
-    {
-      t: 'Los reportes se hacen a mano el día 30.',
-      d: 'Nadie sabe la ocupación real ni el ADR hasta que ya no se puede hacer nada al respecto.',
-    },
+/* Matriz de reservas compacta para el hero — con barra "López" que aparece al confirmarse la reserva */
+function HeroMatrixPeek({ highlight }: { highlight: boolean }) {
+  const rooms = [
+    { h: '201', bars: [{ s: 0, l: 3, c: NAVY, label: 'García' }] },
+    { h: '202', bars: [{ s: 2, l: 3, c: '#0F766E', label: 'Kim' }] },
+    { h: '203', bars: [{ s: 1, l: 2, c: NAVY, label: 'Torres' }] },
+    { h: '204', bars: [] as Array<{ s: number; l: number; c: string; label: string }> },
+    { h: '208', bars: [{ s: 3, l: 3, c: NAVY, label: 'Ruiz' }] },
   ];
   return (
-    <section className="border-t border-slate-100 bg-white py-28">
+    <div>
+      <div className="mb-1.5 grid grid-cols-[28px_repeat(7,1fr)] gap-1 text-[8.5px] font-medium text-slate-400">
+        <span />
+        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+          <span key={i} className="text-center">{d}</span>
+        ))}
+      </div>
+      {rooms.map((r) => (
+        <div key={r.h} className="mb-1 grid grid-cols-[28px_1fr] items-center gap-1">
+          <span className="text-[9px] font-semibold text-slate-500">{r.h}</span>
+          <div className="relative h-4 rounded bg-slate-50">
+            {r.bars.map((b, i) => (
+              <div
+                key={i}
+                className="absolute top-0 h-4 rounded px-1 text-[8.5px] font-medium leading-4 text-white"
+                style={{ left: `${(b.s / 7) * 100}%`, width: `${(b.l / 7) * 100}%`, background: b.c }}
+              >
+                {b.label}
+              </div>
+            ))}
+            {r.h === '204' && (
+              <AnimatePresence>
+                {highlight && (
+                  <motion.div
+                    initial={{ opacity: 0, scaleX: 0.4 }}
+                    animate={{ opacity: 1, scaleX: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5, ease }}
+                    className="absolute top-0 h-4 origin-left rounded px-1 text-[8.5px] font-semibold leading-4 text-white ring-2 ring-orange-300"
+                    style={{ left: `${(1 / 7) * 100}%`, width: `${(2 / 7) * 100}%`, background: ORANGE }}
+                  >
+                    López · IA
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+          </div>
+        </div>
+      ))}
+      <div className="mt-1 text-right text-[9px] font-medium text-slate-400">Ocupación 78%</div>
+    </div>
+  );
+}
+
+/* ══════════════════ 2. DOLORES (comprimido) ══════════════════ */
+function Pains() {
+  const items = [
+    'La reserva llegó por WhatsApp… y nadie la capturó.',
+    'Recepción no sabe qué habitaciones están listas.',
+    'El corte de caja nunca cuadra a la primera.',
+    'Los reportes se hacen a mano el día 30.',
+  ];
+  return (
+    <section className="border-t border-slate-100 bg-white py-16">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}>
           <motion.div variants={fadeUp}><SectionTag>Te suena</SectionTag></motion.div>
-          <motion.h2 variants={fadeUp} custom={1} className="max-w-3xl text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+          <motion.h2 variants={fadeUp} custom={1} className="max-w-3xl text-[30px] font-bold tracking-[-0.03em] text-slate-900 md:text-[44px]">
             Así se ve un hotel operando sin sistema.
           </motion.h2>
         </motion.div>
 
-        <div className="mt-14 grid gap-5 md:grid-cols-2">
-          {items.map((it, i) => (
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map((t, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: (i % 2) * 0.08, duration: 0.7, ease }}
-              className="rounded-[20px] border border-slate-200 bg-white p-7 md:p-8"
+              transition={{ delay: (i % 4) * 0.06, duration: 0.6, ease }}
+              className="rounded-[18px] border border-slate-200 bg-white p-5"
             >
-              <div className="mb-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold" style={{ background: '#FFF3EB', color: ORANGE }}>
+              <div className="mb-3 inline-flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold" style={{ background: '#FFF3EB', color: ORANGE }}>
                 {i + 1}
               </div>
-              <h3 className="text-[19px] font-semibold tracking-tight text-slate-900 md:text-[21px]">{it.t}</h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-slate-600">{it.d}</p>
+              <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-slate-900">{t}</h3>
             </motion.div>
           ))}
         </div>
@@ -230,7 +489,7 @@ function Pains() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease }}
-          className="mx-auto mt-16 max-w-3xl text-center text-[24px] font-semibold leading-snug tracking-[-0.02em] text-slate-900 md:text-[32px]"
+          className="mx-auto mt-12 max-w-3xl text-center text-[22px] font-semibold leading-snug tracking-[-0.02em] text-slate-900 md:text-[28px]"
         >
           Nada de esto es culpa de tu equipo.
           <br />
@@ -241,40 +500,7 @@ function Pains() {
   );
 }
 
-/* ══════════════════ 2.5 BAND · MENOS FRICCIÓN ══════════════════ */
-function FrictionBand() {
-  return (
-    <section className="border-t border-slate-100 py-24" style={{ background: NAVY }}>
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
-        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, ease }}
-            className="text-[36px] font-bold tracking-[-0.03em] text-white md:text-[54px]"
-          >
-            Menos fricción.
-            <br />
-            <span style={{ color: ORANGE }}>Más huéspedes que vuelven.</span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, ease, delay: 0.1 }}
-            className="max-w-lg text-[17px] leading-relaxed text-white/70 md:text-[19px]"
-          >
-            Un hotel bien llevado se nota. VULO lo hace más obvio — desde la primera reserva
-            hasta el corte del día, sin pasos que sobren.
-          </motion.p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ══════════════════ 3. CÓMO FUNCIONA (3 momentos) ══════════════════ */
+/* ══════════════════ 3. CÓMO FUNCIONA ══════════════════ */
 function HowItWorks() {
   const blocks = [
     {
@@ -297,7 +523,7 @@ function HowItWorks() {
     },
   ];
   return (
-    <section id="funciones" className="border-t border-slate-100 bg-slate-50/60 py-28">
+    <section id="como-funciona" className="border-t border-slate-100 bg-slate-50/60 py-28 scroll-mt-24">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <div className="mx-auto max-w-3xl text-center">
           <SectionTag>Cómo funciona</SectionTag>
@@ -333,26 +559,27 @@ function HowItWorks() {
 }
 
 function MockInbox() {
-  // Animated WhatsApp thread that materializes into a reservation card
   const script: Array<{ from: 'g' | 'ia'; text: string }> = [
     { from: 'g', text: 'Hola! Tienen habitación para 2 personas del 22 al 25 de julio?' },
     { from: 'ia', text: '¡Hola! Sí, tenemos disponibilidad. Doble con vista al mar $2,400/noche 🌊' },
     { from: 'g', text: 'Perfecto, la aparto a nombre de Ricardo López' },
     { from: 'ia', text: 'Listo Ricardo ✅ Reserva RES-2026-1042 creada. Te comparto link de pago…' },
   ];
-  const [step, setStep] = useState(0);
+  const reduced = useReducedMotion();
+  const visible = usePageVisible();
+  const [step, setStep] = useState(reduced ? script.length : 0);
   useEffect(() => {
+    if (reduced || !visible) return;
     if (step >= script.length) {
       const r = setTimeout(() => setStep(0), 4200);
       return () => clearTimeout(r);
     }
     const t = setTimeout(() => setStep(step + 1), 1400);
     return () => clearTimeout(t);
-  }, [step]);
+  }, [step, reduced, visible]);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.05fr_1fr]">
-      {/* Phone / WhatsApp */}
       <div className="mx-auto w-full max-w-[360px] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_80px_-30px_rgba(15,23,42,0.35)]">
         <div className="flex items-center gap-3 bg-[#075E54] px-4 py-3 text-white">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-[13px] font-semibold">RL</div>
@@ -372,11 +599,7 @@ function MockInbox() {
                 transition={{ duration: 0.35, ease }}
                 className={`flex ${m.from === 'ia' ? 'justify-end' : 'justify-start'}`}
               >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-3 py-2 text-[12.5px] leading-snug shadow-sm ${
-                    m.from === 'ia' ? 'bg-[#DCF8C6] text-slate-800' : 'bg-white text-slate-800'
-                  }`}
-                >
+                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-[12.5px] leading-snug shadow-sm ${m.from === 'ia' ? 'bg-[#DCF8C6] text-slate-800' : 'bg-white text-slate-800'}`}>
                   {m.text}
                 </div>
               </motion.div>
@@ -393,9 +616,9 @@ function MockInbox() {
                   {[0, 1, 2].map((d) => (
                     <motion.span
                       key={d}
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1, repeat: Infinity, delay: d * 0.15 }}
                       className="h-1.5 w-1.5 rounded-full bg-slate-400"
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }}
                     />
                   ))}
                 </div>
@@ -411,7 +634,6 @@ function MockInbox() {
         </div>
       </div>
 
-      {/* Reservation card, appears at end */}
       <div className="flex items-center">
         <AnimatePresence mode="wait">
           {step >= script.length ? (
@@ -502,14 +724,14 @@ function MockHousekeeping() {
 
 function MockCheckout() {
   const cargos = [
-    { d: '2 noches · Hab. 208', v: '[DATO REAL]' },
-    { d: 'Consumo restaurante', v: '[DATO REAL]' },
-    { d: 'Lavandería', v: '[DATO REAL]' },
+    { d: 'Hospedaje · 2 noches Hab. 208', v: '$2,400' },
+    { d: 'Consumo restaurante', v: '$495' },
+    { d: 'Lavandería', v: '$120' },
   ];
   const corte = [
-    { m: 'Efectivo', v: '[DATO REAL]' },
-    { m: 'Tarjeta', v: '[DATO REAL]' },
-    { m: 'Transferencia', v: '[DATO REAL]' },
+    { m: 'Efectivo', v: '$3,850' },
+    { m: 'Tarjeta', v: '$6,200' },
+    { m: 'Transferencia', v: '$2,400' },
   ];
   return (
     <BrowserFrame title="vulo · check-out">
@@ -524,9 +746,13 @@ function MockCheckout() {
         {cargos.map((c, i) => (
           <div key={i} className="flex items-center justify-between border-b border-slate-100 px-3 py-2 text-[12.5px] last:border-b-0">
             <span className="text-slate-700">{c.d}</span>
-            <span className="font-medium text-slate-500">{c.v}</span>
+            <span className="font-medium text-slate-900">{c.v}</span>
           </div>
         ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+        <span className="text-[11px] uppercase tracking-wider text-slate-500">Total cuenta</span>
+        <span className="text-[15px] font-bold" style={{ color: NAVY }}>$3,015 MXN</span>
       </div>
       <div className="mt-4 rounded-lg bg-slate-50 p-3">
         <div className="mb-2 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Corte del día · por método</div>
@@ -543,143 +769,40 @@ function MockCheckout() {
   );
 }
 
-/* ══════════════════ 3.5 IA EN WHATSAPP ══════════════════ */
-function AIWhatsApp() {
+/* ══════════════════ 4. FRICTION BAND ══════════════════ */
+function FrictionBand() {
   return (
-    <section className="border-t border-slate-100 bg-white py-24 md:py-32">
+    <section className="border-t border-slate-100 py-24" style={{ background: NAVY }}>
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
-        <div className="grid gap-14 lg:grid-cols-[1.05fr_1fr] lg:items-center">
-          {/* Copy */}
-          <div>
-            <SectionTag>IA en WhatsApp</SectionTag>
-            <h2 className="text-[34px] font-bold leading-[1.05] tracking-[-0.03em] text-slate-900 md:text-[54px]">
-              El único recepcionista
-              <br />
-              <span className="text-slate-400">que contesta a las 2 de la mañana.</span>
-            </h2>
-            <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-600 md:text-[18px]">
-              WhatsApp es el canal por donde más te buscan los huéspedes — y el peor atendido:
-              recepción está ocupada, el mensaje se queda en visto y esa reserva se va con el
-              hotel que sí contestó. Aquí la IA responde al instante, 24/7, con la información
-              real de tu hotel: consulta disponibilidad, cotiza, crea la reserva en el sistema
-              y confirma. Y cuando el tema requiere un humano, se lo pasa a tu equipo con todo
-              el contexto.
-            </p>
-            <div className="mt-10 grid gap-3 sm:grid-cols-3">
-              {[
-                'Responde 24/7 en segundos',
-                'Reserva directo en el sistema',
-                'Escala a tu equipo cuando hace falta',
-              ].map((t, i) => (
-                <motion.div
-                  key={t}
-                  initial={{ opacity: 0, y: 14 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease, delay: i * 0.06 }}
-                  className="rounded-[14px] border border-slate-200 bg-white p-4"
-                >
-                  <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold text-white" style={{ background: ORANGE }}>
-                    {i + 1}
-                  </div>
-                  <div className="text-[13.5px] font-medium leading-snug text-slate-900">{t}</div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Mockup */}
-          <MockAIWhatsApp />
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease }}
+            className="text-[36px] font-bold tracking-[-0.03em] text-white md:text-[54px]"
+          >
+            Menos fricción.
+            <br />
+            <span style={{ color: ORANGE }}>Más huéspedes que vuelven.</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease, delay: 0.1 }}
+            className="max-w-lg text-[17px] leading-relaxed text-white/70 md:text-[19px]"
+          >
+            Un hotel bien llevado se nota. VULO lo hace más obvio — desde la primera reserva
+            hasta el corte del día, sin pasos que sobren.
+          </motion.p>
         </div>
       </div>
     </section>
   );
 }
 
-function MockAIWhatsApp() {
-  const msgs: Array<{ from: 'g' | 'ia'; t: string; time: string; delay: number }> = [
-    { from: 'g', t: 'Hola, ¿tienen habitación para hoy? Somos 2.', time: '02:14', delay: 0.1 },
-    { from: 'ia', t: 'Hola 👋 Sí, tenemos disponibilidad. ¿Solo esta noche o incluyes mañana?', time: '02:14', delay: 0.35 },
-    { from: 'g', t: 'Solo esta noche.', time: '02:15', delay: 0.65 },
-    { from: 'ia', t: 'Perfecto. Habitación Doble Estándar por $1,290 MXN, incluye desayuno. ¿La aparto?', time: '02:15', delay: 0.9 },
-    { from: 'g', t: 'Sí, apártala por favor.', time: '02:16', delay: 1.2 },
-    { from: 'ia', t: 'Listo ✅ Reserva RES-2026-1042 a nombre tuyo. Te esperamos.', time: '02:16', delay: 1.45 },
-  ];
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.8, ease }}
-      className="relative"
-    >
-      <BrowserFrame title="WhatsApp · Huésped nuevo">
-        <div className="flex flex-col" style={{ background: '#EFE8DE' }}>
-          {/* Header */}
-          <div className="flex items-center gap-3 border-b border-black/5 bg-[#f5efe6] px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-semibold text-white" style={{ background: NAVY }}>
-              H
-            </div>
-            <div className="flex-1">
-              <div className="text-[13px] font-semibold text-slate-900">Huésped · +52 331 428 90…</div>
-              <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                IA respondiendo · 02:14 a.m.
-              </div>
-            </div>
-            <div className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: ORANGE }}>
-              IA
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex flex-col gap-2 px-4 py-5" style={{ minHeight: 320 }}>
-            {msgs.map((m, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.35, ease, delay: m.delay }}
-                className={`max-w-[82%] rounded-[14px] px-3 py-2 text-[13px] leading-snug shadow-sm ${
-                  m.from === 'g'
-                    ? 'self-start bg-white text-slate-900'
-                    : 'self-end text-slate-900'
-                }`}
-                style={m.from === 'ia' ? { background: '#D9FDD3' } : undefined}
-              >
-                <div>{m.t}</div>
-                <div className="mt-0.5 text-right text-[10px] text-slate-400">{m.time}</div>
-              </motion.div>
-            ))}
-
-            {/* Success chip */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, ease, delay: 1.8 }}
-              className="mt-3 self-center inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-white" />
-              Reserva creada en el sistema ✓
-            </motion.div>
-          </div>
-
-          {/* Input bar */}
-          <div className="flex items-center gap-2 border-t border-black/5 bg-[#f5efe6] px-3 py-2.5">
-            <div className="flex-1 rounded-full bg-white px-3 py-1.5 text-[11.5px] text-slate-400">
-              Escribe un mensaje…
-            </div>
-            <div className="h-7 w-7 rounded-full" style={{ background: NAVY }} />
-          </div>
-        </div>
-      </BrowserFrame>
-    </motion.div>
-  );
-}
-
-/* ══════════════════ 4. FUNCIONES ══════════════════ */
+/* ══════════════════ 5. FUNCIONES ══════════════════ */
 function Features() {
   const items = [
     { icon: Calendar, t: 'Reservas y calendario', d: 'Timeline visual por habitación, arrastrar y soltar, bloqueos y tarifas por temporada.' },
@@ -730,64 +853,10 @@ function Features() {
   );
 }
 
-/* ══════════════════ 5. PARA QUIÉN ══════════════════ */
-function ForWho() {
-  const items = [
-    {
-      icon: Building2,
-      t: 'Hotel boutique / independiente',
-      d: 'Un equipo chico que necesita orden sin burocracia. El sistema sustituye planillas, WhatsApps sueltos y libretas.',
-    },
-    {
-      icon: ClipboardList,
-      t: 'Hotel de paso / alta rotación',
-      d: 'Muchas entradas y salidas al día. Check-in rápido, limpieza al ritmo y caja que cuadra.',
-    },
-    {
-      icon: BarChart3,
-      t: 'Grupo con varias propiedades',
-      d: 'Cada propiedad con su equipo y sus tarifas; la dirección con la foto consolidada.',
-    },
-  ];
-  return (
-    <section className="border-t border-slate-100 bg-slate-50/60 py-28">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
-        <div className="mx-auto max-w-3xl text-center">
-          <SectionTag>Para quién</SectionTag>
-          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
-            Distintos hoteles.
-            <br />
-            <span className="text-slate-400">La misma tranquilidad.</span>
-          </h2>
-        </div>
-
-        <div className="mt-14 grid gap-5 md:grid-cols-3">
-          {items.map((it, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: i * 0.08, duration: 0.7, ease }}
-              className="rounded-[20px] border border-slate-200 bg-white p-7"
-            >
-              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-[12px]" style={{ background: NAVY }}>
-                <it.icon className="h-5 w-5 text-white" strokeWidth={1.75} />
-              </div>
-              <h3 className="text-[19px] font-semibold tracking-tight text-slate-900">{it.t}</h3>
-              <p className="mt-3 text-[14.5px] leading-relaxed text-slate-600">{it.d}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ══════════════════ 5.5 HIGHLIGHTS · IA + POS ══════════════════ */
+/* ══════════════════ 6. HIGHLIGHTS ══════════════════ */
 function Highlights() {
   return (
-    <section className="border-t border-slate-100 bg-white py-28">
+    <section className="border-t border-slate-100 bg-slate-50/60 py-28">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <div className="mx-auto max-w-3xl text-center">
           <SectionTag>Lo que nos hace distintos</SectionTag>
@@ -827,9 +896,9 @@ function Highlights() {
             </p>
             <ul className="mt-5 space-y-2.5 text-[14px] text-slate-700">
               {[
-                'Responde en segundos, 24/7, en el mismo tono del hotel',
-                'Convierte conversaciones en reservas confirmadas',
-                'Se calla y avisa cuando el huésped necesita a un humano',
+                'Responde 24/7 en segundos, en el mismo tono del hotel',
+                'Crea la reserva directo en el sistema, sin capturas manuales',
+                'Escala a tu equipo cuando hace falta, con la conversación resumida',
               ].map((t) => (
                 <li key={t} className="flex items-start gap-2.5">
                   <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: ORANGE }} strokeWidth={2.5} />
@@ -890,7 +959,7 @@ function Highlights() {
   );
 }
 
-/* ══════════════════ 5.6 GALERÍA · POR DENTRO ══════════════════ */
+/* ══════════════════ 7. GALERÍA ══════════════════ */
 function Gallery() {
   const tiles: Array<{
     tag: string;
@@ -899,35 +968,13 @@ function Gallery() {
     render: React.ReactNode;
     span?: string;
   }> = [
-    {
-      tag: 'Reservas',
-      title: 'Matriz visual por fechas.',
-      body: 'Arrastra, extiende y bloquea. Sin planillas, sin dobles capturas.',
-      span: 'lg:col-span-2',
-      render: <TileMatrix />,
-    },
-    {
-      tag: 'IA · WhatsApp',
-      title: 'Conversaciones que se vuelven reservas.',
-      body: 'La IA responde y crea la reserva en el mismo hilo.',
-      render: <TileWA />,
-    },
-    {
-      tag: 'Punto de venta',
-      title: 'POS táctil, cuenta al huésped.',
-      body: 'Cobros al momento o cargados a la habitación.',
-      render: <TilePOS />,
-    },
-    {
-      tag: 'Housekeeping',
-      title: 'Piso a piso, en tiempo real.',
-      body: 'Recepción ve al instante qué está listo.',
-      span: 'lg:col-span-2',
-      render: <TileHK />,
-    },
+    { tag: 'Reservas', title: 'Matriz visual por fechas.', body: 'Arrastra, extiende y bloquea. Sin planillas, sin dobles capturas.', span: 'lg:col-span-2', render: <TileMatrix /> },
+    { tag: 'IA · WhatsApp', title: 'Conversaciones que se vuelven reservas.', body: 'La IA responde y crea la reserva en el mismo hilo.', render: <TileWA /> },
+    { tag: 'Punto de venta', title: 'POS táctil, cuenta al huésped.', body: 'Cobros al momento o cargados a la habitación.', render: <TilePOS /> },
+    { tag: 'Housekeeping', title: 'Piso a piso, en tiempo real.', body: 'Recepción ve al instante qué está listo.', span: 'lg:col-span-2', render: <TileHK /> },
   ];
   return (
-    <section className="border-t border-slate-100 bg-slate-50/60 py-28">
+    <section className="border-t border-slate-100 bg-white py-28">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <div className="mx-auto max-w-3xl text-center">
           <SectionTag>Por dentro</SectionTag>
@@ -955,9 +1002,7 @@ function Gallery() {
               </div>
               <h3 className="mt-3 text-[18px] font-semibold tracking-tight text-slate-900">{t.title}</h3>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-slate-500">{t.body}</p>
-              <div className="mt-5 overflow-hidden rounded-[12px] border border-slate-100 bg-slate-50/70 p-3">
-                {t.render}
-              </div>
+              <div className="mt-5 overflow-hidden rounded-[12px] border border-slate-100 bg-slate-50/70 p-3">{t.render}</div>
             </motion.div>
           ))}
         </div>
@@ -987,17 +1032,11 @@ function TileMatrix() {
         <div key={h} className="mb-1 grid grid-cols-[36px_1fr] items-center gap-1">
           <span className="text-[10px] font-semibold text-slate-500">{h}</span>
           <div className="relative h-5 rounded bg-white">
-            {bars
-              .filter((b) => b.row === r)
-              .map((b, i) => (
-                <div
-                  key={i}
-                  className="absolute top-0 h-5 rounded px-1.5 text-[9.5px] font-medium leading-5 text-white"
-                  style={{ left: `${(b.start / 7) * 100}%`, width: `${(b.len / 7) * 100}%`, background: b.c }}
-                >
-                  {b.label}
-                </div>
-              ))}
+            {bars.filter((b) => b.row === r).map((b, i) => (
+              <div key={i} className="absolute top-0 h-5 rounded px-1.5 text-[9.5px] font-medium leading-5 text-white" style={{ left: `${(b.start / 7) * 100}%`, width: `${(b.len / 7) * 100}%`, background: b.c }}>
+                {b.label}
+              </div>
+            ))}
           </div>
         </div>
       ))}
@@ -1009,14 +1048,10 @@ function TileWA() {
   return (
     <div className="rounded-lg bg-[#ECE5DD] p-2">
       <div className="mb-1.5 flex justify-start">
-        <div className="max-w-[85%] rounded-lg bg-white px-2 py-1.5 text-[10.5px] text-slate-800 shadow-sm">
-          ¿Tienen habitación este viernes?
-        </div>
+        <div className="max-w-[85%] rounded-lg bg-white px-2 py-1.5 text-[10.5px] text-slate-800 shadow-sm">¿Tienen habitación este viernes?</div>
       </div>
       <div className="mb-1.5 flex justify-end">
-        <div className="max-w-[85%] rounded-lg bg-[#DCF8C6] px-2 py-1.5 text-[10.5px] text-slate-800 shadow-sm">
-          ¡Sí! Doble $2,400 · 22–25 Jul 🌊
-        </div>
+        <div className="max-w-[85%] rounded-lg bg-[#DCF8C6] px-2 py-1.5 text-[10.5px] text-slate-800 shadow-sm">¡Sí! Doble $2,400 · 22–25 Jul 🌊</div>
       </div>
       <div className="flex justify-end">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-[9.5px] font-semibold shadow-sm" style={{ color: ORANGE }}>
@@ -1032,11 +1067,7 @@ function TilePOS() {
     <div>
       <div className="grid grid-cols-3 gap-1.5">
         {['Café', 'Cerveza', 'Snack', 'Desayuno', 'Comida', 'Postre'].map((p, i) => (
-          <div
-            key={p}
-            className="rounded-md border border-slate-100 bg-white p-1.5 text-center text-[10px] font-medium text-slate-700"
-            style={i === 1 ? { background: '#FFF3EB', color: ORANGE, borderColor: '#FED7AA' } : undefined}
-          >
+          <div key={p} className="rounded-md border border-slate-100 bg-white p-1.5 text-center text-[10px] font-medium text-slate-700" style={i === 1 ? { background: '#FFF3EB', color: ORANGE, borderColor: '#FED7AA' } : undefined}>
             {p}
           </div>
         ))}
@@ -1074,7 +1105,49 @@ function TileHK() {
   );
 }
 
-/* ══════════════════ 6. INTEGRACIONES ══════════════════ */
+/* ══════════════════ 8. PARA QUIÉN ══════════════════ */
+function ForWho() {
+  const items = [
+    { icon: Building2, t: 'Hotel boutique / independiente', d: 'Un equipo chico que necesita orden sin burocracia. El sistema sustituye planillas, WhatsApps sueltos y libretas.' },
+    { icon: ClipboardList, t: 'Hotel de paso / alta rotación', d: 'Muchas entradas y salidas al día. Check-in rápido, limpieza al ritmo y caja que cuadra.' },
+    { icon: BarChart3, t: 'Grupo con varias propiedades', d: 'Cada propiedad con su equipo y sus tarifas; la dirección con la foto consolidada.' },
+  ];
+  return (
+    <section className="border-t border-slate-100 bg-slate-50/60 py-28">
+      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionTag>Para quién</SectionTag>
+          <h2 className="text-[34px] font-bold tracking-[-0.03em] text-slate-900 md:text-[52px]">
+            Distintos hoteles.
+            <br />
+            <span className="text-slate-400">La misma tranquilidad.</span>
+          </h2>
+        </div>
+
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
+          {items.map((it, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ delay: i * 0.08, duration: 0.7, ease }}
+              className="rounded-[20px] border border-slate-200 bg-white p-7"
+            >
+              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-[12px]" style={{ background: NAVY }}>
+                <it.icon className="h-5 w-5 text-white" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-[19px] font-semibold tracking-tight text-slate-900">{it.t}</h3>
+              <p className="mt-3 text-[14.5px] leading-relaxed text-slate-600">{it.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════ 9. INTEGRACIONES ══════════════════ */
 function Integrations() {
   const live = [
     { name: 'Booking.com', icon: Globe, color: '#003580' },
@@ -1088,7 +1161,7 @@ function Integrations() {
     { name: 'Google Hotel Ads', color: '#4285F4' },
   ];
   return (
-    <section className="border-t border-slate-100 bg-white py-28">
+    <section id="integraciones" className="border-t border-slate-100 bg-white py-28 scroll-mt-24">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <div className="mx-auto max-w-3xl text-center">
           <SectionTag>Ecosistema</SectionTag>
@@ -1140,29 +1213,12 @@ function Integrations() {
   );
 }
 
-/* ══════════════════ 7. CONFIANZA ══════════════════ */
+/* ══════════════════ 10. CONFIANZA ══════════════════ */
 function Trust() {
   const items = [
-    {
-      icon: Sparkles,
-      t: 'Te lo mostramos con tus datos',
-      d: 'La demo se hace cargando habitaciones y tarifas reales del hotel interesado. Nada de ejemplos abstractos.',
-    },
-    {
-      icon: BarChart3,
-      t: 'Datos del producto',
-      d: '[DATO REAL: hoteles operando · habitaciones gestionadas · reservas procesadas]',
-    },
-    {
-      icon: ShieldCheck,
-      t: 'Seguridad',
-      d: 'Respaldos automáticos y accesos por rol: recepción no ve lo que ve gerencia.',
-    },
-    {
-      icon: LifeBuoy,
-      t: 'Acompañamiento',
-      d: 'Implementación guiada y soporte por WhatsApp con humano real. [Ajustar canal]',
-    },
+    { icon: Sparkles, t: 'Te lo mostramos con tus datos', d: 'La demo se hace cargando habitaciones y tarifas reales del hotel interesado. Nada de ejemplos abstractos.' },
+    { icon: ShieldCheck, t: 'Seguridad', d: 'Respaldos automáticos y accesos por rol: recepción no ve lo que ve gerencia.' },
+    { icon: LifeBuoy, t: 'Acompañamiento', d: 'Implementación guiada y soporte por WhatsApp con humano real.' },
   ];
   return (
     <section className="border-t border-slate-100 bg-slate-50/60 py-28">
@@ -1176,7 +1232,7 @@ function Trust() {
           </h2>
         </div>
 
-        <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
           {items.map((it, i) => (
             <motion.div
               key={i}
@@ -1197,19 +1253,19 @@ function Trust() {
   );
 }
 
-/* ══════════════════ 8. FAQ ══════════════════ */
+/* ══════════════════ 11. FAQ ══════════════════ */
 function FAQ() {
   const qs = [
-    { q: '¿Cuánto tarda la implementación?', a: 'Depende del tamaño del hotel. Un hotel boutique suele quedar operando en cuestión de días; grupos multi-propiedad pueden llevar un par de semanas. [DATO REAL: rango típico]' },
+    { q: '¿Cuánto tarda la implementación?', a: 'Un hotel boutique suele quedar operando en menos de una semana; grupos multi-propiedad, en dos a tres semanas.' },
     { q: '¿Qué pasa con mis datos si me quiero ir?', a: 'Son tuyos. Exportas tu información (reservas, huéspedes, historial de cobros) en formatos estándar cuando lo pidas. Sin candado.' },
     { q: '¿Funciona en celular y tablet en recepción?', a: 'Sí. La interfaz está pensada para escritorio, tablet y celular. Recepción puede operar desde una tablet sin problema.' },
-    { q: '¿Necesito internet todo el tiempo?', a: 'Sí, es un sistema en la nube. Con una conexión estable en recepción es suficiente. [Ajustar si existe modo offline]' },
-    { q: '¿Cómo se cobra?', a: '[MODELO REAL: mensualidad por propiedad o por habitación activa. Definir antes de publicar.]' },
+    { q: '¿Necesito internet todo el tiempo?', a: 'Sí, es un sistema en la nube. Con una conexión estable en recepción es suficiente.' },
+    { q: '¿Cómo se cobra?', a: 'Una mensualidad fija por propiedad que incluye todos los módulos, la IA de WhatsApp y el soporte. Sin costos por usuario ni sorpresas. Escríbenos y te cotizamos según el tamaño de tu hotel.' },
     { q: '¿Migran mi información actual?', a: 'Sí. Si vienes de otro sistema o de hojas de cálculo, te ayudamos a subir habitaciones, tarifas, huéspedes y reservas activas en la implementación.' },
   ];
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="precios" className="border-t border-slate-100 bg-white py-28">
+    <section className="border-t border-slate-100 bg-white py-28">
       <div className="mx-auto max-w-[880px] px-6 lg:px-10">
         <div className="text-center">
           <SectionTag>Preguntas frecuentes</SectionTag>
@@ -1230,9 +1286,7 @@ function FAQ() {
                   <span className="text-[16px] font-semibold text-slate-900 md:text-[17px]">{it.q}</span>
                   <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
-                {isOpen && (
-                  <div className="px-6 pb-6 text-[15px] leading-relaxed text-slate-600">{it.a}</div>
-                )}
+                {isOpen && <div className="px-6 pb-6 text-[15px] leading-relaxed text-slate-600">{it.a}</div>}
               </div>
             );
           })}
@@ -1242,11 +1296,16 @@ function FAQ() {
   );
 }
 
-/* ══════════════════ 9. CTA FINAL ══════════════════ */
+/* ══════════════════ 12. CTA FINAL ══════════════════ */
 function FinalCTA() {
   return (
-    <section id="contacto" className="border-t border-slate-100 py-32" style={{ background: NAVY }}>
+    <section className="border-t border-slate-100 py-32" style={{ background: NAVY }}>
       <div className="mx-auto max-w-3xl px-6 text-center lg:px-10">
+        {/* Chip decorativo — cerrando el loop del hero */}
+        <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow">
+          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+          Reserva creada en el sistema ✓
+        </div>
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -1263,8 +1322,8 @@ function FinalCTA() {
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="h-[52px] rounded-full px-8 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
-            <a href="https://wa.me/523171035768?text=Hola%2C%20quiero%20agendar%20una%20demo%20de%20VULO" target="_blank" rel="noreferrer">
-              WhatsApp: 317 103 5768 <ArrowRight className="ml-1 h-4 w-4" />
+            <a href={WA_DEMO} target="_blank" rel="noreferrer">
+              Agendar demo por WhatsApp <ArrowRight className="ml-1 h-4 w-4" />
             </a>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-[52px] rounded-full border-white/25 bg-transparent px-7 text-[15px] font-medium text-white hover:bg-white/10 hover:text-white">
@@ -1282,14 +1341,14 @@ function FinalCTA() {
 /* ══════════════════ FOOTER ══════════════════ */
 function Footer() {
   const cols: Array<{ t: string; l: Array<[string, string]> }> = [
-    { t: 'Producto', l: [['Funciones', '#funciones'], ['Precios', '#precios'], ['Integraciones', '#funciones']] },
-    { t: 'Empresa', l: [['Sobre VULO', '#'], ['Contacto', '#contacto']] },
+    { t: 'Producto', l: [['Funciones', '/funciones'], ['Precios', '/precios'], ['Integraciones', '#integraciones']] },
+    { t: 'Empresa', l: [['Sobre VULO', '/empresa'], ['Contacto', '/contacto']] },
     {
       t: 'Contacto',
       l: [
         ['WhatsApp 317 103 5768', 'https://wa.me/523171035768'],
         ['hola@vulo.mx', 'mailto:hola@vulo.mx'],
-        ['Autlán de Navarro, Jalisco', '#contacto'],
+        ['Autlán de Navarro, Jalisco', '/contacto'],
       ],
     },
     { t: 'Legal', l: [['Términos', '#'], ['Privacidad', '#']] },
@@ -1299,8 +1358,8 @@ function Footer() {
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div>
-            <div className="flex items-center gap-2.5">
-              <Logo size={36} />
+            <div className="flex items-center gap-3">
+              <img src={foxIsotype} alt="" width={40} height={40} className="h-10 w-10 object-contain" />
               <img src={wordmark} alt="VULO" className="h-5 w-auto object-contain" />
             </div>
             <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-slate-500">
@@ -1319,9 +1378,22 @@ function Footer() {
             <div key={c.t}>
               <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">{c.t}</div>
               <ul className="space-y-2">
-                {c.l.map(([label, href]) => (
-                  <li key={label}><a href={href} className="text-[13.5px] text-slate-600 hover:text-slate-900">{label}</a></li>
-                ))}
+                {c.l.map(([label, href]) => {
+                  const external = href.startsWith('http') || href.startsWith('mailto:');
+                  const anchor = href.startsWith('#');
+                  if (external || anchor) {
+                    return (
+                      <li key={label}>
+                        <a href={href} className="text-[13.5px] text-slate-600 hover:text-slate-900">{label}</a>
+                      </li>
+                    );
+                  }
+                  return (
+                    <li key={label}>
+                      <Link to={href} className="text-[13.5px] text-slate-600 hover:text-slate-900">{label}</Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -1346,73 +1418,54 @@ export default function Landing() {
     '@type': 'SoftwareApplication',
     name: 'VULO',
     description:
-      'Sistema de gestión hotelera todo-en-uno: reservas, check-in, housekeeping, cobros y reportes. Hecho para hoteles en México.',
+      'El sistema hotelero que atiende WhatsApp con IA, crea reservas solo y cuadra tu caja. Recepción, housekeeping, cobros y reportes en un solo lugar.',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     url: 'https://vulo.mx/',
-    author: {
-      '@type': 'Organization',
-      name: 'Uniline · Innovación en la nube',
-    },
+    author: { '@type': 'Organization', name: 'Uniline · Innovación en la nube' },
     provider: {
       '@type': 'Organization',
       name: 'VULO',
       telephone: '+52-317-103-5768',
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: 'Autlán de Navarro',
-        addressRegion: 'Jalisco',
-        addressCountry: 'MX',
-      },
+      address: { '@type': 'PostalAddress', addressLocality: 'Autlán de Navarro', addressRegion: 'Jalisco', addressCountry: 'MX' },
     },
-    offers: {
-      '@type': 'Offer',
-      priceCurrency: 'MXN',
-      price: '0',
-      availability: 'https://schema.org/InStock',
-      description: 'Agenda una demo · precios por propiedad.',
-    },
+    offers: { '@type': 'Offer', priceCurrency: 'MXN', price: '0', availability: 'https://schema.org/InStock', description: 'Agenda una demo · precios por propiedad.' },
   };
 
   return (
     <div className="min-h-screen bg-white text-slate-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       <Helmet>
         <html lang="es-MX" />
-        <title>Software para Hoteles en México | VULO — Reservas, Recepción y Cobros</title>
+        <title>Software para Hoteles con IA en WhatsApp | VULO</title>
         <meta
           name="description"
-          content="Sistema de gestión hotelera: reservas, check-in, housekeeping, cobros y reportes en un solo lugar. Hecho para hoteles en México. Agenda una demo."
+          content="El sistema que atiende WhatsApp, crea reservas solo y cuadra tu caja. Reservas, recepción, housekeeping y cobros para hoteles en México. Demo con tus datos."
         />
         <link rel="canonical" href="https://vulo.mx/" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://vulo.mx/" />
-        <meta property="og:title" content="Software para Hoteles en México | VULO" />
-        <meta property="og:description" content="Reservas, recepción, housekeeping, cobros y reportes en un solo lugar." />
+        <meta property="og:title" content="Software para Hoteles con IA en WhatsApp | VULO" />
+        <meta property="og:description" content="El sistema que atiende WhatsApp, crea reservas solo y cuadra tu caja. Demo con tus datos." />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Software para Hoteles con IA en WhatsApp | VULO" />
+        <meta name="twitter:description" content="El sistema que atiende WhatsApp, crea reservas solo y cuadra tu caja. Demo con tus datos." />
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
 
       <Nav />
-      <main>
-        <Hero />
-        <Pains />
-        <FrictionBand />
-        <HowItWorks />
-        <AIWhatsApp />
-        <Features />
-        <Highlights />
-        <Gallery />
-        <ForWho />
-        <Integrations />
-        <Trust />
-        <FAQ />
-        <FinalCTA />
-      </main>
+      <Hero />
+      <Pains />
+      <HowItWorks />
+      <FrictionBand />
+      <Features />
+      <Highlights />
+      <Gallery />
+      <ForWho />
+      <Integrations />
+      <Trust />
+      <FAQ />
+      <FinalCTA />
       <Footer />
     </div>
   );
 }
-
-// Unused import guards (kept intentionally minimal to avoid stray icon imports)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _unused = { Check, Wifi, Smartphone };
