@@ -1393,7 +1393,7 @@ function SystemPreview() {
               <span className="h-2 w-2 rounded-full bg-slate-300" />
               <span className="ml-2 text-[11px] text-slate-500">app.vulo.mx</span>
             </div>
-            <div className="relative aspect-[16/10] bg-white">
+            <div className="relative bg-white" style={{ paddingTop: '62.5%' }}>
               <AnimatePresence mode="wait">
                 <motion.img
                   key={current.src}
