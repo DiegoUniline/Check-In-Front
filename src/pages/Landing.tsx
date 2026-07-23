@@ -12,6 +12,7 @@ import {
 import { Logo } from '@/components/Logo';
 import wordmark from '@/assets/vulo-wordmark.png';
 import foxIsotype from '@/assets/vulo-fox.png';
+import heroRecepcion from '@/assets/hero-recepcion.jpg';
 import shotTimeline from '@/assets/screens/timeline.webp';
 import shotHabitaciones from '@/assets/screens/habitaciones.webp';
 import shotClientes from '@/assets/screens/clientes.webp';
@@ -222,60 +223,151 @@ function Hero() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   return (
-    <section className="relative overflow-hidden bg-white">
-      <div className="mx-auto grid max-w-[1280px] gap-14 px-6 pb-20 pt-14 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:px-10 lg:pb-28 lg:pt-24">
-        <motion.div initial="hidden" animate="show" className="flex flex-col justify-center">
-          <motion.div variants={fadeUp} custom={0}><SectionTag>Software para hoteles · con IA</SectionTag></motion.div>
-          <motion.h1
-            variants={fadeUp}
-            custom={1}
-            className="text-[38px] font-bold leading-[1.04] tracking-[-0.035em] text-slate-900 md:text-[56px] lg:text-[64px]"
-          >
-            Mira cómo VULO atiende tu hotel
-            <br />
-            <span className="text-slate-400">mientras tú duermes.</span>
-          </motion.h1>
-          <motion.p variants={fadeUp} custom={2} className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-600 md:text-[18px]">
-            Reservas, recepción, habitaciones, cobros y WhatsApp con IA — un solo sistema
-            que trabaja 24/7. Esto que ves a la derecha está pasando en tiempo real.
-          </motion.p>
-          <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap items-center gap-3">
-            <Button
-              asChild
-              size="lg"
-              className="h-[52px] rounded-full px-7 text-[15px] font-medium text-white shadow-none hover:opacity-95"
-              style={{ background: ORANGE }}
-            >
-              <a href={WA_DEMO} target="_blank" rel="noreferrer">
-                Ver demo con mis datos <ArrowRight className="ml-1 h-4 w-4" />
-              </a>
-            </Button>
-            <button
-              type="button"
-              onClick={() => scrollTo('como-funciona')}
-              className="inline-flex h-[52px] items-center gap-1.5 rounded-full border-[1.5px] px-6 text-[15px] font-medium transition hover:bg-slate-50"
-              style={{ borderColor: NAVY, color: NAVY }}
-            >
-              Cómo funciona <ChevronDown className="h-4 w-4" />
-            </button>
-          </motion.div>
-          <motion.div variants={fadeUp} custom={4} className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-500">
-            <span>Responde en segundos</span>
-            <span aria-hidden>·</span>
-            <span>Crea la reserva sola</span>
-            <span aria-hidden>·</span>
-            <span>Hecho en México <span aria-hidden>🇲🇽</span></span>
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease, delay: 0.15 }}
-          className="relative"
+    <section className="relative bg-white px-4 pt-6 pb-10 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16">
+      <div className="mx-auto max-w-[1280px]">
+        <div
+          className="relative overflow-hidden rounded-[28px] shadow-[0_40px_120px_-40px_rgba(15,35,63,0.55)]"
+          style={{ background: NAVY }}
         >
-          <HeroDemo />
-        </motion.div>
+          {/* Foto de fondo */}
+          <img
+            src={heroRecepcion}
+            alt="Recepcionista dando la bienvenida a un huésped en un hotel"
+            width={1920}
+            height={1200}
+            fetchPriority="high"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          {/* Degradado navy desde la izquierda para legibilidad */}
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(90deg, ${NAVY} 0%, ${NAVY}E6 35%, ${NAVY}66 60%, transparent 90%)`,
+            }}
+          />
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0A1728]/70 to-transparent" />
+
+          {/* Contenido */}
+          <div className="relative grid min-h-[560px] gap-10 px-6 py-14 sm:px-10 sm:py-20 lg:min-h-[640px] lg:grid-cols-[1.15fr_1fr] lg:px-16 lg:py-24">
+            <motion.div initial="hidden" animate="show" className="flex max-w-2xl flex-col justify-center">
+              <motion.div variants={fadeUp} custom={0}>
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/90 backdrop-blur">
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: ORANGE }} />
+                  Software para hoteles · con IA
+                </div>
+              </motion.div>
+              <motion.h1
+                variants={fadeUp}
+                custom={1}
+                className="text-[40px] font-bold leading-[1.02] tracking-[-0.035em] text-white sm:text-[54px] lg:text-[68px]"
+              >
+                Tu hotel bien atendido
+                <br />
+                <span className="text-white/55">las 24 horas.</span>
+              </motion.h1>
+              <motion.p
+                variants={fadeUp}
+                custom={2}
+                className="mt-6 max-w-lg text-[16px] leading-relaxed text-white/80 sm:text-[18px]"
+              >
+                Reservas, recepción, habitaciones y cobros — más una IA en WhatsApp que
+                responde y aparta cuartos sola. Un solo sistema, hecho en México.
+              </motion.p>
+              <motion.div variants={fadeUp} custom={3} className="mt-9 flex flex-wrap items-center gap-3">
+                <Button
+                  asChild
+                  size="lg"
+                  className="h-[52px] rounded-full px-7 text-[15px] font-semibold text-white shadow-lg shadow-orange-500/20 hover:opacity-95"
+                  style={{ background: ORANGE }}
+                >
+                  <a href={WA_DEMO} target="_blank" rel="noreferrer">
+                    Ver demo con mis datos <ArrowRight className="ml-1 h-4 w-4" />
+                  </a>
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => scrollTo('como-funciona')}
+                  className="inline-flex h-[52px] items-center gap-1.5 rounded-full border border-white/25 bg-white/5 px-6 text-[15px] font-medium text-white backdrop-blur transition hover:bg-white/10"
+                >
+                  Cómo funciona <ChevronDown className="h-4 w-4" />
+                </button>
+              </motion.div>
+              <motion.div variants={fadeUp} custom={4} className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-white/60">
+                <span>Responde en segundos</span>
+                <span aria-hidden>·</span>
+                <span>Crea la reserva sola</span>
+                <span aria-hidden>·</span>
+                <span>Hecho en México <span aria-hidden>🇲🇽</span></span>
+              </motion.div>
+            </motion.div>
+
+            {/* Overlays de producto (desktop) */}
+            <div className="pointer-events-none relative hidden lg:block">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease, delay: 0.4 }}
+                className="pointer-events-auto absolute right-0 top-4 w-[300px] rounded-2xl border border-white/60 bg-white/95 p-4 shadow-2xl backdrop-blur"
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#25D366]">
+                    <MessageSquare className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    IA VULO · WhatsApp
+                  </span>
+                </div>
+                <p className="text-[13.5px] font-medium leading-snug text-slate-800">
+                  ¡Hola Ana! Sí tenemos Suite Vista al Mar del <b>12 al 15 dic</b>. Ya la aparté a tu nombre. ✨
+                </p>
+                <div className="mt-2 text-[10px] text-slate-400">11:53 PM · Respondido en 4 s</div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease, delay: 0.6 }}
+                className="pointer-events-auto absolute right-12 top-[220px] w-[270px] rounded-2xl border border-white/10 p-5 shadow-2xl"
+                style={{ background: '#0B1930' }}
+              >
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                      Nueva reserva
+                    </div>
+                    <div className="text-[15px] font-bold text-white">RES-2026-0142</div>
+                  </div>
+                  <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                    Confirmada
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                    style={{ background: ORANGE }}
+                  >
+                    AR
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-semibold text-white">Ana Ramírez</div>
+                    <div className="text-[11px] text-white/50">2 huéspedes · 3 noches</div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7, ease, delay: 0.9 }}
+                className="pointer-events-auto absolute bottom-6 left-4 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-xl"
+              >
+                <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                Habitación 204 lista para check-in
+              </motion.div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
