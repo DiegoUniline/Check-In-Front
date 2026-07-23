@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ExportButton } from '@/components/ExportButton';
+import { HabitacionesImport } from '@/components/HabitacionesImport';
 import { formatCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -491,6 +492,7 @@ export default function Habitaciones() {
             sheetName="Habitaciones"
             label="Exportar"
           />
+          <HabitacionesImport tiposHabitacion={tiposHabitacion} onImported={cargarDatos} />
         </div>
       </div>
 
