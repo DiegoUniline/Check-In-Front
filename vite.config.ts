@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode, isSsrBuild }) => ({
   /**
    * Qué hace:
    * - Define la base pública de la app.
@@ -35,9 +35,12 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
   ].filter(Boolean),
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      ...(isSsrBuild
+        ? [{ find: "sonner", replacement: path.resolve(__dirname, "./src/ssr/sonner.tsx") }]
+        : []),
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+    ],
   },
   build: {
     outDir: "dist",
