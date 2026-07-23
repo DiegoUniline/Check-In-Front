@@ -39,7 +39,17 @@ if (typeof globalThis.window === "undefined") {
   };
 }
 if (typeof globalThis.document === "undefined") {
-  globalThis.document = { documentElement: { classList: { add() {}, remove() {} } } };
+  globalThis.document = {
+    documentElement: { classList: { add() {}, remove() {} } },
+    getElementsByTagName: () => [],
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }),
+    head: { appendChild() {} },
+    body: { appendChild() {} },
+    addEventListener() {},
+    removeEventListener() {},
+  };
 }
 
 async function main() {
