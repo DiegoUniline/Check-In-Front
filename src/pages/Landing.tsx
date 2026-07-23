@@ -328,8 +328,8 @@ function Hero() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease, delay: 0.6 }}
-                className="pointer-events-auto absolute right-12 top-[220px] w-[270px] rounded-2xl border border-white/10 p-5 shadow-2xl backdrop-blur-xl"
-                style={{ background: 'rgba(11, 25, 48, 0.92)' }}
+                className="pointer-events-auto absolute right-12 top-[220px] w-[270px] rounded-2xl border border-white/10 p-5 shadow-2xl"
+                style={{ background: '#0B1930' }}
               >
                 <div className="mb-3 flex items-start justify-between">
                   <div>
@@ -360,7 +360,7 @@ function Hero() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.7, ease, delay: 0.9 }}
-                className="pointer-events-auto absolute bottom-2 right-4 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-xl"
+                className="pointer-events-auto absolute bottom-6 left-4 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-xl"
               >
                 <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
                 Habitación 204 lista para check-in
