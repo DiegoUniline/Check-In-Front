@@ -328,7 +328,8 @@ function Hero() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease, delay: 0.6 }}
-                className="pointer-events-auto absolute right-16 top-[220px] w-[270px] rounded-2xl border border-white/10 bg-[#0B1930]/92 p-5 shadow-2xl backdrop-blur-xl"
+                className="pointer-events-auto absolute right-12 top-[220px] w-[270px] rounded-2xl border border-white/10 p-5 shadow-2xl backdrop-blur-xl"
+                style={{ background: 'rgba(11, 25, 48, 0.92)' }}
               >
                 <div className="mb-3 flex items-start justify-between">
                   <div>
