@@ -15,43 +15,25 @@ const serverEntryPath = path.join(distDir, "server", "entry-server.js");
 // Rutas reales de vulo.mx a pre-renderizar.
 const ROUTES = ["/", "/funciones", "/precios", "/empresa", "/contacto"];
 
-// Polyfills mínimos para permitir que el bundle SSR se cargue sin explotar
-// (Supabase client, ThemeContext, etc. referencian localStorage/window).
-const noopStorage = {
-  getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
-  clear: () => {},
-  key: () => null,
-  length: 0,
-};
-if (typeof globalThis.localStorage === "undefined") globalThis.localStorage = noopStorage;
-if (typeof globalThis.sessionStorage === "undefined") globalThis.sessionStorage = noopStorage;
-if (typeof globalThis.window === "undefined") {
-  globalThis.window = {
-    localStorage: noopStorage,
-    sessionStorage: noopStorage,
-    matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }),
-    addEventListener() {},
-    removeEventListener() {},
-    location: { origin: "https://vulo.mx", href: "https://vulo.mx/", pathname: "/" },
-    document: { documentElement: { classList: { add() {}, remove() {} } } },
-  };
-}
-if (typeof globalThis.document === "undefined") {
-  globalThis.document = {
-    documentElement: { classList: { add() {}, remove() {} } },
-    getElementsByTagName: () => [],
-    querySelector: () => null,
-    querySelectorAll: () => [],
-    createElement: () => ({ style: {}, setAttribute() {}, appendChild() {}, remove() {} }),
-    createTextNode: (text) => ({ nodeValue: String(text ?? "") }),
-    createElementNS: () => ({ style: {}, setAttribute() {}, appendChild() {} }),
-    head: { appendChild() {} },
-    body: { appendChild() {} },
-    addEventListener() {},
-    removeEventListener() {},
-  };
+// Polyfills DOM completos usando jsdom para que libs como sonner, radix, etc.
+// puedan inicializarse durante el SSG sin explotar.
+import { JSDOM } from "jsdom";
+const dom = new JSDOM("<!doctype html><html><head></head><body></body></html>", {
+  url: "https://vulo.mx/",
+  pretendToBeVisual: true,
+});
+const { window: jsdomWindow } = dom;
+if (typeof globalThis.window === "undefined") globalThis.window = jsdomWindow;
+if (typeof globalThis.document === "undefined") globalThis.document = jsdomWindow.document;
+if (typeof globalThis.navigator === "undefined") globalThis.navigator = jsdomWindow.navigator;
+if (typeof globalThis.localStorage === "undefined") globalThis.localStorage = jsdomWindow.localStorage;
+if (typeof globalThis.sessionStorage === "undefined") globalThis.sessionStorage = jsdomWindow.sessionStorage;
+if (typeof globalThis.HTMLElement === "undefined") globalThis.HTMLElement = jsdomWindow.HTMLElement;
+if (typeof globalThis.Element === "undefined") globalThis.Element = jsdomWindow.Element;
+if (typeof globalThis.Node === "undefined") globalThis.Node = jsdomWindow.Node;
+if (typeof globalThis.getComputedStyle === "undefined") globalThis.getComputedStyle = jsdomWindow.getComputedStyle.bind(jsdomWindow);
+if (typeof globalThis.matchMedia === "undefined") {
+  globalThis.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
 }
 
 async function main() {
