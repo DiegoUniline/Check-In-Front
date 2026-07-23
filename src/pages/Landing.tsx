@@ -12,6 +12,7 @@ import {
 import { Logo } from '@/components/Logo';
 import wordmark from '@/assets/vulo-wordmark.png';
 import foxIsotype from '@/assets/vulo-fox.png';
+import heroRecepcion from '@/assets/hero-recepcion.jpg';
 import shotTimeline from '@/assets/screens/timeline.webp';
 import shotHabitaciones from '@/assets/screens/habitaciones.webp';
 import shotClientes from '@/assets/screens/clientes.webp';
