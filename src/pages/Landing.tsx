@@ -593,6 +593,34 @@ function Pains() {
           <br />
           <span className="text-slate-400">Es culpa de operar con herramientas sueltas.</span>
         </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.7, ease }}
+          className="mx-auto mt-16 max-w-4xl"
+        >
+          <div className="mb-5 text-center">
+            <SectionTag>Conoce VULO en 2 minutos</SectionTag>
+            <p className="mt-2 text-[15px] text-slate-500">
+              Así se ve un hotel operando en calma.
+            </p>
+          </div>
+          <div
+            className="relative overflow-hidden rounded-[22px] border border-slate-200 bg-slate-900 shadow-[0_20px_60px_-20px_rgba(15,23,42,.25)]"
+            style={{ aspectRatio: '16 / 9' }}
+          >
+            <iframe
+              src="https://www.youtube.com/embed/1Ckbd_qs8KU?rel=0&modestbranding=1"
+              title="¿Qué es VULO?"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="absolute inset-0 h-full w-full"
+            />
+          </div>
+        </motion.div>
       </div>
     </section>
   );
