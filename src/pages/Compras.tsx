@@ -1,9 +1,21 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  ShoppingBag, Plus, Search, Package, Truck, 
-  Calendar, DollarSign, CheckCircle2, Clock, AlertCircle,
-  MoreVertical, Eye, FileText, Building, RefreshCw, X,
-  RotateCcw, Trash2, Wallet, Receipt, ArrowLeft
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Eye,
+  FileText,
+  Package,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  ShoppingBag,
+  Trash2,
+  Truck,
+  Wallet,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -13,51 +25,22 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { cn } from '@/lib/utils';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 import { ComboboxCreatable, ComboboxOption } from '@/components/ui/combobox-creatable';
 import { formatCurrency } from '@/lib/currency';
-import { formatDate } from '@/lib/dateFormat';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 
 interface OrderItem {
   producto_id: string;
@@ -66,49 +49,72 @@ interface OrderItem {
   precio: string;
 }
 
+type EstadoCompra = 'Pendiente' | 'Enviada' | 'Confirmada' | 'EnTransito' | 'Recibida' | 'Cancelada' | 'Borrador';
+
+const ESTADOS: Array<{ value: EstadoCompra; label: string }> = [
+  { value: 'Pendiente', label: 'Pendiente' },
+  { value: 'Enviada', label: 'Enviada' },
+  { value: 'Confirmada', label: 'Confirmada' },
+  { value: 'EnTransito', label: 'En tránsito' },
+  { value: 'Recibida', label: 'Recibida' },
+  { value: 'Cancelada', label: 'Cancelada' },
+];
+
+const estadoLabel = (estado?: string) => estado === 'EnTransito' ? 'En tránsito' : estado || 'Pendiente';
+
+const estadoClass = (estado?: string) => {
+  const map: Record<string, string> = {
+    Borrador: 'bg-muted text-muted-foreground',
+    Pendiente: 'bg-warning/15 text-warning border-warning/25',
+    Enviada: 'bg-info/15 text-info border-info/25',
+    Confirmada: 'bg-primary/15 text-primary border-primary/25',
+    EnTransito: 'bg-warning/15 text-warning border-warning/25',
+    Recibida: 'bg-success/15 text-success border-success/25',
+    Cancelada: 'bg-destructive/10 text-destructive border-destructive/25',
+  };
+  return map[estado || 'Pendiente'] || map.Pendiente;
+};
+
 export default function Compras() {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const [tab, setTab] = useState('ordenes');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEstado, setFilterEstado] = useState('all');
-  const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
+  const [provSearch, setProvSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [ordenes, setOrdenes] = useState<any[]>([]);
   const [proveedores, setProveedores] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
+
+  const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
   const [selectedProveedor, setSelectedProveedor] = useState('');
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([
-    { producto_id: '', producto_nombre: '', cantidad: '', precio: '' }
-  ]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([{ producto_id: '', producto_nombre: '', cantidad: '1', precio: '' }]);
+  const [impuestoPct, setImpuestoPct] = useState('16');
   const [notas, setNotas] = useState('');
+  const [savingOrder, setSavingOrder] = useState(false);
+
   const [detalleModal, setDetalleModal] = useState<{ open: boolean; orden: any | null }>({ open: false, orden: null });
   const [pagosOrden, setPagosOrden] = useState<any[]>([]);
-  const [nuevoPago, setNuevoPago] = useState<{ monto: string; metodo_pago: string; referencia: string; notas: string }>({ monto: '', metodo_pago: 'Efectivo', referencia: '', notas: '' });
+  const [nuevoPago, setNuevoPago] = useState({ monto: '', metodo_pago: 'Efectivo', referencia: '', notas: '' });
   const [guardandoPago, setGuardandoPago] = useState(false);
+  const [changingState, setChangingState] = useState(false);
+
   const [isNewProveedorOpen, setIsNewProveedorOpen] = useState(false);
   const [newProveedor, setNewProveedor] = useState({ nombre: '', rfc: '', contacto: '', telefono: '', email: '' });
+  const [savingProveedor, setSavingProveedor] = useState(false);
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
-  const [provSearch, setProvSearch] = useState('');
   const [eliminandoBulkProv, setEliminandoBulkProv] = useState(false);
 
-  // Refs para navegación tipo Odoo: Tab al final de la última línea = nueva línea
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   const pendingFocusIdx = useRef<number | null>(null);
 
   useEffect(() => {
-    if (pendingFocusIdx.current != null) {
-      const row = rowRefs.current[pendingFocusIdx.current];
-      const target = row?.querySelector<HTMLElement>(
-        'button[role="combobox"], [role="combobox"], input, button'
-      );
-      target?.focus();
-      pendingFocusIdx.current = null;
-    }
+    if (pendingFocusIdx.current == null) return;
+    const row = rowRefs.current[pendingFocusIdx.current];
+    row?.querySelector<HTMLElement>('button[role="combobox"], [role="combobox"], input, button')?.focus();
+    pendingFocusIdx.current = null;
   }, [orderItems.length]);
-
-  useEffect(() => {
-    cargarDatos();
-  }, []);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -116,33 +122,29 @@ export default function Compras() {
       const [ordenesData, proveedoresData, productosData] = await Promise.all([
         api.getCompras().catch(() => []),
         api.getProveedores().catch(() => []),
-        api.getProductos().catch(() => [])
+        api.getProductos().catch(() => []),
       ]);
       setOrdenes(Array.isArray(ordenesData) ? ordenesData : []);
       setProveedores(Array.isArray(proveedoresData) ? proveedoresData : []);
       setProductos(Array.isArray(productosData) ? productosData : []);
-    } catch (error) {
-      console.error('Error cargando datos:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredOrdenes = ordenes.filter(o => {
-    const numero = o.numero || o.codigo || '';
-    const provNombre = o.proveedor?.nombre || o.proveedor_nombre || '';
-    const matchSearch = numero.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       provNombre.toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => { cargarDatos(); }, []);
+
+  const filteredOrdenes = useMemo(() => ordenes.filter((o) => {
+    const q = searchQuery.toLowerCase().trim();
+    const numero = o.numero_orden || o.numero || o.codigo || '';
+    const proveedor = o.proveedor?.nombre || o.proveedor_nombre || '';
+    const matchSearch = !q || numero.toLowerCase().includes(q) || proveedor.toLowerCase().includes(q);
     const matchEstado = filterEstado === 'all' || o.estado === filterEstado;
     return matchSearch && matchEstado;
-  });
+  }), [ordenes, searchQuery, filterEstado]);
 
-  const totalPendiente = ordenes.filter(o => ['Enviada', 'Confirmada', 'EnTransito'].includes(o.estado)).reduce((s, o) => s + (Number(o.total) || 0), 0);
-  const ordenesActivas = ordenes.filter(o => !['Recibida', 'Cancelada'].includes(o.estado)).length;
-
-  // ===== DataTable órdenes =====
   const ordenAccessors = useMemo(() => ({
-    numero: (o: any) => o.numero || o.codigo || '',
+    numero: (o: any) => o.numero_orden || o.numero || o.codigo || '',
     proveedor: (o: any) => o.proveedor?.nombre || o.proveedor_nombre || '',
     fecha: (o: any) => o.fecha || o.created_at || '',
     estado: (o: any) => o.estado || '',
@@ -150,62 +152,10 @@ export default function Compras() {
   }), []);
   const dt = useDataTable<any>(filteredOrdenes, ordenAccessors, { storageKey: 'compras-ordenes' });
 
-  const handleResetAll = () => {
-    setSearchQuery('');
-    setFilterEstado('all');
-    dt.resetPersisted();
-  };
-
-  const handleResetAllProv = () => {
-    setProvSearch('');
-    dtProv.resetPersisted();
-  };
-
-  const eliminarSeleccionadas = async () => {
-    setEliminandoBulk(true);
-    try {
-      const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.deleteCompra?.(id) ?? Promise.resolve()));
-      toast({ title: 'Órdenes eliminadas', description: `Se eliminaron ${ids.length} orden(es).` });
-      dt.clearSelection();
-      await cargarDatos();
-    } catch (err: any) {
-      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
-    } finally {
-      setEliminandoBulk(false);
-    }
-  };
-
-  const cambiarEstadoBulk = async (estado: string) => {
-    try {
-      const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.updateEstadoCompra(id, estado)));
-      toast({ title: 'Estado actualizado', description: `${ids.length} orden(es) → ${estado}` });
-      dt.clearSelection();
-      await cargarDatos();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
-    }
-  };
-
-  const exportarCsvOrdenes = () => {
-    const rows = dt.selectedRows.length > 0 ? dt.selectedRows : dt.processed;
-    exportToCsv('ordenes_compra', rows, [
-      { key: 'numero', label: 'Orden', accessor: (o) => o.numero || o.codigo },
-      { key: 'proveedor', label: 'Proveedor', accessor: (o) => o.proveedor?.nombre || o.proveedor_nombre },
-      { key: 'fecha', label: 'Fecha', accessor: (o) => o.fecha || o.created_at },
-      { key: 'estado', label: 'Estado', accessor: (o) => o.estado },
-      { key: 'total', label: 'Total', accessor: (o) => Number(o.total || 0) },
-    ]);
-  };
-
-  // ===== DataTable proveedores =====
   const filteredProveedores = useMemo(() => {
-    const q = provSearch.toLowerCase();
-    return proveedores.filter(p =>
-      !q || p.nombre?.toLowerCase().includes(q) || p.rfc?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q) || p.telefono?.includes(q)
-    );
+    const q = provSearch.toLowerCase().trim();
+    return proveedores.filter((p) => !q || [p.nombre, p.rfc, p.contacto, p.telefono, p.email]
+      .filter(Boolean).some((v) => String(v).toLowerCase().includes(q)));
   }, [proveedores, provSearch]);
   const provAccessors = useMemo(() => ({
     nombre: (p: any) => p.nombre || '',
@@ -216,187 +166,174 @@ export default function Compras() {
   }), []);
   const dtProv = useDataTable<any>(filteredProveedores, provAccessors, { storageKey: 'compras-proveedores' });
 
-  const eliminarProveedoresSeleccionados = async () => {
-    setEliminandoBulkProv(true);
-    try {
-      const ids = Array.from(dtProv.selected);
-      await Promise.all(ids.map(id => api.deleteProveedor?.(id) ?? Promise.resolve()));
-      toast({ title: 'Proveedores eliminados', description: `Se eliminaron ${ids.length} proveedor(es).` });
-      dtProv.clearSelection();
-      await cargarDatos();
-    } catch (err: any) {
-      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
-    } finally {
-      setEliminandoBulkProv(false);
-    }
-  };
+  const stats = useMemo(() => ({
+    total: ordenes.length,
+    activas: ordenes.filter((o) => !['Recibida', 'Cancelada'].includes(o.estado)).length,
+    transito: ordenes.filter((o) => o.estado === 'EnTransito').length,
+    valorActivo: ordenes.filter((o) => !['Recibida', 'Cancelada'].includes(o.estado)).reduce((s, o) => s + (Number(o.total) || 0), 0),
+  }), [ordenes]);
 
-  const exportarCsvProveedores = () => {
-    const rows = dtProv.selectedRows.length > 0 ? dtProv.selectedRows : dtProv.processed;
-    exportToCsv('proveedores', rows, [
-      { key: 'nombre', label: 'Nombre' },
-      { key: 'rfc', label: 'RFC' },
-      { key: 'contacto', label: 'Contacto' },
-      { key: 'telefono', label: 'Teléfono' },
-      { key: 'email', label: 'Email' },
-    ]);
-  };
+  const subtotalNueva = orderItems.reduce((s, item) => {
+    const cantidad = Number(item.cantidad) || 0;
+    const precio = Number(item.precio) || 0;
+    return s + cantidad * precio;
+  }, 0);
+  const impuestoNueva = subtotalNueva * Math.max(0, Math.min(100, Number(impuestoPct) || 0)) / 100;
+  const totalNueva = subtotalNueva + impuestoNueva;
 
-  const getEstadoColor = (estado: string) => {
-    const colors: Record<string, string> = {
-      /*
-        Importante: `Badge` por defecto trae `text-primary-foreground` (blanco).
-        Si un estado no define explícitamente `text-*`, puede quedar ilegible en modo día.
-        Relacionado con `Check-In-Front/src/components/ui/badge.tsx`.
-      */
-      'Borrador': 'bg-muted text-muted-foreground',
-      'Pendiente': 'bg-warning text-warning-foreground',
-      'Enviada': 'bg-info text-info-foreground',
-      'Confirmada': 'bg-primary text-primary-foreground',
-      'EnTransito': 'bg-warning text-warning-foreground',
-      'Recibida': 'bg-success text-success-foreground',
-      'Cancelada': 'bg-destructive text-destructive-foreground',
-    };
-    return colors[estado] || 'bg-muted text-muted-foreground';
-  };
-
-  const getEstadoIcon = (estado: string) => {
-    switch(estado) {
-      case 'Borrador': return <FileText className="h-4 w-4" />;
-      case 'Enviada': return <Clock className="h-4 w-4" />;
-      case 'Confirmada': return <CheckCircle2 className="h-4 w-4" />;
-      case 'EnTransito': return <Truck className="h-4 w-4" />;
-      case 'Recibida': return <Package className="h-4 w-4" />;
-      case 'Cancelada': return <AlertCircle className="h-4 w-4" />;
-      default: return null;
-    }
-  };
-
-  const handleAddItem = () => {
-    setOrderItems([...orderItems, { producto_id: '', producto_nombre: '', cantidad: '', precio: '' }]);
-  };
-
- const handleCreateOrder = async () => {
-  if (!selectedProveedor) {
-    toast({ title: 'Seleccione un proveedor', variant: 'destructive' });
-    return;
-  }
-
-  const validItems = orderItems.filter(i => i.producto_nombre && i.cantidad && i.precio);
-  if (validItems.length === 0) {
-    toast({ title: 'Agregue al menos un producto', variant: 'destructive' });
-    return;
-  }
-
-  try {
-    const detalle = validItems.map(i => ({
-      producto_id: i.producto_id || null,
-      producto_nombre: i.producto_nombre || null,
-      cantidad: parseFloat(i.cantidad),
-      precio_unitario: parseFloat(i.precio)
-    }));
-    const subtotal = detalle.reduce((s, i) => s + (i.cantidad * i.precio_unitario), 0);
-    const impuestos = subtotal * 0.16;
-
-    await api.createCompra({
-      proveedor_id: selectedProveedor,
-      detalle,
-      subtotal,
-      impuestos,
-      total: subtotal + impuestos,
-      notas: notas || null
-    });
-
-    toast({ title: 'Orden creada', description: 'La orden de compra ha sido creada exitosamente' });
-    setIsNewOrderOpen(false);
+  const resetNuevaOrden = () => {
     setSelectedProveedor('');
-    setOrderItems([{ producto_id: '', producto_nombre: '', cantidad: '', precio: '' }]);
+    setOrderItems([{ producto_id: '', producto_nombre: '', cantidad: '1', precio: '' }]);
+    setImpuestoPct('16');
     setNotas('');
-    cargarDatos();
-  } catch (error: any) {
-    toast({ title: 'Error', description: error.message, variant: 'destructive' });
-  }
-};
-  const handleUpdateEstado = async (ordenId: string, nuevoEstado: string) => {
-    try {
-      await api.updateEstadoCompra(ordenId, nuevoEstado);
-      toast({ title: 'Estado actualizado' });
-      cargarDatos();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
   };
 
-  const handleVerDetalle = async (orden: any) => {
-    try {
-      const detalles = await api.getCompra(orden.id);
-      setDetalleModal({ open: true, orden: detalles });
-      try {
-        const pagos = await api.getPagosCompra(orden.id);
-        setPagosOrden(pagos);
-      } catch { setPagosOrden([]); }
-    } catch {
-      setDetalleModal({ open: true, orden });
-      setPagosOrden([]);
-    }
-  };
-
-  const totalPagadoOrden = useMemo(
-    () => pagosOrden.reduce((s, p) => s + (Number(p.monto) || 0), 0),
-    [pagosOrden]
-  );
-
-  const handleRegistrarPago = async () => {
-    if (!detalleModal.orden) return;
-    const monto = parseFloat(nuevoPago.monto);
-    if (!monto || monto <= 0) {
-      toast({ title: 'Monto inválido', variant: 'destructive' });
+  const handleCreateOrder = async () => {
+    if (savingOrder) return;
+    if (!selectedProveedor) {
+      toast({ title: 'Falta proveedor', description: 'Selecciona quién surtirá esta orden.', variant: 'destructive' });
       return;
     }
+    const detalle = orderItems
+      .filter((i) => i.producto_id && Number(i.cantidad) > 0 && Number(i.precio) >= 0)
+      .map((i) => ({
+        producto_id: i.producto_id,
+        producto_nombre: i.producto_nombre,
+        cantidad: Number(i.cantidad),
+        precio_unitario: Number(i.precio),
+      }));
+    if (!detalle.length) {
+      toast({ title: 'Faltan productos', description: 'Agrega al menos una línea válida.', variant: 'destructive' });
+      return;
+    }
+
+    setSavingOrder(true);
+    try {
+      await api.createCompra({
+        proveedor_id: selectedProveedor,
+        detalle,
+        subtotal: subtotalNueva,
+        impuestos: impuestoNueva,
+        total: totalNueva,
+        estado: 'Pendiente',
+        fecha: todayLocal(),
+        notas: notas.trim() || null,
+      });
+      toast({
+        title: 'Orden creada',
+        description: 'La orden quedó pendiente. El inventario se actualizará únicamente cuando la marques como recibida.',
+      });
+      setIsNewOrderOpen(false);
+      resetNuevaOrden();
+      await cargarDatos();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error?.message || 'No se pudo crear la orden', variant: 'destructive' });
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  const openDetalle = async (orden: any) => {
+    setDetalleModal({ open: true, orden });
+    setPagosOrden([]);
+    try {
+      const [detalle, pagos] = await Promise.all([
+        api.getCompra(orden.id).catch(() => orden),
+        api.getPagosCompra(orden.id).catch(() => []),
+      ]);
+      setDetalleModal({ open: true, orden: detalle || orden });
+      setPagosOrden(Array.isArray(pagos) ? pagos : []);
+    } catch {
+      // Mantener la información del listado si el detalle falla.
+    }
+  };
+
+  const totalPagadoOrden = useMemo(() => pagosOrden.reduce((s, p) => s + (Number(p.monto) || 0), 0), [pagosOrden]);
+  const totalDetalle = Number(detalleModal.orden?.total || 0);
+  const saldoDetalle = Math.max(0, totalDetalle - totalPagadoOrden);
+
+  const registrarPago = async () => {
+    if (!detalleModal.orden || guardandoPago) return;
+    const monto = Number(nuevoPago.monto);
+    if (!Number.isFinite(monto) || monto <= 0) {
+      toast({ title: 'Monto inválido', description: 'Ingresa un monto mayor a cero.', variant: 'destructive' });
+      return;
+    }
+    if (monto > saldoDetalle + 0.001) {
+      toast({ title: 'El pago excede el saldo', description: `Saldo pendiente: ${formatCurrency(saldoDetalle)}`, variant: 'destructive' });
+      return;
+    }
+
     setGuardandoPago(true);
     try {
       await api.createPagoCompra({
         compra_id: detalleModal.orden.id,
         monto,
         metodo_pago: nuevoPago.metodo_pago,
-        referencia: nuevoPago.referencia,
-        notas: nuevoPago.notas,
+        referencia: nuevoPago.referencia.trim(),
+        notas: nuevoPago.notas.trim(),
       });
       const pagos = await api.getPagosCompra(detalleModal.orden.id);
-      setPagosOrden(pagos);
-      const total = Number(detalleModal.orden.total || 0);
-      const pagado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
-      // Si queda saldado y no estaba marcada, sugerimos cambiar a Recibida (pagada)
-      if (pagado >= total && detalleModal.orden.estado !== 'Recibida') {
-        try { await api.updateEstadoCompra(detalleModal.orden.id, 'Recibida'); } catch {}
-      }
+      setPagosOrden(Array.isArray(pagos) ? pagos : []);
       setNuevoPago({ monto: '', metodo_pago: 'Efectivo', referencia: '', notas: '' });
-      toast({ title: 'Pago registrado' });
-      cargarDatos();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+      toast({ title: 'Pago registrado', description: 'El pago no modifica la recepción ni el inventario.' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error?.message || 'No se pudo registrar el pago', variant: 'destructive' });
     } finally {
       setGuardandoPago(false);
     }
   };
 
-  const handleEliminarPago = async (pagoId: string) => {
+  const eliminarPago = async (pagoId: string) => {
     if (!detalleModal.orden) return;
+    const ok = await confirm({ title: 'Eliminar pago', description: 'El saldo de la orden se recalculará.', confirmText: 'Eliminar', destructive: true });
+    if (!ok) return;
     try {
       await api.deletePagoCompra(pagoId);
-      const pagos = await api.getPagosCompra(detalleModal.orden.id);
-      setPagosOrden(pagos);
+      setPagosOrden(await api.getPagosCompra(detalleModal.orden.id));
       toast({ title: 'Pago eliminado' });
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error?.message || 'No se pudo eliminar', variant: 'destructive' });
     }
   };
 
-  const handleEliminarOrden = async (orden: any) => {
-    if (!orden?.id) return;
+  const cambiarEstado = async (orden: any, estado: EstadoCompra) => {
+    if (changingState) return;
+    if (estado === 'Recibida') {
+      const ok = await confirm({
+        title: 'Recibir mercancía',
+        description: 'Esta acción ingresará al inventario las cantidades de la orden una sola vez. El pago es independiente de la recepción.',
+        confirmText: 'Recibir e ingresar stock',
+      });
+      if (!ok) return;
+    }
+    if (estado === 'Cancelada') {
+      const ok = await confirm({ title: 'Cancelar orden', description: 'La orden dejará de estar activa. No se modificará inventario si aún no fue recibida.', confirmText: 'Cancelar orden', destructive: true });
+      if (!ok) return;
+    }
+
+    setChangingState(true);
+    try {
+      const updated = await api.updateEstadoCompra(orden.id, estado);
+      toast({ title: estado === 'Recibida' ? 'Mercancía recibida' : 'Estado actualizado', description: estado === 'Recibida' ? 'El inventario fue actualizado con trazabilidad.' : estadoLabel(estado) });
+      await cargarDatos();
+      if (detalleModal.open && detalleModal.orden?.id === orden.id) {
+        const detail = await api.getCompra(orden.id).catch(() => ({ ...orden, ...updated }));
+        setDetalleModal({ open: true, orden: detail });
+      }
+    } catch (error: any) {
+      toast({ title: 'No se pudo cambiar el estado', description: error?.message || 'Revisa la orden e intenta de nuevo.', variant: 'destructive' });
+    } finally {
+      setChangingState(false);
+    }
+  };
+
+  const eliminarOrden = async (orden: any) => {
     const ok = await confirm({
       title: 'Eliminar orden',
-      description: `¿Eliminar la orden ${orden.numero_orden || ''}? Esta acción no se puede deshacer.`,
+      description: orden.estado === 'Recibida'
+        ? 'Una orden recibida no debe eliminarse porque ya afectó inventario.'
+        : `¿Eliminar ${orden.numero_orden || 'esta orden'}?`,
       confirmText: 'Eliminar',
       destructive: true,
     });
@@ -404,971 +341,307 @@ export default function Compras() {
     try {
       await api.deleteCompra(orden.id);
       toast({ title: 'Orden eliminada' });
-      // Si estábamos viendo el detalle de esta orden, volver al listado.
-      if (detalleModal.orden?.id === orden.id) {
-        setDetalleModal({ open: false, orden: null });
-        setPagosOrden([]);
-      }
-      cargarDatos();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
-    }
-  };
-
-  const handleCrearProveedor = async () => {
-    /*
-      Crear proveedor desde Compras (modal).
-      Relacionado con backend `check-in-back/src/routes/proveedores.js` (POST `/api/proveedores`).
-      Nota: el backend normaliza opcionales a null, pero aquí enviamos strings vacíos como null para mantener DB limpia.
-    */
-    const nombre = (newProveedor.nombre || '').trim();
-    if (!nombre) {
-      toast({ title: 'Nombre requerido', description: 'Ingrese el nombre del proveedor', variant: 'destructive' });
-      return;
-    }
-
-    try {
-      const payload = {
-        nombre,
-        rfc: newProveedor.rfc?.trim() || null,
-        contacto: newProveedor.contacto?.trim() || null,
-        telefono: newProveedor.telefono?.trim() || null,
-        email: newProveedor.email?.trim() || null,
-      };
-
-      const creado = await api.createProveedor(payload);
-      setProveedores(prev => [...prev, creado].sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''))));
-      toast({ title: 'Proveedor creado', description: nombre });
-      setIsNewProveedorOpen(false);
-      setNewProveedor({ nombre: '', rfc: '', contacto: '', telefono: '', email: '' });
-      // No forzamos recarga total para mantener UX rápida; igual queda consistente con el estado local.
+      if (detalleModal.orden?.id === orden.id) setDetalleModal({ open: false, orden: null });
+      await cargarDatos();
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'No se puede eliminar', description: error?.message || 'La orden conserva movimientos relacionados.', variant: 'destructive' });
     }
   };
+
+  const eliminarSeleccionadas = async () => {
+    setEliminandoBulk(true);
+    try {
+      const ids = Array.from(dt.selected);
+      const resultados = await Promise.allSettled(ids.map((id) => api.deleteCompra(id)));
+      const ok = resultados.filter((r) => r.status === 'fulfilled').length;
+      const fail = resultados.length - ok;
+      toast({ title: `${ok} orden(es) eliminadas`, description: fail ? `${fail} no se eliminaron por tener movimientos o restricciones.` : undefined });
+      dt.clearSelection();
+      await cargarDatos();
+    } finally {
+      setEliminandoBulk(false);
+    }
+  };
+
+  const exportarOrdenes = () => exportToCsv('ordenes_compra', dt.selectedRows.length ? dt.selectedRows : dt.processed, [
+    { key: 'numero_orden', label: 'Orden', accessor: (o) => o.numero_orden || o.numero || o.codigo },
+    { key: 'proveedor_nombre', label: 'Proveedor', accessor: (o) => o.proveedor?.nombre || o.proveedor_nombre },
+    { key: 'fecha', label: 'Fecha', accessor: (o) => o.fecha || o.created_at },
+    { key: 'estado', label: 'Estado' },
+    { key: 'total', label: 'Total' },
+  ]);
+
+  const crearProveedor = async () => {
+    if (!newProveedor.nombre.trim() || savingProveedor) return;
+    setSavingProveedor(true);
+    try {
+      const creado = await api.createProveedor({
+        nombre: newProveedor.nombre.trim(),
+        rfc: newProveedor.rfc.trim() || null,
+        contacto: newProveedor.contacto.trim() || null,
+        telefono: newProveedor.telefono.trim() || null,
+        email: newProveedor.email.trim() || null,
+      });
+      setProveedores((prev) => [...prev, creado].sort((a, b) => String(a.nombre).localeCompare(String(b.nombre))));
+      setNewProveedor({ nombre: '', rfc: '', contacto: '', telefono: '', email: '' });
+      setIsNewProveedorOpen(false);
+      toast({ title: 'Proveedor creado' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error?.message || 'No se pudo crear', variant: 'destructive' });
+    } finally {
+      setSavingProveedor(false);
+    }
+  };
+
+  const eliminarProveedoresSeleccionados = async () => {
+    setEliminandoBulkProv(true);
+    try {
+      const ids = Array.from(dtProv.selected);
+      const resultados = await Promise.allSettled(ids.map((id) => api.deleteProveedor(id)));
+      const ok = resultados.filter((r) => r.status === 'fulfilled').length;
+      toast({ title: `${ok} proveedor(es) eliminados` });
+      dtProv.clearSelection();
+      await cargarDatos();
+    } finally {
+      setEliminandoBulkProv(false);
+    }
+  };
+
+  const exportarProveedores = () => exportToCsv('proveedores', dtProv.selectedRows.length ? dtProv.selectedRows : dtProv.processed, [
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'rfc', label: 'RFC' },
+    { key: 'contacto', label: 'Contacto' },
+    { key: 'telefono', label: 'Teléfono' },
+    { key: 'email', label: 'Email' },
+  ]);
 
   if (loading) {
     return (
-      <MainLayout title="Órdenes de Compra" subtitle="Cargando...">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <MainLayout title="Compras" subtitle="Órdenes, recepción y pagos a proveedores">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl border bg-muted/30 animate-pulse" />)}</div>
+      </MainLayout>
+    );
+  }
+
+  if (isNewOrderOpen) {
+    const productoOptions: ComboboxOption[] = productos.map((p) => ({ value: p.id, label: p.nombre }));
+    return (
+      <MainLayout title="Nueva orden de compra" subtitle="Captura la orden; el stock entra únicamente al recibir mercancía">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <Button variant="ghost" size="sm" className="w-fit" onClick={() => { setIsNewOrderOpen(false); resetNuevaOrden(); }}><ArrowLeft className="mr-1.5 h-4 w-4" />Volver a órdenes</Button>
+          <div className="flex gap-2"><Button variant="outline" onClick={() => { setIsNewOrderOpen(false); resetNuevaOrden(); }} disabled={savingOrder}>Descartar</Button><Button onClick={handleCreateOrder} disabled={savingOrder}>{savingOrder ? 'Guardando…' : 'Guardar orden'}</Button></div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label>Proveedor *</Label>
+                  <ComboboxCreatable
+                    options={proveedores.map((p) => ({ value: p.id, label: p.nombre }))}
+                    value={selectedProveedor}
+                    onValueChange={setSelectedProveedor}
+                    onCreate={async (nombre) => {
+                      const nuevo = await api.createProveedor({ nombre });
+                      setProveedores((prev) => [...prev, nuevo]);
+                      setSelectedProveedor(nuevo.id);
+                      return { value: nuevo.id, label: nuevo.nombre };
+                    }}
+                    placeholder="Seleccionar proveedor"
+                    searchPlaceholder="Buscar o crear proveedor"
+                    createLabel="Crear proveedor"
+                  />
+                </div>
+                <div className="space-y-1.5"><Label>Fecha</Label><Input value={todayLocal()} disabled /></div>
+              </div>
+
+              <div className="rounded-xl border overflow-hidden">
+                <div className="flex items-center justify-between gap-3 bg-muted/30 px-3 py-2"><p className="text-sm font-semibold">Productos</p><Badge variant="secondary">{orderItems.filter((i) => i.producto_id).length} líneas</Badge></div>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
+                    <TableHeader><TableRow><TableHead className="min-w-[260px]">Producto</TableHead><TableHead className="w-28 text-center">Cantidad</TableHead><TableHead className="w-36 text-right">Costo unit.</TableHead><TableHead className="w-36 text-right">Subtotal</TableHead><TableHead className="w-10" /></TableRow></TableHeader>
+                    <TableBody>
+                      {orderItems.map((item, idx) => (
+                        <TableRow key={idx} ref={(el) => { rowRefs.current[idx] = el; }}>
+                          <TableCell>
+                            <ComboboxCreatable
+                              options={productoOptions}
+                              value={item.producto_id}
+                              onValueChange={(id) => {
+                                const prod = productos.find((p) => p.id === id);
+                                setOrderItems((prev) => prev.map((row, i) => i === idx ? { ...row, producto_id: id, producto_nombre: prod?.nombre || '', precio: row.precio || String(prod?.precio_compra || '') } : row));
+                              }}
+                              placeholder="Seleccionar producto"
+                              searchPlaceholder="Buscar producto"
+                            />
+                          </TableCell>
+                          <TableCell><Input type="number" min="0.01" step="0.01" inputMode="decimal" className="text-center" value={item.cantidad} onChange={(e) => setOrderItems((prev) => prev.map((row, i) => i === idx ? { ...row, cantidad: e.target.value } : row))} /></TableCell>
+                          <TableCell><Input type="number" min="0" step="0.01" inputMode="decimal" className="text-right" value={item.precio} onChange={(e) => setOrderItems((prev) => prev.map((row, i) => i === idx ? { ...row, precio: e.target.value } : row))} onKeyDown={(e) => {
+                            if ((e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) && idx === orderItems.length - 1 && item.producto_id && Number(item.cantidad) > 0 && item.precio !== '') {
+                              e.preventDefault();
+                              pendingFocusIdx.current = orderItems.length;
+                              setOrderItems((prev) => [...prev, { producto_id: '', producto_nombre: '', cantidad: '1', precio: '' }]);
+                            }
+                          }} /></TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency((Number(item.cantidad) || 0) * (Number(item.precio) || 0))}</TableCell>
+                          <TableCell><Button variant="ghost" size="icon" disabled={orderItems.length === 1} onClick={() => setOrderItems((prev) => prev.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="border-t px-3 py-2"><Button variant="ghost" size="sm" onClick={() => setOrderItems((prev) => [...prev, { producto_id: '', producto_nombre: '', cantidad: '1', precio: '' }])}><Plus className="mr-1.5 h-4 w-4" />Agregar línea</Button></div>
+              </div>
+
+              <div className="space-y-1.5"><Label>Notas / condiciones</Label><Textarea rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Entrega, crédito, referencia, condiciones del proveedor..." /></div>
+            </CardContent>
+          </Card>
+
+          <Card className="h-fit xl:sticky xl:top-0">
+            <CardContent className="p-4 space-y-3">
+              <div><p className="text-sm font-semibold">Resumen de la orden</p><p className="text-xs text-muted-foreground">No modifica inventario hasta recibir.</p></div>
+              <Separator />
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotalNueva)}</span></div>
+              <div className="grid grid-cols-[1fr_88px] gap-2 items-center"><Label className="text-muted-foreground">Impuesto %</Label><Input type="number" min="0" max="100" value={impuestoPct} onChange={(e) => setImpuestoPct(e.target.value)} className="text-right" /></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Impuestos</span><span>{formatCurrency(impuestoNueva)}</span></div>
+              <Separator />
+              <div className="flex justify-between items-baseline"><span className="font-semibold">Total</span><span className="text-xl font-bold text-primary">{formatCurrency(totalNueva)}</span></div>
+              <Button className="w-full" onClick={handleCreateOrder} disabled={savingOrder}>{savingOrder ? 'Guardando…' : 'Crear orden pendiente'}</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (detalleModal.open && detalleModal.orden) {
+    const orden = detalleModal.orden;
+    const detalle = orden.detalle || orden.compras_detalle || [];
+    return (
+      <MainLayout title={orden.numero_orden || 'Detalle de compra'} subtitle="Orden, recepción física y pagos son procesos independientes">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <Button variant="ghost" size="sm" className="w-fit" onClick={() => setDetalleModal({ open: false, orden: null })}><ArrowLeft className="mr-1.5 h-4 w-4" />Órdenes</Button>
+          <div className="flex flex-wrap gap-2">
+            {!['Recibida', 'Cancelada'].includes(orden.estado) && <Button variant="outline" onClick={() => cambiarEstado(orden, 'Cancelada')} disabled={changingState}>Cancelar</Button>}
+            {!['Recibida', 'Cancelada'].includes(orden.estado) && <Button onClick={() => cambiarEstado(orden, 'Recibida')} disabled={changingState}><Package className="mr-2 h-4 w-4" />Recibir mercancía</Button>}
+          </div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
+          <div className="space-y-4">
+            <Card><CardContent className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div><div className="flex items-center gap-2"><h2 className="text-lg font-semibold">{orden.proveedor_nombre || orden.proveedor?.nombre || 'Proveedor'}</h2><Badge variant="outline" className={estadoClass(orden.estado)}>{estadoLabel(orden.estado)}</Badge></div><p className="text-sm text-muted-foreground mt-1">{orden.fecha || orden.created_at ? formatDate(orden.fecha || orden.created_at) : 'Sin fecha'} · {detalle.length} líneas</p></div>
+                <p className="text-2xl font-bold">{formatCurrency(totalDetalle)}</p>
+              </div>
+            </CardContent></Card>
+
+            <Card className="overflow-hidden">
+              <Table><TableHeader><TableRow><TableHead>Producto</TableHead><TableHead className="text-right">Cantidad</TableHead><TableHead className="text-right">Costo</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader><TableBody>
+                {detalle.map((item: any, idx: number) => <TableRow key={item.id || idx}><TableCell className="font-medium">{item.producto_nombre || 'Producto'}</TableCell><TableCell className="text-right">{Number(item.cantidad) || 0}</TableCell><TableCell className="text-right">{formatCurrency(Number(item.precio_unitario) || 0)}</TableCell><TableCell className="text-right font-medium">{formatCurrency(Number(item.total) || (Number(item.cantidad) || 0) * (Number(item.precio_unitario) || 0))}</TableCell></TableRow>)}
+                {!detalle.length && <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">Sin líneas de detalle</TableCell></TableRow>}
+              </TableBody></Table>
+            </Card>
+
+            {orden.notas && <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Notas</p><p className="text-sm whitespace-pre-wrap">{orden.notas}</p></CardContent></Card>}
+          </div>
+
+          <div className="space-y-4">
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <p className="font-semibold">Pago al proveedor</p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <MiniMetric label="Total" value={formatCurrency(totalDetalle)} />
+                  <MiniMetric label="Pagado" value={formatCurrency(totalPagadoOrden)} />
+                  <MiniMetric label="Saldo" value={formatCurrency(saldoDetalle)} emphasis={saldoDetalle > 0} />
+                </div>
+                {saldoDetalle > 0 ? (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <Label>Monto</Label>
+                      <Input type="number" min="0.01" max={saldoDetalle} step="0.01" value={nuevoPago.monto} onChange={(e) => setNuevoPago((p) => ({ ...p, monto: e.target.value }))} placeholder={formatCurrency(saldoDetalle)} />
+                      <Select value={nuevoPago.metodo_pago} onValueChange={(v) => setNuevoPago((p) => ({ ...p, metodo_pago: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Efectivo">Efectivo</SelectItem><SelectItem value="Tarjeta">Tarjeta</SelectItem><SelectItem value="Transferencia">Transferencia</SelectItem></SelectContent></Select>
+                      <Input value={nuevoPago.referencia} onChange={(e) => setNuevoPago((p) => ({ ...p, referencia: e.target.value }))} placeholder="Referencia (opcional)" />
+                      <Button className="w-full" onClick={registrarPago} disabled={guardandoPago}>{guardandoPago ? 'Registrando…' : 'Registrar pago'}</Button>
+                      <p className="text-[11px] text-muted-foreground">Registrar un pago no recibe mercancía ni modifica stock.</p>
+                    </div>
+                  </>
+                ) : <div className="rounded-lg bg-success/10 p-3 text-sm text-success flex items-center gap-2"><CheckCircle2 className="h-4 w-4" />Orden liquidada</div>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <p className="font-semibold">Historial de pagos</p>
+                {!pagosOrden.length ? <p className="text-sm text-muted-foreground">Sin pagos registrados.</p> : pagosOrden.map((pago) => <div key={pago.id} className="flex items-start justify-between gap-2 border-b last:border-0 pb-2 last:pb-0"><div><p className="text-sm font-medium">{formatCurrency(Number(pago.monto) || 0)}</p><p className="text-xs text-muted-foreground">{pago.metodo_pago || 'Pago'} · {pago.fecha ? formatDateTime(pago.fecha) : ''}</p></div><Button variant="ghost" size="icon" onClick={() => eliminarPago(pago.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>)}
+              </CardContent>
+            </Card>
+
+            <Card><CardContent className="p-4 space-y-2"><p className="font-semibold">Estado logístico</p><Select value={orden.estado || 'Pendiente'} onValueChange={(v) => cambiarEstado(orden, v as EstadoCompra)} disabled={changingState || orden.estado === 'Recibida'}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ESTADOS.map((e) => <SelectItem key={e.value} value={e.value} disabled={e.value === 'Recibida' && orden.estado === 'Cancelada'}>{e.label}</SelectItem>)}</SelectContent></Select><p className="text-[11px] text-muted-foreground">“Recibida” es el único estado que ingresa mercancía a inventario.</p></CardContent></Card>
+
+            <Button variant="outline" className="w-full text-destructive" onClick={() => eliminarOrden(orden)}><Trash2 className="mr-2 h-4 w-4" />Eliminar orden</Button>
+          </div>
         </div>
       </MainLayout>
     );
   }
 
   return (
-    <MainLayout 
-      title="Órdenes de Compra" 
-      subtitle="Gestión de compras a proveedores"
-    >
-      {detalleModal.open && detalleModal.orden ? null : (
-      <Tabs defaultValue="ordenes">
-        {/*
-          Tabs responsivas: evitamos overflow horizontal global (en este caso son solo 2 pestañas).
-          Relacionado con `Check-In-Front/src/index.css` que fuerza `overflow-x: hidden` y puede "cortar" elementos que desbordan.
-          Relacionado con `Check-In-Front/src/pages/Compras.tsx` (vista principal de Compras).
-        */}
-        <div className="w-full pb-2 mb-4">
-          <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-max">
-            <TabsTrigger value="ordenes">Órdenes de Compra</TabsTrigger>
-            <TabsTrigger value="proveedores">Proveedores</TabsTrigger>
-          </TabsList>
-        </div>
+    <MainLayout title="Compras" subtitle="Órdenes a proveedores, recepción de mercancía y pagos">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="grid grid-cols-2 w-full mb-4 sm:w-fit"><TabsTrigger value="ordenes">Órdenes</TabsTrigger><TabsTrigger value="proveedores">Proveedores</TabsTrigger></TabsList>
 
         <TabsContent value="ordenes">
-          {isNewOrderOpen ? (() => {
-            const subtotal = orderItems.reduce(
-              (s, it) => s + (parseFloat(it.cantidad || '0') * parseFloat(it.precio || '0') || 0),
-              0
-            );
-            const impuestos = subtotal * 0.16;
-            const total = subtotal + impuestos;
-            const productoOptions: ComboboxOption[] = productos.map(p => ({ value: p.id, label: p.nombre }));
-            return (
-              <div className="space-y-4">
-                {/* Barra superior tipo Odoo */}
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setIsNewOrderOpen(false)}>
-                      <ArrowLeft className="h-4 w-4 mr-1" /> Órdenes
-                    </Button>
-                    <span className="text-muted-foreground">/</span>
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <ShoppingBag className="h-5 w-5 text-primary" /> Nueva Orden
-                    </h2>
-                    <Badge variant="secondary">Borrador</Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => setIsNewOrderOpen(false)}>Descartar</Button>
-                    <Button onClick={handleCreateOrder}>
-                      <CheckCircle2 className="h-4 w-4 mr-2" /> Guardar
-                    </Button>
-                  </div>
-                </div>
-
-                <Card>
-                  <CardContent className="p-6 space-y-6">
-                    {/* Cabecera editable */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Proveedor *</Label>
-                        <ComboboxCreatable
-                          options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
-                          value={selectedProveedor}
-                          onValueChange={setSelectedProveedor}
-                          onCreate={async (nombre) => {
-                            try {
-                              const newProv = await api.createProveedor({ nombre });
-                              setProveedores([...proveedores, newProv]);
-                              toast({ title: 'Proveedor creado' });
-                              return { value: newProv.id, label: newProv.nombre };
-                            } catch (e: any) {
-                              toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                            }
-                          }}
-                          placeholder="Seleccionar proveedor..."
-                          searchPlaceholder="Buscar o crear proveedor..."
-                          createLabel="Crear proveedor"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de orden</Label>
-                        <Input value={formatDate(new Date())} disabled className="bg-muted/40" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado inicial</Label>
-                        <Input value="Pendiente" disabled className="bg-muted/40" />
-                      </div>
-                    </div>
-
-                    {/* Líneas tipo Odoo */}
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="bg-muted/40 px-3 py-2 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm font-semibold">
-                          <Package className="h-4 w-4 text-primary" /> Líneas de la orden
-                        </div>
-                        <span className="text-xs text-muted-foreground hidden sm:block">
-                          Tip: presiona <kbd className="px-1.5 py-0.5 rounded border bg-background">Tab</kbd> al final de una línea para agregar otra
-                        </span>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="min-w-[260px]">Producto</TableHead>
-                              <TableHead className="w-24 text-center">Cant.</TableHead>
-                              <TableHead className="w-32 text-right">Precio Unit.</TableHead>
-                              <TableHead className="w-32 text-right">Subtotal</TableHead>
-                              <TableHead className="w-10"></TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {orderItems.map((item, idx) => {
-                              const lineSub = (parseFloat(item.cantidad || '0') * parseFloat(item.precio || '0')) || 0;
-                              const isLast = idx === orderItems.length - 1;
-                              return (
-                                <TableRow key={idx} ref={(el) => (rowRefs.current[idx] = el)}>
-                                  <TableCell>
-                                    <ComboboxCreatable
-                                      options={productoOptions}
-                                      value={item.producto_id}
-                                      onValueChange={(val) => {
-                                        const newItems = [...orderItems];
-                                        const prod = productos.find(p => p.id === val);
-                                        newItems[idx].producto_id = val;
-                                        newItems[idx].producto_nombre = prod?.nombre || val;
-                                        if (prod?.precio_compra) newItems[idx].precio = String(prod.precio_compra);
-                                        if (!newItems[idx].cantidad) newItems[idx].cantidad = '1';
-                                        setOrderItems(newItems);
-                                      }}
-                                      onCreate={async (nombre) => {
-                                        try {
-                                          const newProd = await api.createProducto({ nombre, stock_actual: 0 });
-                                          setProductos([...productos, newProd]);
-                                          toast({ title: 'Producto creado' });
-                                          return { value: newProd.id, label: newProd.nombre };
-                                        } catch (e: any) {
-                                          toast({ title: 'Error', description: e.message, variant: 'destructive' });
-                                        }
-                                      }}
-                                      placeholder="Seleccionar producto..."
-                                      searchPlaceholder="Buscar o crear producto..."
-                                      createLabel="Crear producto"
-                                      autoOpenOnFocus
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <Input
-                                      type="number" inputMode="decimal" min="0"
-                                      className="text-center h-9"
-                                      value={item.cantidad}
-                                      onChange={(e) => {
-                                        const n = [...orderItems]; n[idx].cantidad = e.target.value; setOrderItems(n);
-                                      }}
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <Input
-                                      type="number" inputMode="decimal" min="0"
-                                      className="text-right h-9"
-                                      value={item.precio}
-                                      onChange={(e) => {
-                                        const n = [...orderItems]; n[idx].precio = e.target.value; setOrderItems(n);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Tab' && !e.shiftKey && isLast) {
-                                          const cur = orderItems[idx];
-                                          if (cur.producto_nombre && cur.cantidad && cur.precio) {
-                                            e.preventDefault();
-                                            pendingFocusIdx.current = orderItems.length;
-                                            setOrderItems([
-                                              ...orderItems,
-                                              { producto_id: '', producto_nombre: '', cantidad: '', precio: '' },
-                                            ]);
-                                          }
-                                        }
-                                        if (e.key === 'Enter') {
-                                          e.preventDefault();
-                                          const cur = orderItems[idx];
-                                          if (cur.producto_nombre && cur.cantidad && cur.precio && isLast) {
-                                            pendingFocusIdx.current = orderItems.length;
-                                            setOrderItems([
-                                              ...orderItems,
-                                              { producto_id: '', producto_nombre: '', cantidad: '', precio: '' },
-                                            ]);
-                                          }
-                                        }
-                                      }}
-                                    />
-                                  </TableCell>
-                                  <TableCell className="text-right font-medium">
-                                    {formatCurrency(lineSub)}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Button
-                                      variant="ghost" size="icon"
-                                      onClick={() => setOrderItems(orderItems.filter((_, i) => i !== idx))}
-                                      disabled={orderItems.length === 1}
-                                      aria-label="Eliminar línea"
-                                    >
-                                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-                      <div className="px-3 py-2 border-t bg-muted/20">
-                        <Button variant="ghost" size="sm" onClick={handleAddItem}>
-                          <Plus className="h-4 w-4 mr-1" /> Agregar línea
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Notas + Totales */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      <div className="lg:col-span-2 space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notas / términos</Label>
-                        <Textarea
-                          rows={4}
-                          placeholder="Condiciones de pago, instrucciones de entrega, etc."
-                          value={notas}
-                          onChange={(e) => setNotas(e.target.value)}
-                        />
-                      </div>
-                      <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm h-fit">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Líneas</span>
-                          <span className="font-medium">{orderItems.filter(i => i.producto_nombre && i.cantidad && i.precio).length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Subtotal</span>
-                          <span className="font-medium">{formatCurrency(subtotal)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">IVA (16%)</span>
-                          <span className="font-medium">{formatCurrency(impuestos)}</span>
-                        </div>
-                        <Separator />
-                        <div className="flex justify-between text-base">
-                          <span className="font-semibold">Total</span>
-                          <span className="font-bold text-primary">{formatCurrency(total)}</span>
-                        </div>
-                        <Button onClick={handleCreateOrder} size="lg" className="w-full mt-2">
-                          <CheckCircle2 className="h-4 w-4 mr-2" /> Guardar orden
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })() : (<>
-          {/*
-            En tablets (ej. iPad ~820px) 4 columnas recortan el contenido.
-            Usamos 2 columnas hasta `lg` para evitar cortes.
-          */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <Card>
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <ShoppingBag className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold">{ordenes.length}</p>
-                    <p className="text-sm text-muted-foreground truncate">Total Órdenes</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-warning/10">
-                    <Clock className="h-5 w-5 text-warning" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold">{ordenesActivas}</p>
-                    <p className="text-sm text-muted-foreground truncate">En Proceso</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-info/10">
-                    <Truck className="h-5 w-5 text-info" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold">{ordenes.filter(o => o.estado === 'EnTransito').length}</p>
-                    <p className="text-sm text-muted-foreground truncate">En Tránsito</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-destructive/10">
-                    <DollarSign className="h-5 w-5 text-destructive" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold truncate">{formatCurrency(totalPendiente)}</p>
-                    <p className="text-sm text-muted-foreground truncate">Por Pagar</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
+            <Metric label="Órdenes" value={String(stats.total)} icon={ShoppingBag} />
+            <Metric label="Activas" value={String(stats.activas)} icon={Clock} />
+            <Metric label="En tránsito" value={String(stats.transito)} icon={Truck} />
+            <Metric label="Valor en proceso" value={formatCurrency(stats.valorActivo)} icon={DollarSign} />
           </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-            {/*
-              Toolbar responsiva:
-              - Móvil + Tablet (<lg): stack para que nada se corte
-              - Desktop (lg+): una fila
-            */}
-            <div className="flex flex-1 flex-col lg:flex-row lg:items-center gap-3">
-              <div className="relative flex-1 lg:max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Buscar por número o proveedor..."
-                  className="pl-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              {/* En móvil: Estado + Refrescar en la misma fila para ahorrar espacio */}
-              <div className="flex items-center gap-2 w-full lg:w-auto">
-                <Select value={filterEstado} onValueChange={setFilterEstado}>
-                  <SelectTrigger className="flex-1 lg:w-[160px]">
-                    <SelectValue placeholder="Estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Borrador">Borrador</SelectItem>
-                    <SelectItem value="Enviada">Enviada</SelectItem>
-                    <SelectItem value="Confirmada">Confirmada</SelectItem>
-                    <SelectItem value="EnTransito">En Tránsito</SelectItem>
-                    <SelectItem value="Recibida">Recibida</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="icon" onClick={cargarDatos} className="shrink-0">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleResetAll}>
-                  <RotateCcw className="h-4 w-4 mr-1" />
-                  Restablecer
-                </Button>
-              </div>
-            </div>
-            <Button onClick={() => setIsNewOrderOpen(true)} className="w-full sm:w-auto justify-center">
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Orden
-            </Button>
+          <div className="flex flex-col lg:flex-row lg:items-center gap-2 mb-4">
+            <div className="relative flex-1 lg:max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar orden o proveedor" /></div>
+            <Select value={filterEstado} onValueChange={setFilterEstado}><SelectTrigger className="lg:w-[170px]"><SelectValue placeholder="Estado" /></SelectTrigger><SelectContent><SelectItem value="all">Todos los estados</SelectItem>{ESTADOS.map((e) => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}</SelectContent></Select>
+            <div className="flex gap-2 lg:ml-auto"><Button variant="outline" size="icon" onClick={cargarDatos}><RefreshCw className="h-4 w-4" /></Button><Button variant="outline" size="sm" onClick={() => { setSearchQuery(''); setFilterEstado('all'); dt.resetPersisted(); }}><RotateCcw className="mr-1.5 h-4 w-4" />Restablecer</Button><Button onClick={() => setIsNewOrderOpen(true)}><Plus className="mr-1.5 h-4 w-4" />Nueva orden</Button></div>
           </div>
 
-          <Card>
-            {/*
-              En móvil, una tabla con scroll se siente incómoda: mostramos cards.
-              En tablets (iPad) también preferimos cards: la tabla suele recortarse por ancho.
-              Tabla solo en `lg+` (mejor densidad y caben todas las columnas).
-            */}
-            <div className="block lg:hidden">
-              <div className="divide-y">
-                {filteredOrdenes.map((orden) => {
-                  const numero = orden.numero_orden || orden.numero || orden.codigo || `OC-${orden.id}`;
-                  const provNombre = orden.proveedor?.nombre || orden.proveedor_nombre || '-';
-                  const fecha = orden.fecha || orden.created_at;
-                  const itemsCount = orden.items?.length || orden.items_count || 0;
-                  return (
-                    <div key={orden.id} className="p-4">
-                      {/*
-                        Header responsivo: `flex-wrap` para que el badge no se "corte" a la derecha.
-                        Relacionado con `Check-In-Front/src/index.css` (overflow-x hidden a nivel global).
-                      */}
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold truncate">{numero}</p>
-                          <p className="text-sm text-muted-foreground truncate">{provNombre}</p>
-                        </div>
-                        <Badge className={cn("flex items-center gap-1 shrink-0 max-w-full", getEstadoColor(orden.estado))}>
-                          {getEstadoIcon(orden.estado)}
-                          {orden.estado === 'EnTransito' ? 'En Tránsito' : orden.estado}
-                        </Badge>
-                      </div>
-                      {/*
-                        En móvil: evitamos que el botón compita en una grilla 2-cols (se recortaba).
-                        Mostramos info en grilla y el CTA en fila completa.
-                      */}
-                      <div className="mt-3 space-y-3 text-sm">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Fecha</p>
-                            <p className="font-medium">{fecha ? formatDate(fecha) : '-'}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Total</p>
-                            <p className="font-bold">{formatCurrency(Number(orden.total || 0))}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-xs text-muted-foreground">Items</p>
-                            <p className="font-medium">{itemsCount} productos</p>
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => handleVerDetalle(orden)} className="w-full justify-center">
-                          <Eye className="mr-2 h-4 w-4" /> Ver detalle
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {filteredOrdenes.length === 0 && (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No hay órdenes de compra
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="space-y-2 lg:hidden">
+            {dt.processed.map((orden) => <OrderCard key={orden.id} orden={orden} onOpen={() => openDetalle(orden)} />)}
+            {!dt.processed.length && <Card><CardContent className="p-8 text-center text-muted-foreground">No hay órdenes con estos filtros.</CardContent></Card>}
+          </div>
 
-            <div className="hidden lg:block relative w-full overflow-x-auto touch-pan-x overscroll-x-contain">
-              <div className="p-3 border-b">
-                <BulkActionBar
-                  count={dt.selectedCount}
-                  onClear={dt.clearSelection}
-                  onDelete={eliminarSeleccionadas}
-                  onExport={exportarCsvOrdenes}
-                  deleting={eliminandoBulk}
-                  entityName="órdenes"
-                  extraActions={
-                    <>
-                      <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Enviada')}>Enviar</Button>
-                      <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Recibida')}>Marcar recibida</Button>
-                      <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Cancelada')}>Cancelar</Button>
-                    </>
-                  }
-                />
-              </div>
-              <Table className="min-w-[900px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40px]">
-                      <Checkbox
-                        checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
-                        onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
-                        aria-label="Seleccionar todas"
-                      />
-                    </TableHead>
-                    <SortHeader label="Orden" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.numero} onFilterChange={(v) => dt.setColumnFilter('numero', v)} onValuesChange={(vs) => dt.setColumnFilterValues('numero', vs)} filterOptions={filteredOrdenes.map((o: any) => o.numero || o.codigo)} />
-                    <SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.proveedor} onFilterChange={(v) => dt.setColumnFilter('proveedor', v)} onValuesChange={(vs) => dt.setColumnFilterValues('proveedor', vs)} filterOptions={filteredOrdenes.map((o: any) => o.proveedor?.nombre || o.proveedor_nombre)} />
-                    <SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.fecha} onFilterChange={(v) => dt.setColumnFilter('fecha', v)} onValuesChange={(vs) => dt.setColumnFilterValues('fecha', vs)} filterOptions={filteredOrdenes.map((o: any) => o.fecha)} />
-                    <TableHead>Items</TableHead>
-                    <SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.estado} onFilterChange={(v) => dt.setColumnFilter('estado', v)} onValuesChange={(vs) => dt.setColumnFilterValues('estado', vs)} filterOptions={filteredOrdenes.map((o: any) => o.estado)} />
-                    <SortHeader label="Total" columnKey="total" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" filterValue={dt.filters.total} onFilterChange={(v) => dt.setColumnFilter('total', v)} onValuesChange={(vs) => dt.setColumnFilterValues('total', vs)} />
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dt.processed.map(orden => {
-                    const numero = orden.numero_orden || orden.numero || orden.codigo || `OC-${orden.id}`;
-                    const provNombre = orden.proveedor?.nombre || orden.proveedor_nombre || '-';
-                    const provContacto = orden.proveedor?.contacto || orden.proveedor_contacto || '';
-                    const fecha = orden.fecha || orden.created_at;
-                    const itemsCount = orden.items?.length || orden.items_count || 0;
-                    return (
-                      <TableRow key={orden.id} className={dt.selected.has(orden.id) ? 'bg-primary/5' : ''}>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={dt.selected.has(orden.id)}
-                            onCheckedChange={() => dt.toggleRow(orden.id)}
-                            aria-label="Seleccionar fila"
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">{numero}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{provNombre}</p>
-                            {provContacto && <p className="text-xs text-muted-foreground">{provContacto}</p>}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p>{fecha ? formatDate(fecha) : '-'}</p>
-                            {orden.fecha_entrega && (
-                              <p className="text-xs text-muted-foreground">
-                                Entrega: {formatDate(orden.fecha_entrega)}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {itemsCount} productos
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={cn("flex items-center gap-1 w-fit", getEstadoColor(orden.estado))}>
-                            {getEstadoIcon(orden.estado)}
-                            {orden.estado === 'EnTransito' ? 'En Tránsito' : orden.estado}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-bold">
-                          {formatCurrency(Number(orden.total || 0))}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleVerDetalle(orden)}>
-                                <Eye className="mr-2 h-4 w-4" /> Ver detalle
-                              </DropdownMenuItem>
-                              {orden.estado === 'Borrador' && (
-                                <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Enviada')}>
-                                  <Clock className="mr-2 h-4 w-4" /> Enviar orden
-                                </DropdownMenuItem>
-                              )}
-                              {orden.estado === 'Enviada' && (
-                                <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Confirmada')}>
-                                  <CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar
-                                </DropdownMenuItem>
-                              )}
-                              {orden.estado === 'Confirmada' && (
-                                <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'EnTransito')}>
-                                  <Truck className="mr-2 h-4 w-4" /> Marcar en tránsito
-                                </DropdownMenuItem>
-                              )}
-                              {orden.estado === 'EnTransito' && (
-                                <DropdownMenuItem onClick={() => handleUpdateEstado(orden.id, 'Recibida')}>
-                                  <Package className="mr-2 h-4 w-4" /> Marcar recibida
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem>
-                                <FileText className="mr-2 h-4 w-4" /> Generar PDF
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleEliminarOrden(orden)}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {dt.processed.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        No hay órdenes de compra
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <Card className="hidden lg:block overflow-hidden">
+            <div className="p-3 border-b"><BulkActionBar count={dt.selectedCount} onClear={dt.clearSelection} onDelete={eliminarSeleccionadas} onExport={exportarOrdenes} deleting={eliminandoBulk} entityName="órdenes" /></div>
+            <div className="overflow-x-auto"><Table className="min-w-[850px]"><TableHeader><TableRow><TableHead className="w-10"><Checkbox checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)} /></TableHead><SortHeader label="Orden" columnKey="numero" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} /><SortHeader label="Proveedor" columnKey="proveedor" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} /><SortHeader label="Fecha" columnKey="fecha" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} /><SortHeader label="Estado" columnKey="estado" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} /><SortHeader label="Total" columnKey="total" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="right" /><TableHead className="text-right">Acción</TableHead></TableRow></TableHeader><TableBody>
+              {dt.processed.map((orden) => <TableRow key={orden.id} className={dt.selected.has(orden.id) ? 'bg-primary/5' : ''}><TableCell><Checkbox checked={dt.selected.has(orden.id)} onCheckedChange={() => dt.toggleRow(orden.id)} /></TableCell><TableCell className="font-medium">{orden.numero_orden || orden.numero || orden.codigo || '—'}</TableCell><TableCell>{orden.proveedor_nombre || orden.proveedor?.nombre || '—'}</TableCell><TableCell>{orden.fecha || orden.created_at ? formatDate(orden.fecha || orden.created_at) : '—'}</TableCell><TableCell><Badge variant="outline" className={estadoClass(orden.estado)}>{estadoLabel(orden.estado)}</Badge></TableCell><TableCell className="text-right font-semibold">{formatCurrency(Number(orden.total) || 0)}</TableCell><TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openDetalle(orden)}><Eye className="mr-1.5 h-4 w-4" />Ver</Button></TableCell></TableRow>)}
+              {!dt.processed.length && <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No hay órdenes.</TableCell></TableRow>}
+            </TableBody></Table></div>
           </Card>
-          </>)}
         </TabsContent>
 
         <TabsContent value="proveedores">
-          <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar proveedor..." className="pl-9" value={provSearch} onChange={(e) => setProvSearch(e.target.value)} />
-            </div>
-            <Button variant="outline" size="sm" onClick={handleResetAllProv}>
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Restablecer
-            </Button>
-          </div>
-            <Button onClick={() => setIsNewProveedorOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Proveedor
-            </Button>
-          </div>
-
-          <BulkActionBar
-            count={dtProv.selectedCount}
-            onClear={dtProv.clearSelection}
-            onDelete={eliminarProveedoresSeleccionados}
-            onExport={exportarCsvProveedores}
-            deleting={eliminandoBulkProv}
-            entityName="proveedores"
-          />
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {dtProv.processed.map(prov => (
-              <Card key={prov.id} className={cn("hover:shadow-md transition-all", dtProv.selected.has(prov.id) && 'ring-2 ring-primary')}>
-                <CardContent className="p-4">
-                  <div className="flex justify-end mb-2">
-                    <Checkbox
-                      checked={dtProv.selected.has(prov.id)}
-                      onCheckedChange={() => dtProv.toggleRow(prov.id)}
-                      aria-label="Seleccionar proveedor"
-                    />
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Building className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{prov.nombre}</h3>
-                      <p className="text-sm text-muted-foreground">{prov.rfc || ''}</p>
-                      <Separator className="my-2" />
-                      <div className="space-y-1 text-sm">
-                        {prov.contacto && <p><span className="text-muted-foreground">Contacto:</span> {prov.contacto}</p>}
-                        {prov.telefono && <p><span className="text-muted-foreground">Tel:</span> {prov.telefono}</p>}
-                        {prov.email && <p><span className="text-muted-foreground">Email:</span> {prov.email}</p>}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {dtProv.processed.length === 0 && (
-              <div className="col-span-full text-center py-8 text-muted-foreground">
-                No hay proveedores registrados
-              </div>
-            )}
-          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4"><div className="relative flex-1 sm:max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={provSearch} onChange={(e) => setProvSearch(e.target.value)} placeholder="Buscar proveedor, RFC, correo..." /></div><div className="flex gap-2 sm:ml-auto"><Button variant="outline" size="sm" onClick={() => { setProvSearch(''); dtProv.resetPersisted(); }}><RotateCcw className="mr-1.5 h-4 w-4" />Restablecer</Button><Button onClick={() => setIsNewProveedorOpen(true)}><Plus className="mr-1.5 h-4 w-4" />Nuevo proveedor</Button></div></div>
+          <Card className="overflow-hidden"><div className="p-3 border-b"><BulkActionBar count={dtProv.selectedCount} onClear={dtProv.clearSelection} onDelete={eliminarProveedoresSeleccionados} onExport={exportarProveedores} deleting={eliminandoBulkProv} entityName="proveedores" /></div><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead className="w-10"><Checkbox checked={dtProv.allVisibleSelected ? true : dtProv.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dtProv.toggleSelectAllVisible(!!v)} /></TableHead><SortHeader label="Proveedor" columnKey="nombre" sortKey={dtProv.sortKey} sortDir={dtProv.sortDir} onSort={dtProv.toggleSort} /><SortHeader label="RFC" columnKey="rfc" sortKey={dtProv.sortKey} sortDir={dtProv.sortDir} onSort={dtProv.toggleSort} /><SortHeader label="Contacto" columnKey="contacto" sortKey={dtProv.sortKey} sortDir={dtProv.sortDir} onSort={dtProv.toggleSort} /><TableHead>Teléfono</TableHead><TableHead>Email</TableHead></TableRow></TableHeader><TableBody>{dtProv.processed.map((p) => <TableRow key={p.id}><TableCell><Checkbox checked={dtProv.selected.has(p.id)} onCheckedChange={() => dtProv.toggleRow(p.id)} /></TableCell><TableCell className="font-medium">{p.nombre}</TableCell><TableCell>{p.rfc || '—'}</TableCell><TableCell>{p.contacto || '—'}</TableCell><TableCell>{p.telefono || '—'}</TableCell><TableCell>{p.email || '—'}</TableCell></TableRow>)}{!dtProv.processed.length && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">No hay proveedores.</TableCell></TableRow>}</TableBody></Table></div></Card>
         </TabsContent>
       </Tabs>
-      )}
 
-
-      {/* Detalle inline (vista completa, no modal) */}
-      {detalleModal.open && detalleModal.orden && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => { setDetalleModal({ open: false, orden: null }); setPagosOrden([]); }}>
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                  <h2 className="text-xl font-bold flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Orden {detalleModal.orden.numero_orden || detalleModal.orden.numero || detalleModal.orden.codigo || ''}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">Información completa de la orden de compra</p>
-                </div>
-              </div>
-              <Button variant="destructive" size="sm" onClick={() => handleEliminarOrden(detalleModal.orden)}>
-                <Trash2 className="h-4 w-4 mr-1" /> Eliminar
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Metadata: 2 columnas en desktop */}
-                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-lg border bg-muted/20">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Proveedor</p>
-                    <p className="font-semibold">{detalleModal.orden.proveedor?.nombre || detalleModal.orden.proveedor_nombre || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Fecha</p>
-                    <p className="font-semibold">
-                      {detalleModal.orden.fecha || detalleModal.orden.created_at
-                        ? formatDate(detalleModal.orden.fecha || detalleModal.orden.created_at)
-                        : '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Estado</p>
-                    <Badge className={getEstadoColor(detalleModal.orden.estado)}>{detalleModal.orden.estado}</Badge>
-                  </div>
-                </div>
-                {/* Totales financieros */}
-                <div className="p-4 rounded-lg border bg-card">
-                  <div className="flex items-center justify-between text-sm py-1">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">{formatCurrency(Number(detalleModal.orden.subtotal || 0))}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm py-1">
-                    <span className="text-muted-foreground">Impuestos</span>
-                    <span className="font-medium">{formatCurrency(Number(detalleModal.orden.impuestos || 0))}</span>
-                  </div>
-                  <Separator className="my-2" />
-                  <div className="flex items-center justify-between py-1">
-                    <span className="font-semibold">Total</span>
-                    <span className="text-xl font-bold text-primary">{formatCurrency(Number(detalleModal.orden.total || 0))}</span>
-                  </div>
-                  {(() => {
-                    const total = Number(detalleModal.orden.total || 0);
-                    const saldo = Math.max(0, total - totalPagadoOrden);
-                    return (
-                      <>
-                        <Separator className="my-2" />
-                        <div className="flex items-center justify-between text-sm py-0.5">
-                          <span className="text-muted-foreground">Pagado</span>
-                          <span className="font-semibold text-emerald-600">{formatCurrency(totalPagadoOrden)}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm py-0.5">
-                          <span className="text-muted-foreground">Saldo</span>
-                          <span className={cn('font-semibold', saldo > 0 ? 'text-amber-600' : 'text-emerald-600')}>
-                            {formatCurrency(saldo)}
-                          </span>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Productos</p>
-               {detalleModal.orden.detalle && detalleModal.orden.detalle.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Producto</TableHead>
-                        <TableHead>Cantidad</TableHead>
-                        <TableHead>P. Unitario</TableHead>
-                        {/* El subtotal del renglón NO incluye impuestos (los impuestos se muestran en el encabezado del modal). */}
-                        <TableHead className="text-right">Subtotal</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-            {detalleModal.orden.detalle.map((item: any, idx: number) => (
-                        <TableRow key={idx}>
-                      <TableCell>{item.producto_nombre || item.producto || item.nombre}</TableCell>
-                          <TableCell>{item.cantidad}</TableCell>
-                          <TableCell>{formatCurrency(Number(item.precio_unitario || item.precioUnitario || 0))}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Number(item.subtotal || (item.cantidad * item.precio_unitario) || 0))}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p className="text-muted-foreground">No hay productos registrados</p>
-                )}
-              </div>
-              {detalleModal.orden.notas && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Notas</p>
-                    <p>{detalleModal.orden.notas}</p>
-                  </div>
-                </>
-              )}
-
-              {/* Pagos al proveedor */}
-              <Separator />
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold flex items-center gap-2">
-                    <Wallet className="h-4 w-4 text-primary" /> Pagos al proveedor
-                  </p>
-                  {(() => {
-                    const total = Number(detalleModal.orden.total || 0);
-                    const saldo = Math.max(0, total - totalPagadoOrden);
-                    return (
-                      <div className="text-xs text-right">
-                        <div>Pagado: <span className="font-semibold text-emerald-600">{formatCurrency(totalPagadoOrden)}</span></div>
-                        <div>Saldo: <span className={cn('font-semibold', saldo > 0 ? 'text-amber-600' : 'text-emerald-600')}>{formatCurrency(saldo)}</span></div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {pagosOrden.length > 0 && (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Método</TableHead>
-                        <TableHead>Referencia</TableHead>
-                        <TableHead className="text-right">Monto</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pagosOrden.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="text-sm">{formatDate(p.fecha)}</TableCell>
-                          <TableCell><Badge variant="secondary">{p.metodo_pago}</Badge></TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{p.referencia || '—'}</TableCell>
-                          <TableCell className="text-right font-medium">{formatCurrency(Number(p.monto))}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => handleEliminarPago(p.id)} aria-label="Eliminar pago">
-                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-
-                {/* Form rápido para registrar pago */}
-                <div className="mt-3 rounded-lg border bg-muted/20 p-3 grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-                  <div className="sm:col-span-3">
-                    <Label className="text-xs">Monto</Label>
-                    <Input
-                      type="number" inputMode="decimal" min="0" placeholder="0.00"
-                      value={nuevoPago.monto}
-                      onChange={(e) => setNuevoPago(p => ({ ...p, monto: e.target.value }))}
-                    />
-                  </div>
-                  <div className="sm:col-span-3">
-                    <Label className="text-xs">Método</Label>
-                    <Select value={nuevoPago.metodo_pago} onValueChange={(v) => setNuevoPago(p => ({ ...p, metodo_pago: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Efectivo">Efectivo</SelectItem>
-                        <SelectItem value="Transferencia">Transferencia</SelectItem>
-                        <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                        <SelectItem value="Cheque">Cheque</SelectItem>
-                        <SelectItem value="Otro">Otro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="sm:col-span-4">
-                    <Label className="text-xs">Referencia (opcional)</Label>
-                    <Input
-                      placeholder="Folio, # transferencia..."
-                      value={nuevoPago.referencia}
-                      onChange={(e) => setNuevoPago(p => ({ ...p, referencia: e.target.value }))}
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Button
-                      onClick={handleRegistrarPago}
-                      disabled={guardandoPago || !nuevoPago.monto}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Pagar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Nuevo Proveedor Dialog */}
-      <Dialog open={isNewProveedorOpen} onOpenChange={setIsNewProveedorOpen}>
-        <DialogContent className="max-w-md max-h-[88vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building className="h-5 w-5" />
-              Nuevo Proveedor
-            </DialogTitle>
-            <DialogDescription>
-              Registre un proveedor para usarlo en Órdenes de Compra
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Nombre *</Label>
-              <Input
-                value={newProveedor.nombre}
-                onChange={(e) => setNewProveedor(prev => ({ ...prev, nombre: e.target.value }))}
-                placeholder="Ej. Alimentos del Pacífico"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>RFC</Label>
-                <Input
-                  value={newProveedor.rfc}
-                  onChange={(e) => setNewProveedor(prev => ({ ...prev, rfc: e.target.value }))}
-                  placeholder="Opcional"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Contacto</Label>
-                <Input
-                  value={newProveedor.contacto}
-                  onChange={(e) => setNewProveedor(prev => ({ ...prev, contacto: e.target.value }))}
-                  placeholder="Opcional"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Teléfono</Label>
-                <Input
-                  value={newProveedor.telefono}
-                  onChange={(e) => setNewProveedor(prev => ({ ...prev, telefono: e.target.value }))}
-                  placeholder="Opcional"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  value={newProveedor.email}
-                  onChange={(e) => setNewProveedor(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Opcional"
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewProveedorOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCrearProveedor}>
-              <Plus className="mr-2 h-4 w-4" />
-              Crear Proveedor
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Dialog open={isNewProveedorOpen} onOpenChange={setIsNewProveedorOpen}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Nuevo proveedor</DialogTitle><DialogDescription>Nombre obligatorio; el resto puede completarse después.</DialogDescription></DialogHeader><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5 sm:col-span-2"><Label>Nombre *</Label><Input value={newProveedor.nombre} onChange={(e) => setNewProveedor((p) => ({ ...p, nombre: e.target.value }))} /></div><div className="space-y-1.5"><Label>RFC</Label><Input value={newProveedor.rfc} onChange={(e) => setNewProveedor((p) => ({ ...p, rfc: e.target.value }))} /></div><div className="space-y-1.5"><Label>Contacto</Label><Input value={newProveedor.contacto} onChange={(e) => setNewProveedor((p) => ({ ...p, contacto: e.target.value }))} /></div><div className="space-y-1.5"><Label>Teléfono</Label><Input value={newProveedor.telefono} onChange={(e) => setNewProveedor((p) => ({ ...p, telefono: e.target.value }))} /></div><div className="space-y-1.5"><Label>Email</Label><Input type="email" value={newProveedor.email} onChange={(e) => setNewProveedor((p) => ({ ...p, email: e.target.value }))} /></div></div><DialogFooter><Button variant="outline" onClick={() => setIsNewProveedorOpen(false)}>Cancelar</Button><Button onClick={crearProveedor} disabled={savingProveedor || !newProveedor.nombre.trim()}>{savingProveedor ? 'Guardando…' : 'Crear proveedor'}</Button></DialogFooter></DialogContent></Dialog>
     </MainLayout>
+  );
+}
+
+function Metric({ label, value, icon: Icon }: { label: string; value: string; icon: any }) {
+  return <Card><CardContent className="p-3 sm:p-4 flex items-center justify-between gap-2"><div className="min-w-0"><p className="text-xs text-muted-foreground truncate">{label}</p><p className="text-lg sm:text-xl font-bold truncate">{value}</p></div><span className="rounded-lg bg-primary/10 p-2 text-primary shrink-0"><Icon className="h-4 w-4" /></span></CardContent></Card>;
+}
+
+function MiniMetric({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
+  return <div className={cn('rounded-lg border p-2', emphasis && 'border-warning/30 bg-warning/5')}><p className="text-[10px] text-muted-foreground">{label}</p><p className={cn('text-sm font-semibold truncate', emphasis && 'text-warning')}>{value}</p></div>;
+}
+
+function OrderCard({ orden, onOpen }: { orden: any; onOpen: () => void }) {
+  return (
+    <Card><CardContent className="p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-semibold truncate">{orden.numero_orden || orden.numero || orden.codigo || 'Orden'}</p><p className="text-sm text-muted-foreground truncate">{orden.proveedor_nombre || orden.proveedor?.nombre || 'Sin proveedor'}</p></div><Badge variant="outline" className={estadoClass(orden.estado)}>{estadoLabel(orden.estado)}</Badge></div><div className="grid grid-cols-2 gap-3 mt-3 text-sm"><div><p className="text-xs text-muted-foreground">Fecha</p><p>{orden.fecha || orden.created_at ? formatDate(orden.fecha || orden.created_at) : '—'}</p></div><div className="text-right"><p className="text-xs text-muted-foreground">Total</p><p className="font-bold">{formatCurrency(Number(orden.total) || 0)}</p></div></div><Button variant="outline" size="sm" className="w-full mt-3" onClick={onOpen}><Eye className="mr-1.5 h-4 w-4" />Ver orden</Button></CardContent></Card>
   );
 }
