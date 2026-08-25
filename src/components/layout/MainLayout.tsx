@@ -24,15 +24,21 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
         setPaletteOpen((o) => !o);
       }
     };
+    const onOpenPalette = () => setPaletteOpen(true);
+
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('open-command-palette', onOpenPalette);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('open-command-palette', onOpenPalette);
+    };
   }, []);
 
   return (
     <SidebarProvider>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <div
-        className="flex h-[100dvh] w-full overflow-hidden"
+        className="flex h-[100dvh] w-full overflow-hidden bg-muted/20"
         style={{
           paddingTop: 'env(safe-area-inset-top)',
           paddingLeft: 'env(safe-area-inset-left)',
@@ -40,16 +46,18 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
         }}
       >
         <AppSidebar />
-        <SidebarInset className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+        <SidebarInset className="flex flex-1 flex-col min-w-0 h-full overflow-hidden bg-background lg:rounded-l-2xl lg:my-2 lg:mr-2 lg:border lg:shadow-sm">
           <OfflineBanner />
           <AlertaSuscripcion />
           <Header title={title} subtitle={subtitle} />
           <main
             data-scroll-container
-            className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-6"
+            className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5 lg:px-7 lg:py-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-7"
             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
           >
-            {children}
+            <div className="mx-auto w-full max-w-[1600px]">
+              {children}
+            </div>
           </main>
         </SidebarInset>
         <MobileBottomNav />
