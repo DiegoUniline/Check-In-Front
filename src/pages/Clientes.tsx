@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { 
-  Users, Search, Plus, Star, Mail, Phone, 
-  MoreVertical, Eye, Edit, History, Award, X, Trash2,
-  RotateCcw
+import {
+  Users, Search, Plus, Star, Mail, Phone,
+  MoreVertical, Eye, Edit, Award, RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ExportButton } from '@/components/ExportButton';
@@ -22,7 +21,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/useDataTable';
 import { SortHeader } from '@/components/datatable/SortHeader';
-
 import { BulkActionBar } from '@/components/datatable/BulkActionBar';
 import { exportToCsv } from '@/lib/exportCsv';
 import {
@@ -35,6 +33,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -43,14 +42,14 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { splitPhone, joinPhone, DEFAULT_COUNTRY } from '@/lib/phoneCountries';
 import { formatDate } from '@/lib/dateFormat';
 import { formatCurrency } from '@/lib/currency';
+import { cn } from '@/lib/utils';
 
 interface Cliente {
   id: string;
@@ -85,9 +84,12 @@ const clienteInicial = {
   notas: ''
 };
 
+type ClienteFiltro = 'all' | 'vip' | 'nuevos' | 'frecuentes';
+
 export default function Clientes() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickFilter, setQuickFilter] = useState<ClienteFiltro>('all');
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -100,33 +102,38 @@ export default function Clientes() {
   const [phoneLocal, setPhoneLocal] = useState<string>('');
   const [historial, setHistorial] = useState<any[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
+  const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
-  // Normalización de VIP para evitar que React renderice "0".
-  // - Qué hace: convierte valores típicos de MySQL (0/1, "0"/"1") a boolean real.
-  // - Por qué: en JSX, `0 && <Icon/>` retorna `0` y React lo pinta como texto ("Apellido0").
-  // - Relación: Consumido por el render de estrella VIP en esta pantalla.
   const isVipValue = (value: unknown) => value === true || value === 1 || value === '1' || value === 'true';
 
-  // Sanitización UI para el bug "apellido con 0" en clientes NO VIP.
-  // - Qué hace: cuando `es_vip` es falso, elimina un sufijo "0" de apellidos (ej: "García0" -> "García").
-  // - Por qué: hay registros ya afectados; al editar queremos que el usuario vea y guarde el valor limpio.
-  // - Relación: Complementa la sanitización del API client en `Check-In-Front/src/lib/api.ts`.
   const sanitizeApellidoParaNoVip = (apellido: unknown, esVip: boolean) => {
     if (esVip) return typeof apellido === 'string' ? apellido : (apellido as any);
     if (apellido === 0) return '';
     if (typeof apellido !== 'string') return apellido as any;
-    // Regex para cubrir casos con espacios / caracteres invisibles al final.
     return apellido.replace(/0[\s\u200B\uFEFF]*$/u, '').trim();
   };
 
-  // Sanitización también para nombre (defensivo).
-  // - Qué hace: si por el bug el "0" terminó en `nombre`, lo limpiamos igual para NO VIP.
-  // - Por qué: el usuario reporta que en la lista el "0" se ve pegado al apellido; si está en `nombre` o en `apellido_*`, lo eliminamos.
   const sanitizeTextoParaNoVip = (texto: unknown, esVip: boolean) => {
     if (esVip) return typeof texto === 'string' ? texto : (texto as any);
     if (texto === 0) return '';
     if (typeof texto !== 'string') return texto as any;
     return texto.replace(/0[\s\u200B\uFEFF]*$/u, '').trim();
+  };
+
+  const nombreCompleto = (cliente?: Cliente | null) => {
+    if (!cliente) return '';
+    const vip = isVipValue((cliente as any).es_vip);
+    return [
+      sanitizeTextoParaNoVip(cliente.nombre, vip),
+      sanitizeApellidoParaNoVip(cliente.apellido_paterno, vip),
+      sanitizeApellidoParaNoVip(cliente.apellido_materno || '', vip),
+    ].filter(Boolean).join(' ').trim();
+  };
+
+  const iniciales = (cliente?: Cliente | null) => {
+    if (!cliente) return '?';
+    const parts = nombreCompleto(cliente).split(/\s+/).filter(Boolean);
+    return `${parts[0]?.[0] || ''}${parts[1]?.[0] || ''}`.toUpperCase() || '?';
   };
 
   useEffect(() => {
@@ -137,13 +144,11 @@ export default function Clientes() {
     try {
       setLoading(true);
       const data = await api.getClientes();
-      // Blindaje adicional a nivel de pantalla: dejamos el estado ya limpio para que toda la UI (tabla, filtros, modal) sea consistente.
       const list = Array.isArray(data) ? data : [];
       const sanitized = list.map((c: Cliente) => {
         const esVip = isVipValue((c as any).es_vip);
         return {
           ...c,
-          // Importante: normalizamos `es_vip` a boolean real para que NO se renderice "0" en el JSX.
           es_vip: esVip,
           nombre: sanitizeTextoParaNoVip(c.nombre, esVip),
           apellido_paterno: sanitizeApellidoParaNoVip(c.apellido_paterno, esVip),
@@ -163,6 +168,7 @@ export default function Clientes() {
     setFormData(clienteInicial);
     setPhoneCountry(DEFAULT_COUNTRY);
     setPhoneLocal('');
+    setSelectedCliente(null);
     setIsEditing(false);
     setIsFormOpen(true);
   };
@@ -175,7 +181,6 @@ export default function Clientes() {
     setFormData({
       tipo_cliente: cliente.tipo_cliente || 'Persona',
       nombre: cliente.nombre || '',
-      // Limpieza visual y para guardar: si NO VIP y venía "Apellido0", mostramos sin el 0.
       apellido_paterno: sanitizeApellidoParaNoVip(cliente.apellido_paterno || '', esVip),
       apellido_materno: sanitizeApellidoParaNoVip(cliente.apellido_materno || '', esVip),
       email: cliente.email || '',
@@ -193,15 +198,13 @@ export default function Clientes() {
   };
 
   const handleGuardar = async () => {
-    if (!formData.nombre || !formData.apellido_paterno) {
-      toast({ title: 'Error', description: 'Nombre y apellido son requeridos', variant: 'destructive' });
+    if (!formData.nombre.trim() || !formData.apellido_paterno.trim()) {
+      toast({ title: 'Faltan datos', description: 'Nombre y apellido son requeridos', variant: 'destructive' });
       return;
     }
 
     setSaving(true);
     try {
-      // Saneamos antes de enviar: evita que se guarde "Apellido0" en clientes NO VIP.
-      // `direccion` no existe en la tabla `clientes` del backend, lo excluimos del payload.
       const { direccion: _direccion, ...rest } = formData as any;
       const telefonoNormalizado = joinPhone(phoneCountry, phoneLocal);
       const payload = {
@@ -212,13 +215,13 @@ export default function Clientes() {
       };
       if (isEditing && selectedCliente) {
         await api.updateCliente(selectedCliente.id, payload);
-        toast({ title: 'Éxito', description: 'Cliente actualizado' });
+        toast({ title: 'Cliente actualizado' });
       } else {
         await api.createCliente(payload);
-        toast({ title: 'Éxito', description: 'Cliente creado' });
+        toast({ title: 'Cliente creado' });
       }
       setIsFormOpen(false);
-      cargarClientes();
+      await cargarClientes();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -226,17 +229,28 @@ export default function Clientes() {
     }
   };
 
+  const stats = {
+    total: clientes.length,
+    vip: clientes.filter(c => isVipValue((c as any).es_vip)).length,
+    nuevos: clientes.filter(c => (c.total_estancias || 0) <= 1).length,
+    frecuentes: clientes.filter(c => (c.total_estancias || 0) > 5).length,
+  };
+
   const filteredClientes = clientes.filter(c => {
-    // Para búsquedas, usamos también valores ya saneados (por si el backend devolvió datos con el bug).
-    const esVip = isVipValue((c as any).es_vip);
-    const fullName = `${sanitizeTextoParaNoVip(c.nombre, esVip)} ${sanitizeApellidoParaNoVip(c.apellido_paterno, esVip)} ${sanitizeApellidoParaNoVip(c.apellido_materno || '', esVip)}`.toLowerCase();
-    const query = searchQuery.toLowerCase();
-    return fullName.includes(query) || 
-           c.email?.toLowerCase().includes(query) || 
-           c.telefono?.includes(query);
+    const query = searchQuery.trim().toLowerCase();
+    const searchMatch = !query
+      || nombreCompleto(c).toLowerCase().includes(query)
+      || String(c.email || '').toLowerCase().includes(query)
+      || String(c.telefono || '').toLowerCase().includes(query)
+      || String(c.numero_documento || '').toLowerCase().includes(query);
+
+    let filterMatch = true;
+    if (quickFilter === 'vip') filterMatch = isVipValue((c as any).es_vip);
+    if (quickFilter === 'nuevos') filterMatch = (c.total_estancias || 0) <= 1;
+    if (quickFilter === 'frecuentes') filterMatch = (c.total_estancias || 0) > 5;
+    return searchMatch && filterMatch;
   });
 
-  // ===== DataTable: selección, sort y filtros por columna =====
   const accessors = useMemo(() => ({
     nombre: (c: Cliente) => `${c.nombre || ''} ${c.apellido_paterno || ''} ${c.apellido_materno || ''}`.trim(),
     email: (c: Cliente) => c.email || '',
@@ -245,12 +259,11 @@ export default function Clientes() {
     registro: (c: Cliente) => c.created_at || '',
     lealtad: (c: Cliente) => c.nivel_lealtad || 'Bronce',
   }), []);
-
   const dt = useDataTable<Cliente>(filteredClientes, accessors, { storageKey: 'clientes' });
-  const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
   const handleResetAll = () => {
     setSearchQuery('');
+    setQuickFilter('all');
     dt.resetPersisted();
   };
 
@@ -285,11 +298,11 @@ export default function Clientes() {
 
   const getLoyaltyColor = (nivel?: string) => {
     switch (nivel) {
-      case 'Diamante': return 'bg-purple-500';
-      case 'Platino': return 'bg-slate-400';
-      case 'Oro': return 'bg-yellow-500';
-      case 'Plata': return 'bg-gray-400';
-      default: return 'bg-orange-700';
+      case 'Diamante': return 'bg-purple-500 text-white';
+      case 'Platino': return 'bg-slate-400 text-white';
+      case 'Oro': return 'bg-yellow-500 text-yellow-950';
+      case 'Plata': return 'bg-gray-400 text-white';
+      default: return 'bg-orange-700 text-white';
     }
   };
 
@@ -308,511 +321,316 @@ export default function Clientes() {
     }
   };
 
-  const stats = {
-    total: clientes.length,
-    vip: clientes.filter(c => c.es_vip).length,
-    nuevos: clientes.filter(c => (c.total_estancias || 0) <= 1).length,
-    frecuentes: clientes.filter(c => (c.total_estancias || 0) > 5).length,
-  };
-
   if (loading) {
     return (
-      <MainLayout title="Gestión de Clientes" subtitle="Base de datos de huéspedes y empresas">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <MainLayout title="Clientes" subtitle="Huéspedes y empresas">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-xl border bg-muted/30" />)}
         </div>
       </MainLayout>
     );
   }
 
-  return (
-    <MainLayout 
-      title="Gestión de Clientes" 
-      subtitle="Base de datos de huéspedes y empresas"
-    >
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-sm text-muted-foreground">Total Clientes</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <Star className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.vip}</p>
-              <p className="text-sm text-muted-foreground">VIP</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <Users className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.nuevos}</p>
-              <p className="text-sm text-muted-foreground">Nuevos</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-info/10">
-              <Award className="h-5 w-5 text-info" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.frecuentes}</p>
-              <p className="text-sm text-muted-foreground">Frecuentes</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+  const quickStats: Array<{ key: ClienteFiltro; label: string; count: number; icon: any; className: string }> = [
+    { key: 'all', label: 'Todos', count: stats.total, icon: Users, className: 'text-primary' },
+    { key: 'vip', label: 'VIP', count: stats.vip, icon: Star, className: 'text-warning' },
+    { key: 'nuevos', label: 'Nuevos', count: stats.nuevos, icon: Plus, className: 'text-success' },
+    { key: 'frecuentes', label: 'Frecuentes', count: stats.frecuentes, icon: Award, className: 'text-info' },
+  ];
 
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2 flex-1">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por nombre, email o teléfono..."
+  return (
+    <MainLayout title="Clientes" subtitle="Encuentra huéspedes, historial y preferencias">
+      <Card className="mb-4 overflow-hidden">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-2 divide-x divide-y sm:grid-cols-4 sm:divide-y-0">
+            {quickStats.map(stat => {
+              const Icon = stat.icon;
+              return (
+                <button
+                  type="button"
+                  key={stat.key}
+                  onClick={() => setQuickFilter(quickFilter === stat.key && stat.key !== 'all' ? 'all' : stat.key)}
+                  className={cn('flex items-center gap-2 p-3 text-left transition hover:bg-muted/40', quickFilter === stat.key && 'bg-primary/5')}
+                >
+                  <Icon className={cn('h-4 w-4', stat.className)} />
+                  <div>
+                    <p className="text-lg font-bold tabular-nums">{stat.count}</p>
+                    <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="relative min-w-0 flex-1 sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Nombre, teléfono, email o documento..."
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="sm" onClick={handleResetAll}>
-            <RotateCcw className="h-4 w-4 mr-1" />
-            Restablecer
-          </Button>
+          {(searchQuery || quickFilter !== 'all') && (
+            <Button variant="ghost" size="sm" className="shrink-0" onClick={handleResetAll}>
+              <RotateCcw className="mr-1 h-3.5 w-3.5" /> <span className="hidden sm:inline">Limpiar</span>
+            </Button>
+          )}
         </div>
-        <Button onClick={handleNuevoCliente}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Cliente
-        </Button>
-        <ExportButton
-          rows={() => filteredClientes.map((c: any) => ({
-            Nombre: `${c.nombre || ''} ${c.apellido_paterno || ''} ${c.apellido_materno || ''}`.trim(),
-            Email: c.email || '',
-            Teléfono: c.telefono || '',
-            Ciudad: c.ciudad || '',
-            País: c.pais || '',
-            'Total estancias': c.total_estancias || 0,
-            VIP: c.es_vip ? 'Sí' : 'No',
-            Notas: c.notas || '',
-          }))}
-          filename="clientes"
-          sheetName="Clientes"
-          label="Exportar"
-        />
-      </div>
 
-      {/* Table */}
-      <Card className="overflow-hidden">
-        <div className="p-3 border-b">
-          <BulkActionBar
-            count={dt.selectedCount}
-            onClear={dt.clearSelection}
-            onDelete={eliminarSeleccionados}
-            onExport={exportarCsv}
-            deleting={eliminandoBulk}
-            entityName="clientes"
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
+          <span className="text-xs text-muted-foreground sm:hidden">{filteredClientes.length} clientes</span>
+          <Button onClick={handleNuevoCliente} size="sm"><Plus className="mr-1.5 h-3.5 w-3.5" /> Nuevo cliente</Button>
+          <ExportButton
+            rows={() => filteredClientes.map((c: any) => ({
+              Nombre: nombreCompleto(c),
+              Email: c.email || '',
+              Teléfono: c.telefono || '',
+              'Total estancias': c.total_estancias || 0,
+              VIP: c.es_vip ? 'Sí' : 'No',
+              Notas: c.notas || '',
+            }))}
+            filename="clientes"
+            sheetName="Clientes"
+            label="Exportar"
           />
         </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40px]">
-                  <Checkbox
-                    checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false}
-                    onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)}
-                    aria-label="Seleccionar todos"
-                  />
-                </TableHead>
-                <SortHeader label="Cliente" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.nombre} onFilterChange={(v) => dt.setColumnFilter('nombre', v)} onValuesChange={(vs) => dt.setColumnFilterValues('nombre', vs)} filterOptions={filteredClientes.map(c => `${c.nombre} ${c.apellido_paterno || ''}`.trim())} />
-                <SortHeader label="Contacto" columnKey="email" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.email} onFilterChange={(v) => dt.setColumnFilter('email', v)} onValuesChange={(vs) => dt.setColumnFilterValues('email', vs)} filterOptions={filteredClientes.map(c => c.email || c.telefono || '')} />
-                <SortHeader label="Estancias" columnKey="estancias" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="center" filterValue={dt.filters.estancias} onFilterChange={(v) => dt.setColumnFilter('estancias', v)} onValuesChange={(vs) => dt.setColumnFilterValues('estancias', vs)} filterOptions={filteredClientes.map(c => String(c.total_estancias || 0))} />
-                <SortHeader label="Registro" columnKey="registro" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.registro} onFilterChange={(v) => dt.setColumnFilter('registro', v)} onValuesChange={(vs) => dt.setColumnFilterValues('registro', vs)} filterOptions={filteredClientes.map(c => c.created_at || '')} />
-                <SortHeader label="Lealtad" columnKey="lealtad" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.lealtad} onFilterChange={(v) => dt.setColumnFilter('lealtad', v)} onValuesChange={(vs) => dt.setColumnFilterValues('lealtad', vs)} filterOptions={filteredClientes.map(c => c.es_vip ? 'VIP' : 'Regular')} />
-                <TableHead className="text-right">Acciones</TableHead>
+      </div>
+
+      <BulkActionBar
+        count={dt.selectedCount}
+        onClear={dt.clearSelection}
+        onDelete={eliminarSeleccionados}
+        onExport={exportarCsv}
+        deleting={eliminandoBulk}
+        entityName="clientes"
+      />
+
+      <div className="space-y-2 md:hidden">
+        {dt.processed.length === 0 ? (
+          <div className="flex min-h-52 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/10 px-6 text-center">
+            <Users className="mb-3 h-9 w-9 text-muted-foreground/40" />
+            <p className="font-medium">No encontramos clientes</p>
+            <p className="mt-1 text-sm text-muted-foreground">Prueba otra búsqueda o filtro.</p>
+          </div>
+        ) : dt.processed.map(cliente => (
+          <Card
+            key={cliente.id}
+            className={cn('transition active:bg-muted/40', dt.selected.has(cliente.id) && 'ring-2 ring-primary')}
+          >
+            <CardContent className="p-3">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  className="mt-2"
+                  checked={dt.selected.has(cliente.id)}
+                  onCheckedChange={() => dt.toggleRow(cliente.id)}
+                  aria-label="Seleccionar cliente"
+                />
+                <button type="button" className="flex min-w-0 flex-1 items-start gap-3 text-left" onClick={() => handleViewCliente(cliente)}>
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{iniciales(cliente)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-sm font-semibold">{nombreCompleto(cliente)}</p>
+                      {isVipValue((cliente as any).es_vip) && <Star className="h-3.5 w-3.5 shrink-0 fill-warning text-warning" />}
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{cliente.telefono || cliente.email || 'Sin contacto'}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[10px]">{cliente.total_estancias || 0} estancias</Badge>
+                      <Badge className={cn('text-[10px]', getLoyaltyColor(cliente.nivel_lealtad))}>{cliente.nivel_lealtad || 'Bronce'}</Badge>
+                    </div>
+                  </div>
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleViewCliente(cliente)}><Eye className="mr-2 h-4 w-4" /> Ver detalle</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleEditarCliente(cliente)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="hidden overflow-hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox checked={dt.allVisibleSelected ? true : dt.someVisibleSelected ? 'indeterminate' : false} onCheckedChange={(v) => dt.toggleSelectAllVisible(!!v)} aria-label="Seleccionar todos" />
+              </TableHead>
+              <SortHeader label="Cliente" columnKey="nombre" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.nombre} onFilterChange={(v) => dt.setColumnFilter('nombre', v)} onValuesChange={(vs) => dt.setColumnFilterValues('nombre', vs)} filterOptions={filteredClientes.map(c => nombreCompleto(c))} />
+              <SortHeader label="Contacto" columnKey="email" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.email} onFilterChange={(v) => dt.setColumnFilter('email', v)} onValuesChange={(vs) => dt.setColumnFilterValues('email', vs)} filterOptions={filteredClientes.map(c => c.email || c.telefono || '')} />
+              <SortHeader label="Estancias" columnKey="estancias" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} align="center" filterValue={dt.filters.estancias} onFilterChange={(v) => dt.setColumnFilter('estancias', v)} onValuesChange={(vs) => dt.setColumnFilterValues('estancias', vs)} filterOptions={filteredClientes.map(c => String(c.total_estancias || 0))} />
+              <SortHeader label="Registro" columnKey="registro" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.registro} onFilterChange={(v) => dt.setColumnFilter('registro', v)} onValuesChange={(vs) => dt.setColumnFilterValues('registro', vs)} filterOptions={filteredClientes.map(c => c.created_at || '')} />
+              <SortHeader label="Lealtad" columnKey="lealtad" sortKey={dt.sortKey} sortDir={dt.sortDir} onSort={dt.toggleSort} filterValue={dt.filters.lealtad} onFilterChange={(v) => dt.setColumnFilter('lealtad', v)} onValuesChange={(vs) => dt.setColumnFilterValues('lealtad', vs)} filterOptions={filteredClientes.map(c => c.nivel_lealtad || 'Bronce')} />
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {dt.processed.map(cliente => (
+              <TableRow
+                key={cliente.id}
+                onClick={() => handleViewCliente(cliente)}
+                className={cn('cursor-pointer', dt.selected.has(cliente.id) && 'bg-primary/5')}
+              >
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={dt.selected.has(cliente.id)} onCheckedChange={() => dt.toggleRow(cliente.id)} aria-label="Seleccionar fila" />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2.5">
+                    <Avatar className="h-8 w-8"><AvatarFallback className="bg-primary/10 text-[11px] font-semibold text-primary">{iniciales(cliente)}</AvatarFallback></Avatar>
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 font-medium"><span className="max-w-[260px] truncate">{nombreCompleto(cliente)}</span>{isVipValue((cliente as any).es_vip) && <Star className="h-3.5 w-3.5 fill-warning text-warning" />}</p>
+                      <p className="text-[11px] text-muted-foreground">{cliente.tipo_cliente || 'Persona'}</p>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-0.5">
+                    <p className="flex items-center gap-1 text-xs"><Mail className="h-3 w-3 text-muted-foreground" /> {cliente.email || 'Sin email'}</p>
+                    <p className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="h-3 w-3" /> {cliente.telefono || 'Sin teléfono'}</p>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center font-semibold tabular-nums">{cliente.total_estancias || 0}</TableCell>
+                <TableCell className="text-xs">{cliente.created_at ? formatDate(cliente.created_at) : '-'}</TableCell>
+                <TableCell><Badge className={cn('text-[10px]', getLoyaltyColor(cliente.nivel_lealtad))}>{cliente.nivel_lealtad || 'Bronce'}</Badge></TableCell>
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleViewCliente(cliente)}><Eye className="mr-2 h-4 w-4" /> Ver detalle</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditarCliente(cliente)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {dt.processed.map(cliente => (
-                <TableRow
-                  key={cliente.id}
-                  className={`cursor-pointer hover:bg-muted/50 ${dt.selected.has(cliente.id) ? 'bg-primary/5' : ''}`}
-                >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={dt.selected.has(cliente.id)}
-                      onCheckedChange={() => dt.toggleRow(cliente.id)}
-                      aria-label="Seleccionar fila"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {sanitizeTextoParaNoVip(cliente.nombre, Boolean(cliente.es_vip))?.charAt?.(0)}
-                          {sanitizeApellidoParaNoVip(cliente.apellido_paterno, Boolean(cliente.es_vip))?.charAt?.(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium flex items-center gap-2">
-                          {sanitizeTextoParaNoVip(cliente.nombre, Boolean(cliente.es_vip))}{' '}
-                          {sanitizeApellidoParaNoVip(cliente.apellido_paterno, Boolean(cliente.es_vip))}
-                          {isVipValue((cliente as any).es_vip) ? <Star className="h-4 w-4 text-warning fill-warning" /> : null}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{cliente.tipo_cliente || 'Individual'}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <p className="text-sm flex items-center gap-1">
-                        <Mail className="h-3 w-3" /> {cliente.email || '-'}
-                      </p>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Phone className="h-3 w-3" /> {cliente.telefono || '-'}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span className="font-medium">{cliente.total_estancias || 0}</span>
-                  </TableCell>
-                  <TableCell>
-                    {cliente.created_at ? formatDate(cliente.created_at) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getLoyaltyColor(cliente.nivel_lealtad)}>
-                      {cliente.nivel_lealtad || 'Bronce'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewCliente(cliente)}>
-                          <Eye className="mr-2 h-4 w-4" /> Ver detalle
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditarCliente(cliente)}>
-                          <Edit className="mr-2 h-4 w-4" /> Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <History className="mr-2 h-4 w-4" /> Historial
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {dt.processed.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
-                    No hay clientes que coincidan con los filtros
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+            ))}
+            {dt.processed.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No hay clientes que coincidan.</TableCell></TableRow>}
+          </TableBody>
+        </Table>
       </Card>
 
-      <p className="text-sm text-muted-foreground mt-4 text-center">
-        Mostrando {dt.processed.length} de {clientes.length} clientes
-      </p>
+      <div className="mt-3 hidden items-center justify-between text-xs text-muted-foreground md:flex">
+        <span>Mostrando {dt.processed.length} de {clientes.length} clientes</span>
+        <span>Haz clic en una fila para abrir el expediente.</span>
+      </div>
 
-      {/* Modal Detalle */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-h-[88vh] max-w-xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {sanitizeTextoParaNoVip(selectedCliente?.nombre, Boolean(selectedCliente?.es_vip))?.charAt?.(0)}
-                  {sanitizeApellidoParaNoVip(selectedCliente?.apellido_paterno, Boolean(selectedCliente?.es_vip))?.charAt?.(0)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="flex items-center gap-2">
-                  {sanitizeTextoParaNoVip(selectedCliente?.nombre, Boolean(selectedCliente?.es_vip))}{' '}
-                  {sanitizeApellidoParaNoVip(selectedCliente?.apellido_paterno, Boolean(selectedCliente?.es_vip))}
-                  {isVipValue((selectedCliente as any)?.es_vip) ? <Star className="h-5 w-5 text-warning fill-warning" /> : null}
-                </p>
-                <p className="text-sm font-normal text-muted-foreground">{selectedCliente?.email}</p>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10"><AvatarFallback className="bg-primary text-sm font-semibold text-primary-foreground">{iniciales(selectedCliente)}</AvatarFallback></Avatar>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="flex items-center gap-1.5"><span className="truncate">{nombreCompleto(selectedCliente)}</span>{isVipValue((selectedCliente as any)?.es_vip) && <Star className="h-4 w-4 fill-warning text-warning" />}</DialogTitle>
+                <DialogDescription className="truncate">{selectedCliente?.email || selectedCliente?.telefono || 'Sin contacto registrado'}</DialogDescription>
               </div>
-            </DialogTitle>
-            <DialogDescription>Información detallada del cliente</DialogDescription>
+              {selectedCliente && <Button variant="outline" size="sm" onClick={() => { setIsDetailOpen(false); handleEditarCliente(selectedCliente); }}><Edit className="mr-1 h-3.5 w-3.5" /> Editar</Button>}
+            </div>
           </DialogHeader>
 
           <Tabs defaultValue="info">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="info">Información</TabsTrigger>
+              <TabsTrigger value="info">Resumen</TabsTrigger>
               <TabsTrigger value="historial">Historial</TabsTrigger>
-              <TabsTrigger value="preferencias">Preferencias</TabsTrigger>
+              <TabsTrigger value="preferencias">Notas</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="info" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Teléfono</Label>
-                  <p className="font-medium">{selectedCliente?.telefono || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Nacionalidad</Label>
-                  <p className="font-medium">{selectedCliente?.nacionalidad || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Documento</Label>
-                  <p className="font-medium">{selectedCliente?.tipo_documento}: {selectedCliente?.numero_documento || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Nivel de Lealtad</Label>
-                  <Badge className={getLoyaltyColor(selectedCliente?.nivel_lealtad)}>
-                    {selectedCliente?.nivel_lealtad || 'Bronce'}
-                  </Badge>
-                </div>
+
+            <TabsContent value="info" className="mt-3 space-y-3">
+              <div className="grid grid-cols-2 gap-2 rounded-lg border p-3 text-sm">
+                <div><p className="text-[11px] text-muted-foreground">Teléfono</p><p className="truncate font-medium">{selectedCliente?.telefono || '-'}</p></div>
+                <div><p className="text-[11px] text-muted-foreground">Nacionalidad</p><p className="truncate font-medium">{selectedCliente?.nacionalidad || '-'}</p></div>
+                <div><p className="text-[11px] text-muted-foreground">Documento</p><p className="truncate font-medium">{selectedCliente?.tipo_documento || '-'} {selectedCliente?.numero_documento || ''}</p></div>
+                <div><p className="text-[11px] text-muted-foreground">Lealtad</p><Badge className={cn('mt-0.5 text-[10px]', getLoyaltyColor(selectedCliente?.nivel_lealtad))}>{selectedCliente?.nivel_lealtad || 'Bronce'}</Badge></div>
               </div>
-              <Separator />
               {(() => {
                 const validas = historial.filter((r: any) => r.estado !== 'Cancelada');
                 const totalGastado = validas.reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
                 const totalNoches = validas.reduce((s: number, r: any) => s + (Number(r.noches) || 0), 0);
                 const estancias = validas.length || (selectedCliente?.total_estancias || 0);
                 return (
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="p-4 rounded-lg bg-muted">
-                      <p className="text-2xl font-bold text-primary">{estancias}</p>
-                      <p className="text-sm text-muted-foreground">Estancias</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-muted">
-                      <p className="text-2xl font-bold text-primary">
-                        {formatCurrency(totalGastado)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Total Gastado</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-muted">
-                      <p className="text-2xl font-bold text-primary">{totalNoches}</p>
-                      <p className="text-sm text-muted-foreground">Noches</p>
-                    </div>
+                  <div className="grid grid-cols-3 divide-x rounded-lg border bg-muted/10">
+                    <div className="p-3 text-center"><p className="text-lg font-bold text-primary">{estancias}</p><p className="text-[10px] text-muted-foreground">Estancias</p></div>
+                    <div className="p-3 text-center"><p className="truncate text-sm font-bold text-primary sm:text-base">{formatCurrency(totalGastado)}</p><p className="text-[10px] text-muted-foreground">Gastado</p></div>
+                    <div className="p-3 text-center"><p className="text-lg font-bold text-primary">{totalNoches}</p><p className="text-[10px] text-muted-foreground">Noches</p></div>
                   </div>
                 );
               })()}
             </TabsContent>
-            
-            <TabsContent value="historial" className="mt-4">
+
+            <TabsContent value="historial" className="mt-3">
               {loadingHistorial ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-                </div>
+                <div className="space-y-2 py-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 animate-pulse rounded-lg bg-muted/40" />)}</div>
               ) : historial.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  No hay historial disponible
-                </div>
+                <div className="py-8 text-center text-sm text-muted-foreground">No hay estancias registradas.</div>
               ) : (
-                <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                <div className="max-h-[50vh] space-y-2 overflow-y-auto">
                   {historial.map((r: any) => (
-                    <div key={r.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+                    <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {r.numero_reserva || `RES-${String(r.id).slice(0, 6)}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {r.fecha_checkin ? formatDate(r.fecha_checkin) : '-'}
-                          {r.fecha_checkout ? ` → ${formatDate(r.fecha_checkout)}` : ''}
-                          {r.habitacion_numero ? ` · Hab ${r.habitacion_numero}` : ''}
-                        </p>
+                        <p className="truncate text-sm font-medium">{r.numero_reserva || `RES-${String(r.id).slice(0, 6)}`}</p>
+                        <p className="text-[11px] text-muted-foreground">{r.fecha_checkin ? formatDate(r.fecha_checkin) : '-'}{r.fecha_checkout ? ` → ${formatDate(r.fecha_checkout)}` : ''}{r.habitacion_numero ? ` · Hab ${r.habitacion_numero}` : ''}</p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {r.estado && <Badge variant="outline">{r.estado}</Badge>}
-                        {r.total != null && (
-                          <span className="text-sm font-semibold">
-                            {formatCurrency(Number(r.total))}
-                          </span>
-                        )}
-                      </div>
+                      <div className="shrink-0 text-right">{r.total != null && <p className="text-sm font-semibold">{formatCurrency(Number(r.total))}</p>}{r.estado && <p className="text-[10px] text-muted-foreground">{r.estado}</p>}</div>
                     </div>
                   ))}
                 </div>
               )}
             </TabsContent>
-            
-            <TabsContent value="preferencias" className="mt-4">
-              <div className="space-y-3">
-                {selectedCliente?.notas ? (
-                  <p className="text-sm text-muted-foreground">{selectedCliente.notas}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Sin preferencias registradas</p>
-                )}
+
+            <TabsContent value="preferencias" className="mt-3">
+              <div className="min-h-28 rounded-lg border bg-muted/10 p-3 text-sm leading-relaxed text-muted-foreground">
+                {selectedCliente?.notas || 'Sin notas o preferencias registradas.'}
               </div>
             </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
 
-      {/* Modal Crear/Editar Cliente */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
-            <DialogDescription>
-              {isEditing ? 'Modifica los datos del cliente' : 'Ingresa los datos del nuevo cliente'}
-            </DialogDescription>
+            <DialogTitle>{isEditing ? `Editar ${selectedCliente ? nombreCompleto(selectedCliente) : 'cliente'}` : 'Nuevo cliente'}</DialogTitle>
+            <DialogDescription>{isEditing ? 'Actualiza los datos del huésped o empresa.' : 'Registra los datos esenciales; puedes completar el resto después.'}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mt-4">
-            {/* Tipo de cliente */}
-            <div>
-              <Label>Tipo de Cliente</Label>
-              <Select 
-                value={formData.tipo_cliente} 
-                onValueChange={(v) => setFormData({...formData, tipo_cliente: v})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Persona">Persona</SelectItem>
-                  <SelectItem value="Empresa">Empresa</SelectItem>
-                </SelectContent>
+          <div className="grid gap-3 py-1 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Tipo de cliente</Label>
+              <Select value={formData.tipo_cliente} onValueChange={(v) => setFormData({ ...formData, tipo_cliente: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Persona">Persona</SelectItem><SelectItem value="Empresa">Empresa</SelectItem></SelectContent>
               </Select>
             </div>
-
-            {/* Nombre */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Nombre *</Label>
-                <Input 
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                  placeholder="Nombre"
-                />
-              </div>
-              <div>
-                <Label>Apellido Paterno *</Label>
-                <Input 
-                  value={formData.apellido_paterno}
-                  onChange={(e) => setFormData({...formData, apellido_paterno: e.target.value})}
-                  placeholder="Apellido paterno"
-                />
-              </div>
-              <div>
-                <Label>Apellido Materno</Label>
-                <Input 
-                  value={formData.apellido_materno}
-                  onChange={(e) => setFormData({...formData, apellido_materno: e.target.value})}
-                  placeholder="Apellido materno"
-                />
-              </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div><Label className="font-medium">Cliente VIP</Label><p className="text-[11px] text-muted-foreground">Destácalo en reservas y recepción.</p></div>
+              <Switch checked={Boolean(formData.es_vip)} onCheckedChange={(v) => setFormData({ ...formData, es_vip: v })} />
             </div>
 
-            {/* Contacto */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Email</Label>
-                <Input 
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="correo@ejemplo.com"
-                />
-              </div>
-              <div>
-                <Label>Teléfono</Label>
-                <PhoneInput
-                  country={phoneCountry}
-                  localPhone={phoneLocal}
-                  onCountryChange={setPhoneCountry}
-                  onLocalPhoneChange={setPhoneLocal}
-                />
-              </div>
-            </div>
+            <div className="space-y-1.5"><Label>Nombre *</Label><Input autoFocus value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Nombre" /></div>
+            <div className="space-y-1.5"><Label>Apellido paterno *</Label><Input value={formData.apellido_paterno} onChange={(e) => setFormData({ ...formData, apellido_paterno: e.target.value })} placeholder="Apellido paterno" /></div>
+            <div className="space-y-1.5"><Label>Apellido materno</Label><Input value={formData.apellido_materno} onChange={(e) => setFormData({ ...formData, apellido_materno: e.target.value })} placeholder="Apellido materno" /></div>
+            <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="correo@ejemplo.com" /></div>
 
-            {/* Documento */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Tipo Documento</Label>
-                <Select 
-                  value={formData.tipo_documento} 
-                  onValueChange={(v) => setFormData({...formData, tipo_documento: v})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="INE">INE</SelectItem>
-                    <SelectItem value="Pasaporte">Pasaporte</SelectItem>
-                    <SelectItem value="Licencia">Licencia</SelectItem>
-                    <SelectItem value="Otro">Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Número Documento</Label>
-                <Input 
-                  value={formData.numero_documento}
-                  onChange={(e) => setFormData({...formData, numero_documento: e.target.value})}
-                  placeholder="Número de identificación"
-                />
-              </div>
-              <div>
-                <Label>Nacionalidad</Label>
-                <Input 
-                  value={formData.nacionalidad}
-                  onChange={(e) => setFormData({...formData, nacionalidad: e.target.value})}
-                  placeholder="Mexicana"
-                />
-              </div>
-            </div>
+            <div className="space-y-1.5 sm:col-span-2"><Label>Teléfono</Label><PhoneInput country={phoneCountry} localPhone={phoneLocal} onCountryChange={setPhoneCountry} onLocalPhoneChange={setPhoneLocal} /></div>
 
-            {/* VIP */}
-            <div className="flex items-center gap-2">
-              <input 
-                type="checkbox"
-                id="es_vip"
-                checked={formData.es_vip}
-                onChange={(e) => setFormData({...formData, es_vip: e.target.checked})}
-                className="rounded"
-              />
-              <Label htmlFor="es_vip" className="cursor-pointer">Cliente VIP</Label>
-            </div>
-
-            {/* Notas */}
-            <div>
-              <Label>Notas / Preferencias</Label>
-              <Textarea 
-                value={formData.notas}
-                onChange={(e) => setFormData({...formData, notas: e.target.value})}
-                placeholder="Preferencias del cliente, alergias, solicitudes especiales..."
-                rows={3}
-              />
-            </div>
-
-            {/* Botones */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsFormOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleGuardar} disabled={saving}>
-                {saving ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Crear Cliente')}
-              </Button>
-            </div>
+            <div className="space-y-1.5"><Label>Tipo de documento</Label><Select value={formData.tipo_documento} onValueChange={(v) => setFormData({ ...formData, tipo_documento: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="INE">INE</SelectItem><SelectItem value="Pasaporte">Pasaporte</SelectItem><SelectItem value="Licencia">Licencia</SelectItem><SelectItem value="Otro">Otro</SelectItem></SelectContent></Select></div>
+            <div className="space-y-1.5"><Label>Número de documento</Label><Input value={formData.numero_documento} onChange={(e) => setFormData({ ...formData, numero_documento: e.target.value })} placeholder="Identificación" /></div>
+            <div className="space-y-1.5 sm:col-span-2"><Label>Nacionalidad</Label><Input value={formData.nacionalidad} onChange={(e) => setFormData({ ...formData, nacionalidad: e.target.value })} placeholder="Mexicana" /></div>
+            <div className="space-y-1.5 sm:col-span-2"><Label>Notas / preferencias</Label><Textarea className="min-h-24" value={formData.notas} onChange={(e) => setFormData({ ...formData, notas: e.target.value })} placeholder="Alergias, preferencias, solicitudes especiales..." /></div>
           </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFormOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleGuardar} disabled={saving}>{saving ? 'Guardando...' : (isEditing ? 'Guardar cambios' : 'Crear cliente')}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>
