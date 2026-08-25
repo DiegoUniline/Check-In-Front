@@ -4,6 +4,7 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import "@/lib/comprasSafetyPatch";
+import "@/lib/reportingSafetyPatch";
 
 const ROUTER_BASENAME =
   (import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "";
