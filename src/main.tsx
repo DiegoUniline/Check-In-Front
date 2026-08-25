@@ -6,6 +6,7 @@ import "./index.css";
 import "@/lib/comprasSafetyPatch";
 import "@/lib/reportingSafetyPatch";
 import "@/lib/operationalIntegrityPatch";
+import "@/lib/reservationIntegrityPatch";
 
 const ROUTER_BASENAME =
   (import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "";
