@@ -7,6 +7,7 @@ import "@/lib/comprasSafetyPatch";
 import "@/lib/reportingSafetyPatch";
 import "@/lib/operationalIntegrityPatch";
 import "@/lib/reservationIntegrityPatch";
+import "@/lib/dashboardIntegrityPatch";
 
 const ROUTER_BASENAME =
   (import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "";
