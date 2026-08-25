@@ -1,4 +1,4 @@
-import { LayoutDashboard, CalendarDays, LogIn, ShoppingCart, BedDouble } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, LogIn, LogOut, BedDouble } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/useAuth';
@@ -8,8 +8,8 @@ const primary = [
   { title: 'Inicio', url: '/dashboard', icon: LayoutDashboard, viewKey: 'dashboard' },
   { title: 'Reservas', url: '/reservas', icon: CalendarDays, viewKey: 'reservas' },
   { title: 'Check-In', url: '/reservas/checkin', icon: LogIn, viewKey: 'reservas' },
+  { title: 'Check-Out', url: '/reservas/checkout', icon: LogOut, viewKey: 'reservas' },
   { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
-  { title: 'POS', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
 ];
 
 export function MobileBottomNav() {
@@ -23,16 +23,16 @@ export function MobileBottomNav() {
       ? pathname === '/reservas'
       : pathname === url || pathname.startsWith(url + '/');
 
-  const visiblePrimary = primary.filter((i) => !i.viewKey || canAccess(i.viewKey, user?.rol));
-  const items = visiblePrimary.slice(0, 5);
+  const items = primary.filter((i) => !i.viewKey || canAccess(i.viewKey, user?.rol)).slice(0, 5);
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-card/96 shadow-[0_-8px_30px_rgba(15,23,42,0.06)] backdrop-blur supports-[backdrop-filter]:bg-card/88"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      aria-label="Navegación principal"
     >
       <div
-        className="h-16"
+        className="h-[68px] px-1"
         style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
@@ -42,15 +42,20 @@ export function MobileBottomNav() {
               key={item.url}
               to={item.url}
               className={cn(
-                'relative flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors',
-                active ? 'text-primary' : 'text-muted-foreground active:text-foreground'
+                'relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-medium transition-all',
+                active ? 'text-primary' : 'text-muted-foreground active:bg-muted active:text-foreground'
               )}
             >
               {active && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-b-full bg-primary" />
+                <span className="absolute top-1 h-1 w-1 rounded-full bg-primary" />
               )}
-              <item.icon className={cn('h-5 w-5 transition-transform', active && 'scale-110')} />
-              <span className="leading-none">{item.title}</span>
+              <span className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-xl transition-all',
+                active && 'bg-primary/10'
+              )}>
+                <item.icon className={cn('h-5 w-5 transition-transform', active && 'scale-105')} />
+              </span>
+              <span className="max-w-full truncate leading-none">{item.title}</span>
             </NavLink>
           );
         })}
