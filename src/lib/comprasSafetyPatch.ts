@@ -4,13 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 /**
  * Capa de seguridad para Compras.
  *
- * Corrige tres problemas del flujo legado sin romper órdenes históricas:
- * 1) una orden nueva NO debe aumentar stock hasta que sea recibida;
- * 2) pagar una orden NO equivale a recibir mercancía;
- * 3) una recepción debe impactar inventario una sola vez.
- *
- * Las órdenes antiguas que ya generaron movimientos con motivo "Compra" se
- * reconocen por su referencia/folio y no vuelven a incrementar existencias.
+ * Reglas definitivas:
+ * 1) crear una orden NO modifica inventario;
+ * 2) pagar una orden NO modifica su estado logístico ni inventario;
+ * 3) marcar una orden como Recibida ingresa stock una sola vez;
+ * 4) órdenes históricas que ya generaron stock no se duplican.
  */
 const PATCH_KEY = '__hospedapp_compras_safety_patch_v1__';
 const root = globalThis as any;
@@ -20,23 +18,8 @@ if (!root[PATCH_KEY]) {
 
   const client = api as any;
   const db = supabase as any;
-
   const originalUpdateEstadoCompra = client.updateEstadoCompra.bind(client);
   const originalDeleteCompra = client.deleteCompra.bind(client);
-  const originalCreatePagoCompra = client.createPagoCompra.bind(client);
-
-  // Cuando Compras registra un pago, la pantalla legado intenta marcar
-  // inmediatamente la orden como Recibida si queda saldada. Marcamos ese
-  // intento para ignorarlo una sola vez: pago y recepción son eventos distintos.
-  const suppressAutoReceive = new Map<string, number>();
-
-  client.createPagoCompra = async (data: any) => {
-    const result = await originalCreatePagoCompra(data);
-    if (data?.compra_id) {
-      suppressAutoReceive.set(String(data.compra_id), Date.now() + 5000);
-    }
-    return result;
-  };
 
   client.createCompra = async (data: any) => {
     const { detalles, detalle, ...header } = data || {};
@@ -108,12 +91,10 @@ if (!root[PATCH_KEY]) {
         if (detalleError) throw detalleError;
       }
     } catch (error) {
-      // La cabecera no debe quedar huérfana si falla el detalle.
       await db.from('compras').delete().eq('id', compra.id).eq('hotel_id', hotelId);
       throw error;
     }
 
-    // Deliberadamente NO se modifica inventario aquí. El stock entra al recibir.
     return compra;
   };
 
@@ -130,11 +111,12 @@ if (!root[PATCH_KEY]) {
     if (compraError) throw compraError;
     if (!compra) throw new Error('Orden de compra no encontrada');
     if (compra.estado === 'Recibida') return compra;
+    if (compra.estado === 'Cancelada') throw new Error('Una orden cancelada no puede recibirse.');
 
     const folio = compra.numero_orden || compra.numero || compra.codigo || null;
 
-    // Compatibilidad histórica: antes el stock se incrementaba al CREAR la orden.
-    // Si ya existe un movimiento con este folio, no lo repetimos.
+    // Compatibilidad histórica: el flujo anterior ingresaba stock al CREAR.
+    // Si ya existen movimientos de compra con este folio, solo actualizamos estado.
     if (folio) {
       const { data: movimientosPrevios, error: movimientosError } = await db
         .from('movimientos_inventario')
@@ -143,9 +125,7 @@ if (!root[PATCH_KEY]) {
         .eq('motivo', 'Compra')
         .limit(1);
       if (movimientosError) throw movimientosError;
-      if (movimientosPrevios?.length) {
-        return originalUpdateEstadoCompra(id, 'Recibida');
-      }
+      if (movimientosPrevios?.length) return originalUpdateEstadoCompra(id, 'Recibida');
     }
 
     const detalle = (compra.compras_detalle || compra.detalle || []) as any[];
@@ -157,9 +137,7 @@ if (!root[PATCH_KEY]) {
       cantidades.set(item.producto_id, (cantidades.get(item.producto_id) || 0) + cantidad);
     });
 
-    if (!cantidades.size) {
-      return originalUpdateEstadoCompra(id, 'Recibida');
-    }
+    if (!cantidades.size) return originalUpdateEstadoCompra(id, 'Recibida');
 
     const ids = [...cantidades.keys()];
     const { data: productos, error: productosError } = await db
@@ -172,12 +150,11 @@ if (!root[PATCH_KEY]) {
     const anteriores = new Map<string, number>();
     (productos || []).forEach((p: any) => anteriores.set(p.id, Number(p.stock_actual) || 0));
     const actualizados: string[] = [];
+    let movimientosInsertados: any[] = [];
 
     try {
       for (const productoId of ids) {
-        if (!anteriores.has(productoId)) {
-          throw new Error(`No se encontró el producto ${productoId} para recibir la compra`);
-        }
+        if (!anteriores.has(productoId)) throw new Error(`No se encontró el producto ${productoId} para recibir la compra`);
         const anterior = anteriores.get(productoId) || 0;
         const nuevo = anterior + (cantidades.get(productoId) || 0);
         const { error } = await db
@@ -203,22 +180,18 @@ if (!root[PATCH_KEY]) {
         };
       });
 
-      const { data: movimientosInsertados, error: movimientosError } = await db
+      const { data: movData, error: movimientosError } = await db
         .from('movimientos_inventario')
         .insert(movimientos)
         .select('id');
       if (movimientosError) throw movimientosError;
+      movimientosInsertados = movData || [];
 
-      try {
-        return await originalUpdateEstadoCompra(id, 'Recibida');
-      } catch (error) {
-        if (movimientosInsertados?.length) {
-          await db.from('movimientos_inventario').delete().in('id', movimientosInsertados.map((m: any) => m.id));
-        }
-        throw error;
-      }
+      return await originalUpdateEstadoCompra(id, 'Recibida');
     } catch (error) {
-      // Compensación: si algo falla a mitad de la recepción, regresamos stocks.
+      if (movimientosInsertados.length) {
+        await db.from('movimientos_inventario').delete().in('id', movimientosInsertados.map((m: any) => m.id));
+      }
       for (const productoId of actualizados.reverse()) {
         await db
           .from('productos')
@@ -232,14 +205,6 @@ if (!root[PATCH_KEY]) {
 
   client.updateEstadoCompra = async (id: string, estado: string) => {
     if (estado !== 'Recibida') return originalUpdateEstadoCompra(id, estado);
-
-    const expiry = suppressAutoReceive.get(String(id));
-    if (expiry && expiry >= Date.now()) {
-      suppressAutoReceive.delete(String(id));
-      const { data } = await db.from('compras').select('*').eq('id', id).maybeSingle();
-      return data;
-    }
-    suppressAutoReceive.delete(String(id));
     return recibirCompra(id);
   };
 
@@ -255,11 +220,11 @@ if (!root[PATCH_KEY]) {
     if (!compra) return { ok: true };
 
     if (compra.estado === 'Recibida') {
-      throw new Error('Una orden recibida ya afectó inventario y no debe eliminarse. Cancela mediante un ajuste documentado si necesitas corregirla.');
+      throw new Error('Una orden recibida ya afectó inventario y no debe eliminarse. Usa un ajuste documentado si necesitas corregirla.');
     }
 
     // Órdenes históricas no recibidas pudieron haber afectado stock por la lógica
-    // anterior. Las detectamos y revertimos antes de permitir su eliminación.
+    // anterior. Si es seguro, revertimos ese stock antes de eliminar.
     const folio = compra.numero_orden;
     if (folio) {
       const { data: movs, error: movError } = await db
