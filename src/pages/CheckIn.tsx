@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
-  User, CreditCard, BedDouble, Check,
-  Loader2, PenLine, FileDown,
+  User,
+  CreditCard,
+  BedDouble,
+  Check,
+  Loader2,
+  PenLine,
+  FileDown,
+  ArrowLeft,
+  ClipboardCheck,
+  CircleDollarSign,
+  CheckCircle2,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -13,7 +20,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -30,6 +36,7 @@ import { SignaturePad } from '@/components/SignaturePad';
 import { exportarRegistroHuesped } from '@/lib/pdfExport';
 import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
 import { formatDate } from '@/lib/dateFormat';
+import { cn } from '@/lib/utils';
 
 export default function CheckIn() {
   const { id } = useParams();
@@ -69,7 +76,7 @@ export default function CheckIn() {
         const habsDisp = await api.getHabitacionesDisponibles(
           reservaData.fecha_checkin,
           reservaData.fecha_checkout,
-          reservaData.tipo_habitacion_id
+          reservaData.tipo_habitacion_id,
         );
         setHabitacionesDisponibles(Array.isArray(habsDisp) ? habsDisp : []);
       }
@@ -91,32 +98,31 @@ export default function CheckIn() {
     }
   };
 
-  const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId);
-
+  const selectedHabitacion = habitacionesDisponibles.find((h) => h.id === formData.habitacionId);
   const totalPagos = pagos.reduce((sum, p) => sum + (Number(p.monto) || 0), 0);
 
   const handleSubmit = async () => {
     if (!formData.habitacionId) {
       toast({
         variant: 'destructive',
-        title: 'Habitación requerida',
-        description: 'Debe seleccionar una habitación.',
+        title: 'Falta asignar habitación',
+        description: 'Selecciona la habitación antes de continuar.',
       });
       return;
     }
     if (!aceptaTerminos) {
       toast({
         variant: 'destructive',
-        title: 'Términos requeridos',
-        description: 'El huésped debe aceptar los términos y condiciones.',
+        title: 'Falta aceptar términos',
+        description: 'El huésped debe aceptar los términos y el aviso de privacidad.',
       });
       return;
     }
     if (!firma) {
       toast({
         variant: 'destructive',
-        title: 'Firma requerida',
-        description: 'Solicite la firma del huésped para completar el check-in.',
+        title: 'Falta la firma',
+        description: 'Solicita la firma del huésped para completar el check-in.',
       });
       return;
     }
@@ -125,7 +131,6 @@ export default function CheckIn() {
     try {
       await api.checkin(id!, formData.habitacionId);
 
-      // Registrar todos los pagos
       for (const pago of pagos) {
         if (!pago.monto || pago.monto <= 0) continue;
         await api.createPago({
@@ -137,9 +142,8 @@ export default function CheckIn() {
         });
       }
 
-      // Generar tarjeta de registro con firma digital
       try {
-        const hab = habitacionesDisponibles.find(h => h.id === formData.habitacionId);
+        const hab = habitacionesDisponibles.find((h) => h.id === formData.habitacionId);
         await exportarRegistroHuesped({
           hotel: reserva.hotel?.nombre,
           hotelDireccion: reserva.hotel?.direccion,
@@ -150,7 +154,8 @@ export default function CheckIn() {
           reserva: {
             ...reserva,
             habitacion_numero: hab?.numero || reserva.habitacion_numero,
-            tipo_habitacion_nombre: reserva.tipo_habitacion_nombre || reserva.tipo_habitacion?.nombre,
+            tipo_habitacion_nombre:
+              reserva.tipo_habitacion_nombre || reserva.tipo_habitacion?.nombre,
           },
           cliente: {
             nombre: formData.nombre,
@@ -167,11 +172,10 @@ export default function CheckIn() {
       }
 
       toast({
-        title: '✅ Check-in completado',
-        description: `${formData.nombre} ${formData.apellidoPaterno} - Hab. ${selectedHabitacion?.numero}`,
+        title: 'Check-in completado',
+        description: `${formData.nombre} ${formData.apellidoPaterno} · Hab. ${selectedHabitacion?.numero || reserva.habitacion_numero || ''}`,
       });
 
-      // Mensaje de bienvenida por WhatsApp (fallo silencioso)
       try {
         const tel = reserva.cliente?.telefono || reserva.clientes?.telefono;
         if (tel && reserva.hotel_id) {
@@ -203,9 +207,16 @@ export default function CheckIn() {
 
   if (loading) {
     return (
-      <MainLayout title="Check-In" subtitle="Cargando...">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <MainLayout title="Check-In" subtitle="Preparando la llegada">
+        <div className="mx-auto max-w-6xl space-y-4">
+          <div className="h-24 animate-pulse rounded-2xl bg-muted" />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="space-y-4 lg:col-span-2">
+              <div className="h-64 animate-pulse rounded-2xl bg-muted" />
+              <div className="h-52 animate-pulse rounded-2xl bg-muted" />
+            </div>
+            <div className="h-96 animate-pulse rounded-2xl bg-muted" />
+          </div>
         </div>
       </MainLayout>
     );
@@ -214,242 +225,336 @@ export default function CheckIn() {
   if (!reserva) {
     return (
       <MainLayout title="Check-In" subtitle="Reserva no encontrada">
-        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-          <p className="text-muted-foreground mb-4">No se encontró la reserva especificada.</p>
-          <Button onClick={() => navigate('/reservas')}>Volver a Reservas</Button>
+        <div className="flex min-h-[55vh] flex-col items-center justify-center text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <BedDouble className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h2 className="text-lg font-semibold">No encontramos esta reserva</h2>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            Regresa a las llegadas y selecciona nuevamente el huésped que deseas registrar.
+          </p>
+          <Button className="mt-5" onClick={() => navigate('/reservas/checkin')}>
+            Volver a llegadas
+          </Button>
         </div>
       </MainLayout>
     );
   }
 
-  const noches = reserva.noches || Math.ceil((new Date(reserva.fecha_checkout).getTime() - new Date(reserva.fecha_checkin).getTime()) / (1000 * 60 * 60 * 24));
+  const noches =
+    reserva.noches ||
+    Math.ceil(
+      (new Date(reserva.fecha_checkout).getTime() - new Date(reserva.fecha_checkin).getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
   const total = reserva.total || reserva.monto_total || 0;
   const impuestos = Number(reserva.impuestos ?? reserva.total_impuestos ?? 0) || 0;
-  const subtotal = Number(reserva.subtotal ?? reserva.subtotal_hospedaje ?? (total - impuestos)) || 0;
+  const subtotal = Number(reserva.subtotal ?? reserva.subtotal_hospedaje ?? total - impuestos) || 0;
   const saldoRestante = Math.max(0, total - totalPagos);
+  const identidadLista = Boolean(formData.nombre.trim() && formData.apellidoPaterno.trim());
+  const registroListo = aceptaTerminos && Boolean(firma);
+
+  const steps = [
+    { label: 'Huésped', icon: User, done: identidadLista },
+    { label: 'Habitación', icon: BedDouble, done: Boolean(formData.habitacionId) },
+    { label: 'Pago', icon: CircleDollarSign, done: saldoRestante <= 0 },
+    { label: 'Firma', icon: PenLine, done: registroListo },
+  ];
 
   return (
     <MainLayout
-      title="Proceso de Check-In"
+      title="Check-In"
       subtitle={`Reserva ${reserva.numero_reserva || reserva.id?.slice(0, 8)}`}
     >
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">Progreso del Check-in</span>
-          <span className="text-sm text-muted-foreground">{formData.habitacionId ? '100%' : '50%'}</span>
+      <div className="mx-auto max-w-7xl space-y-4 lg:space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/reservas/checkin')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Llegadas de hoy
+          </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="h-7 rounded-full px-3 text-xs font-medium">
+              {noches} {noches === 1 ? 'noche' : 'noches'}
+            </Badge>
+            {formData.habitacionId && (
+              <Badge className="h-7 rounded-full px-3 text-xs font-medium">
+                Hab. {selectedHabitacion?.numero || reserva.habitacion?.numero || reserva.habitacion_numero}
+              </Badge>
+            )}
+          </div>
         </div>
-        <Progress value={formData.habitacionId ? 100 : 50} className="h-2" />
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="h-5 w-5 text-primary" />
-                Información del Huésped
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nombre</Label>
-                  <Input
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Apellido Paterno</Label>
-                  <Input
-                    value={formData.apellidoPaterno}
-                    onChange={(e) => setFormData({ ...formData, apellidoPaterno: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Documento de Identidad</Label>
-                  <Input
-                    value={formData.documento}
-                    onChange={(e) => setFormData({ ...formData, documento: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Nacionalidad</Label>
-                  <Select
-                    value={formData.nacionalidad}
-                    onValueChange={(v) => setFormData({ ...formData, nacionalidad: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mexicana">Mexicana</SelectItem>
-                      <SelectItem value="Estadounidense">Estadounidense</SelectItem>
-                      <SelectItem value="Canadiense">Canadiense</SelectItem>
-                      <SelectItem value="Otra">Otra</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BedDouble className="h-5 w-5 text-primary" />
-                Asignación de Habitación
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground text-sm">Tipo de Habitación</Label>
-                  <p className="font-medium">{reserva.tipo_habitacion_nombre || reserva.tipo_habitacion?.nombre || 'N/A'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-sm">Fechas</Label>
-                  <p className="font-medium">
-                    {formatDate(reserva.fecha_checkin)} - {formatDate(reserva.fecha_checkout)}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Habitación Asignada</Label>
-                <Select
-                  value={formData.habitacionId}
-                  onValueChange={(v) => setFormData({ ...formData, habitacionId: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar habitación" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {habitacionesDisponibles.map(hab => (
-                      <SelectItem key={hab.id} value={hab.id}>
-                        Hab. {hab.numero} - Piso {hab.piso}
-                      </SelectItem>
-                    ))}
-                    {reserva.habitacion_id && (
-                      <SelectItem value={reserva.habitacion_id}>
-                        Hab. {reserva.habitacion?.numero || reserva.habitacion_numero} (Pre-asignada)
-                      </SelectItem>
+        <Card className="overflow-hidden border-border/70 shadow-sm">
+          <CardContent className="p-0">
+            <div className="grid divide-y sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+              {steps.map((step, index) => (
+                <div key={step.label} className="flex items-center gap-3 px-4 py-3.5">
+                  <div
+                    className={cn(
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
+                      step.done
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'border-border bg-muted/40 text-muted-foreground',
                     )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-muted-foreground">Huéspedes:</span>
-                <Badge variant="secondary">{reserva.adultos || 1} Adultos</Badge>
-                {(reserva.ninos || 0) > 0 && <Badge variant="secondary">{reserva.ninos} Niños</Badge>}
-              </div>
-            </CardContent>
-          </Card>
+                  >
+                    {step.done ? <Check className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Paso {index + 1}
+                    </p>
+                    <p className="truncate text-sm font-medium">{step.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <PenLine className="h-5 w-5 text-primary" />
-                Términos y firma digital
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-md bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
-                El huésped declara que los datos proporcionados son verídicos y acepta las políticas del
-                establecimiento (horarios de check-in/out, política de cancelación, cargos por daños,
-                responsabilidad por objetos personales) así como el aviso de privacidad para el tratamiento
-                de sus datos personales.
-              </div>
-              <label className="flex items-start gap-2 text-sm cursor-pointer">
-                <Checkbox
-                  checked={aceptaTerminos}
-                  onCheckedChange={(v) => setAceptaTerminos(Boolean(v))}
-                  className="mt-0.5"
-                />
-                <span>Acepto los términos y condiciones y el aviso de privacidad.</span>
-              </label>
-              <div>
-                <Label className="mb-2 block">Firma del huésped</Label>
-                <SignaturePad onChange={setFirma} height={170} />
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <FileDown className="h-3 w-3" />
-                Al completar el check-in se generará automáticamente la tarjeta de registro en PDF con la firma.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1">
-          <div className="sticky top-24 space-y-4">
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  Resumen de Pago
+        <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+          <div className="space-y-4 lg:col-span-2">
+            <Card className="border-border/70 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <User className="h-5 w-5 text-primary" />
+                  Datos del huésped
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Hospedaje ({noches} noches)</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Nombre</Label>
+                    <Input
+                      value={formData.nombre}
+                      onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                      placeholder="Nombre del huésped"
+                    />
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="space-y-1.5">
+                    <Label>Apellido paterno</Label>
+                    <Input
+                      value={formData.apellidoPaterno}
+                      onChange={(e) => setFormData({ ...formData, apellidoPaterno: e.target.value })}
+                      placeholder="Apellido paterno"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Documento</Label>
+                    <Input
+                      value={formData.documento}
+                      onChange={(e) => setFormData({ ...formData, documento: e.target.value })}
+                      placeholder="INE, pasaporte u otro"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Nacionalidad</Label>
+                    <Select
+                      value={formData.nacionalidad}
+                      onValueChange={(v) => setFormData({ ...formData, nacionalidad: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mexicana">Mexicana</SelectItem>
+                        <SelectItem value="Estadounidense">Estadounidense</SelectItem>
+                        <SelectItem value="Canadiense">Canadiense</SelectItem>
+                        <SelectItem value="Otra">Otra</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="correo@ejemplo.com"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <BedDouble className="h-5 w-5 text-primary" />
+                  Habitación y estancia
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 rounded-xl bg-muted/35 p-3 sm:grid-cols-3 sm:p-4">
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tipo</p>
+                    <p className="mt-1 text-sm font-semibold">
+                      {reserva.tipo_habitacion_nombre || reserva.tipo_habitacion?.nombre || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Entrada</p>
+                    <p className="mt-1 text-sm font-semibold">{formatDate(reserva.fecha_checkin)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Salida</p>
+                    <p className="mt-1 text-sm font-semibold">{formatDate(reserva.fecha_checkout)}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label>Habitación asignada</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {habitacionesDisponibles.length} disponibles
+                    </span>
+                  </div>
+                  <Select
+                    value={formData.habitacionId}
+                    onValueChange={(v) => setFormData({ ...formData, habitacionId: v })}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Seleccionar habitación disponible" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {habitacionesDisponibles.map((hab) => (
+                        <SelectItem key={hab.id} value={hab.id}>
+                          Hab. {hab.numero} · Piso {hab.piso}
+                        </SelectItem>
+                      ))}
+                      {reserva.habitacion_id && (
+                        <SelectItem value={reserva.habitacion_id}>
+                          Hab. {reserva.habitacion?.numero || reserva.habitacion_numero} · Preasignada
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Huéspedes</span>
+                  <Badge variant="secondary">{reserva.adultos || 1} adulto(s)</Badge>
+                  {(reserva.ninos || 0) > 0 && <Badge variant="secondary">{reserva.ninos} niño(s)</Badge>}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <PenLine className="h-5 w-5 text-primary" />
+                  Aceptación y firma
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground sm:p-4">
+                  El huésped confirma que sus datos son correctos y acepta las políticas del establecimiento,
+                  horarios, cargos por daños, responsabilidad por objetos personales y el aviso de privacidad.
+                </div>
+
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/30">
+                  <Checkbox
+                    checked={aceptaTerminos}
+                    onCheckedChange={(v) => setAceptaTerminos(Boolean(v))}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Acepta términos y aviso de privacidad</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Requerido para finalizar el registro.
+                    </p>
+                  </div>
+                </label>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <Label>Firma del huésped</Label>
+                    {firma && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Firma capturada
+                      </span>
+                    )}
+                  </div>
+                  <SignaturePad onChange={setFirma} height={170} />
+                </div>
+
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <FileDown className="h-3.5 w-3.5" />
+                  Al completar el check-in se genera automáticamente la tarjeta de registro en PDF.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="lg:sticky lg:top-20">
+            <Card className="overflow-hidden border-primary/20 shadow-sm">
+              <div className="bg-primary px-5 py-4 text-primary-foreground">
+                <p className="text-xs font-medium uppercase tracking-wider opacity-80">Total de estancia</p>
+                <div className="mt-1 flex items-end justify-between gap-3">
+                  <p className="text-3xl font-bold tracking-tight">{formatCurrency(total)}</p>
+                  <CreditCard className="mb-1 h-6 w-6 opacity-80" />
+                </div>
+              </div>
+              <CardContent className="space-y-4 p-5">
+                <div className="space-y-2.5 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Hospedaje ({noches} {noches === 1 ? 'noche' : 'noches'})</span>
+                    <span className="font-medium">{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Impuestos</span>
-                    <span>{formatCurrency(impuestos)}</span>
+                    <span className="font-medium">{formatCurrency(impuestos)}</span>
                   </div>
                   <Separator />
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span className="text-primary">{formatCurrency(total)}</span>
+                  <div className="flex justify-between gap-3">
+                    <span className="font-medium">Capturado</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(totalPagos)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="font-medium">Restante</span>
+                    <span className="font-semibold">{formatCurrency(saldoRestante)}</span>
                   </div>
                 </div>
 
                 <Separator />
 
-                <PagosMultiplesGrid
-                  total={total}
-                  pagos={pagos}
-                  onChange={setPagos}
-                />
+                <PagosMultiplesGrid total={total} pagos={pagos} onChange={setPagos} />
 
-                <div className="pt-4 space-y-2">
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || !formData.habitacionId}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Procesando...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        COMPLETAR CHECK-IN
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate('/reservas')}
-                  >
-                    Cancelar Proceso
-                  </Button>
-                </div>
+                <Button
+                  className="h-11 w-full text-sm font-semibold"
+                  size="lg"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || !formData.habitacionId || !aceptaTerminos || !firma}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Registrando llegada...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Completar check-in
+                    </>
+                  )}
+                </Button>
+
+                {(!formData.habitacionId || !aceptaTerminos || !firma) && (
+                  <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <ClipboardCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        Para finalizar: asigna habitación, acepta términos y captura la firma.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <Button variant="ghost" className="w-full" onClick={() => navigate('/reservas/checkin')}>
+                  Cancelar y volver
+                </Button>
               </CardContent>
             </Card>
           </div>
