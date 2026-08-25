@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import "./index.css";
 import "@/lib/comprasSafetyPatch";
 import "@/lib/reportingSafetyPatch";
+import "@/lib/operationalIntegrityPatch";
 
 const ROUTER_BASENAME =
   (import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "";
