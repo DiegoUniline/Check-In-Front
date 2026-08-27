@@ -18,8 +18,8 @@ import { formatCurrency, setHotelCurrency, currencyCode } from '@/lib/currency';
 import {
   Hotel as HotelIcon, MapPin, Phone, Mail, Users, BedDouble, CheckCircle2,
   Loader2, Star, Wifi, Wind, Tv, Coffee, Bath, Calendar as CalIcon, ChevronLeft, ChevronRight,
-  Maximize2, Images, Info,
-  CalendarCheck, BookOpenCheck,
+  Images, CalendarCheck, BookOpenCheck, Minus, Plus, ShieldCheck, ArrowDown,
+  MessageCircle, Clock3, Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, addDays, differenceInCalendarDays, eachDayOfInterval, parseISO } from 'date-fns';
@@ -107,7 +107,15 @@ export default function PublicHotel() {
   const [bookingHab, setBookingHab] = useState<Habitacion | null>(null);
   const [bookingRange, setBookingRange] = useState<DateRange | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmacion, setConfirmacion] = useState<{ numero: string; total: number; anticipo: number } | null>(null);
+  const [confirmacion, setConfirmacion] = useState<{
+    numero: string;
+    total: number;
+    anticipo: number;
+    email: string;
+    habitacion: string;
+    fechas: string;
+    noches: number;
+  } | null>(null);
   const [form, setForm] = useState({ nombre: '', apellido_paterno: '', email: '', telefono: '', solicitudes: '' });
 
   // Carga inicial
@@ -257,7 +265,15 @@ export default function PublicHotel() {
       });
       if (errR) throw errR;
 
-      setConfirmacion({ numero: reservaCreada?.numero_reserva || '', total, anticipo });
+      setConfirmacion({
+        numero: reservaCreada?.numero_reserva || '',
+        total,
+        anticipo,
+        email: form.email.trim(),
+        habitacion: `${tipo.nombre} · Habitación ${bookingHab.numero}`,
+        fechas: `${format(bookingRange.from, 'd MMM', { locale: es })} — ${format(bookingRange.to, 'd MMM yyyy', { locale: es })}`,
+        noches: nsBooking,
+      });
       setBookingHab(null);
       setForm({ nombre: '', apellido_paterno: '', email: '', telefono: '', solicitudes: '' });
     } catch (e: any) {
@@ -281,71 +297,107 @@ export default function PublicHotel() {
     );
   }
 
+  const todayHotel = parseISO(localDateForZone(hotel.timezone));
+  const heroImage = habitaciones.length ? habitacionesConFotos(habitaciones[0])[0] : bannerImg;
+  const habitacionesOrdenadas = [...habsVisibles].sort((a, b) =>
+    Number(isHabDisponibleEnRango(b.id, range)) - Number(isHabDisponibleEnRango(a.id, range)),
+  );
+  const disponiblesCount = habitacionesOrdenadas.filter((h) => isHabDisponibleEnRango(h.id, range)).length;
+  const locationLabel = [hotel.ciudad, hotel.estado].filter(Boolean).join(', ');
+
   return (
-    <div data-scroll-container className="public-page h-[100dvh] overflow-y-auto overscroll-contain bg-stone-50 text-stone-900 [color-scheme:light] [&_input]:bg-white [&_input]:text-stone-900 [&_input]:border-stone-200 [&_textarea]:bg-white [&_textarea]:text-stone-900 [&_textarea]:border-stone-200 [&_[role=combobox]]:bg-white [&_[role=combobox]]:text-stone-900">
+    <div data-scroll-container className="public-page h-[100dvh] overflow-y-auto overscroll-contain bg-[#f7f6f2] text-stone-900 [color-scheme:light] [&_input]:bg-white [&_input]:text-stone-900 [&_input]:border-stone-200 [&_textarea]:bg-white [&_textarea]:text-stone-900 [&_textarea]:border-stone-200 [&_[role=combobox]]:bg-white [&_[role=combobox]]:text-stone-900">
       {/* Hero */}
-      <header className="relative overflow-hidden text-stone-50">
+      <header className="relative min-h-[560px] overflow-hidden text-white md:min-h-[680px]">
         <img
-          src={bannerImg}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+          src={heroImage}
+          alt={`Hospédate en ${hotel.nombre}`}
+          className="absolute inset-0 h-full w-full object-cover scale-[1.02]"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/70 via-stone-900/55 to-stone-950/80" />
-        <div className="container mx-auto px-6 py-12 md:py-20 relative">
-          <div className="flex items-start gap-5">
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,18,16,.92)_0%,rgba(12,18,16,.68)_46%,rgba(12,18,16,.22)_78%,rgba(12,18,16,.42)_100%)]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/35" />
+
+        <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+          <div className="flex min-w-0 items-center gap-3">
             {hotel.logo_url ? (
-              <img src={hotel.logo_url} alt={hotel.nombre} className="h-16 w-16 md:h-20 md:w-20 rounded-2xl object-cover ring-2 ring-stone-50/20 shadow-2xl" />
+              <img src={hotel.logo_url} alt={hotel.nombre} className="h-11 w-11 rounded-xl bg-white object-cover shadow-lg ring-1 ring-white/40" />
             ) : (
-              <div className="h-16 w-16 md:h-20 md:w-20 rounded-2xl bg-stone-50/10 flex items-center justify-center ring-2 ring-stone-50/20">
-                <HotelIcon className="h-8 w-8 text-stone-50" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/12 ring-1 ring-white/25 backdrop-blur-md">
+                <HotelIcon className="h-5 w-5" />
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              {hotel.estrellas ? (
-                <div className="flex gap-0.5 mb-2">
-                  {Array.from({ length: hotel.estrellas }).map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
-                  ))}
-                </div>
-              ) : null}
-              <h1 className="font-serif text-3xl md:text-5xl font-light tracking-tight">{hotel.nombre}</h1>
-              <div className="text-stone-300 mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
-                {(hotel.ciudad || hotel.estado) && (
-                  <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{[hotel.ciudad, hotel.estado].filter(Boolean).join(', ')}</span>
-                )}
-                {hotel.telefono && <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />{hotel.telefono}</span>}
-                {hotel.email && <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />{hotel.email}</span>}
-              </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold tracking-wide sm:text-base">{hotel.nombre}</p>
+              {locationLabel && <p className="truncate text-[11px] text-white/65">{locationLabel}</p>}
             </div>
           </div>
-          {hotel.descripcion_publica && (
-            <p className="mt-6 max-w-3xl text-stone-200/90 leading-relaxed">{hotel.descripcion_publica}</p>
+          {hotel.telefono && (
+            <a href={`tel:${hotel.telefono}`} className="hidden items-center gap-2 rounded-full border border-white/20 bg-black/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white hover:text-stone-950 sm:flex">
+              <Phone className="h-4 w-4" /> Contactar
+            </a>
           )}
+        </nav>
+
+        <div className="relative z-[1] mx-auto flex max-w-7xl items-center px-5 pb-28 pt-16 sm:px-8 md:pt-24 lg:px-10">
+          <div className="max-w-3xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-medium backdrop-blur-md">
+              <ShieldCheck className="h-4 w-4 text-emerald-300" /> Reserva directa con el hotel
+            </div>
+            {hotel.estrellas ? (
+              <div className="mb-3 flex gap-1">
+                {Array.from({ length: hotel.estrellas }).map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-amber-300 text-amber-300" />
+                ))}
+              </div>
+            ) : null}
+            <h1 className="max-w-3xl font-serif text-4xl font-light leading-[1.04] tracking-[-0.035em] sm:text-6xl md:text-7xl">
+              Tu próxima estancia empieza aquí.
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/78 sm:text-lg">
+              {hotel.descripcion_publica || `Descubre una estancia cómoda y reserva directamente en ${hotel.nombre}.`}
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Button onClick={() => document.getElementById('buscar-estancia')?.scrollIntoView({ behavior: 'smooth' })} className="h-12 rounded-full bg-white px-6 font-semibold text-stone-950 shadow-xl hover:bg-stone-100">
+                Consultar disponibilidad <ArrowDown className="ml-2 h-4 w-4" />
+              </Button>
+              {locationLabel && (
+                <span className="flex items-center gap-2 px-1 text-sm text-white/75"><MapPin className="h-4 w-4" />{locationLabel}</span>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
       {/* Filtros */}
-      <section className="container mx-auto px-6 -mt-8 relative z-10">
-        <div className="bg-white rounded-2xl shadow-xl border border-stone-200/70 p-4 md:p-5 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-          <div className="md:col-span-3">
-            <Label className="text-[11px] uppercase tracking-wider text-stone-500 font-medium">Tipo</Label>
+      <section id="buscar-estancia" className="relative z-10 mx-auto -mt-14 max-w-7xl scroll-mt-5 px-4 sm:px-8 lg:px-10">
+        <div className="rounded-[28px] border border-white/70 bg-white/95 p-3 shadow-[0_24px_70px_-28px_rgba(28,25,23,.42)] backdrop-blur-xl md:p-4">
+          <div className="mb-3 flex items-center justify-between px-2 pt-1 md:hidden">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[.18em] text-emerald-700">Tu estancia</p>
+              <p className="font-serif text-xl">Encuentra tu habitación</p>
+            </div>
+            {ns > 0 && <Badge className="rounded-full bg-stone-900 px-3 text-white hover:bg-stone-900">{ns} {ns === 1 ? 'noche' : 'noches'}</Badge>}
+          </div>
+          <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
+          <div className="rounded-2xl bg-stone-50 px-4 py-3 md:col-span-3">
+            <Label className="text-[10px] font-bold uppercase tracking-[.16em] text-stone-400">Habitación</Label>
             <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-              <SelectTrigger className="mt-1 h-11 border-stone-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="mt-0.5 h-8 border-0 bg-transparent p-0 text-[15px] font-semibold shadow-none focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="todos">Todos los tipos</SelectItem>
                 {tipos.map(t => <SelectItem key={t.id} value={t.id}>{t.nombre}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-4">
-            <Label className="text-[11px] uppercase tracking-wider text-stone-500 font-medium">Fechas</Label>
+          <div className="rounded-2xl bg-stone-50 px-4 py-3 md:col-span-4">
+            <Label className="text-[10px] font-bold uppercase tracking-[.16em] text-stone-400">Llegada y salida</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("mt-1 h-11 w-full justify-start font-normal border-stone-200", !range?.from && "text-stone-400")}>
-                  <CalIcon className="h-4 w-4 mr-2" />
+                <Button variant="ghost" className={cn("mt-0.5 h-8 w-full justify-start p-0 text-[15px] font-semibold hover:bg-transparent", !range?.from && "text-stone-400")}>
+                  <CalIcon className="mr-2 h-4 w-4 text-emerald-700" />
                   {range?.from ? (
                     range.to ? (
-                      <>{format(range.from, "d MMM", { locale: es })} → {format(range.to, "d MMM yyyy", { locale: es })}</>
+                      <>{format(range.from, "d MMM", { locale: es })} <span className="mx-1.5 text-stone-300">—</span> {format(range.to, "d MMM yyyy", { locale: es })}</>
                     ) : format(range.from, "PPP", { locale: es })
                   ) : <span>Selecciona fechas</span>}
                 </Button>
@@ -356,34 +408,68 @@ export default function PublicHotel() {
                   selected={range}
                   onSelect={setRange}
                   numberOfMonths={2}
-                  disabled={(d) => d < addDays(new Date(), -1)}
+                  disabled={(d) => d < todayHotel}
                   locale={es}
                   className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>
           </div>
-          <div className="md:col-span-2">
-            <Label className="text-[11px] uppercase tracking-wider text-stone-500 font-medium">Adultos</Label>
-            <Input type="number" min={1} value={adultos} onChange={(e) => setAdultos(parseInt(e.target.value) || 1)} className="mt-1 h-11 border-stone-200" />
-          </div>
-          <div className="md:col-span-2">
-            <Label className="text-[11px] uppercase tracking-wider text-stone-500 font-medium">Niños</Label>
-            <Input type="number" min={0} value={ninos} onChange={(e) => setNinos(parseInt(e.target.value) || 0)} className="mt-1 h-11 border-stone-200" />
-          </div>
-          <div className="md:col-span-1 flex md:justify-end">
-            <div className="text-sm text-stone-500 text-right md:pb-2.5">
-              {ns > 0 ? <><span className="font-semibold text-stone-800">{ns}</span> {ns === 1 ? 'noche' : 'noches'}</> : '—'}
+          <div className="rounded-2xl bg-stone-50 px-4 py-3 md:col-span-2">
+            <Label className="text-[10px] font-bold uppercase tracking-[.16em] text-stone-400">Adultos</Label>
+            <div className="mt-1 flex h-8 items-center justify-between">
+              <button type="button" aria-label="Quitar adulto" onClick={() => setAdultos(Math.max(1, adultos - 1))} className="flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition hover:border-stone-400"><Minus className="h-3.5 w-3.5" /></button>
+              <span className="text-base font-semibold">{adultos}</span>
+              <button type="button" aria-label="Agregar adulto" onClick={() => setAdultos(adultos + 1)} className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-900 text-white transition hover:bg-emerald-800"><Plus className="h-3.5 w-3.5" /></button>
             </div>
+          </div>
+          <div className="rounded-2xl bg-stone-50 px-4 py-3 md:col-span-2">
+            <Label className="text-[10px] font-bold uppercase tracking-[.16em] text-stone-400">Niños</Label>
+            <div className="mt-1 flex h-8 items-center justify-between">
+              <button type="button" aria-label="Quitar niño" onClick={() => setNinos(Math.max(0, ninos - 1))} className="flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition hover:border-stone-400"><Minus className="h-3.5 w-3.5" /></button>
+              <span className="text-base font-semibold">{ninos}</span>
+              <button type="button" aria-label="Agregar niño" onClick={() => setNinos(ninos + 1)} className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-900 text-white transition hover:bg-emerald-800"><Plus className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
+          <div className="hidden justify-center md:col-span-1 md:flex">
+            <div className="text-center">
+              <p className="text-xl font-bold text-stone-900">{ns || '—'}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">{ns === 1 ? 'noche' : 'noches'}</p>
+            </div>
+          </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Confianza */}
+      <section className="mx-auto max-w-7xl px-5 pb-4 pt-8 sm:px-8 lg:px-10">
+        <div className="grid gap-3 rounded-3xl border border-stone-200/70 bg-white/60 p-4 sm:grid-cols-3 sm:p-5">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><ShieldCheck className="h-5 w-5" /></div>
+            <div><p className="text-sm font-semibold">Reserva directa</p><p className="text-xs text-stone-500">Sin intermediarios</p></div>
+          </div>
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-700"><MessageCircle className="h-5 w-5" /></div>
+            <div><p className="text-sm font-semibold">Atención personal</p><p className="text-xs text-stone-500">Confirmación por el hotel</p></div>
+          </div>
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700"><Clock3 className="h-5 w-5" /></div>
+            <div><p className="text-sm font-semibold">Proceso rápido</p><p className="text-xs text-stone-500">Sin cobro en este paso</p></div>
           </div>
         </div>
       </section>
 
       {/* Habitaciones */}
-      <section className="container mx-auto px-6 py-12">
-        <div className="flex items-baseline justify-between mb-6">
-          <h2 className="font-serif text-2xl md:text-3xl font-light">Habitaciones disponibles</h2>
-          <span className="text-sm text-stone-500">{habsVisibles.length} habitación{habsVisibles.length !== 1 ? 'es' : ''}</span>
+      <section id="habitaciones" className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-emerald-700"><Sparkles className="h-3.5 w-3.5" />Tu espacio ideal</div>
+            <h2 className="font-serif text-3xl font-light tracking-tight md:text-5xl">Elige cómo quieres descansar</h2>
+            <p className="mt-2 max-w-2xl text-sm text-stone-500 md:text-base">Compara espacios, amenidades y tarifas. Tu solicitud se envía directamente al hotel.</p>
+          </div>
+          <span className="w-fit rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-600 shadow-sm ring-1 ring-stone-200">
+            <span className="font-bold text-emerald-700">{disponiblesCount}</span> disponible{disponiblesCount !== 1 ? 's' : ''}
+          </span>
         </div>
 
         {habsVisibles.length === 0 && (
@@ -393,8 +479,8 @@ export default function PublicHotel() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {habsVisibles.map((h) => {
+        <div className="grid grid-cols-1 gap-7 lg:grid-cols-2">
+          {habitacionesOrdenadas.map((h) => {
             const t = h.tipo_habitacion_id ? tipoMap[h.tipo_habitacion_id] : null;
             if (!t) return null;
             const fotos = habitacionesConFotos(h);
@@ -402,99 +488,78 @@ export default function PublicHotel() {
             const fotoActual = fotos[idx];
             const disponible = isHabDisponibleEnRango(h.id, range);
             const precioBase = Number(t.precio_base) || 0;
-            const fechaRefTarjeta = range?.from ? format(range.from, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+            const fechaRefTarjeta = range?.from ? format(range.from, 'yyyy-MM-dd') : localDateForZone(hotel.timezone);
             const { precio, temporada: tempTarjeta } = resolverPrecioTemporada(precioBase, fechaRefTarjeta, t.id, h.id, hotel?.id);
-            const precioOriginal = tempTarjeta ? precioBase : Math.round(precio * 1.18);
-            const total = precio * Math.max(1, ns || 1);
+            const personasExtra = Math.max(0, (adultos + ninos) - t.capacidad_adultos);
+            const extraPorNoche = personasExtra * (Number(t.precio_persona_extra) || 0);
+            const total = (precio + extraPorNoche) * Math.max(1, ns || 1);
             return (
-              <Card key={h.id} className="group flex flex-col overflow-hidden border border-stone-200 bg-white rounded-xl hover:shadow-2xl transition-all duration-300">
-                <div className="relative aspect-[4/3] bg-gradient-to-br from-stone-100 to-stone-200 overflow-hidden cursor-pointer" onClick={() => openBooking(h)}>
+              <Card key={h.id} className="group flex flex-col overflow-hidden rounded-[28px] border border-stone-200/80 bg-white shadow-[0_18px_55px_-38px_rgba(28,25,23,.7)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_28px_70px_-35px_rgba(28,25,23,.45)]">
+                <div className="relative aspect-[16/10] cursor-pointer overflow-hidden bg-gradient-to-br from-stone-100 to-stone-200" onClick={() => openBooking(h)}>
                   {fotoActual ? (
-                    <img src={fotoActual} alt={`${t.nombre} ${h.numero}`} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" />
+                    <img src={fotoActual} alt={`${t.nombre} ${h.numero}`} className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-[1.045]" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center"><BedDouble className="h-14 w-14 text-stone-300" /></div>
                   )}
                   {fotos.length > 1 && (
                     <>
                       <button onClick={(e) => { e.stopPropagation(); setCarruselIdx({ ...carruselIdx, [h.id]: (idx - 1 + fotos.length) % fotos.length }); }}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/95 hover:bg-white flex items-center justify-center shadow-md text-blue-700 transition">
+                        className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-md backdrop-blur transition hover:bg-white">
                         <ChevronLeft className="h-5 w-5" />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); setCarruselIdx({ ...carruselIdx, [h.id]: (idx + 1) % fotos.length }); }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/95 hover:bg-white flex items-center justify-center shadow-md text-blue-700 transition">
+                        className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-md backdrop-blur transition hover:bg-white">
                         <ChevronRight className="h-5 w-5" />
                       </button>
-                      <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 bg-stone-900/75 text-white text-xs font-medium rounded-md px-2 py-1">
+                      <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-stone-950/65 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
                         <Images className="h-3.5 w-3.5" />{fotos.length}
                       </div>
                     </>
                   )}
                   {range?.from && range?.to && !disponible && (
-                    <div className="absolute inset-0 bg-stone-900/55 flex items-center justify-center">
-                      <Badge variant="destructive" className="text-sm px-3 py-1.5 shadow-lg">Reservada en estas fechas</Badge>
+                    <div className="absolute inset-0 flex items-center justify-center bg-stone-950/55 backdrop-blur-[1px]">
+                      <Badge className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-stone-900 shadow-xl hover:bg-white">No disponible en estas fechas</Badge>
                     </div>
                   )}
                 </div>
-                <CardContent className="p-5 flex-1 flex flex-col gap-3">
-                  <div>
-                    <h3 className="text-[17px] font-semibold text-stone-900 leading-snug">{t.nombre}</h3>
-                    <div className="text-xs text-stone-500 mt-0.5">Habitación {h.numero}{h.piso ? ` · Piso ${h.piso}` : ''}</div>
+                <CardContent className="flex flex-1 flex-col gap-4 p-5 sm:p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-serif text-2xl font-medium leading-snug text-stone-900">{t.nombre}</h3>
+                      <div className="mt-1 text-xs font-medium uppercase tracking-wider text-stone-400">Habitación {h.numero}{h.piso ? ` · Piso ${h.piso}` : ''}</div>
+                    </div>
+                    {tempTarjeta && <Badge variant="outline" className="shrink-0 rounded-full border-amber-200 bg-amber-50 text-amber-800">{tempTarjeta.nombre}</Badge>}
                   </div>
 
-                  <ul className="text-[13px] text-stone-700 space-y-1.5">
-                    <li className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-stone-500 shrink-0" />
-                      Hasta {t.capacidad_maxima} {t.capacidad_maxima === 1 ? 'persona' : 'personas'}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <BedDouble className="h-4 w-4 text-stone-500 shrink-0" />
-                      {t.capacidad_adultos} adulto{t.capacidad_adultos !== 1 ? 's' : ''}
-                      {t.capacidad_ninos > 0 ? ` + ${t.capacidad_ninos} niño${t.capacidad_ninos !== 1 ? 's' : ''}` : ''}
-                    </li>
+                  {t.descripcion && <p className="line-clamp-2 text-sm leading-relaxed text-stone-600">{t.descripcion}</p>}
+
+                  <ul className="flex flex-wrap gap-2 text-xs font-medium text-stone-600">
+                    <li className="flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1.5"><Users className="h-3.5 w-3.5 text-emerald-700" />Hasta {t.capacidad_maxima} {t.capacidad_maxima === 1 ? 'persona' : 'personas'}</li>
+                    <li className="flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1.5"><BedDouble className="h-3.5 w-3.5 text-emerald-700" />{t.capacidad_adultos} adulto{t.capacidad_adultos !== 1 ? 's' : ''}{t.capacidad_ninos > 0 ? ` + ${t.capacidad_ninos} niño${t.capacidad_ninos !== 1 ? 's' : ''}` : ''}</li>
                     {(t.amenidades || []).slice(0, 3).map((a) => {
                       const Icon = amenityIcon(a);
                       return (
-                        <li key={a} className="flex items-center gap-2">
-                          <Icon className="h-4 w-4 text-stone-500 shrink-0" />{a}
-                        </li>
+                        <li key={a} className="flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1.5"><Icon className="h-3.5 w-3.5 text-emerald-700" />{a}</li>
                       );
                     })}
                     {(t.amenidades?.length || 0) > 3 && (
-                      <li className="text-xs text-blue-700 font-medium pl-6">+{(t.amenidades!.length - 3)} amenidades más</li>
+                      <li className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-800">+{(t.amenidades!.length - 3)} más</li>
                     )}
                   </ul>
 
-                  <div className="text-[12px] text-emerald-700 font-medium flex items-center gap-1">
-                    100% reembolsable <Info className="h-3 w-3" />
-                  </div>
-
-                  <div className="mt-auto pt-3 border-t border-stone-100 text-right">
-                    <div className="inline-block bg-emerald-700 text-white text-[11px] font-semibold rounded px-1.5 py-0.5 mb-1">15% de descuento</div>
-                    <div className="text-xs text-stone-400 line-through">{formatCurrency(precioOriginal)} {currencyCode()}</div>
-                    <div className="text-2xl font-bold text-stone-900 leading-tight">{formatCurrency(precio)} <span className="text-sm font-medium text-stone-500">{currencyCode()}</span></div>
-                    <div className="text-[11px] text-stone-500">por noche{ns > 1 ? ` · ${formatCurrency(total)} total` : ''}</div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div className="mt-auto flex items-end justify-between gap-4 border-t border-stone-100 pt-4">
+                    <div>
+                      <div className="text-[11px] font-medium uppercase tracking-wider text-stone-400">Desde</div>
+                      <div className="text-2xl font-bold leading-tight text-stone-900">{formatCurrency(precio)} <span className="text-xs font-semibold text-stone-400">{currencyCode()}</span></div>
+                      <div className="text-[11px] text-stone-500">por noche{ns > 0 ? ` · ${formatCurrency(total)} por ${ns} ${ns === 1 ? 'noche' : 'noches'}` : ''}</div>
+                    </div>
                     <Button
                       onClick={() => openBooking(h)}
-                      variant="outline"
-                      className="h-11 border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800 font-semibold rounded-md text-[14px]"
+                      className={cn("h-12 shrink-0 rounded-full px-5 font-semibold text-white", disponible ? "bg-stone-900 hover:bg-emerald-800" : "bg-stone-500 hover:bg-stone-600")}
                     >
-                      <CalendarCheck className="h-4 w-4 mr-1.5" />
-                      Ver disponibilidad
+                      {disponible ? <BookOpenCheck className="mr-2 h-4 w-4" /> : <CalendarCheck className="mr-2 h-4 w-4" />}
+                      {disponible ? 'Elegir' : 'Cambiar fechas'}
                     </Button>
-                    <Button
-                      onClick={() => openBooking(h)}
-                      disabled={range?.from && range?.to ? !disponible : false}
-                      className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md text-[14px] disabled:opacity-60"
-                    >
-                      <BookOpenCheck className="h-4 w-4 mr-1.5" />
-                      Reservar
-                    </Button>
-                  </div>
-                  <div className="text-[11px] text-stone-500 text-center -mt-1">
-                    Elige fechas para confirmar disponibilidad. Aún no se te cobrará nada.
                   </div>
                 </CardContent>
               </Card>
@@ -504,18 +569,30 @@ export default function PublicHotel() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-stone-200 bg-white">
-        <div className="container mx-auto px-6 py-6 text-xs text-stone-500 flex flex-wrap justify-between gap-3">
-          <span>© {new Date().getFullYear()} {hotel.nombre}</span>
-          {hotel.hora_checkin && hotel.hora_checkout && (
-            <span>Check-in {hotel.hora_checkin} · Check-out {hotel.hora_checkout}</span>
-          )}
+      <footer className="bg-[#17201d] text-white">
+        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 sm:grid-cols-2 sm:px-8 lg:grid-cols-3 lg:px-10">
+          <div>
+            <div className="flex items-center gap-3">
+              {hotel.logo_url ? <img src={hotel.logo_url} alt="" className="h-11 w-11 rounded-xl bg-white object-cover" /> : <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10"><HotelIcon className="h-5 w-5" /></div>}
+              <div><p className="font-serif text-lg">{hotel.nombre}</p>{locationLabel && <p className="text-xs text-white/55">{locationLabel}</p>}</div>
+            </div>
+          </div>
+          <div className="space-y-2 text-sm text-white/65">
+            {hotel.direccion && <p className="flex gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />{hotel.direccion}</p>}
+            {hotel.telefono && <a href={`tel:${hotel.telefono}`} className="flex gap-2 transition hover:text-white"><Phone className="h-4 w-4 text-emerald-300" />{hotel.telefono}</a>}
+            {hotel.email && <a href={`mailto:${hotel.email}`} className="flex gap-2 transition hover:text-white"><Mail className="h-4 w-4 text-emerald-300" />{hotel.email}</a>}
+          </div>
+          <div className="text-sm text-white/65 lg:text-right">
+            {hotel.hora_checkin && <p>Check-in desde {hotel.hora_checkin}</p>}
+            {hotel.hora_checkout && <p>Check-out hasta {hotel.hora_checkout}</p>}
+            <p className="mt-4 text-xs text-white/35">© {new Date().getFullYear()} {hotel.nombre}</p>
+          </div>
         </div>
       </footer>
 
       {/* Modal de reserva con calendario */}
       <Dialog open={!!bookingHab} onOpenChange={(o) => !o && setBookingHab(null)}>
-        <DialogContent className="max-w-3xl bg-white text-stone-900 max-h-[92vh] overflow-y-auto">
+        <DialogContent className="max-h-[94vh] w-[calc(100%-1.25rem)] max-w-4xl overflow-y-auto rounded-[28px] border-0 bg-white p-0 text-stone-900 shadow-2xl sm:w-full">
           {bookingHab && (() => {
             const t = bookingHab.tipo_habitacion_id ? tipoMap[bookingHab.tipo_habitacion_id] : null;
             if (!t) return null;
@@ -523,37 +600,34 @@ export default function PublicHotel() {
             const ocupados = diasOcupadosPorHab[bookingHab.id] || new Set();
             const disponible = isHabDisponibleEnRango(bookingHab.id, bookingRange);
             const tarifaBase = Number(t.precio_base) || 0;
-            const fechaRef = bookingRange?.from ? format(bookingRange.from, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+            const fechaRef = bookingRange?.from ? format(bookingRange.from, 'yyyy-MM-dd') : localDateForZone(hotel.timezone);
             const { precio: tarifa, temporada: tempReserva } = resolverPrecioTemporada(tarifaBase, fechaRef, t.id, bookingHab.id, hotel?.id);
-            const totalEstim = tarifa * nsBooking;
+            const personasExtra = Math.max(0, (adultos + ninos) - t.capacidad_adultos);
+            const extraPorNoche = personasExtra * (Number(t.precio_persona_extra) || 0);
+            const totalEstim = (tarifa + extraPorNoche) * nsBooking;
             return (
               <>
-                <DialogHeader>
-                  <DialogTitle className="font-serif text-2xl font-light">
-                    {t.nombre} · Habitación {bookingHab.numero}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Selecciona tus fechas en el calendario. Los días en rojo no están disponibles.
-                  </DialogDescription>
-                </DialogHeader>
-
-                {fotos[0] && (
-                  <div className="rounded-xl overflow-hidden aspect-[16/7] bg-stone-100">
-                    <img src={fotos[0]} alt={t.nombre} className="w-full h-full object-cover" />
+                <div className="relative aspect-[16/7] min-h-[190px] overflow-hidden bg-stone-100 sm:min-h-0">
+                  {fotos[0] && <img src={fotos[0]} alt={t.nombre} className="h-full w-full object-cover" />}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-[.16em] text-white/65">Habitación {bookingHab.numero}{bookingHab.piso ? ` · Piso ${bookingHab.piso}` : ''}</p>
+                    <DialogTitle className="font-serif text-3xl font-light sm:text-4xl">{t.nombre}</DialogTitle>
+                    <DialogDescription className="mt-1 text-white/70">Completa tus datos para enviar la solicitud directamente al hotel.</DialogDescription>
                   </div>
-                )}
+                </div>
 
-                <div className="grid md:grid-cols-2 gap-6 mt-2">
+                <div className="grid gap-7 p-5 sm:p-7 md:grid-cols-[.92fr_1.08fr]">
                   <div>
-                    <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-2">Calendario de la habitación</div>
-                    <div className="rounded-xl border border-stone-200 p-2 bg-stone-50">
+                    <div className="mb-3 text-xs font-bold uppercase tracking-[.16em] text-stone-400">Elige tus fechas</div>
+                    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-2">
                       <Calendar
                         mode="range"
                         selected={bookingRange}
                         onSelect={setBookingRange}
                         numberOfMonths={1}
                         disabled={[
-                          (d) => d < addDays(new Date(), -1),
+                          (d) => d < todayHotel,
                           (d) => ocupados.has(format(d, 'yyyy-MM-dd')),
                         ]}
                         modifiers={{ reservado: (d) => ocupados.has(format(d, 'yyyy-MM-dd')) }}
@@ -562,37 +636,41 @@ export default function PublicHotel() {
                         className={cn("p-2 pointer-events-auto")}
                       />
                     </div>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-stone-500">
+                    <div className="mt-3 flex items-center gap-3 text-xs text-stone-500">
                       <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-rose-100 border border-rose-200" />Reservado</span>
                       <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-stone-900" />Tu selección</span>
                     </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                      <span className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" />{adultos} adulto{adultos !== 1 ? 's' : ''}{ninos ? ` · ${ninos} niño${ninos !== 1 ? 's' : ''}` : ''}</span>
+                      <span className="font-semibold">{nsBooking} {nsBooking === 1 ? 'noche' : 'noches'}</span>
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Nombre *</Label>
-                        <Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="border-stone-200" />
+                        <Label className="text-xs font-semibold">Nombre *</Label>
+                        <Input autoComplete="given-name" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="mt-1 h-11 rounded-xl border-stone-200" />
                       </div>
                       <div>
-                        <Label className="text-xs">Apellido</Label>
-                        <Input value={form.apellido_paterno} onChange={(e) => setForm({ ...form, apellido_paterno: e.target.value })} className="border-stone-200" />
+                        <Label className="text-xs font-semibold">Apellido</Label>
+                        <Input autoComplete="family-name" value={form.apellido_paterno} onChange={(e) => setForm({ ...form, apellido_paterno: e.target.value })} className="mt-1 h-11 rounded-xl border-stone-200" />
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs">Email *</Label>
-                      <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="border-stone-200" />
+                      <Label className="text-xs font-semibold">Correo electrónico *</Label>
+                      <Input autoComplete="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1 h-11 rounded-xl border-stone-200" placeholder="nombre@correo.com" />
                     </div>
                     <div>
-                      <Label className="text-xs">Teléfono *</Label>
-                      <Input value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className="border-stone-200" />
+                      <Label className="text-xs font-semibold">Teléfono *</Label>
+                      <Input autoComplete="tel" inputMode="tel" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className="mt-1 h-11 rounded-xl border-stone-200" placeholder="Tu número de contacto" />
                     </div>
                     <div>
-                      <Label className="text-xs">Solicitudes especiales</Label>
-                      <Textarea rows={2} value={form.solicitudes} onChange={(e) => setForm({ ...form, solicitudes: e.target.value })} className="border-stone-200" />
+                      <Label className="text-xs font-semibold">¿Podemos preparar algo especial?</Label>
+                      <Textarea rows={2} value={form.solicitudes} onChange={(e) => setForm({ ...form, solicitudes: e.target.value })} className="mt-1 rounded-xl border-stone-200" placeholder="Opcional" />
                     </div>
 
-                    <div className="rounded-xl border border-stone-200 p-3 bg-stone-50 text-sm space-y-1">
+                    <div className="space-y-1.5 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm">
                       <div className="flex justify-between text-stone-600"><span>Tarifa por noche</span><span className="font-medium text-stone-900">{formatCurrency(tarifa)}</span></div>
                       {tempReserva && (
                         <div className="flex justify-between text-emerald-700 text-xs">
@@ -600,9 +678,10 @@ export default function PublicHotel() {
                           <span>Tarifa base {formatCurrency(tarifaBase)}</span>
                         </div>
                       )}
+                      {extraPorNoche > 0 && <div className="flex justify-between text-stone-600"><span>Personas extra por noche</span><span className="font-medium text-stone-900">{formatCurrency(extraPorNoche)}</span></div>}
                       <div className="flex justify-between text-stone-600"><span>Noches</span><span className="font-medium text-stone-900">{nsBooking}</span></div>
-                      <div className="flex justify-between font-serif text-base border-t border-stone-200 pt-2 mt-1">
-                        <span>Total</span><span>{formatCurrency(totalEstim)}</span>
+                      <div className="mt-2 flex justify-between border-t border-stone-200 pt-3 font-serif text-xl">
+                        <span>Total estimado</span><span>{formatCurrency(totalEstim)}</span>
                       </div>
                       {hotel.requiere_anticipo && nsBooking > 0 && (
                         <div className="flex justify-between text-amber-700 text-xs pt-1">
@@ -617,11 +696,11 @@ export default function PublicHotel() {
                   </div>
                 </div>
 
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setBookingHab(null)} disabled={submitting}>Cancelar</Button>
-                  <Button onClick={handleBookSubmit} disabled={submitting || nsBooking < 1 || !disponible} className="bg-stone-900 hover:bg-stone-800 text-stone-50">
+                <DialogFooter className="border-t border-stone-100 bg-stone-50 px-5 py-4 sm:px-7">
+                  <Button variant="ghost" onClick={() => setBookingHab(null)} disabled={submitting} className="rounded-full">Cancelar</Button>
+                  <Button onClick={handleBookSubmit} disabled={submitting || nsBooking < 1 || !disponible} className="h-12 rounded-full bg-stone-900 px-6 font-semibold text-white hover:bg-emerald-800">
                     {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Confirmar reserva
+                    Enviar solicitud de reserva
                   </Button>
                 </DialogFooter>
               </>
@@ -632,33 +711,39 @@ export default function PublicHotel() {
 
       {/* Confirmación */}
       <Dialog open={!!confirmacion} onOpenChange={(o) => !o && setConfirmacion(null)}>
-        <DialogContent className="max-w-md bg-white text-stone-900">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 font-serif font-light text-2xl">
-              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-              ¡Reserva recibida!
+        <DialogContent className="w-[calc(100%-1.25rem)] max-w-md overflow-hidden rounded-[28px] border-0 bg-white p-0 text-stone-900 shadow-2xl sm:w-full">
+          <div className="bg-[#17201d] px-6 pb-6 pt-8 text-center text-white">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-400/15 ring-1 ring-emerald-300/30">
+              <CheckCircle2 className="h-7 w-7 text-emerald-300" />
+            </div>
+            <DialogHeader>
+            <DialogTitle className="justify-center font-serif text-3xl font-light">
+              ¡Solicitud recibida!
             </DialogTitle>
-            <DialogDescription>Tu solicitud está pendiente de confirmación por el hotel.</DialogDescription>
+            <DialogDescription className="mt-2 text-white/65">El hotel revisará la solicitud y se pondrá en contacto contigo para confirmarla.</DialogDescription>
           </DialogHeader>
+          </div>
           {confirmacion && (
-            <div className="space-y-2 text-sm">
-              <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-                <div className="text-xs text-stone-500">Número de reserva</div>
-                <div className="text-xl font-bold tracking-wider">{confirmacion.numero}</div>
+            <div className="space-y-4 p-6 text-sm">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-center">
+                <div className="text-[10px] font-bold uppercase tracking-[.18em] text-emerald-700">Número de reserva</div>
+                <div className="mt-1 text-2xl font-bold tracking-wider text-emerald-950">{confirmacion.numero}</div>
               </div>
-              <div className="flex justify-between"><span className="text-stone-500">Total estimado</span><span className="font-semibold">{formatCurrency(confirmacion.total)}</span></div>
+              <div className="space-y-2.5 rounded-2xl border border-stone-200 p-4">
+                <p className="font-semibold text-stone-900">{confirmacion.habitacion}</p>
+                <div className="flex justify-between text-stone-500"><span>{confirmacion.fechas}</span><span>{confirmacion.noches} {confirmacion.noches === 1 ? 'noche' : 'noches'}</span></div>
+                <div className="flex justify-between border-t border-stone-100 pt-2.5"><span className="text-stone-500">Total estimado</span><span className="font-bold">{formatCurrency(confirmacion.total)}</span></div>
+              </div>
               {confirmacion.anticipo > 0 && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 mt-2">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                   <div className="font-semibold mb-1 text-amber-900">Anticipo solicitado: {formatCurrency(confirmacion.anticipo)}</div>
                   <p className="text-xs text-amber-800/80">El hotel te contactará para coordinar el método de pago del anticipo y confirmar tu reserva.</p>
                 </div>
               )}
-              <p className="text-xs text-stone-500 pt-2">Guarda tu número de reserva. Recibirás confirmación al correo {form.email || 'registrado'}.</p>
+              <p className="text-center text-xs leading-relaxed text-stone-500">Guarda tu número de reserva. Correo registrado: <span className="font-medium text-stone-700">{confirmacion.email}</span>.</p>
+              <Button onClick={() => setConfirmacion(null)} className="h-12 w-full rounded-full bg-stone-900 font-semibold text-white hover:bg-emerald-800">Listo</Button>
             </div>
           )}
-          <DialogFooter>
-            <Button onClick={() => setConfirmacion(null)} className="w-full bg-stone-900 hover:bg-stone-800 text-stone-50">Listo</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
