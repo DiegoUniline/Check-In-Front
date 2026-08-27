@@ -19,7 +19,7 @@ import { CheckInsCard } from '@/components/dashboard/CheckInsCard';
 import { VentasDiaCard } from '@/components/dashboard/VentasDiaCard';
 import { TareasCriticasCard } from '@/components/dashboard/TareasCriticasCard';
 import { OcupacionChart } from '@/components/dashboard/OcupacionChart';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -94,7 +94,7 @@ export default function Dashboard() {
         });
       } else {
         try {
-          const hoy = new Date().toISOString().split('T')[0];
+          const hoy = todayLocal();
           const pagos = await api.getPagos({ fecha: hoy });
           if (Array.isArray(pagos) && pagos.length > 0) {
             const totalPagos = pagos.reduce((sum: number, p: any) => sum + (Number(p.monto) || 0), 0);

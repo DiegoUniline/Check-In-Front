@@ -10,34 +10,32 @@ if (!root[PATCH_KEY]) {
   const db = supabase as any;
   const originalCheckin = client.checkin.bind(client);
 
-  client.getHabitacionesDisponibles = async (checkin: string, checkout: string, tipoId?: string) => {
+  client.getHabitacionesDisponibles = async (checkin: string, checkout: string, tipoId?: string, excludeReservaId?: string) => {
     const hotelId = client.getHotelId?.();
     let habitacionesQuery = db
       .from('habitaciones')
       .select('*, tipos_habitacion(*)')
       .eq('hotel_id', hotelId)
-      .eq('estado_habitacion', 'Disponible');
+      .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio)');
     if (tipoId) habitacionesQuery = habitacionesQuery.eq('tipo_habitacion_id', tipoId);
+
+    let reservasQuery = db.from('reservas')
+      .select('habitacion_id')
+      .eq('hotel_id', hotelId)
+      .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
+      .lt('fecha_checkin', checkout)
+      .gt('fecha_checkout', checkin);
+    if (excludeReservaId) reservasQuery = reservasQuery.neq('id', excludeReservaId);
 
     const [{ data: habitaciones, error: habError }, { data: conflictos, error: reservasError }] = await Promise.all([
       habitacionesQuery,
-      db.from('reservas')
-        .select('habitacion_id')
-        .eq('hotel_id', hotelId)
-        .in('estado', ['Confirmada', 'CheckIn'])
-        .lt('fecha_checkin', checkout)
-        .gt('fecha_checkout', checkin),
+      reservasQuery,
     ]);
     if (habError) throw habError;
     if (reservasError) throw reservasError;
 
     const ocupadas = new Set((conflictos || []).map((r: any) => r.habitacion_id).filter(Boolean));
-    return (habitaciones || []).filter((h: any) => {
-      const limpieza = String(h.estado_limpieza || '').toLowerCase();
-      const mantenimiento = String(h.estado_mantenimiento || '').toLowerCase();
-      const lista = (!limpieza || limpieza === 'limpia') && (!mantenimiento || mantenimiento === 'ok');
-      return lista && !ocupadas.has(h.id);
-    });
+    return (habitaciones || []).filter((h: any) => !ocupadas.has(h.id));
   };
 
   client.checkin = async (id: string, habitacionId?: string) => {

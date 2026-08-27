@@ -14,6 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { useConfirm } from '@/hooks/useConfirm';
 import { formatCurrency } from '@/lib/currency';
+import { addDays, format } from 'date-fns';
+import { formatDate } from '@/lib/dateFormat';
+
+const platformToday = () => format(new Date(), 'yyyy-MM-dd');
+const platformDateIn = (days: number) => format(addDays(new Date(), days), 'yyyy-MM-dd');
 
 export default function AdminPlataforma() {
   const queryClient = useQueryClient();
@@ -58,8 +63,8 @@ export default function AdminPlataforma() {
   
   const [formSuscripcion, setFormSuscripcion] = useState({ 
     plan_id: '', 
-    fecha_inicio: new Date().toISOString().split('T')[0],
-    fecha_fin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    fecha_inicio: platformToday(),
+    fecha_fin: platformDateIn(30)
   });
 
   const [modalPlan, setModalPlan] = useState<{ open: boolean; plan: any | null }>({ open: false, plan: null });
@@ -208,8 +213,8 @@ export default function AdminPlataforma() {
       setModalSuscripcion({ open: false, hotel: null });
       setFormSuscripcion({ 
         plan_id: '', 
-        fecha_inicio: new Date().toISOString().split('T')[0],
-        fecha_fin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        fecha_inicio: platformToday(),
+        fecha_fin: platformDateIn(30)
       });
     },
     onError: (e: any) => toast.error(e.message)
@@ -454,11 +459,11 @@ export default function AdminPlataforma() {
                             </div>
                             <div className="flex justify-between text-xs">
                               <span className="text-slate-500">Inicio:</span>
-                              <span className="font-bold">{new Date(suscripcion.fecha_inicio).toLocaleDateString()}</span>
+                              <span className="font-bold">{formatDate(suscripcion.fecha_inicio)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                               <span className="text-slate-500">Vence:</span>
-                              <span className="font-bold">{new Date(suscripcion.fecha_fin).toLocaleDateString()}</span>
+                              <span className="font-bold">{formatDate(suscripcion.fecha_fin)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                               <span className="text-slate-500">Estado:</span>

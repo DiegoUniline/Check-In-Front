@@ -149,7 +149,15 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
 
   const cargarHabitaciones = async () => {
     try {
-      const data = await api.getHabitaciones?.() || [];
+      const base = reserva || reservaInicial;
+      const data = base?.fecha_checkin && base?.fecha_checkout
+        ? await api.getHabitacionesDisponibles(
+            String(base.fecha_checkin).slice(0, 10),
+            String(base.fecha_checkout).slice(0, 10),
+            base.tipo_habitacion_id || undefined,
+            base.id,
+          )
+        : await api.getHabitaciones?.() || [];
       setHabitaciones(data);
     } catch (error) {
       console.error('Error cargando habitaciones:', error);
@@ -182,21 +190,24 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
 
   const fechaCheckin = parseStayDate(r.fecha_checkin);
   const nochesOriginales = r.noches || differenceInCalendarDays(parseStayDate(r.fecha_checkout), fechaCheckin);
-  const nochesEditadas = differenceInCalendarDays(fechaCheckout, fechaCheckin) || 1;
+  const nochesEditadas = Math.max(1, differenceInCalendarDays(fechaCheckout, fechaCheckin));
   const nochesActuales = editMode ? nochesEditadas : nochesOriginales;
   const diferenciaNOches = nochesEditadas - nochesOriginales;
   
   const tarifaNoche = safeNumber(r.tarifa_noche);
-  const subtotalHospedaje = editMode ? (tarifaNoche * nochesEditadas) : safeNumber(r.subtotal_hospedaje, tarifaNoche * nochesOriginales);
+  const subtotalHospedaje = tarifaNoche * nochesActuales;
   const personasExtra = r.personas_extra || 0;
   const cargoPersonaExtra = safeNumber(r.cargo_persona_extra);
   const totalPersonaExtra = personasExtra * cargoPersonaExtra * nochesActuales;
-  const descuentoMonto = safeNumber(r.descuento_monto);
-  const totalCargos = r.cargos?.reduce((sum: number, c: any) => sum + safeNumber(c.total), 0) || 0;
-  const subtotalBase = subtotalHospedaje + totalPersonaExtra + totalCargos - descuentoMonto;
+  const totalCargos = r.cargos?.reduce((sum: number, c: any) => sum + safeNumber(c.total, safeNumber(c.subtotal)), 0) || 0;
   // No aplicar IVA automático: se respetan los impuestos configurados en la reserva.
   const impuestos = safeNumber(r.total_impuestos);
-  const total = editMode ? (subtotalBase + impuestos) : safeNumber(r.total);
+  const totalBruto = subtotalHospedaje + totalPersonaExtra + totalCargos + impuestos;
+  const descuentoValor = safeNumber(r.descuento_valor);
+  const descuentoMonto = editMode && String(r.descuento_tipo || '').toLowerCase().startsWith('porc')
+    ? Math.min(totalBruto, totalBruto * descuentoValor / 100)
+    : safeNumber(r.descuento, safeNumber(r.descuento_monto));
+  const total = editMode ? Math.max(0, totalBruto - descuentoMonto) : safeNumber(r.total, Math.max(0, totalBruto - descuentoMonto));
   const pagado = safeNumber(r.total_pagado);
   const saldoPendiente = total - pagado;
   const porcentajePagado = total > 0 ? (pagado / total) * 100 : 0;

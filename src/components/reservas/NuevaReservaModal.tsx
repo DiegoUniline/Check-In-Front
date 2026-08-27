@@ -304,7 +304,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   };
 
   // Cálculos
-  const noches = differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin) || 1;
+  const noches = Math.max(0, differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin));
+  const nuevoClienteValido = Boolean(
+    formData.nuevoCliente.nombre.trim()
+    && formData.nuevoCliente.apellido_paterno.trim()
+    && formData.nuevoCliente.telefono.trim(),
+  );
   const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId) || 
     (preload?.habitacion?.id === formData.habitacionId ? preload.habitacion : null);
   const selectedTipo = tiposHabitacion.find(t => t.id === formData.tipoHabitacion) || 
@@ -436,29 +441,23 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      let clienteId = formData.clienteId;
-
-      if (!clienteId && formData.nuevoCliente.nombre) {
-        const nuevoCliente = await api.createCliente(formData.nuevoCliente);
-        clienteId = nuevoCliente.id;
-      }
-
-      if (!clienteId) {
-        toast({ title: 'Error', description: 'Selecciona o crea un cliente', variant: 'destructive' });
-        setLoading(false);
+      if (!formData.clienteId && !nuevoClienteValido) {
+        toast({
+          title: 'Datos incompletos',
+          description: 'Nombre, apellido paterno y teléfono son obligatorios para un cliente nuevo.',
+          variant: 'destructive',
+        });
         return;
       }
-
-      // Tarifa efectiva: aplica ajuste de temporada y suma el cargo por persona extra.
-      const tarifaConExtras = tarifaEfectiva + (formData.personasExtra * formData.cargoPersonaExtra);
-      const descuentoMonto = formData.descuentoTipo === 'Porcentaje'
-        ? (tarifaConExtras * noches * (Number(formData.descuentoValor) || 0)) / 100
-        : Number(formData.descuentoValor) || 0;
+      if (noches < 1) {
+        toast({ title: 'Fechas inválidas', description: 'El check-out debe ser posterior al check-in.', variant: 'destructive' });
+        return;
+      }
       const notasCombinadas = [formData.solicitudesEspeciales, formData.notasInternas]
         .filter(Boolean)
         .join('\n---\n');
       const reservaData = {
-        cliente_id: clienteId,
+        cliente_id: formData.clienteId || null,
         habitacion_id: formData.habitacionId || null,
         tipo_habitacion_id: formData.tipoHabitacion || null,
         fecha_checkin: format(formData.fechaCheckin, 'yyyy-MM-dd'),
@@ -467,50 +466,40 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         adultos: formData.adultos,
         ninos: formData.ninos,
         noches,
-        tarifa_noche: tarifaConExtras,
+        tarifa_noche: tarifaEfectiva,
+        personas_extra: formData.personasExtra,
+        cargo_persona_extra: formData.cargoPersonaExtra,
         descuento: descuentoMonto,
+        descuento_tipo: formData.descuentoTipo === 'none' ? '' : formData.descuentoTipo,
+        descuento_valor: formData.descuentoTipo === 'none' ? 0 : Number(formData.descuentoValor) || 0,
         total_impuestos: totalImpuestos,
         solicitudes_especiales: formData.solicitudesEspeciales,
         notas: notasCombinadas || null,
         origen,
       };
 
-      const reserva = await api.createReserva(reservaData);
-
-      if (origen === 'Recepcion' && formData.habitacionId) {
-        await api.checkin(reserva.id, formData.habitacionId);
-        for (const entregableId of formData.entregablesSeleccionados) {
-          try { await api.asignarEntregable?.(reserva.id, { entregable_id: entregableId, cantidad: 1 }); } catch {}
-        }
-      }
-
- for (const cargo of formData.cargos) {
-  try {
-    await api.createCargo({
-      reserva_id: reserva.id, 
-      concepto_id: cargo.concepto_id, 
-      concepto: cargo.concepto_nombre,
-      cantidad: cargo.cantidad, 
-      precio_unitario: cargo.precio_unitario,
-      subtotal: cargo.subtotal, 
-      impuesto: cargo.impuesto, 
-      total: cargo.total,
-    });
-  } catch (err) {
-    console.error('Error creando cargo:', err);
-  }
-}
-
-      for (const pago of formData.pagos) {
-        try {
-          await api.createPago({
-            reserva_id: reserva.id,
-            monto: pago.monto,
-            metodo_pago: pago.metodo_pago,
-            concepto: pago.concepto,
-          });
-        } catch {}
-      }
+      const reserva = await api.createReservationBundle({
+        reserva: reservaData,
+        cliente: formData.clienteId ? undefined : formData.nuevoCliente,
+        cargos: formData.cargos.map((cargo) => ({
+          concepto_id: cargo.concepto_id,
+          concepto: cargo.concepto_nombre,
+          cantidad: cargo.cantidad,
+          precio_unitario: cargo.precio_unitario,
+          impuesto: cargo.impuesto,
+          notas: cargo.notas,
+        })),
+        pagos: formData.pagos.map((pago) => ({
+          monto: pago.monto,
+          metodo_pago: pago.metodo_pago,
+          concepto: pago.concepto,
+        })),
+        entregables: formData.entregablesSeleccionados.map((entregableId) => ({
+          entregable_id: entregableId,
+          cantidad: 1,
+        })),
+        checkin: origen === 'Recepcion',
+      });
 
       toast({
         title: origen === 'Recepcion' ? '✅ Check-in completado' : '✅ Reserva creada',
@@ -1245,11 +1234,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
             {step === 1 ? 'Cancelar' : <><ChevronLeft className="mr-1 h-4 w-4" /> Anterior</>}
           </Button>
           {step < 4 ? (
-            <Button onClick={handleNext} disabled={(step === 1 && noches < 1) || (step === 2 && !formData.habitacionId) || (step === 3 && !formData.clienteId && !formData.nuevoCliente.nombre)}>
+            <Button onClick={handleNext} disabled={(step === 1 && noches < 1) || (step === 2 && !formData.habitacionId) || (step === 3 && !formData.clienteId && !nuevoClienteValido)}>
               Siguiente <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleConfirm} disabled={loading} size="lg" className={origen === 'Recepcion' ? 'bg-green-600 hover:bg-green-700' : ''}>
+            <Button onClick={handleConfirm} disabled={loading || noches < 1 || (!formData.clienteId && !nuevoClienteValido)} size="lg" className={origen === 'Recepcion' ? 'bg-green-600 hover:bg-green-700' : ''}>
               {loading ? 'Procesando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Completar Check-in' : 'Confirmar Reserva'}</>}
             </Button>
           )}

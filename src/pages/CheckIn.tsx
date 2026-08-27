@@ -78,8 +78,14 @@ export default function CheckIn() {
           reservaData.fecha_checkin,
           reservaData.fecha_checkout,
           reservaData.tipo_habitacion_id,
+          reservaData.id,
         );
-        setHabitacionesDisponibles(Array.isArray(habsDisp) ? habsDisp : []);
+        const listas = (Array.isArray(habsDisp) ? habsDisp : []).filter((h: any) => {
+          const limpieza = String(h.estado_limpieza || 'Limpia').toLowerCase();
+          const mantenimiento = String(h.estado_mantenimiento || 'OK').toLowerCase();
+          return h.estado_habitacion === 'Disponible' && limpieza === 'limpia' && mantenimiento === 'ok';
+        });
+        setHabitacionesDisponibles(listas);
       }
 
       const cli: any = (reservaData as any).cliente || (reservaData as any).clientes || {};
@@ -130,18 +136,18 @@ export default function CheckIn() {
 
     setIsSubmitting(true);
     try {
-      await api.checkin(id!, formData.habitacionId);
-
-      for (const pago of pagos) {
-        if (!pago.monto || pago.monto <= 0) continue;
-        await api.createPago({
-          reserva_id: id,
-          monto: pago.monto,
-          metodo_pago: pago.metodo,
-          referencia: pago.referencia,
-          concepto: 'Pago en Check-in',
-        });
-      }
+      await api.completeCheckin(
+        id!,
+        formData.habitacionId,
+        pagos
+          .filter((pago) => Number(pago.monto) > 0)
+          .map((pago) => ({
+            monto: Number(pago.monto),
+            metodo_pago: pago.metodo,
+            referencia: pago.referencia,
+            concepto: 'Pago en Check-in',
+          })),
+      );
 
       try {
         const hab = habitacionesDisponibles.find((h) => h.id === formData.habitacionId);

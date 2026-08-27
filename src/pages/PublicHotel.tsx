@@ -45,6 +45,7 @@ type Hotel = {
   telefono: string | null; email: string | null; hora_checkin: string | null;
   hora_checkout: string | null; estrellas: number | null; permite_reservas_online: boolean;
   requiere_anticipo: boolean; porcentaje_anticipo: number; logo_url: string | null;
+  timezone: string | null;
 };
 type Tipo = {
   id: string; nombre: string; descripcion: string | null;
@@ -65,6 +66,18 @@ const amenityIcon = (a: string) => {
   if (k.includes('café') || k.includes('cafe') || k.includes('desayuno')) return Coffee;
   if (k.includes('baño') || k.includes('bano') || k.includes('jacuzzi')) return Bath;
   return CheckCircle2;
+};
+
+const localDateForZone = (timezone?: string | null) => {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
 };
 
 export default function PublicHotel() {
@@ -105,6 +118,8 @@ export default function PublicHotel() {
       const { data: h } = await (supabase as any).from('hotels_publicos').select('*').eq('slug', slug).maybeSingle();
       if (!h) { setNotFound(true); setLoading(false); return; }
       setHotel(h as any);
+      const localToday = parseISO(localDateForZone((h as any).timezone));
+      setRange({ from: addDays(localToday, 1), to: addDays(localToday, 2) });
       setHotelCurrency({
         codigo: (h as any).moneda_codigo,
         simbolo: (h as any).moneda_simbolo,
@@ -129,8 +144,8 @@ export default function PublicHotel() {
         .from('reservas')
         .select('id, habitacion_id, tipo_habitacion_id, fecha_checkin, fecha_checkout, estado')
         .eq('hotel_id', hotel.id)
-        .in('estado', ['Pendiente', 'Confirmada', 'CheckIn'])
-        .gte('fecha_checkout', new Date().toISOString().slice(0, 10));
+        .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
+        .gt('fecha_checkout', localDateForZone(hotel.timezone));
       setReservas(data || []);
     };
     load();
@@ -206,15 +221,6 @@ export default function PublicHotel() {
 
     setSubmitting(true);
     try {
-      const { data: cliente, error: errC } = await supabase.from('clientes').insert({
-        hotel_id: hotel.id,
-        nombre: form.nombre.trim(),
-        apellido_paterno: form.apellido_paterno.trim() || null,
-        email: form.email.trim(),
-        telefono: form.telefono.trim(),
-      }).select().single();
-      if (errC) throw errC;
-
       const baseTarifa = Number(tipo.precio_base) || 0;
       const fechaIn = format(bookingRange.from, 'yyyy-MM-dd');
       const { precio: tarifa } = resolverPrecioTemporada(baseTarifa, fechaIn, tipo.id, bookingHab.id, hotel.id);
@@ -226,25 +232,29 @@ export default function PublicHotel() {
         ? Math.round(total * (Number(hotel.porcentaje_anticipo) || 0)) / 100
         : 0;
 
-      // El numero_reserva lo asigna un trigger BEFORE INSERT en la DB
-      // (RES-AAAA-XXXX con secuencia por hotel/año)
-      const { data: reservaCreada, error: errR } = await supabase.from('reservas').insert({
-        hotel_id: hotel.id,
-        cliente_id: cliente.id,
-        habitacion_id: bookingHab.id,
-        tipo_habitacion_id: tipo.id,
-        fecha_checkin: format(bookingRange.from, 'yyyy-MM-dd'),
-        fecha_checkout: format(bookingRange.to, 'yyyy-MM-dd'),
-        adultos, ninos,
-        noches: nsBooking,
-        tarifa_noche: tarifa,
-        subtotal_hospedaje: subtotal,
-        total,
-        saldo_pendiente: total,
-        estado: 'Pendiente',
-        origen: 'Web',
-        solicitudes_especiales: form.solicitudes || null,
-      }).select('numero_reserva').single();
+      // Cliente y reserva se crean en una sola transacción. El trigger de la DB
+      // vuelve a comprobar disponibilidad para cerrar carreras entre dos usuarios.
+      const { data: reservaCreada, error: errR } = await (supabase as any).rpc('create_public_reservation', {
+        p_hotel_id: hotel.id,
+        p_cliente: {
+          nombre: form.nombre.trim(),
+          apellido_paterno: form.apellido_paterno.trim(),
+          email: form.email.trim(),
+          telefono: form.telefono.trim(),
+        },
+        p_reserva: {
+          habitacion_id: bookingHab.id,
+          tipo_habitacion_id: tipo.id,
+          fecha_checkin: format(bookingRange.from, 'yyyy-MM-dd'),
+          fecha_checkout: format(bookingRange.to, 'yyyy-MM-dd'),
+          adultos,
+          ninos,
+          tarifa_noche: tarifa,
+          personas_extra: personasExtra,
+          cargo_persona_extra: Number(tipo.precio_persona_extra) || 0,
+          solicitudes_especiales: form.solicitudes || '',
+        },
+      });
       if (errR) throw errR;
 
       setConfirmacion({ numero: reservaCreada?.numero_reserva || '', total, anticipo });

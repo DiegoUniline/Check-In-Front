@@ -21,27 +21,20 @@ if (!root[PATCH_KEY]) {
 
   const recalcularSaldoReserva = async (reservaId: string) => {
     const hotelId = client.getHotelId?.();
-    const [{ data: reserva, error: reservaError }, { data: pagos, error: pagosError }, { data: cargos, error: cargosError }] = await Promise.all([
+    const [{ data: reserva, error: reservaError }, { data: pagos, error: pagosError }] = await Promise.all([
       db.from('reservas').select('total').eq('id', reservaId).eq('hotel_id', hotelId).maybeSingle(),
       db.from('pagos').select('monto').eq('reserva_id', reservaId).eq('hotel_id', hotelId),
-      db.from('cargos').select('total,subtotal,cantidad,precio_unitario').eq('reserva_id', reservaId).eq('hotel_id', hotelId),
     ]);
     if (reservaError) throw reservaError;
     if (pagosError) throw pagosError;
-    if (cargosError) throw cargosError;
     if (!reserva) return;
 
-    const hospedaje = Number(reserva.total || 0);
-    const cargosTotal = (cargos || []).reduce((sum: number, c: any) => {
-      const totalCargo = Number(c.total ?? c.subtotal ?? ((Number(c.precio_unitario) || 0) * (Number(c.cantidad) || 1))) || 0;
-      return sum + totalCargo;
-    }, 0);
+    const totalReserva = Number(reserva.total || 0);
     const totalPagado = (pagos || []).reduce((sum: number, p: any) => sum + (Number(p.monto) || 0), 0);
-    const totalAdeudado = hospedaje + cargosTotal;
 
     const { error } = await db
       .from('reservas')
-      .update({ total_pagado: totalPagado, saldo_pendiente: Math.max(0, totalAdeudado - totalPagado) })
+      .update({ total_pagado: totalPagado, saldo_pendiente: Math.max(0, totalReserva - totalPagado) })
       .eq('id', reservaId)
       .eq('hotel_id', hotelId);
     if (error) throw error;

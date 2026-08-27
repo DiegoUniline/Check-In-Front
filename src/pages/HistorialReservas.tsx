@@ -858,7 +858,7 @@ export default function HistorialReservas() {
                       <div className="p-2 bg-muted/50 rounded-lg">
                         <p className="text-xs text-muted-foreground">Descuento</p>
                         <p className="text-base font-bold text-green-600">
-                          -{formatCurrency(safeNumber(detalleCompleto.descuento_monto))}
+                          -{formatCurrency(safeNumber(detalleCompleto.descuento ?? detalleCompleto.descuento_monto))}
                         </p>
                       </div>
                       <div className="p-2 bg-muted/50 rounded-lg">

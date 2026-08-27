@@ -12,6 +12,22 @@ export const setHotelTimezone = (tz?: string | null) => {
 };
 export const getHotelTimezone = () => HOTEL_TZ;
 
+const parseCalendarParts = (ymd: string) => {
+  const [year, month, day] = ymd.split('-').map(Number);
+  return { year, month, day };
+};
+
+const addCalendarDays = (ymd: string, amount: number): string => {
+  const { year, month, day } = parseCalendarParts(ymd);
+  const date = new Date(Date.UTC(year, month - 1, day + amount));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+};
+
+const calendarWeekday = (ymd: string): number => {
+  const { year, month, day } = parseCalendarParts(ymd);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+};
+
 // Fecha "hoy" YYYY-MM-DD en la zona horaria del hotel (no en UTC ni en la del navegador).
 export const todayLocal = (): string => {
   try {
@@ -233,7 +249,8 @@ class ApiClient {
   getDashboardCheckoutsHoy = () => this.getCheckoutsHoy();
   getDashboardVentasHoy = async (): Promise<any> => {
     const today = todayLocal();
-    const { data } = await supabase.from('ventas').select('total').eq('hotel_id', this.hid()).gte('fecha', today);
+    const tomorrow = addCalendarDays(today, 1);
+    const { data } = await supabase.from('ventas').select('total').eq('hotel_id', this.hid()).gte('fecha', today).lt('fecha', tomorrow);
     const total = (data || []).reduce((s: number, v: any) => s + Number(v.total || 0), 0);
     return { total, count: (data || []).length };
   };
@@ -253,8 +270,12 @@ class ApiClient {
     return Object.values(map);
   };
   getDashboardIngresosMes = async (): Promise<any> => {
-    const start = new Date(); start.setDate(1);
-    const { data } = await supabase.from('reservas').select('total, fecha_checkin').eq('hotel_id', this.hid()).gte('fecha_checkin', start.toISOString().slice(0, 10));
+    const today = todayLocal();
+    const { year, month } = parseCalendarParts(today);
+    const start = `${year}-${String(month).padStart(2, '0')}-01`;
+    const nextMonthDate = new Date(Date.UTC(year, month, 1));
+    const nextMonth = `${nextMonthDate.getUTCFullYear()}-${String(nextMonthDate.getUTCMonth() + 1).padStart(2, '0')}-01`;
+    const { data } = await supabase.from('reservas').select('total, fecha_checkin').eq('hotel_id', this.hid()).gte('fecha_checkin', start).lt('fecha_checkin', nextMonth);
     const total = (data || []).reduce((s: number, r: any) => s + Number(r.total || 0), 0);
     return { total, count: (data || []).length };
   };
@@ -262,38 +283,31 @@ class ApiClient {
   getDashboardOcupacionSemanal = async (): Promise<any> => {
     const hotel_id = this.hid();
     const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const today = new Date();
+    const today = todayLocal();
     // Lunes de esta semana (semana lun-dom)
-    const dow = today.getDay(); // 0=Dom..6=Sab
+    const dow = calendarWeekday(today); // 0=Dom..6=Sab
     const offsetToMon = dow === 0 ? -6 : 1 - dow;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + offsetToMon);
-    monday.setHours(0, 0, 0, 0);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const monday = addCalendarDays(today, offsetToMon);
+    const sunday = addCalendarDays(monday, 6);
     const [{ data: habs }, { data: reservas }] = await Promise.all([
       supabase.from('habitaciones').select('id').eq('hotel_id', hotel_id),
       supabase
         .from('reservas')
         .select('fecha_checkin, fecha_checkout, estado')
         .eq('hotel_id', hotel_id)
-        .lte('fecha_checkin', fmt(sunday))
-        .gte('fecha_checkout', fmt(monday)),
+        .lte('fecha_checkin', sunday)
+        .gt('fecha_checkout', monday),
     ]);
     const total = (habs || []).length || 1;
     const result: { dia: string; ocupacion: number }[] = [];
     for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const ds = fmt(d);
+      const ds = addCalendarDays(monday, i);
       const ocupadas = (reservas || []).filter((r: any) => {
         if (r.estado === 'Cancelada') return false;
         return r.fecha_checkin <= ds && r.fecha_checkout > ds;
       }).length;
       result.push({
-        dia: dias[d.getDay()],
+        dia: dias[calendarWeekday(ds)],
         ocupacion: total ? Math.round((ocupadas / total) * 100) : 0,
       });
     }
@@ -322,11 +336,25 @@ class ApiClient {
     if (error) throw error;
     return data;
   };
-  getHabitacionesDisponibles = async (checkin: string, checkout: string, tipoId?: string): Promise<any> => {
-    let q = supabase.from('habitaciones').select('*, tipos_habitacion(*)').eq('hotel_id', this.hid()).eq('estado_habitacion', 'Disponible');
+  getHabitacionesDisponibles = async (checkin: string, checkout: string, tipoId?: string, excludeReservaId?: string): Promise<any> => {
+    let q = supabase
+      .from('habitaciones')
+      .select('*, tipos_habitacion(*)')
+      .eq('hotel_id', this.hid())
+      .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio)');
     if (tipoId) q = q.eq('tipo_habitacion_id', tipoId);
-    const { data: habs } = await q;
-    const { data: ocupadas } = await supabase.from('reservas').select('habitacion_id').eq('hotel_id', this.hid()).in('estado', ['Confirmada', 'CheckIn']).lte('fecha_checkin', checkout).gte('fecha_checkout', checkin);
+    const { data: habs, error: habError } = await q;
+    if (habError) throw habError;
+    let conflictsQuery = supabase
+      .from('reservas')
+      .select('habitacion_id')
+      .eq('hotel_id', this.hid())
+      .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
+      .lt('fecha_checkin', checkout)
+      .gt('fecha_checkout', checkin);
+    if (excludeReservaId) conflictsQuery = conflictsQuery.neq('id', excludeReservaId);
+    const { data: ocupadas, error: reservationError } = await conflictsQuery;
+    if (reservationError) throw reservationError;
     const ocupadasIds = new Set((ocupadas || []).map((r: any) => r.habitacion_id));
     return (habs || []).filter((h: any) => !ocupadasIds.has(h.id));
   };
@@ -481,6 +509,9 @@ class ApiClient {
     ]);
     return {
       ...data,
+      cliente: (data as any).clientes || null,
+      habitacion: (data as any).habitaciones || null,
+      tipo_habitacion: (data as any).tipos_habitacion || (data as any).habitaciones?.tipos_habitacion || null,
       cliente_nombre: (data as any).clientes ? `${(data as any).clientes.nombre} ${(data as any).clientes.apellido_paterno || ''}`.trim() : '',
       cliente_email: (data as any).clientes?.email || '',
       cliente_telefono: (data as any).clientes?.telefono || '',
@@ -491,6 +522,13 @@ class ApiClient {
       habitacion_numero: (data as any).habitaciones?.numero,
       pagos: pagos || [],
       cargos: cargos || [],
+      cargos_extra: (cargos || []).map((cargo: any) => ({
+        ...cargo,
+        precio: Number(cargo.precio_unitario || 0),
+        cantidad: Number(cargo.cantidad || 1),
+        total: Number(cargo.total ?? cargo.subtotal ?? 0),
+        producto_nombre: cargo.producto_nombre || cargo.concepto || 'Cargo',
+      })),
     };
   };
   getCheckinsHoy = async (): Promise<any> => {
@@ -540,7 +578,7 @@ class ApiClient {
         .select('id, numero_reserva, fecha_checkin, fecha_checkout, estado')
         .eq('hotel_id', this.hid())
         .eq('habitacion_id', data.habitacion_id)
-        .in('estado', ['Confirmada', 'CheckIn'])
+        .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
         .lt('fecha_checkin', data.fecha_checkout)
         .gt('fecha_checkout', data.fecha_checkin);
       if (errConf) throw errConf;
@@ -583,23 +621,58 @@ class ApiClient {
     const { data: r, error } = await supabase.from('reservas').update(data).eq('id', id).select().single();
     if (error) throw error; return r;
   };
-  checkin = async (id: string, habitacionId?: string): Promise<any> => {
-    const upd: any = { checkin_realizado: true, estado: 'CheckIn' };
-    if (habitacionId) upd.habitacion_id = habitacionId;
-    const { data: r, error } = await supabase.from('reservas').update(upd).eq('id', id).select().single();
+  createReservationBundle = async (input: {
+    reserva: any;
+    cliente?: any;
+    cargos?: any[];
+    pagos?: any[];
+    entregables?: any[];
+    checkin?: boolean;
+  }): Promise<any> => {
+    const { data, error } = await (supabase as any).rpc('create_reservation_bundle', {
+      p_reserva: { ...input.reserva, hotel_id: this.hid() },
+      p_cliente: input.cliente || null,
+      p_cargos: input.cargos || [],
+      p_pagos: input.pagos || [],
+      p_entregables: input.entregables || [],
+      p_checkin: Boolean(input.checkin),
+    });
     if (error) throw error;
-    if (r?.habitacion_id) {
-      await supabase.from('habitaciones').update({ estado_habitacion: 'Ocupada' }).eq('id', r.habitacion_id);
+    void registrarAuditoria({
+      accion: 'crear', entidad: 'reserva', entidad_id: data?.id,
+      descripcion: `Reserva ${data?.numero_reserva || ''} (${data?.fecha_checkin} → ${data?.fecha_checkout})`,
+      datos_despues: data,
+    });
+    return data;
+  };
+  completeCheckin = async (id: string, habitacionId: string, pagos: any[] = []): Promise<any> => {
+    const { data, error } = await (supabase as any).rpc('complete_reservation_checkin', {
+      p_reserva_id: id,
+      p_habitacion_id: habitacionId,
+      p_pagos: pagos,
+    });
+    if (error) throw error;
+    return data;
+  };
+  checkin = async (id: string, habitacionId?: string): Promise<any> => {
+    if (!habitacionId) {
+      const { data: reserva, error } = await supabase.from('reservas').select('habitacion_id').eq('id', id).maybeSingle();
+      if (error) throw error;
+      habitacionId = reserva?.habitacion_id;
     }
-    return r;
+    if (!habitacionId) throw new Error('Selecciona una habitación antes de hacer check-in');
+    return this.completeCheckin(id, habitacionId, []);
+  };
+  completeCheckout = async (id: string, pago?: any): Promise<any> => {
+    const { data, error } = await (supabase as any).rpc('complete_reservation_checkout', {
+      p_reserva_id: id,
+      p_pago: pago || null,
+    });
+    if (error) throw error;
+    return data;
   };
   checkout = async (id: string): Promise<any> => {
-    const { data: r, error } = await supabase.from('reservas').update({ checkout_realizado: true, estado: 'CheckOut' }).eq('id', id).select().single();
-    if (error) throw error;
-    if (r?.habitacion_id) {
-      await supabase.from('habitaciones').update({ estado_habitacion: 'Disponible', estado_limpieza: 'Sucia' }).eq('id', r.habitacion_id);
-    }
-    return r;
+    return this.completeCheckout(id);
   };
   cancelarReserva = async (id: string, motivo?: string): Promise<any> => {
     const { data: r, error } = await supabase.from('reservas').update({ estado: 'Cancelada', notas: motivo }).eq('id', id).select().single();
@@ -616,7 +689,15 @@ class ApiClient {
   };
 
   // ------- Pagos -------
-  getPagos = async (_params?: any): Promise<any> => { const { data } = await supabase.from('pagos').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
+  getPagos = async (params?: Record<string, string>): Promise<any> => {
+    let q = supabase.from('pagos').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
+    if (params?.fecha) q = q.gte('fecha', params.fecha).lt('fecha', addCalendarDays(params.fecha, 1));
+    if (params?.fecha_desde) q = q.gte('fecha', params.fecha_desde);
+    if (params?.fecha_hasta) q = q.lt('fecha', addCalendarDays(params.fecha_hasta, 1));
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  };
   getPagosReserva = async (reservaId: string): Promise<any> => { const { data } = await supabase.from('pagos').select('*').eq('reserva_id', reservaId).order('fecha', { ascending: false }); return data || []; };
   createPago = async (data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('pagos').insert({ ...data, hotel_id: this.hid() }).select().single();
@@ -641,8 +722,9 @@ class ApiClient {
   // ------- Cargos -------
   getCargosReserva = async (reservaId: string): Promise<any> => { const { data } = await supabase.from('cargos').select('*').eq('reserva_id', reservaId).order('fecha', { ascending: false }); return data || []; };
   createCargo = async (data: any): Promise<any> => {
-    const total = Number(data.cantidad || 1) * Number(data.precio_unitario || 0);
-    const { data: r, error } = await supabase.from('cargos').insert({ ...data, total, hotel_id: this.hid() }).select().single();
+    const subtotal = Number(data.cantidad || 1) * Number(data.precio_unitario || 0);
+    const total = subtotal + Number(data.impuesto || 0);
+    const { data: r, error } = await supabase.from('cargos').insert({ ...data, subtotal, total, hotel_id: this.hid() }).select().single();
     if (error) throw error; return r;
   };
   deleteCargo = async (id: string): Promise<any> => { const { error } = await supabase.from('cargos').delete().eq('id', id); if (error) throw error; return { ok: true }; };
@@ -905,7 +987,10 @@ class ApiClient {
   getGastos = async (params?: Record<string, string>): Promise<any> => {
     let q = supabase.from('gastos').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
     if (params?.categoria) q = q.eq('categoria', params.categoria);
-    const { data } = await q;
+    if (params?.fecha_desde) q = q.gte('fecha', params.fecha_desde);
+    if (params?.fecha_hasta) q = q.lte('fecha', params.fecha_hasta);
+    const { data, error } = await q;
+    if (error) throw error;
     return data || [];
   };
   getGasto = async (id: string): Promise<any> => { const { data } = await supabase.from('gastos').select('*').eq('id', id).maybeSingle(); return data; };
@@ -929,7 +1014,14 @@ class ApiClient {
   deleteProveedor = async (id: string): Promise<any> => { const { error } = await supabase.from('proveedores').delete().eq('id', id); if (error) throw error; return { ok: true }; };
 
   // ------- Compras -------
-  getCompras = async (_params?: any): Promise<any> => { const { data } = await supabase.from('compras').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
+  getCompras = async (params?: Record<string, string>): Promise<any> => {
+    let q = supabase.from('compras').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
+    if (params?.fecha_desde) q = q.gte('fecha', params.fecha_desde);
+    if (params?.fecha_hasta) q = q.lte('fecha', params.fecha_hasta);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  };
   getCompra = async (id: string): Promise<any> => {
     const { data } = await supabase
       .from('compras')
@@ -1084,7 +1176,14 @@ class ApiClient {
   };
 
   // ------- Transacciones -------
-  getTransacciones = async (_params?: any): Promise<any> => { const { data } = await supabase.from('transacciones').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
+  getTransacciones = async (params?: Record<string, string>): Promise<any> => {
+    let q = supabase.from('transacciones').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
+    if (params?.fecha_desde) q = q.gte('fecha', params.fecha_desde);
+    if (params?.fecha_hasta) q = q.lt('fecha', addCalendarDays(params.fecha_hasta, 1));
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  };
   getTransaccion = async (id: string): Promise<any> => { const { data } = await supabase.from('transacciones').select('*').eq('id', id).maybeSingle(); return data; };
 
   // ------- Hotel -------
@@ -1151,11 +1250,12 @@ class ApiClient {
       supabase.from('suscripciones' as any).select('*'),
       supabase.from('planes' as any).select('id,nombre'),
     ]);
-    const today = new Date();
+    const todayParts = parseCalendarParts(new Intl.DateTimeFormat('en-CA').format(new Date()));
+    const todayEpoch = Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day);
     return ((subs as any[]) || []).map((s: any) => {
       const plan = ((planes as any[]) || []).find((p: any) => p.id === s.plan_id);
-      const fin = new Date(s.fecha_fin);
-      const dias = Math.ceil((fin.getTime() - today.getTime()) / 86400000);
+      const fin = parseCalendarParts(String(s.fecha_fin).slice(0, 10));
+      const dias = Math.ceil((Date.UTC(fin.year, fin.month - 1, fin.day) - todayEpoch) / 86400000);
       return { ...s, plan_nombre: plan?.nombre || '—', dias_restantes: dias };
     });
   };
@@ -1168,9 +1268,8 @@ class ApiClient {
   };
   extenderSuscripcion = async (id: string, dias = 30): Promise<any> => {
     const { data: cur } = await supabase.from('suscripciones' as any).select('fecha_fin').eq('id', id).maybeSingle();
-    const base = cur ? new Date((cur as any).fecha_fin) : new Date();
-    base.setDate(base.getDate() + dias);
-    const { error } = await supabase.from('suscripciones' as any).update({ fecha_fin: base.toISOString().slice(0,10) }).eq('id', id);
+    const base = cur ? String((cur as any).fecha_fin).slice(0, 10) : new Intl.DateTimeFormat('en-CA').format(new Date());
+    const { error } = await supabase.from('suscripciones' as any).update({ fecha_fin: addCalendarDays(base, dias) }).eq('id', id);
     if (error) throw error; return {};
   };
   eliminarSuscripcion = async (id: string): Promise<any> => {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { format, addDays, isSameDay, startOfDay } from 'date-fns';
+import { format, addDays, isSameDay, startOfDay, differenceInCalendarDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -54,7 +54,7 @@ export function TimelineGrid({
       if (!r.fecha_checkin || !r.fecha_checkout) return false;
       const checkinStr = r.fecha_checkin.substring(0, 10);
       const checkoutStr = r.fecha_checkout.substring(0, 10);
-      return currentDateStr >= checkinStr && currentDateStr <= checkoutStr;
+      return currentDateStr >= checkinStr && currentDateStr < checkoutStr;
     });
   };
 
@@ -64,13 +64,12 @@ export function TimelineGrid({
     const currentDateStr = format(days[dayIndex], 'yyyy-MM-dd');
     const checkinStr = reserva.fecha_checkin.substring(0, 10);
     const checkoutStr = reserva.fecha_checkout.substring(0, 10);
-    
-    const checkinDate = new Date(checkinStr + 'T00:00:00');
-    const checkoutDate = new Date(checkoutStr + 'T00:00:00');
-    const noches = Math.ceil((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (currentDateStr === checkinStr) return noches === 1 ? 'start' : 'start';
-    if (currentDateStr === checkoutStr) return 'end';
+    const noches = differenceInCalendarDays(parseISO(checkoutStr), parseISO(checkinStr));
+    const ultimaNoche = format(addDays(parseISO(checkoutStr), -1), 'yyyy-MM-dd');
+
+    if (noches === 1 && currentDateStr === checkinStr) return 'single';
+    if (currentDateStr === checkinStr) return 'start';
+    if (currentDateStr === ultimaNoche) return 'end';
     return 'middle';
   };
 
@@ -111,7 +110,7 @@ export function TimelineGrid({
     if (!hasConflict) {
       const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
       const fechaCheckin = days[startIdx];
-      const fechaCheckout = days[endIdx];
+      const fechaCheckout = addDays(days[endIdx], 1);
       onCreateReservation?.(habitacion, fechaCheckin, fechaCheckout);
     }
 
@@ -210,14 +209,14 @@ export function TimelineGrid({
                                   cellWidth,
                                   cellHeight,
                                   estadoCfg.block,
-                                  position === 'start' && 'rounded-l',
-                                  position === 'end' && 'rounded-r',
+                                  (position === 'start' || position === 'single') && 'rounded-l',
+                                  (position === 'end' || position === 'single') && 'rounded-r',
                                   isToday && "ring-2 ring-primary ring-inset"
                                 )}
                                 onClick={() => onReservationClick(reserva)}
                                 aria-label={`Reserva ${reserva.cliente_nombre || ''} — ${estadoCfg.label}`}
                               >
-                                {position === 'start' && (
+                                {(position === 'start' || position === 'single') && (
                                   <div className="h-full flex items-center gap-1 px-1 overflow-hidden">
                                     <EstadoIcon className={cn('flex-shrink-0', isCompact ? 'h-2.5 w-2.5' : 'h-3 w-3')} aria-hidden="true" />
                                     <span className={cn("font-medium truncate flex-1", isCompact ? "text-[8px]" : "text-[10px]")}>
@@ -230,7 +229,7 @@ export function TimelineGrid({
                                 )}
                               </div>
                             </TooltipTrigger>
-                            {position === 'start' && (
+                            {(position === 'start' || position === 'single') && (
                               <TooltipContent side="top" className="max-w-xs">
                                 <div className="space-y-1">
                                   <p className="font-semibold text-sm">{reserva.cliente_nombre} {reserva.apellido_paterno}</p>

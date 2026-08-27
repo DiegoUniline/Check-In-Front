@@ -34,11 +34,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 
 interface Transaccion {
@@ -73,7 +73,7 @@ export default function Historial() {
   const cargarTransacciones = async () => {
     setLoading(true);
     try {
-      const now = new Date();
+      const now = parseISO(todayLocal());
       let fechaDesde: Date, fechaHasta: Date;
       
       switch (dateRange) {
@@ -95,8 +95,8 @@ export default function Historial() {
       }
 
       const params: Record<string, string> = {
-        fecha_desde: fechaDesde.toISOString().split('T')[0],
-        fecha_hasta: fechaHasta.toISOString().split('T')[0],
+        fecha_desde: format(fechaDesde, 'yyyy-MM-dd'),
+        fecha_hasta: format(fechaHasta, 'yyyy-MM-dd'),
       };
 
       // Try to load from transacciones endpoint, fallback to pagos + gastos

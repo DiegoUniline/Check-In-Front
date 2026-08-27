@@ -63,7 +63,7 @@ export default function CheckOut() {
       ]);
       setReserva(reservaData);
       setPagos(Array.isArray(pagosData) ? pagosData : []);
-      setCargosExtra((reservaData as any)?.cargos_extra || []);
+      setCargosExtra((reservaData as any)?.cargos_extra || (reservaData as any)?.cargos || []);
     } catch (error) {
       console.error('Error cargando reserva:', error);
       toast({ title: 'Error', description: 'No se pudo cargar la reserva', variant: 'destructive' });
@@ -119,12 +119,13 @@ export default function CheckOut() {
   const subtotal = Number(reserva.subtotal ?? reserva.subtotal_hospedaje ?? total - impuestos) || 0;
   const totalPagado = pagos.reduce((sum, p) => sum + (Number(p.monto) || 0), 0);
   const totalCargosExtra = cargosExtra.reduce(
-    (sum, c) => sum + Number(c.precio) * (c.cantidad || 1),
+    (sum, c) => sum + Number(c.total ?? c.subtotal ?? (Number(c.precio_unitario ?? c.precio) * (c.cantidad || 1))),
     0,
   );
-  const saldoPendiente = Math.max(0, total + totalCargosExtra - totalPagado);
-  const huesped = `${reserva.cliente?.nombre || reserva.huesped_nombre || ''} ${
-    reserva.cliente?.apellido_paterno || ''
+  const saldoPendiente = Math.max(0, total - totalPagado);
+  const cliente = reserva.cliente || reserva.clientes || {};
+  const huesped = `${cliente.nombre || reserva.huesped_nombre || ''} ${
+    cliente.apellido_paterno || ''
   }`.trim();
   const habitacion = reserva.habitacion?.numero || reserva.habitacion_numero || 'N/A';
 
@@ -140,16 +141,14 @@ export default function CheckOut() {
 
     setIsSubmitting(true);
     try {
-      if (saldoPendiente > 0) {
-        await api.createPago({
-          reserva_id: id,
+      await api.completeCheckout(
+        id!,
+        saldoPendiente > 0 ? {
           monto: saldoPendiente,
           metodo_pago: metodoPago,
           concepto: 'Pago en Check-out',
-        });
-      }
-
-      await api.checkout(id!);
+        } : undefined,
+      );
 
       toast({
         title: 'Check-out completado',
@@ -299,9 +298,9 @@ export default function CheckOut() {
                             <TableRow key={idx}>
                               <TableCell>{cargo.concepto || cargo.producto_nombre}</TableCell>
                               <TableCell className="text-center">{cargo.cantidad || 1}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(Number(cargo.precio))}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(Number(cargo.precio_unitario ?? cargo.precio ?? 0))}</TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatCurrency(Number(cargo.precio) * (cargo.cantidad || 1))}
+                                {formatCurrency(Number(cargo.total ?? cargo.subtotal ?? (Number(cargo.precio_unitario ?? cargo.precio ?? 0) * (cargo.cantidad || 1))))}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -332,7 +331,7 @@ export default function CheckOut() {
                         <p className="text-xs text-muted-foreground">Cantidad {cargo.cantidad || 1}</p>
                       </div>
                       <span className="shrink-0 font-semibold">
-                        {formatCurrency(Number(cargo.precio) * (cargo.cantidad || 1))}
+                        {formatCurrency(Number(cargo.total ?? cargo.subtotal ?? (Number(cargo.precio_unitario ?? cargo.precio ?? 0) * (cargo.cantidad || 1))))}
                       </span>
                     </div>
                   ))}
@@ -395,11 +394,11 @@ export default function CheckOut() {
               <CardContent className="space-y-4 p-5">
                 <div className="space-y-2.5 text-sm">
                   <div className="flex justify-between gap-3">
-                    <span className="text-muted-foreground">Hospedaje</span>
+                    <span className="text-muted-foreground">Total (extras incluidos)</span>
                     <span className="font-medium">{formatCurrency(total)}</span>
                   </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-muted-foreground">Extras</span>
+                  <div className="flex justify-between gap-3 text-xs">
+                    <span className="text-muted-foreground">De ese total, extras</span>
                     <span className="font-medium">{formatCurrency(totalCargosExtra)}</span>
                   </div>
                   <div className="flex justify-between gap-3 text-emerald-600 dark:text-emerald-400">
