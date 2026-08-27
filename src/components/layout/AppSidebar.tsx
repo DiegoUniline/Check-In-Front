@@ -111,7 +111,9 @@ export function AppSidebar() {
   const location = useLocation();
   const { state, isMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const { user } = useAuth();
-  const collapsed = state === 'collapsed';
+  // El drawer móvil siempre debe mostrar etiquetas, aunque el usuario haya
+  // dejado contraído el sidebar en su última sesión de escritorio.
+  const collapsed = state === 'collapsed' && !isMobile;
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [ocupadas, setOcupadas] = useState(0);
   const [totalHab, setTotalHab] = useState(0);
@@ -196,6 +198,7 @@ export function AppSidebar() {
               <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                 <NavLink
                   to={item.url}
+                  onClick={() => isMobile && setOpenMobile(false)}
                   className={cn(
                     'group relative flex min-h-10 items-center gap-3 rounded-xl transition-all',
                     collapsed ? 'justify-center px-0' : 'px-3',
@@ -223,11 +226,11 @@ export function AppSidebar() {
   };
 
   const groups = [
-    { key: 'operacion', label: 'Operación', items: operationsNavItems, defaultOpen: false },
-    { key: 'ventas', label: 'Ventas y caja', items: salesNavItems, defaultOpen: false },
-    { key: 'stock', label: 'Inventario y compras', items: stockNavItems, defaultOpen: false },
-    { key: 'whatsapp', label: 'WhatsApp', items: whatsappNavItems, defaultOpen: false },
-    { key: 'admin', label: 'Administración', items: adminNavItems, defaultOpen: false },
+    { key: 'operacion', label: 'Operación', icon: Wrench, items: operationsNavItems, defaultOpen: false },
+    { key: 'ventas', label: 'Ventas y caja', icon: ShoppingCart, items: salesNavItems, defaultOpen: false },
+    { key: 'stock', label: 'Inventario y compras', icon: Package, items: stockNavItems, defaultOpen: false },
+    { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, items: whatsappNavItems, defaultOpen: false },
+    { key: 'admin', label: 'Administración', icon: Settings, items: adminNavItems, defaultOpen: false },
   ];
 
   return (
@@ -277,21 +280,39 @@ export function AppSidebar() {
             return <SidebarGroup key={group.key}><SidebarGroupContent>{rendered}</SidebarGroupContent></SidebarGroup>;
           }
 
-          const open = openGroups[group.key] ?? group.defaultOpen;
+          const groupHasActiveRoute = group.items.some((item) =>
+            location.pathname === item.url || location.pathname.startsWith(item.url + '/'),
+          );
+          const open = groupHasActiveRoute || (openGroups[group.key] ?? group.defaultOpen);
+          const GroupIcon = group.icon;
           return (
-            <SidebarGroup key={group.key} className="py-0.5">
+            <SidebarGroup key={group.key} className="py-1">
               <Collapsible open={open} onOpenChange={() => toggleGroup(group.key, group.defaultOpen)}>
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                    className={cn(
+                      'group/category flex min-h-11 w-full items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition-all',
+                      open
+                        ? 'border-white/10 bg-white/[0.07] text-sidebar-foreground shadow-sm'
+                        : 'border-transparent text-sidebar-foreground/75 hover:border-white/[0.07] hover:bg-white/[0.05] hover:text-sidebar-foreground',
+                    )}
                   >
-                    <span>{group.label}</span>
-                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', open ? 'rotate-0' : '-rotate-90')} />
+                    <span className={cn(
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
+                      open ? 'bg-primary/15 text-primary' : 'bg-white/[0.05] text-sidebar-foreground/70 group-hover/category:text-sidebar-foreground',
+                    )}>
+                      <GroupIcon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-[0.01em]">{group.label}</span>
+                    <ChevronDown className={cn(
+                      'h-4 w-4 shrink-0 text-sidebar-foreground/55 transition-transform duration-200',
+                      open ? 'rotate-0 text-primary' : '-rotate-90',
+                    )} />
                   </button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pt-1">
-                  <SidebarGroupContent>{rendered}</SidebarGroupContent>
+                <CollapsibleContent className="pt-1.5">
+                  <SidebarGroupContent className="ml-3 border-l border-white/10 pl-2">{rendered}</SidebarGroupContent>
                 </CollapsibleContent>
               </Collapsible>
             </SidebarGroup>
