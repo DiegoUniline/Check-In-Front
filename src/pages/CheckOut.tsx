@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import {
   User,
   CreditCard,
@@ -109,9 +110,9 @@ export default function CheckOut() {
 
   const noches =
     reserva.noches ||
-    Math.ceil(
-      (new Date(reserva.fecha_checkout).getTime() - new Date(reserva.fecha_checkin).getTime()) /
-        (1000 * 60 * 60 * 24),
+    differenceInCalendarDays(
+      parseISO(String(reserva.fecha_checkout).slice(0, 10)),
+      parseISO(String(reserva.fecha_checkin).slice(0, 10)),
     );
   const total = reserva.total || reserva.monto_total || 0;
   const impuestos = Number(reserva.impuestos ?? reserva.total_impuestos ?? 0) || 0;

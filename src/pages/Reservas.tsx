@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { format, addDays, subDays } from 'date-fns';
+import { format, addDays, parseISO, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   ChevronLeft, ChevronRight, Plus, Search, 
@@ -171,7 +171,7 @@ export default function Reservas() {
     }
   };
 
-  const [startDate, setStartDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(() => parseISO(todayLocal()));
   const [viewMode, setViewMode] = useState<ViewMode>('Semana');
   const [filtroTipo, setFiltroTipo] = useState<string>('all');
   const [filtroPiso, setFiltroPiso] = useState<string>('all');
@@ -239,7 +239,7 @@ export default function Reservas() {
 
   const navegarFecha = (direccion: 'prev' | 'next' | 'today') => {
     if (direccion === 'today') {
-      setStartDate(new Date());
+      setStartDate(parseISO(todayLocal()));
       return;
     }
     const dias = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 7 : 30;
@@ -271,7 +271,7 @@ export default function Reservas() {
   };
 
   const handleRecepcionLibreClick = (habitacion: any) => {
-    const hoy = new Date();
+    const hoy = parseISO(todayLocal());
     setPreloadReserva({
       habitacion,
       fechaCheckin: hoy,

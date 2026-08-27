@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { format, differenceInDays } from 'date-fns';
+import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   Calendar, BedDouble, CreditCard, DoorOpen, DoorClosed, Phone, Mail, 
@@ -81,6 +81,14 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     crearCargo: true
   });
 
+  // Las fechas de estancia son DATE (sin hora). Parsearlas con `new Date('YYYY-MM-DD')`
+  // las interpreta como UTC y puede mostrar el día anterior en hoteles UTC-6.
+  const parseStayDate = (value: unknown): Date => {
+    const dateOnly = String(value || '').slice(0, 10);
+    const parsed = parseISO(dateOnly);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
   useEffect(() => {
     if (open && reservaInicial?.id) {
       cargarReserva();
@@ -102,7 +110,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     try {
       const data = await api.getReserva(reservaInicial.id);
       setReserva(data);
-      setFechaCheckout(new Date(data.fecha_checkout));
+      setFechaCheckout(parseStayDate(data.fecha_checkout));
       setHabitacionId(data.habitacion_id || '');
       
       try {
@@ -114,7 +122,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     } catch (error) {
       console.error('Error cargando reserva:', error);
       setReserva(reservaInicial);
-      setFechaCheckout(new Date(reservaInicial.fecha_checkout));
+      setFechaCheckout(parseStayDate(reservaInicial.fecha_checkout));
       setHabitacionId(reservaInicial.habitacion_id || '');
     } finally {
       setLoading(false);
@@ -172,9 +180,9 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     return isNaN(n) ? def : n;
   };
 
-  const fechaCheckin = new Date(r.fecha_checkin);
-  const nochesOriginales = r.noches || differenceInDays(new Date(r.fecha_checkout), fechaCheckin);
-  const nochesEditadas = differenceInDays(fechaCheckout, fechaCheckin) || 1;
+  const fechaCheckin = parseStayDate(r.fecha_checkin);
+  const nochesOriginales = r.noches || differenceInCalendarDays(parseStayDate(r.fecha_checkout), fechaCheckin);
+  const nochesEditadas = differenceInCalendarDays(fechaCheckout, fechaCheckin) || 1;
   const nochesActuales = editMode ? nochesEditadas : nochesOriginales;
   const diferenciaNOches = nochesEditadas - nochesOriginales;
   
@@ -217,7 +225,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     setProcessing(true);
     try {
       const updates: any = {};
-      const checkoutOriginal = format(new Date(r.fecha_checkout), 'yyyy-MM-dd');
+      const checkoutOriginal = String(r.fecha_checkout || '').slice(0, 10);
       const checkoutNuevo = format(fechaCheckout, 'yyyy-MM-dd');
       
       if (checkoutNuevo !== checkoutOriginal) updates.fecha_checkout = checkoutNuevo;
@@ -241,7 +249,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   };
 
   const handleCancelarEdicion = () => {
-    setFechaCheckout(new Date(r.fecha_checkout));
+    setFechaCheckout(parseStayDate(r.fecha_checkout));
     setHabitacionId(r.habitacion_id || '');
     setEditMode(false);
   };
@@ -986,11 +994,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{r.cliente_email || 'Sin email'}</span>
+                        <span className="text-sm">{r.cliente_email || r.clientes?.email || r.cliente?.email || 'Sin email'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{r.cliente_telefono || 'Sin teléfono'}</span>
+                        <span className="text-sm">{r.cliente_telefono || r.clientes?.telefono || r.cliente?.telefono || 'Sin teléfono'}</span>
                       </div>
                     </div>
                   </CardContent>

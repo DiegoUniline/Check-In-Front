@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale';
 import vuloFoxUrl from '@/assets/vulo-fox.png';
 import vuloWordmarkUrl from '@/assets/vulo-wordmark.png';
 import { getHotelCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/dateFormat';
 
 /** Devuelve el código ISO por defecto: el de la moneda activa del hotel. */
 const defaultCurrency = () => getHotelCurrency().codigo || 'MXN';
@@ -493,7 +494,7 @@ export async function exportarComprobanteReserva(opts: ReservaPdfCtx & {
   let foxData: string | null = null;
   try { foxData = await loadImageDataUrl(vuloFoxUrl); } catch { /* noop */ }
 
-  const fmtFecha = (d: Date | string) => format(new Date(d), 'dd/MM/yyyy', { locale: es });
+  const fmtFecha = (d: Date | string) => formatDate(d);
   const nowLabel = format(new Date(), 'dd/MM/yyyy HH:mm');
   const folio = reserva.numero_reserva || '—';
 
@@ -754,7 +755,7 @@ export async function exportarRegistroHuesped(opts: ReservaPdfCtx & {
   const GRAY_200: [number, number, number] = [229, 231, 235];   // #E5E7EB
   const GRAY_700: [number, number, number] = [55, 65, 81];      // #374151
 
-  const fmtFecha = (d: Date | string) => format(new Date(d), 'dd/MM/yyyy', { locale: es });
+  const fmtFecha = (d: Date | string) => formatDate(d);
   const nowLabel = format(new Date(), 'dd/MM/yyyy HH:mm');
   const folio = reserva.numero_reserva || '—';
 

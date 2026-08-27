@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { format, parseISO, differenceInDays, startOfDay } from 'date-fns';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   BedDouble, User, Clock, AlertCircle, LayoutGrid, List,
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
+import { todayLocal } from '@/lib/api';
 
 interface RecepcionGridProps {
   habitaciones: any[];
@@ -112,7 +113,7 @@ export function RecepcionGrid({
   const [filtroPiso, setFiltroPiso] = useState<number | 'all'>('all');
   const [filtroTipo, setFiltroTipo] = useState<string>('all');
   const [query, setQuery] = useState('');
-  const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
+  const todayStr = todayLocal();
 
   const items: HabitacionStatus[] = useMemo(() => {
     return habitaciones.map((hab) => {
@@ -469,7 +470,7 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
   if (estado === 'ocupada' && reservaActiva?.fecha_checkout) {
     try {
       const out = parseISO(reservaActiva.fecha_checkout.substring(0, 10));
-      nochesRestantes = Math.max(0, differenceInDays(out, startOfDay(new Date())));
+      nochesRestantes = Math.max(0, differenceInCalendarDays(out, parseISO(todayLocal())));
     } catch {/* ignore */}
   }
 

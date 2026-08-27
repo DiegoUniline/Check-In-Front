@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { format, addDays, differenceInDays } from 'date-fns';
+import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   CalendarDays, Search, BedDouble, Check, ChevronRight, ChevronLeft, 
@@ -34,7 +34,7 @@ import { formatCurrency } from '@/lib/currency';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 import { resolveImpuestosDefault } from '@/lib/impuestosDefault';
 import { resolverPrecioTemporada, describirAjuste, loadTemporadas } from '@/lib/temporadas';
@@ -125,39 +125,44 @@ interface FormData {
   pagos: PagoTemp[];
 }
 
-const createInitialFormData = (preload?: ReservationPreload): FormData => ({
-  fechaCheckin: preload?.fechaCheckin || new Date(),
-  fechaCheckout: preload?.fechaCheckout || addDays(new Date(), 1),
-  horaLlegada: '15:00',
-  adultos: 2,
-  ninos: 0,
-  personasExtra: 0,
-  // Relacionado con `check-in-back/src/routes/tiposHabitacion.js`:
-  // El costo por persona extra debe venir de `tipos_habitacion.precio_persona_extra`,
-  // no debe estar hardcodeado. Se autocompleta cuando el usuario selecciona el tipo.
-  cargoPersonaExtra: 0,
-  tipoHabitacion: preload?.habitacion?.tipo_habitacion_id || preload?.habitacion?.tipo_id || '',
-  habitacionId: preload?.habitacion?.id || '',
-  clienteId: '',
-  clienteData: null,
-  nuevoCliente: {
-    nombre: '',
-    apellido_paterno: '',
-    apellido_materno: '',
-    email: '',
-    telefono: '',
-    tipo_documento: 'INE',
-    numero_documento: '',
-  },
-  solicitudesEspeciales: '',
-  notasInternas: '',
-  descuentoTipo: 'none',
-  descuentoValor: 0,
-  impuestos: [],
-  entregablesSeleccionados: [],
-  cargos: [],
-  pagos: [],
-});
+const hotelToday = () => parseISO(todayLocal());
+
+const createInitialFormData = (preload?: ReservationPreload): FormData => {
+  const today = hotelToday();
+  return {
+    fechaCheckin: preload?.fechaCheckin || today,
+    fechaCheckout: preload?.fechaCheckout || addDays(today, 1),
+    horaLlegada: '15:00',
+    adultos: 2,
+    ninos: 0,
+    personasExtra: 0,
+    // Relacionado con `check-in-back/src/routes/tiposHabitacion.js`:
+    // El costo por persona extra debe venir de `tipos_habitacion.precio_persona_extra`,
+    // no debe estar hardcodeado. Se autocompleta cuando el usuario selecciona el tipo.
+    cargoPersonaExtra: 0,
+    tipoHabitacion: preload?.habitacion?.tipo_habitacion_id || preload?.habitacion?.tipo_id || '',
+    habitacionId: preload?.habitacion?.id || '',
+    clienteId: '',
+    clienteData: null,
+    nuevoCliente: {
+      nombre: '',
+      apellido_paterno: '',
+      apellido_materno: '',
+      email: '',
+      telefono: '',
+      tipo_documento: 'INE',
+      numero_documento: '',
+    },
+    solicitudesEspeciales: '',
+    notasInternas: '',
+    descuentoTipo: 'none',
+    descuentoValor: 0,
+    impuestos: [],
+    entregablesSeleccionados: [],
+    cargos: [],
+    pagos: [],
+  };
+};
 
 export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: NuevaReservaModalProps) {
   const [step, setStep] = useState<Step>(1);
@@ -299,10 +304,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   };
 
   // Cálculos
-const noches = differenceInDays(
-  new Date(format(formData.fechaCheckout, 'yyyy-MM-dd')),
-  new Date(format(formData.fechaCheckin, 'yyyy-MM-dd'))
-) || 1;
+  const noches = differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin) || 1;
   const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId) || 
     (preload?.habitacion?.id === formData.habitacionId ? preload.habitacion : null);
   const selectedTipo = tiposHabitacion.find(t => t.id === formData.tipoHabitacion) || 
@@ -345,7 +347,7 @@ const noches = differenceInDays(
   const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
     setOrigen(nuevoOrigen);
     if (nuevoOrigen === 'Recepcion') {
-      const hoy = new Date();
+      const hoy = hotelToday();
       const checkoutActual = formData.fechaCheckout;
       // Si el checkout es menor o igual a hoy, ajustarlo a mañana
       const nuevoCheckout = checkoutActual <= hoy ? addDays(hoy, 1) : checkoutActual;

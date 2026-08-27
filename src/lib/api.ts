@@ -464,6 +464,8 @@ class ApiClient {
       return (data || []).map((r: any) => ({
         ...r,
         cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
+        cliente_email: r.clientes?.email || '',
+        cliente_telefono: r.clientes?.telefono || '',
         habitacion_numero: r.habitaciones?.numero,
         tipo_habitacion_nombre: r.tipos_habitacion?.nombre || r.habitaciones?.tipos_habitacion?.nombre,
       }));
@@ -480,6 +482,12 @@ class ApiClient {
     return {
       ...data,
       cliente_nombre: (data as any).clientes ? `${(data as any).clientes.nombre} ${(data as any).clientes.apellido_paterno || ''}`.trim() : '',
+      cliente_email: (data as any).clientes?.email || '',
+      cliente_telefono: (data as any).clientes?.telefono || '',
+      apellido_paterno: (data as any).clientes?.apellido_paterno || '',
+      apellido_materno: (data as any).clientes?.apellido_materno || '',
+      es_vip: Boolean((data as any).clientes?.es_vip),
+      total_estancias: Number((data as any).clientes?.total_estancias || 0),
       habitacion_numero: (data as any).habitaciones?.numero,
       pagos: pagos || [],
       cargos: cargos || [],
