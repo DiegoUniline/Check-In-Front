@@ -28,9 +28,10 @@ export function AsistenteVulo() {
   // No mostrar en rutas públicas (marketing/auth)
   const publicRoutes = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/funciones', '/precios', '/empresa', '/contacto', '/features', '/pricing', '/about', '/contact'];
   const isPublic = publicRoutes.some((r) => pathname === r) || pathname.startsWith('/h/');
+  const guia = useMemo(() => guiaPorRuta(pathname), [pathname]);
+
   if (isPublic) return null;
 
-  const guia = useMemo(() => guiaPorRuta(pathname), [pathname]);
   const Icono = guia.icono;
 
   return (
