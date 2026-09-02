@@ -428,7 +428,7 @@ class ApiClient {
     const hotelId = this.hid();
     const today = todayLocal();
     const [reservasR, habitacionesR, limpiezaR, mantenimientoR, turnoR, bitacoraR, cierreR] = await Promise.all([
-      supabase.from('reservas').select('id,numero_reserva,fecha_checkin,fecha_checkout,estado,checkin_realizado,checkout_realizado,habitacion_id,saldo_pendiente,total,total_pagado').eq('hotel_id', hotelId),
+      supabase.from('reservas').select('id,numero_reserva,fecha_checkin,fecha_checkout,estado,origen,checkin_realizado,checkout_realizado,habitacion_id,saldo_pendiente,total,total_pagado').eq('hotel_id', hotelId),
       supabase.from('habitaciones').select('id,numero,estado_habitacion,estado_limpieza,estado_mantenimiento').eq('hotel_id', hotelId),
       supabase.from('tareas_limpieza').select('id,estado,prioridad,asignado_a,habitacion_id').eq('hotel_id', hotelId).neq('estado', 'Completada'),
       supabase.from('tareas_mantenimiento').select('id,estado,prioridad,habitacion_id,titulo').eq('hotel_id', hotelId).neq('estado', 'Completada'),
@@ -447,9 +447,10 @@ class ApiClient {
     const cierreData = cierreR.data || (cierreR.error ? fallbackClosures.find((item) => item.fecha_operativa === today) : null) || null;
     const habitacionesMap = new Map(habitaciones.map((h: any) => [h.id, h]));
     const active = (r: any) => !['cancelada', 'finalizada', 'completada', 'checkout', 'check out', 'noshow', 'no show'].includes(String(r.estado || '').toLowerCase());
-    const arrivals = reservas.filter((r: any) => r.fecha_checkin === today && active(r) && !r.checkin_realizado);
-    const overdueArrivals = reservas.filter((r: any) => r.fecha_checkin < today && active(r) && !r.checkin_realizado && !r.checkout_realizado);
-    const departures = reservas.filter((r: any) => r.fecha_checkout <= today && active(r) && !r.checkout_realizado);
+    const approvedForReception = (r: any) => !(r.origen === 'Web' && r.estado === 'Pendiente');
+    const arrivals = reservas.filter((r: any) => r.fecha_checkin === today && active(r) && approvedForReception(r) && !r.checkin_realizado);
+    const overdueArrivals = reservas.filter((r: any) => r.fecha_checkin < today && active(r) && approvedForReception(r) && !r.checkin_realizado && !r.checkout_realizado);
+    const departures = reservas.filter((r: any) => r.fecha_checkout <= today && active(r) && r.checkin_realizado && !r.checkout_realizado);
     const unassigned = arrivals.filter((r: any) => !r.habitacion_id);
     const dirtyArrivals = arrivals.filter((r: any) => {
       if (!r.habitacion_id) return false;
@@ -469,9 +470,9 @@ class ApiClient {
     const push = (alert: OperationalAlert) => { if (alert.count > 0) alerts.push(alert); };
 
     push({ id: 'dirty-arrivals', priority: 'critical', title: 'Llegadas con habitación no lista', detail: 'Recepción no debería entregar estas habitaciones todavía.', count: dirtyArrivals.length, action: '/limpieza', actionLabel: 'Priorizar limpieza' });
-    push({ id: 'departures', priority: 'critical', title: 'Salidas pendientes o vencidas', detail: 'Revisa el folio, el saldo y confirma la salida.', count: departures.length, action: '/reservas/checkout', actionLabel: 'Atender salidas' });
+    push({ id: 'departures', priority: 'critical', title: 'Salidas pendientes o vencidas', detail: 'Revisa el folio, el saldo y confirma la salida.', count: departures.length, action: '/reservas/checkout?focus=overdue', actionLabel: 'Atender salidas' });
     push({ id: 'unassigned', priority: 'critical', title: 'Llegadas sin habitación asignada', detail: 'Asigna habitación antes de que llegue el huésped.', count: unassigned.length, action: '/reservas', actionLabel: 'Asignar ahora' });
-    push({ id: 'overdue-arrivals', priority: 'critical', title: 'Llegadas anteriores sin resolver', detail: 'Confirma si llegaron, extendieron o deben marcarse como no-show.', count: overdueArrivals.length, action: '/reservas/checkin', actionLabel: 'Resolver llegadas' });
+    push({ id: 'overdue-arrivals', priority: 'critical', title: 'Llegadas anteriores sin resolver', detail: 'Confirma si llegaron, extendieron o deben marcarse como no-show.', count: overdueArrivals.length, action: '/reservas/checkin?focus=overdue', actionLabel: 'Resolver llegadas' });
     push({ id: 'balances', priority: 'warning', title: 'Reservas activas con saldo pendiente', detail: 'Hay dinero por cobrar o validar antes del check-out.', count: balances.length, action: '/reservas', actionLabel: 'Revisar saldos' });
     push({ id: 'cleaning', priority: dirtyArrivals.length ? 'critical' : 'warning', title: 'Tareas de limpieza sin responsable', detail: 'Asigna a una persona y evita habitaciones detenidas.', count: cleaningUnassigned.length, action: '/limpieza', actionLabel: 'Asignar tareas' });
     push({ id: 'maintenance', priority: 'critical', title: 'Mantenimientos prioritarios abiertos', detail: 'Pueden afectar la venta o la experiencia del huésped.', count: urgentMaintenance.length, action: '/mantenimiento', actionLabel: 'Atender mantenimiento' });
@@ -602,8 +603,9 @@ class ApiClient {
     ]);
     const reservas = reservasR.data || [];
     const active = (r: any) => !['cancelada', 'finalizada', 'completada', 'checkout', 'check out', 'noshow', 'no show'].includes(String(r.estado || '').toLowerCase());
-    const arrivalsPending = reservas.filter((r: any) => r.fecha_checkin === date && active(r) && !r.checkin_realizado).length;
-    const departuresPendingRows = reservas.filter((r: any) => r.fecha_checkout <= date && active(r) && !r.checkout_realizado);
+    const approvedForReception = (r: any) => !(r.origen === 'Web' && r.estado === 'Pendiente');
+    const arrivalsPending = reservas.filter((r: any) => r.fecha_checkin === date && active(r) && approvedForReception(r) && !r.checkin_realizado).length;
+    const departuresPendingRows = reservas.filter((r: any) => r.fecha_checkout <= date && active(r) && r.checkin_realizado && !r.checkout_realizado);
     const departuresPending = departuresPendingRows.length;
     const balances = departuresPendingRows.filter((r: any) => Number(r.saldo_pendiente || 0) > 0.01);
     const activeRooms = new Set(reservas.filter((r: any) => active(r) && r.checkin_realizado && !r.checkout_realizado).map((r: any) => r.habitacion_id));
@@ -616,9 +618,9 @@ class ApiClient {
     const closure = cierreR.data || (cierreR.error ? fallbackClosures.find((item) => item.fecha_operativa === date) : null) || null;
     const criticalLog = openLog.filter((e: any) => ['pendiente', 'incidente', 'mantenimiento', 'caja', 'entrega de turno'].includes(String(e.categoria || '').toLowerCase()) && ['alta', 'crítica'].includes(String(e.prioridad || '').toLowerCase())).length;
     const checks: NightAuditCheck[] = [
-      { id: 'arrivals', label: 'Llegadas del día resueltas', detail: 'Check-in realizado o no-show documentado.', count: arrivalsPending, blocking: true, ok: arrivalsPending === 0, action: '/reservas/checkin' },
-      { id: 'departures', label: 'Salidas atendidas', detail: 'No quedan huéspedes con salida vencida.', count: departuresPending, blocking: true, ok: departuresPending === 0, action: '/reservas/checkout' },
-      { id: 'balances', label: 'Folios de salida sin saldo', detail: 'Todos los cobros del día están conciliados.', count: balances.length, blocking: true, ok: balances.length === 0, action: '/reservas/checkout' },
+      { id: 'arrivals', label: 'Llegadas del día resueltas', detail: 'Check-in realizado o no-show documentado.', count: arrivalsPending, blocking: true, ok: arrivalsPending === 0, action: `/reservas/checkin?from=${date}&to=${date}` },
+      { id: 'departures', label: 'Salidas atendidas', detail: 'No quedan huéspedes con salida vencida.', count: departuresPending, blocking: true, ok: departuresPending === 0, action: `/reservas/checkout?focus=overdue&to=${date}` },
+      { id: 'balances', label: 'Folios de salida sin saldo', detail: 'Todos los cobros del día están conciliados.', count: balances.length, blocking: true, ok: balances.length === 0, action: `/reservas/checkout?focus=overdue&to=${date}` },
       { id: 'shifts', label: 'Turnos y cajas cerrados', detail: 'No existe una caja operativa todavía abierta.', count: openShifts.length, blocking: true, ok: openShifts.length === 0, action: '/turnos' },
       { id: 'rooms', label: 'Habitaciones consistentes', detail: 'Toda habitación ocupada tiene una estancia activa.', count: inconsistentRooms, blocking: true, ok: inconsistentRooms === 0, action: '/habitaciones' },
       { id: 'log', label: 'Incidentes prioritarios documentados', detail: 'No quedan pendientes críticos sin seguimiento.', count: criticalLog, blocking: false, ok: criticalLog === 0, action: '/turnos' },

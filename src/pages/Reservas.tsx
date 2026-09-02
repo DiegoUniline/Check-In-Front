@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { format, addDays, parseISO, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -141,6 +141,7 @@ type ViewMode = 'Dia' | 'Semana' | 'Mes';
 
 export default function Reservas() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { vista } = useParams<{ vista?: string }>();
   const [loading, setLoading] = useState(true);
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
@@ -189,13 +190,18 @@ export default function Reservas() {
   // Sub-vista dentro de "Reservas": timeline (default) | card | tabla
   type ReservasSubView = 'timeline' | 'card' | 'tabla';
   const [reservasSubView, setReservasSubView] = useState<ReservasSubView>('timeline');
+  const navigationParams = new URLSearchParams(location.search);
+  const navigationFocus = navigationParams.get('focus');
+  const navigationFrom = navigationParams.get('from');
+  const navigationTo = navigationParams.get('to');
   const [busquedaCheckin, setBusquedaCheckin] = useState('');
   const [busquedaCheckout, setBusquedaCheckout] = useState('');
   const hoyISO = todayLocal();
-  const [desdeCheckin, setDesdeCheckin] = useState(hoyISO);
-  const [hastaCheckin, setHastaCheckin] = useState(hoyISO);
-  const [desdeCheckout, setDesdeCheckout] = useState(hoyISO);
-  const [hastaCheckout, setHastaCheckout] = useState(hoyISO);
+  const ayerISO = format(subDays(parseISO(hoyISO), 1), 'yyyy-MM-dd');
+  const [desdeCheckin, setDesdeCheckin] = useState(() => navigationFrom ?? (navigationFocus === 'overdue' ? '' : hoyISO));
+  const [hastaCheckin, setHastaCheckin] = useState(() => navigationTo ?? (navigationFocus === 'overdue' ? ayerISO : hoyISO));
+  const [desdeCheckout, setDesdeCheckout] = useState(() => navigationFrom ?? (navigationFocus === 'overdue' ? '' : hoyISO));
+  const [hastaCheckout, setHastaCheckout] = useState(() => navigationTo ?? hoyISO);
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
   const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
   const [filtrosOpen, setFiltrosOpen] = useState(false);

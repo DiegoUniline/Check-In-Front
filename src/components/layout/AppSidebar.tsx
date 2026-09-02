@@ -205,19 +205,19 @@ export function AppSidebar() {
                     'group relative flex min-h-10 items-center gap-3 rounded-xl transition-all',
                     collapsed ? 'justify-center px-0' : 'px-3',
                     isActive
-                      ? 'bg-primary/10 font-semibold text-primary'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
+                      ? 'bg-blue-50 font-semibold text-blue-800'
+                      : 'text-slate-700 hover:bg-blue-50/80 hover:text-blue-800'
                   )}
                 >
-                  {isActive && !collapsed && <span className="absolute left-0 h-5 w-1 rounded-r-full bg-primary" />}
-                  <item.icon className={cn('h-[18px] w-[18px] shrink-0', isActive && 'text-primary')} />
+                  {isActive && !collapsed && <span className="absolute left-0 h-5 w-1 rounded-r-full bg-blue-700" />}
+                  <item.icon className={cn('h-[18px] w-[18px] shrink-0 text-blue-700', isActive && 'text-blue-800')} />
                   {!collapsed && <span className="flex-1 truncate text-sm">{item.title}</span>}
                   {!collapsed && badgeValue > 0 && (
-                    <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                    <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-700 px-1.5 text-[10px] font-bold text-white">
                       {badgeValue}
                     </span>
                   )}
-                  {collapsed && badgeValue > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />}
+                  {collapsed && badgeValue > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-blue-700" />}
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -236,8 +236,8 @@ export function AppSidebar() {
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0 bg-sidebar">
-      <SidebarHeader className="border-b border-sidebar-border/70 px-3 py-4">
+    <Sidebar collapsible="icon" className="border-r border-blue-200/80 bg-white shadow-[4px_0_18px_rgba(30,64,175,0.04)]">
+      <SidebarHeader className="border-b border-blue-100 px-3 py-4">
         <div className="flex items-center justify-between gap-2">
           <NavLink to="/dashboard" className="flex min-w-0 items-center gap-3">
             {collapsed ? (
@@ -245,7 +245,7 @@ export function AppSidebar() {
             ) : (
               <div className="flex min-w-0 flex-col">
                 <LogoHorizontal size={34} />
-                <span className="ml-12 mt-1 text-[10px] font-medium tracking-wide text-muted-foreground">Software para hoteles</span>
+                <span className="ml-12 mt-1 text-[10px] font-medium tracking-wide text-blue-900/55">Software para hoteles</span>
               </div>
             )}
           </NavLink>
@@ -254,7 +254,7 @@ export function AppSidebar() {
               type="button"
               onClick={() => (isMobile ? setOpenMobile(false) : toggleSidebar())}
               aria-label="Contraer menú"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-blue-700 transition-colors hover:bg-blue-50 hover:text-blue-900"
             >
               {isMobile ? <X className="h-5 w-5" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
@@ -265,13 +265,13 @@ export function AppSidebar() {
       <SidebarContent ref={contentRef} className="px-2 py-3 group-data-[collapsible=icon]:px-1">
         {user?.email === 'diego.leon@uniline.mx' && (
           <SidebarGroup className="pb-1">
-            {!collapsed && <SidebarGroupLabel className="px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">Administración maestro</SidebarGroupLabel>}
+            {!collapsed && <SidebarGroupLabel className="px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-blue-700">Administración maestro</SidebarGroupLabel>}
             <SidebarGroupContent>{renderNavItems(adminSaaSItem)}</SidebarGroupContent>
           </SidebarGroup>
         )}
 
         <SidebarGroup className="pb-1">
-          {!collapsed && <SidebarGroupLabel className="px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Principal</SidebarGroupLabel>}
+          {!collapsed && <SidebarGroupLabel className="px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-blue-900/55">Principal</SidebarGroupLabel>}
           <SidebarGroupContent>{renderNavItems(mainNavItems)}</SidebarGroupContent>
         </SidebarGroup>
 
@@ -296,25 +296,25 @@ export function AppSidebar() {
                     className={cn(
                       'group/category flex min-h-11 w-full items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition-all',
                       open
-                        ? 'border-white/10 bg-white/[0.07] text-sidebar-foreground shadow-sm'
-                        : 'border-transparent text-sidebar-foreground/75 hover:border-white/[0.07] hover:bg-white/[0.05] hover:text-sidebar-foreground',
+                        ? 'border-blue-200 bg-blue-50 text-blue-900 shadow-sm'
+                        : 'border-blue-100/80 text-blue-800 hover:border-blue-200 hover:bg-blue-50/70 hover:text-blue-950',
                     )}
                   >
                     <span className={cn(
                       'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
-                      open ? 'bg-primary/15 text-primary' : 'bg-white/[0.05] text-sidebar-foreground/70 group-hover/category:text-sidebar-foreground',
+                      open ? 'bg-blue-100 text-blue-800' : 'bg-blue-50 text-blue-700 group-hover/category:text-blue-900',
                     )}>
                       <GroupIcon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-[0.01em]">{group.label}</span>
                     <ChevronDown className={cn(
-                      'h-4 w-4 shrink-0 text-sidebar-foreground/55 transition-transform duration-200',
-                      open ? 'rotate-0 text-primary' : '-rotate-90',
+                      'h-4 w-4 shrink-0 text-blue-600 transition-transform duration-200',
+                      open ? 'rotate-0 text-blue-800' : '-rotate-90',
                     )} />
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-1.5">
-                  <SidebarGroupContent className="ml-3 border-l border-white/10 pl-2">{rendered}</SidebarGroupContent>
+                  <SidebarGroupContent className="ml-3 border-l border-blue-200 pl-2">{rendered}</SidebarGroupContent>
                 </CollapsibleContent>
               </Collapsible>
             </SidebarGroup>
@@ -322,21 +322,21 @@ export function AppSidebar() {
         })}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border/70 p-3">
+      <SidebarFooter className="border-t border-blue-100 p-3">
         {!collapsed ? (
-          <div className="rounded-2xl border border-sidebar-border/70 bg-sidebar-accent/45 p-3">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3">
             <div className="mb-2 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Ocupación</p>
-                <p className="mt-0.5 text-sm font-medium text-sidebar-foreground">{ocupadas} de {totalHab} habitaciones</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-900/55">Ocupación</p>
+                <p className="mt-0.5 text-sm font-medium text-blue-950">{ocupadas} de {totalHab} habitaciones</p>
               </div>
-              <span className="text-xl font-bold tracking-tight text-primary">{occupancyPercent}%</span>
+              <span className="text-xl font-bold tracking-tight text-blue-700">{occupancyPercent}%</span>
             </div>
             <Progress value={occupancyPercent} className="h-1.5" />
           </div>
         ) : (
           <div className="flex justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-[11px] font-bold text-primary">{occupancyPercent}%</div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[11px] font-bold text-blue-700">{occupancyPercent}%</div>
           </div>
         )}
       </SidebarFooter>
