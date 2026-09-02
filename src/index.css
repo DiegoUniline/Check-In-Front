@@ -52,13 +52,13 @@
     
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 216 60% 20%;
-    --sidebar-primary: 216 72% 40%;
+    --sidebar-foreground: 216 60% 15%;
+    --sidebar-primary: 216 60% 15%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 216 75% 96%;
-    --sidebar-accent-foreground: 216 65% 26%;
-    --sidebar-border: 216 52% 86%;
-    --sidebar-ring: 216 72% 40%;
+    --sidebar-accent-foreground: 216 60% 15%;
+    --sidebar-border: 216 38% 86%;
+    --sidebar-ring: 216 60% 15%;
     
     /* Semantic Colors */
     --success: 160 84% 39%;
@@ -118,13 +118,13 @@
     
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 216 60% 20%;
-    --sidebar-primary: 216 72% 40%;
+    --sidebar-foreground: 216 60% 15%;
+    --sidebar-primary: 216 60% 15%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 216 75% 96%;
-    --sidebar-accent-foreground: 216 65% 26%;
-    --sidebar-border: 216 52% 86%;
-    --sidebar-ring: 216 72% 40%;
+    --sidebar-accent-foreground: 216 60% 15%;
+    --sidebar-border: 216 38% 86%;
+    --sidebar-ring: 216 60% 15%;
     
     /* Semantic Colors */
     --success: 160 84% 45%;
