@@ -1,8 +1,18 @@
-import { useState } from 'react';
-import { 
-  Clock, DollarSign, CreditCard, Banknote, ArrowDownCircle, 
-  ArrowUpCircle, Calculator, CheckCircle2, XCircle, Lock, Unlock,
-  User, Calendar, Receipt, TrendingUp, AlertTriangle
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  ArrowDownCircle,
+  ArrowRightLeft,
+  ArrowUpCircle,
+  Banknote,
+  Calculator,
+  CheckCircle2,
+  Clock3,
+  Lock,
+  Receipt,
+  RefreshCw,
+  Unlock,
+  User,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -10,528 +20,230 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { formatCurrency } from '@/lib/currency';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BitacoraPanel } from '@/components/turnos/BitacoraPanel';
 import { ExportButton } from '@/components/ExportButton';
+import { useAuth } from '@/contexts/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import api from '@/lib/api';
+import { formatCurrency } from '@/lib/currency';
+import { formatDateTime } from '@/lib/dateFormat';
+import { cn } from '@/lib/utils';
 
-interface Turno {
-  id: string;
-  usuario: string;
-  fechaInicio: Date;
-  fechaFin?: Date;
-  fondoInicial: number;
-  fondoFinal?: number;
-  ventasEfectivo: number;
-  ventasTarjeta: number;
-  ventasTransferencia: number;
-  gastosEfectivo: number;
-  estado: 'Abierto' | 'Cerrado';
-}
+type ShiftSummary = {
+  efectivo: number;
+  tarjeta: number;
+  transferencia: number;
+  otros: number;
+  egresosEfectivo: number;
+  movimientos: Array<{ id: string; tipo: 'Ingreso' | 'Egreso'; concepto: string; metodo: string; monto: number; fecha: string }>;
+};
 
-interface MovimientoCaja {
-  id: string;
-  tipo: 'Ingreso' | 'Egreso';
-  concepto: string;
-  monto: number;
-  metodoPago: string;
-  fecha: Date;
-  referencia?: string;
-}
+const emptySummary: ShiftSummary = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, egresosEfectivo: 0, movimientos: [] };
 
 export default function Turnos() {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [turnoActual, setTurnoActual] = useState<Turno | null>(null);
-  const [isAbrirDialogOpen, setIsAbrirDialogOpen] = useState(false);
-  const [isCerrarDialogOpen, setIsCerrarDialogOpen] = useState(false);
+  const [turno, setTurno] = useState<any | null>(null);
+  const [historial, setHistorial] = useState<any[]>([]);
+  const [summary, setSummary] = useState<ShiftSummary>(emptySummary);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [closeDialog, setCloseDialog] = useState(false);
   const [fondoInicial, setFondoInicial] = useState('');
   const [fondoContado, setFondoContado] = useState('');
-  
-  // Mock movements
-  const [movimientos] = useState<MovimientoCaja[]>([
-    { id: '1', tipo: 'Ingreso', concepto: 'Pago Reserva RES-2024-0001', monto: 1500, metodoPago: 'Efectivo', fecha: new Date() },
-    { id: '2', tipo: 'Ingreso', concepto: 'Venta POS - Minibar', monto: 350, metodoPago: 'Tarjeta', fecha: new Date() },
-    { id: '3', tipo: 'Egreso', concepto: 'Compra suministros', monto: 200, metodoPago: 'Efectivo', fecha: new Date() },
-    { id: '4', tipo: 'Ingreso', concepto: 'Pago Check-out Hab 302', monto: 4500, metodoPago: 'Transferencia', fecha: new Date() },
-    { id: '5', tipo: 'Ingreso', concepto: 'Room Service', monto: 280, metodoPago: 'Cargo Habitación', fecha: new Date() },
-  ]);
+  const [entregaA, setEntregaA] = useState('');
+  const [resumenEntrega, setResumenEntrega] = useState('');
+  const [pendientesEntrega, setPendientesEntrega] = useState('');
+  const [motivoDiferencia, setMotivoDiferencia] = useState('');
+  const [checks, setChecks] = useState({ caja: false, pendientes: false, llegadas: false, incidentes: false });
 
-  // Mock historical shifts
-  const [historialTurnos] = useState<Turno[]>([
-    {
-      id: 't1',
-      usuario: 'Carlos García',
-      fechaInicio: new Date(Date.now() - 86400000),
-      fechaFin: new Date(Date.now() - 57600000),
-      fondoInicial: 2000,
-      fondoFinal: 8750,
-      ventasEfectivo: 5200,
-      ventasTarjeta: 3400,
-      ventasTransferencia: 1800,
-      gastosEfectivo: 650,
-      estado: 'Cerrado',
-    },
-    {
-      id: 't2',
-      usuario: 'María López',
-      fechaInicio: new Date(Date.now() - 172800000),
-      fechaFin: new Date(Date.now() - 144000000),
-      fondoInicial: 2000,
-      fondoFinal: 6250,
-      ventasEfectivo: 3800,
-      ventasTarjeta: 2100,
-      ventasTransferencia: 950,
-      gastosEfectivo: 400,
-      estado: 'Cerrado',
-    },
-  ]);
+  const load = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const [current, history] = await Promise.all([api.getOpenShift(user.id), api.getShiftHistory()]);
+      setTurno(current);
+      setHistorial(history);
+      setSummary(current ? await api.getShiftFinancialSummary(current.abierto_at) : emptySummary);
+    } catch (error: any) {
+      toast({ title: 'No se pudieron cargar los turnos', description: error?.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast, user?.id]);
 
-  const handleAbrirTurno = () => {
-    const fondo = parseFloat(fondoInicial);
-    if (isNaN(fondo) || fondo < 0) {
-      toast({
-        title: 'Error',
-        description: 'Ingrese un fondo inicial válido',
-        variant: 'destructive',
-      });
+  useEffect(() => { void load(); }, [load]);
+
+  const efectivoEsperado = useMemo(
+    () => Number(turno?.fondo_inicial || 0) + summary.efectivo - summary.egresosEfectivo,
+    [turno?.fondo_inicial, summary.efectivo, summary.egresosEfectivo],
+  );
+  const contado = Number(fondoContado || 0);
+  const diferencia = contado - efectivoEsperado;
+  const allChecked = Object.values(checks).every(Boolean);
+
+  const abrirTurno = async () => {
+    const fondo = Number(fondoInicial);
+    if (!Number.isFinite(fondo) || fondo < 0 || !user?.id) {
+      toast({ title: 'Ingresa un fondo inicial válido', variant: 'destructive' });
       return;
     }
-
-    setTurnoActual({
-      id: `turno-${Date.now()}`,
-      usuario: 'Carlos García',
-      fechaInicio: new Date(),
-      fondoInicial: fondo,
-      ventasEfectivo: 0,
-      ventasTarjeta: 0,
-      ventasTransferencia: 0,
-      gastosEfectivo: 0,
-      estado: 'Abierto',
-    });
-
-    toast({
-      title: 'Turno abierto',
-      description: `Fondo inicial: ${formatCurrency(fondo)}`,
-    });
-    setIsAbrirDialogOpen(false);
-    setFondoInicial('');
+    setSaving(true);
+    try {
+      await api.openShift({ usuario_id: user.id, usuario_nombre: `${user.nombre || ''} ${user.apellidoPaterno || ''}`.trim() || user.email, fondo_inicial: fondo });
+      toast({ title: 'Turno abierto', description: `Fondo inicial: ${formatCurrency(fondo)}` });
+      setFondoInicial('');
+      setOpenDialog(false);
+      await load();
+    } catch (error: any) {
+      toast({ title: 'No se pudo abrir el turno', description: error?.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleCerrarTurno = () => {
-    const contado = parseFloat(fondoContado);
-    if (isNaN(contado) || contado < 0) {
-      toast({
-        title: 'Error',
-        description: 'Ingrese el monto contado',
-        variant: 'destructive',
-      });
+  const cerrarTurno = async () => {
+    if (!turno || !fondoContado || !Number.isFinite(contado)) {
+      toast({ title: 'Cuenta y registra el efectivo en caja', variant: 'destructive' });
       return;
     }
-
-    const esperado = (turnoActual?.fondoInicial || 0) + 
-                     movimientos.filter(m => m.tipo === 'Ingreso' && m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0) -
-                     movimientos.filter(m => m.tipo === 'Egreso' && m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0);
-    
-    const diferencia = contado - esperado;
-
-    toast({
-      title: 'Turno cerrado',
-      description: diferencia === 0 
-        ? 'Arqueo correcto' 
-        : `Diferencia: ${diferencia > 0 ? '+' : ''}${formatCurrency(diferencia)}`,
-      variant: diferencia === 0 ? 'default' : 'destructive',
-    });
-    
-    setTurnoActual(null);
-    setIsCerrarDialogOpen(false);
-    setFondoContado('');
+    if (!resumenEntrega.trim() || !pendientesEntrega.trim()) {
+      toast({ title: 'La entrega debe incluir resumen y pendientes', variant: 'destructive' });
+      return;
+    }
+    if (!allChecked) {
+      toast({ title: 'Confirma los cuatro puntos del cierre', variant: 'destructive' });
+      return;
+    }
+    if (Math.abs(diferencia) > 0.009 && !motivoDiferencia.trim()) {
+      toast({ title: 'Explica la diferencia de caja', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.closeShift(turno.id, {
+        efectivo_esperado: efectivoEsperado,
+        efectivo_contado: contado,
+        diferencia,
+        ingresos_efectivo: summary.efectivo,
+        ingresos_tarjeta: summary.tarjeta,
+        ingresos_transferencia: summary.transferencia,
+        otros_ingresos: summary.otros,
+        egresos_efectivo: summary.egresosEfectivo,
+        entrega_a: entregaA.trim() || null,
+        resumen_entrega: resumenEntrega.trim(),
+        pendientes_entrega: pendientesEntrega.trim(),
+        motivo_diferencia: motivoDiferencia.trim() || null,
+        checklist_cierre: checks,
+      });
+      await api.createBitacoraOperativa({
+        turno_id: turno.id,
+        categoria: 'Entrega de turno',
+        prioridad: Math.abs(diferencia) > 0.009 ? 'Alta' : 'Normal',
+        titulo: `Entrega de turno${entregaA.trim() ? ` a ${entregaA.trim()}` : ''}`,
+        detalle: `${resumenEntrega.trim()}\n\nPendientes: ${pendientesEntrega.trim()}\nCaja: ${formatCurrency(contado)} · Diferencia: ${formatCurrency(diferencia)}`,
+        estado: 'Abierto',
+        autor_id: user?.id,
+        autor_nombre: user?.nombre || user?.email || 'Usuario',
+      }).catch(() => null);
+      toast({ title: 'Turno cerrado y entregado', description: Math.abs(diferencia) < 0.01 ? 'Caja conciliada correctamente.' : `Diferencia registrada: ${formatCurrency(diferencia)}` });
+      setCloseDialog(false);
+      setFondoContado('');
+      setEntregaA('');
+      setResumenEntrega('');
+      setPendientesEntrega('');
+      setMotivoDiferencia('');
+      setChecks({ caja: false, pendientes: false, llegadas: false, incidentes: false });
+      await load();
+    } catch (error: any) {
+      toast({ title: 'No se pudo cerrar el turno', description: error?.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Calculate totals for current shift
-  const ingresos = movimientos.filter(m => m.tipo === 'Ingreso');
-  const egresos = movimientos.filter(m => m.tipo === 'Egreso');
-  const totalIngresos = ingresos.reduce((sum, m) => sum + m.monto, 0);
-  const totalEgresos = egresos.reduce((sum, m) => sum + m.monto, 0);
-  const efectivoEnCaja = (turnoActual?.fondoInicial || 0) + 
-    ingresos.filter(m => m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0) -
-    egresos.filter(m => m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0);
+  if (loading) {
+    return <MainLayout title="Turnos" subtitle="Caja, pendientes y entrega"><div className="h-80 animate-pulse rounded-2xl bg-muted" /></MainLayout>;
+  }
 
   return (
-    <MainLayout 
-      title="Gestión de Turnos" 
-      subtitle="Control de caja y arqueos"
-    >
-      {/* Status Banner */}
-      {turnoActual ? (
-        <Card className="mb-6 border-success bg-success/5">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+    <MainLayout title="Turnos" subtitle="Nadie entrega el hotel de memoria">
+      <div className="space-y-5">
+        <Card className={cn('overflow-hidden border-2', turno ? 'border-emerald-200' : 'border-amber-200')}>
+          <CardContent className={cn('p-5', turno ? 'bg-emerald-50/60' : 'bg-amber-50/60')}>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-success/20">
-                  <Unlock className="h-6 w-6 text-success" />
+                <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl', turno ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')}>
+                  {turno ? <Unlock className="h-6 w-6" /> : <Lock className="h-6 w-6" />}
                 </div>
                 <div>
-                  <p className="font-semibold text-lg flex items-center gap-2">
-                    Turno Abierto
-                    <Badge className="bg-success">Activo</Badge>
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Inicio: {formatDateTime(turnoActual.fechaInicio)} • {turnoActual.usuario}
-                  </p>
+                  <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">{turno ? 'Turno abierto' : 'No hay turno abierto'}</h2>{turno && <Badge className="bg-emerald-600">Activo</Badge>}{turno?._local_only && <Badge variant="outline">Este dispositivo</Badge>}</div>
+                  <p className="text-sm text-muted-foreground">{turno ? `${turno.usuario_nombre} · ${formatDateTime(turno.abierto_at)}` : 'Abre caja para iniciar el control de tu operación.'}</p>
                 </div>
               </div>
-              <Button variant="destructive" onClick={() => setIsCerrarDialogOpen(true)}>
-                <Lock className="h-4 w-4 mr-2" />
-                Cerrar Turno
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button>
+                {turno ? <Button variant="destructive" onClick={() => setCloseDialog(true)}><ArrowRightLeft className="mr-2 h-4 w-4" />Entregar y cerrar</Button> : <Button onClick={() => setOpenDialog(true)}><Unlock className="mr-2 h-4 w-4" />Abrir turno</Button>}
+              </div>
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <Card className="mb-6 border-warning bg-warning/5">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-warning/20">
-                  <Lock className="h-6 w-6 text-warning" />
-                </div>
-                <div>
-                  <p className="font-semibold text-lg">No hay turno abierto</p>
-                  <p className="text-sm text-muted-foreground">
-                    Debe abrir un turno para registrar movimientos
-                  </p>
-                </div>
-              </div>
-              <Button onClick={() => setIsAbrirDialogOpen(true)}>
-                <Unlock className="h-4 w-4 mr-2" />
-                Abrir Turno
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {turnoActual && (
-        <>
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Banknote className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{formatCurrency(efectivoEnCaja)}</p>
-                    <p className="text-sm text-muted-foreground">Efectivo en Caja</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-success/10">
-                    <ArrowDownCircle className="h-5 w-5 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-success">{formatCurrency(totalIngresos)}</p>
-                    <p className="text-sm text-muted-foreground">Ingresos</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-destructive/10">
-                    <ArrowUpCircle className="h-5 w-5 text-destructive" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-destructive">{formatCurrency(totalEgresos)}</p>
-                    <p className="text-sm text-muted-foreground">Egresos</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-info/10">
-                    <Receipt className="h-5 w-5 text-info" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{movimientos.length}</p>
-                    <p className="text-sm text-muted-foreground">Movimientos</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Movements Table */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                Movimientos del Turno
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Hora</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Concepto</TableHead>
-                    <TableHead>Método</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {movimientos.map(mov => (
-                    <TableRow key={mov.id}>
-                      <TableCell>{format(mov.fecha, "HH:mm")}</TableCell>
-                      <TableCell>
-                        <Badge variant={mov.tipo === 'Ingreso' ? 'default' : 'destructive'}>
-                          {mov.tipo}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{mov.concepto}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{mov.metodoPago}</Badge>
-                      </TableCell>
-                      <TableCell className={cn(
-                        "text-right font-medium",
-                        mov.tipo === 'Ingreso' ? 'text-success' : 'text-destructive'
-                      )}>
-                        {mov.tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(mov.monto)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      {/* Historical Shifts */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Historial de Turnos
-            </CardTitle>
-            <ExportButton
-              rows={() => historialTurnos.map((t) => ({
-                Inicio: formatDateTime(t.fechaInicio),
-                Fin: t.fechaFin ? formatDateTime(t.fechaFin) : '',
-                Usuario: t.usuario,
-                'Fondo Inicial': t.fondoInicial,
-                'Ventas Efectivo': t.ventasEfectivo,
-                'Ventas Tarjeta': t.ventasTarjeta,
-                'Ventas Transferencia': t.ventasTransferencia,
-                'Gastos Efectivo': t.gastosEfectivo,
-                'Fondo Final': t.fondoFinal ?? '',
-                Estado: t.estado,
-              }))}
-              filename="historial_turnos"
-              sheetName="Turnos"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Usuario</TableHead>
-                <TableHead>Fondo Inicial</TableHead>
-                <TableHead>Ventas</TableHead>
-                <TableHead>Fondo Final</TableHead>
-                <TableHead>Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {historialTurnos.map(turno => (
-                <TableRow key={turno.id}>
-                  <TableCell>
-                    {formatDate(turno.fechaInicio)}
-                  </TableCell>
-                  <TableCell>{turno.usuario}</TableCell>
-                  <TableCell>{formatCurrency(turno.fondoInicial)}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <p>Efvo: {formatCurrency(turno.ventasEfectivo)}</p>
-                      <p className="text-muted-foreground">Tarj: {formatCurrency(turno.ventasTarjeta)}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{formatCurrency(turno.fondoFinal)}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{turno.estado}</Badge>
-                  </TableCell>
-                </TableRow>
+        {turno && (
+          <>
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              {[
+                { label: 'Efectivo esperado', value: efectivoEsperado, icon: Banknote, tone: 'text-slate-900 bg-slate-100' },
+                { label: 'Ingresos del turno', value: summary.efectivo + summary.tarjeta + summary.transferencia + summary.otros, icon: ArrowDownCircle, tone: 'text-emerald-700 bg-emerald-100' },
+                { label: 'Egresos en efectivo', value: summary.egresosEfectivo, icon: ArrowUpCircle, tone: 'text-red-700 bg-red-100' },
+                { label: 'Movimientos', value: summary.movimientos.length, icon: Receipt, tone: 'text-blue-700 bg-blue-100', count: true },
+              ].map((item) => (
+                <Card key={item.label}><CardContent className="p-4"><div className="flex items-center gap-3"><span className={cn('flex h-10 w-10 items-center justify-center rounded-xl', item.tone)}><item.icon className="h-5 w-5" /></span><div><p className="text-lg font-bold sm:text-xl">{item.count ? item.value : formatCurrency(item.value)}</p><p className="text-xs text-muted-foreground">{item.label}</p></div></div></CardContent></Card>
               ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </div>
 
-      <div className="mt-6">
-        <BitacoraPanel turnoId={turnoActual?.id} />
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Receipt className="h-5 w-5" />Movimientos reales desde la apertura</CardTitle></CardHeader>
+              <CardContent className="overflow-x-auto">
+                <Table><TableHeader><TableRow><TableHead>Hora</TableHead><TableHead>Tipo</TableHead><TableHead>Concepto</TableHead><TableHead>Método</TableHead><TableHead className="text-right">Monto</TableHead></TableRow></TableHeader>
+                  <TableBody>{summary.movimientos.length === 0 ? <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Todavía no hay movimientos en este turno.</TableCell></TableRow> : summary.movimientos.map((m) => <TableRow key={`${m.tipo}-${m.id}`}><TableCell>{m.fecha ? formatDateTime(m.fecha) : '—'}</TableCell><TableCell><Badge variant={m.tipo === 'Ingreso' ? 'secondary' : 'destructive'}>{m.tipo}</Badge></TableCell><TableCell>{m.concepto}</TableCell><TableCell>{m.metodo}</TableCell><TableCell className={cn('text-right font-semibold', m.tipo === 'Ingreso' ? 'text-emerald-700' : 'text-red-700')}>{m.tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(m.monto)}</TableCell></TableRow>)}</TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        <BitacoraPanel turnoId={turno?.id} />
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between"><CardTitle className="flex items-center gap-2 text-base"><Clock3 className="h-5 w-5" />Historial de turnos</CardTitle><ExportButton rows={() => historial} filename="turnos_vulo" sheetName="Turnos" /></CardHeader>
+          <CardContent className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Apertura</TableHead><TableHead>Usuario</TableHead><TableHead>Fondo</TableHead><TableHead>Contado</TableHead><TableHead>Diferencia</TableHead><TableHead>Entrega</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader><TableBody>
+            {historial.length === 0 ? <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">El primer turno aparecerá aquí.</TableCell></TableRow> : historial.map((t) => <TableRow key={t.id}><TableCell>{formatDateTime(t.abierto_at)}</TableCell><TableCell>{t.usuario_nombre}</TableCell><TableCell>{formatCurrency(t.fondo_inicial)}</TableCell><TableCell>{t.efectivo_contado == null ? '—' : formatCurrency(t.efectivo_contado)}</TableCell><TableCell className={cn('font-semibold', Number(t.diferencia) ? 'text-red-700' : 'text-emerald-700')}>{t.diferencia == null ? '—' : formatCurrency(t.diferencia)}</TableCell><TableCell className="max-w-56 truncate">{t.resumen_entrega || '—'}</TableCell><TableCell><Badge variant={t.estado === 'Abierto' ? 'default' : 'secondary'}>{t.estado}</Badge></TableCell></TableRow>)}
+          </TableBody></Table></CardContent>
+        </Card>
       </div>
 
-      {/* Open Shift Dialog */}
-      <Dialog open={isAbrirDialogOpen} onOpenChange={setIsAbrirDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Unlock className="h-5 w-5" />
-              Abrir Nuevo Turno
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-              <User className="h-10 w-10 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Carlos García</p>
-                <p className="text-sm text-muted-foreground">Recepcionista</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fondo">Fondo Inicial de Caja *</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="fondo"
-                  type="number"
-                  placeholder="0.00"
-                  className="pl-9"
-                  value={fondoInicial}
-                  onChange={(e) => setFondoInicial(e.target.value)}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Cuente el efectivo en caja y registre el monto
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAbrirDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAbrirTurno}>
-              <Unlock className="h-4 w-4 mr-2" />
-              Abrir Turno
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}><DialogContent className="max-w-md"><DialogHeader><DialogTitle>Abrir turno operativo</DialogTitle></DialogHeader><div className="space-y-4 py-2"><div className="flex items-center gap-3 rounded-xl bg-muted p-4"><User className="h-8 w-8 text-muted-foreground" /><div><p className="font-semibold">{user?.nombre || user?.email}</p><p className="text-sm text-muted-foreground">{user?.rol}</p></div></div><div><Label htmlFor="fondo-inicial">Efectivo contado al abrir *</Label><Input id="fondo-inicial" type="number" min="0" step="0.01" className="mt-2 text-lg" value={fondoInicial} onChange={(e) => setFondoInicial(e.target.value)} placeholder="0.00" /></div></div><DialogFooter><Button variant="outline" onClick={() => setOpenDialog(false)}>Cancelar</Button><Button onClick={abrirTurno} disabled={saving}>{saving ? 'Abriendo…' : 'Abrir turno'}</Button></DialogFooter></DialogContent></Dialog>
 
-      {/* Close Shift Dialog */}
-      <Dialog open={isCerrarDialogOpen} onOpenChange={setIsCerrarDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
-              Arqueo y Cierre de Turno
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Card className="bg-muted">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Fondo Inicial</p>
-                    <p className="font-medium">{formatCurrency(turnoActual?.fondoInicial)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Ingresos Efectivo</p>
-                    <p className="font-medium text-success">+{formatCurrency(ingresos.filter(m => m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0))}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Egresos Efectivo</p>
-                    <p className="font-medium text-destructive">-{formatCurrency(egresos.filter(m => m.metodoPago === 'Efectivo').reduce((s, m) => s + m.monto, 0))}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Esperado en Caja</p>
-                    <p className="font-bold text-lg">{formatCurrency(efectivoEnCaja)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="space-y-2">
-              <Label htmlFor="contado">Efectivo Contado *</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="contado"
-                  type="number"
-                  placeholder="0.00"
-                  className="pl-9 text-lg"
-                  value={fondoContado}
-                  onChange={(e) => setFondoContado(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {fondoContado && (
-              <Card className={cn(
-                "border-2",
-                parseFloat(fondoContado) === efectivoEnCaja ? "border-success bg-success/5" : "border-warning bg-warning/5"
-              )}>
-                <CardContent className="p-4 flex items-center justify-between">
-                  <span className="font-medium">Diferencia:</span>
-                  <span className={cn(
-                    "text-xl font-bold",
-                    parseFloat(fondoContado) === efectivoEnCaja ? "text-success" : "text-warning"
-                  )}>
-                    {parseFloat(fondoContado) === efectivoEnCaja ? (
-                      <span className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5" /> Correcto
-                      </span>
-                    ) : (
-                      `${parseFloat(fondoContado) > efectivoEnCaja ? '+' : ''}${formatCurrency(parseFloat(fondoContado) - efectivoEnCaja)}`
-                    )}
-                  </span>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCerrarDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleCerrarTurno}>
-              <Lock className="h-4 w-4 mr-2" />
-              Cerrar Turno
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Dialog open={closeDialog} onOpenChange={setCloseDialog}><DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" />Arqueo, entrega y cierre</DialogTitle></DialogHeader><div className="space-y-5 py-2">
+        <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-950 p-4 text-white sm:grid-cols-4"><div><p className="text-xs text-slate-400">Fondo</p><p className="font-semibold">{formatCurrency(turno?.fondo_inicial)}</p></div><div><p className="text-xs text-slate-400">Efectivo ingresado</p><p className="font-semibold text-emerald-400">{formatCurrency(summary.efectivo)}</p></div><div><p className="text-xs text-slate-400">Egresos</p><p className="font-semibold text-red-400">{formatCurrency(summary.egresosEfectivo)}</p></div><div><p className="text-xs text-slate-400">Esperado</p><p className="text-lg font-bold">{formatCurrency(efectivoEsperado)}</p></div></div>
+        <div><Label htmlFor="contado">Efectivo contado *</Label><Input id="contado" type="number" min="0" step="0.01" className="mt-2 text-lg" value={fondoContado} onChange={(e) => setFondoContado(e.target.value)} placeholder="0.00" />{fondoContado && <div className={cn('mt-2 flex items-center justify-between rounded-xl border p-3', Math.abs(diferencia) < 0.01 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50')}><span className="text-sm font-medium">Diferencia de caja</span><strong className={Math.abs(diferencia) < 0.01 ? 'text-emerald-700' : 'text-red-700'}>{formatCurrency(diferencia)}</strong></div>}</div>
+        {Math.abs(diferencia) > 0.009 && <div><Label htmlFor="motivo">Motivo de la diferencia *</Label><Textarea id="motivo" className="mt-2" value={motivoDiferencia} onChange={(e) => setMotivoDiferencia(e.target.value)} placeholder="Explica qué ocurrió; quedará auditado." /></div>}
+        <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor="entrega-a">Entregar a</Label><Input id="entrega-a" className="mt-2" value={entregaA} onChange={(e) => setEntregaA(e.target.value)} placeholder="Siguiente responsable" /></div><div><Label htmlFor="resumen">Resumen de la operación *</Label><Input id="resumen" className="mt-2" value={resumenEntrega} onChange={(e) => setResumenEntrega(e.target.value)} placeholder="Cómo queda el hotel" /></div></div>
+        <div><Label htmlFor="pendientes">Pendientes para el siguiente turno *</Label><Textarea id="pendientes" className="mt-2" rows={3} value={pendientesEntrega} onChange={(e) => setPendientesEntrega(e.target.value)} placeholder="Pagos, llegadas, solicitudes, habitaciones o incidentes. Si no hay, escribe “Sin pendientes”." /></div>
+        <div className="rounded-2xl border p-4"><p className="mb-3 text-sm font-semibold">Confirmación obligatoria</p><div className="space-y-3">{[
+          ['caja', 'Conté físicamente el efectivo y revisé los movimientos.'],
+          ['pendientes', 'Documenté todos los pendientes para el siguiente turno.'],
+          ['llegadas', 'Revisé llegadas, salidas y huéspedes con saldo.'],
+          ['incidentes', 'Registré incidentes, promesas y observaciones relevantes.'],
+        ].map(([key, label]) => <label key={key} className="flex cursor-pointer items-start gap-3 text-sm"><Checkbox checked={checks[key as keyof typeof checks]} onCheckedChange={(v) => setChecks((current) => ({ ...current, [key]: v === true }))} /><span>{label}</span></label>)}</div></div>
+        {!allChecked && <div className="flex gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0" />El turno no podrá cerrarse hasta completar la entrega.</div>}
+      </div><DialogFooter><Button variant="outline" onClick={() => setCloseDialog(false)}>Cancelar</Button><Button variant="destructive" onClick={cerrarTurno} disabled={saving || !allChecked}><CheckCircle2 className="mr-2 h-4 w-4" />{saving ? 'Cerrando…' : 'Cerrar y entregar'}</Button></DialogFooter></DialogContent></Dialog>
     </MainLayout>
   );
 }

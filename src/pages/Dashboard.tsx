@@ -19,6 +19,7 @@ import { CheckInsCard } from '@/components/dashboard/CheckInsCard';
 import { VentasDiaCard } from '@/components/dashboard/VentasDiaCard';
 import { TareasCriticasCard } from '@/components/dashboard/TareasCriticasCard';
 import { OcupacionChart } from '@/components/dashboard/OcupacionChart';
+import { OperationalControlPanel } from '@/components/dashboard/OperationalControlPanel';
 import api, { todayLocal } from '@/lib/api';
 
 export default function Dashboard() {
@@ -174,6 +175,8 @@ export default function Dashboard() {
   return (
     <MainLayout title="Inicio" subtitle="Lo importante del hotel, en un solo lugar">
       <div className="space-y-5 lg:space-y-6">
+        <OperationalControlPanel />
+
         <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
           <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-6">
             <div className="min-w-0">

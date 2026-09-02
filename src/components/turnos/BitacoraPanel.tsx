@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 const CATEGORIAS: BitacoraCategoria[] = [
   'General', 'Pendiente', 'Incidente', 'Huésped', 'Mantenimiento', 'Caja', 'Entrega de turno',
 ];
+const CATEGORIAS_CON_SEGUIMIENTO: BitacoraCategoria[] = ['Pendiente', 'Incidente', 'Mantenimiento', 'Caja', 'Entrega de turno'];
 
 const catColor: Record<BitacoraCategoria, string> = {
   General: 'bg-slate-100 text-slate-700',
@@ -45,20 +46,22 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
   const [open, setOpen] = useState(false);
   const [handoverOpen, setHandoverOpen] = useState(false);
   const [filtro, setFiltro] = useState<'todos' | 'pendientes' | 'turno'>('todos');
-  const [form, setForm] = useState<{ categoria: BitacoraCategoria; titulo: string; detalle: string }>({
+  const [form, setForm] = useState<{ categoria: BitacoraCategoria; prioridad: 'Baja' | 'Normal' | 'Alta' | 'Crítica'; responsable: string; titulo: string; detalle: string }>({
     categoria: 'General',
+    prioridad: 'Normal',
+    responsable: '',
     titulo: '',
     detalle: '',
   });
   const [handover, setHandover] = useState({ destinatario: '', resumen: '', pendientes: '', caja: '' });
 
   const filtradas = useMemo(() => {
-    if (filtro === 'pendientes') return entradas.filter((e) => e.categoria === 'Pendiente' && !e.resuelto);
+    if (filtro === 'pendientes') return entradas.filter((e) => CATEGORIAS_CON_SEGUIMIENTO.includes(e.categoria) && !e.resuelto);
     if (filtro === 'turno' && turnoId) return entradas.filter((e) => e.turnoId === turnoId);
     return entradas;
   }, [entradas, filtro, turnoId]);
 
-  const pendientes = entradas.filter((e) => e.categoria === 'Pendiente' && !e.resuelto).length;
+  const pendientes = entradas.filter((e) => CATEGORIAS_CON_SEGUIMIENTO.includes(e.categoria) && !e.resuelto).length;
 
   const handleAgregar = () => {
     if (!form.titulo.trim()) {
@@ -67,7 +70,7 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
     }
     agregar({ ...form, turnoId, resuelto: false });
     toast({ title: 'Entrada agregada a la bitácora' });
-    setForm({ categoria: 'General', titulo: '', detalle: '' });
+    setForm({ categoria: 'General', prioridad: 'Normal', responsable: '', titulo: '', detalle: '' });
     setOpen(false);
   };
 
@@ -78,7 +81,7 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
       handover.pendientes && `Pendientes: ${handover.pendientes}`,
       handover.caja && `Caja: ${handover.caja}`,
     ].filter(Boolean).join('\n\n');
-    agregar({ categoria: 'Entrega de turno', titulo, detalle, turnoId, resuelto: false });
+    agregar({ categoria: 'Entrega de turno', prioridad: 'Normal', titulo, detalle, turnoId, resuelto: false });
     toast({ title: 'Entrega de turno registrada' });
     setHandover({ destinatario: '', resumen: '', pendientes: '', caja: '' });
     setHandoverOpen(false);
@@ -188,6 +191,19 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Prioridad</Label>
+                    <Select value={form.prioridad} onValueChange={(v: typeof form.prioridad) => setForm({ ...form, prioridad: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{['Baja', 'Normal', 'Alta', 'Crítica'].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Responsable</Label>
+                    <Input value={form.responsable} onChange={(e) => setForm({ ...form, responsable: e.target.value })} placeholder="Nombre o área" />
+                  </div>
+                </div>
                 <div>
                   <Label>Título *</Label>
                   <Input
@@ -248,10 +264,10 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
                 key={e.id}
                 className={cn(
                   'p-3 rounded-lg border bg-white flex gap-3',
-                  e.categoria === 'Pendiente' && e.resuelto && 'opacity-60',
+                  CATEGORIAS_CON_SEGUIMIENTO.includes(e.categoria) && e.resuelto && 'opacity-60',
                 )}
               >
-                {e.categoria === 'Pendiente' && (
+                {CATEGORIAS_CON_SEGUIMIENTO.includes(e.categoria) && (
                   <button onClick={() => togglePendiente(e.id)} className="shrink-0 mt-0.5">
                     {e.resuelto
                       ? <CheckCircle2 className="h-5 w-5 text-emerald-600" />
@@ -263,13 +279,14 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
                     <Badge className={cn('font-normal', catColor[e.categoria])} variant="secondary">
                       {e.categoria}
                     </Badge>
-                    <span className={cn('font-medium', e.categoria === 'Pendiente' && e.resuelto && 'line-through')}>
+                    {e.prioridad && e.prioridad !== 'Normal' && <Badge variant={e.prioridad === 'Crítica' ? 'destructive' : 'outline'}>{e.prioridad}</Badge>}
+                    <span className={cn('font-medium', CATEGORIAS_CON_SEGUIMIENTO.includes(e.categoria) && e.resuelto && 'line-through')}>
                       {e.titulo}
                     </span>
                   </div>
                   {e.detalle && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{e.detalle}</p>}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {e.autor} · {formatDateTime(e.fecha)}
+                    {e.autor}{e.responsable ? ` · Responsable: ${e.responsable}` : ''} · {formatDateTime(e.fecha)}
                   </p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => eliminar(e.id)} className="shrink-0">

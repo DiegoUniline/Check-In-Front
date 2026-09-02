@@ -28,6 +28,7 @@ import {
   CalendarRange,
   ChevronDown,
   PanelLeftClose,
+  ClipboardCheck,
   X,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -68,6 +69,7 @@ const mainNavItems = [
 const operationsNavItems = [
   { title: 'Limpieza', url: '/limpieza', icon: Sparkles, viewKey: 'limpieza' },
   { title: 'Mantenimiento', url: '/mantenimiento', icon: Wrench, viewKey: 'mantenimiento' },
+  { title: 'Cierre del día', url: '/cierre-dia', icon: ClipboardCheck, viewKey: 'cierre-dia' },
   { title: 'Histórico Entradas', url: '/historial-reservas', icon: History, viewKey: 'reservas' },
 ];
 
@@ -176,7 +178,7 @@ export function AppSidebar() {
     setOpenGroups((prev) => {
       const current = prev[key] ?? defaultOpen;
       const next = { ...prev, [key]: !current };
-      try { sessionStorage.setItem('sidebar-open-groups', JSON.stringify(next)); } catch {}
+      try { sessionStorage.setItem('sidebar-open-groups', JSON.stringify(next)); } catch { /* Navegación usable aunque el almacenamiento esté bloqueado. */ }
       return next;
     });
   };

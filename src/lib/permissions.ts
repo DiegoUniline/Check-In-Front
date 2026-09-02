@@ -28,6 +28,7 @@ export const VIEWS: ViewDef[] = [
   // Operaciones
   { key: 'limpieza', label: 'Limpieza', group: 'Operaciones', path: '/limpieza' },
   { key: 'mantenimiento', label: 'Mantenimiento', group: 'Operaciones', path: '/mantenimiento' },
+  { key: 'cierre-dia', label: 'Cierre del día', group: 'Operaciones', path: '/cierre-dia' },
   { key: 'checkin', label: 'Check-In', group: 'Operaciones', path: '/checkin/:id' },
   { key: 'checkout', label: 'Check-Out', group: 'Operaciones', path: '/checkout/:id' },
 
@@ -89,6 +90,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
 
   limpieza: ['Admin', 'Gerente', 'Housekeeping'],
   mantenimiento: ['Admin', 'Gerente', 'Mantenimiento'],
+  'cierre-dia': ['Admin', 'Gerente'],
   checkin: ['Admin', 'Gerente', 'Recepcion'],
   checkout: ['Admin', 'Gerente', 'Recepcion'],
 
@@ -102,7 +104,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   reportes: ['Admin', 'Gerente'],
 
   usuarios: ['Admin'],
-  turnos: ['Admin', 'Gerente'],
+  turnos: ['Admin', 'Gerente', 'Recepcion'],
   catalogos: ['Admin', 'Gerente'],
   configuracion: ['Admin'],
   permisos: ['Admin'],

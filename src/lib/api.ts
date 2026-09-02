@@ -5,6 +5,49 @@ import { setHotelCurrency, formatCurrency } from '@/lib/currency';
 import { withOfflineCache } from '@/lib/offlineCache';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
+const operationalDb = supabase as any;
+
+export type OperationalPriority = 'critical' | 'warning' | 'info';
+
+export type OperationalAlert = {
+  id: string;
+  priority: OperationalPriority;
+  title: string;
+  detail: string;
+  count: number;
+  action: string;
+  actionLabel: string;
+};
+
+export type OperationalControl = {
+  score: number;
+  alerts: OperationalAlert[];
+  criticalCount: number;
+  warningCount: number;
+  openShift: any | null;
+  dayClosure: any | null;
+  pendingLog: number;
+  storageMode: 'central' | 'local';
+  updatedAt: string;
+};
+
+export type NightAuditCheck = {
+  id: string;
+  label: string;
+  detail: string;
+  count: number;
+  blocking: boolean;
+  ok: boolean;
+  action?: string;
+};
+
+export type NightAuditSnapshot = {
+  date: string;
+  checks: NightAuditCheck[];
+  closure: any | null;
+  storageMode: 'central' | 'local';
+  totals: { ingresos: number; gastos: number; ventas: number; saldoPendiente: number };
+};
 // Zona horaria del hotel activo (cacheada). Se actualiza al cargar el hotel.
 let HOTEL_TZ: string = 'America/Mexico_City';
 export const setHotelTimezone = (tz?: string | null) => {
@@ -220,6 +263,72 @@ class ApiClient {
     return id || '00000000-0000-0000-0000-000000000000';
   }
 
+  private operationalFallbackKey(scope: string) {
+    return `vulo:operaciones:${this.hid()}:${scope}`;
+  }
+
+  private readOperationalFallback<T>(scope: string, fallback: T): T {
+    try {
+      const raw = localStorage.getItem(this.operationalFallbackKey(scope));
+      return raw ? JSON.parse(raw) as T : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private writeOperationalFallback<T>(scope: string, value: T): T {
+    localStorage.setItem(this.operationalFallbackKey(scope), JSON.stringify(value));
+    return value;
+  }
+
+  private legacyBitacoraKey() {
+    return `vulo:bitacora:${this.hid()}`;
+  }
+
+  private readLegacyBitacora(): any[] {
+    try {
+      const raw = localStorage.getItem(this.legacyBitacoraKey());
+      const entries = raw ? JSON.parse(raw) : [];
+      return Array.isArray(entries) ? entries : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private writeLegacyBitacora(entries: any[]): any[] {
+    localStorage.setItem(this.legacyBitacoraKey(), JSON.stringify(entries));
+    window.dispatchEvent(new CustomEvent('vulo:bitacora-updated', { detail: { hotelId: this.hid() } }));
+    return entries;
+  }
+
+  private localBitacoraToRow(entry: any): any {
+    return {
+      id: entry.id,
+      hotel_id: entry.hotelId || this.hid(),
+      turno_id: entry.turnoId || null,
+      categoria: entry.categoria || 'General',
+      prioridad: entry.prioridad || 'Normal',
+      titulo: entry.titulo || 'Registro operativo',
+      detalle: entry.detalle || null,
+      estado: entry.resuelto ? 'Resuelto' : 'Abierto',
+      responsable: entry.responsable || null,
+      autor_id: entry.autorId || null,
+      autor_nombre: entry.autor || 'Usuario',
+      created_at: entry.fecha || new Date().toISOString(),
+      updated_at: entry.fecha || new Date().toISOString(),
+    };
+  }
+
+  private operationalId(): string {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    return `00000000-0000-4000-8000-${Date.now().toString().padStart(12, '0').slice(-12)}`;
+  }
+
+  private isMissingOperationalTable(error: any): boolean {
+    const text = `${error?.code || ''} ${error?.message || ''}`.toLowerCase();
+    return text.includes('42p01') || text.includes('pgrst205') || text.includes('could not find the table') || text.includes('does not exist');
+  }
+
   // ------- Dashboard -------
   getDashboardStats = async (): Promise<any> => {
     const hotel_id = this.hid();
@@ -312,6 +421,338 @@ class ApiClient {
       });
     }
     return result;
+  };
+
+  // ------- Control operativo -------
+  getOperationalControl = async (): Promise<OperationalControl> => {
+    const hotelId = this.hid();
+    const today = todayLocal();
+    const [reservasR, habitacionesR, limpiezaR, mantenimientoR, turnoR, bitacoraR, cierreR] = await Promise.all([
+      supabase.from('reservas').select('id,numero_reserva,fecha_checkin,fecha_checkout,estado,checkin_realizado,checkout_realizado,habitacion_id,saldo_pendiente,total,total_pagado').eq('hotel_id', hotelId),
+      supabase.from('habitaciones').select('id,numero,estado_habitacion,estado_limpieza,estado_mantenimiento').eq('hotel_id', hotelId),
+      supabase.from('tareas_limpieza').select('id,estado,prioridad,asignado_a,habitacion_id').eq('hotel_id', hotelId).neq('estado', 'Completada'),
+      supabase.from('tareas_mantenimiento').select('id,estado,prioridad,habitacion_id,titulo').eq('hotel_id', hotelId).neq('estado', 'Completada'),
+      operationalDb.from('turnos_operativos').select('*').eq('hotel_id', hotelId).eq('estado', 'Abierto').order('abierto_at', { ascending: false }).limit(1).maybeSingle(),
+      operationalDb.from('bitacora_operativa').select('id,categoria,prioridad,estado').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
+      operationalDb.from('cierres_diarios').select('*').eq('hotel_id', hotelId).eq('fecha_operativa', today).maybeSingle(),
+    ]);
+
+    const reservas = reservasR.data || [];
+    const habitaciones = habitacionesR.data || [];
+    const fallbackShifts = this.readOperationalFallback<any[]>('turnos', []);
+    const fallbackLog = this.readLegacyBitacora();
+    const fallbackClosures = this.readOperationalFallback<any[]>('cierres', []);
+    const turnoData = turnoR.data || (turnoR.error ? fallbackShifts.find((item) => item.estado === 'Abierto') : null) || null;
+    const bitacoraData = bitacoraR.error ? fallbackLog.map((entry) => ({ categoria: entry.categoria, prioridad: entry.prioridad || 'Normal', estado: entry.resuelto ? 'Resuelto' : 'Abierto' })) : (bitacoraR.data || []);
+    const cierreData = cierreR.data || (cierreR.error ? fallbackClosures.find((item) => item.fecha_operativa === today) : null) || null;
+    const habitacionesMap = new Map(habitaciones.map((h: any) => [h.id, h]));
+    const active = (r: any) => !['cancelada', 'finalizada', 'completada', 'checkout', 'check out', 'noshow', 'no show'].includes(String(r.estado || '').toLowerCase());
+    const arrivals = reservas.filter((r: any) => r.fecha_checkin === today && active(r) && !r.checkin_realizado);
+    const overdueArrivals = reservas.filter((r: any) => r.fecha_checkin < today && active(r) && !r.checkin_realizado && !r.checkout_realizado);
+    const departures = reservas.filter((r: any) => r.fecha_checkout <= today && active(r) && !r.checkout_realizado);
+    const unassigned = arrivals.filter((r: any) => !r.habitacion_id);
+    const dirtyArrivals = arrivals.filter((r: any) => {
+      if (!r.habitacion_id) return false;
+      const room: any = habitacionesMap.get(r.habitacion_id);
+      return room && String(room.estado_limpieza || '').toLowerCase() !== 'limpia';
+    });
+    const balances = reservas.filter((r: any) => active(r) && Number(r.saldo_pendiente || 0) > 0.01);
+    const cleaning = (limpiezaR.data || []).filter((t: any) => String(t.estado || '').toLowerCase() !== 'completada');
+    const cleaningUnassigned = cleaning.filter((t: any) => !t.asignado_a);
+    const maintenance = (mantenimientoR.data || []).filter((t: any) => String(t.estado || '').toLowerCase() !== 'completada');
+    const urgentMaintenance = maintenance.filter((t: any) => ['alta', 'urgente', 'crítica'].includes(String(t.prioridad || '').toLowerCase()));
+    const pendingCategories = ['pendiente', 'incidente', 'mantenimiento', 'caja', 'entrega de turno'];
+    const pendingEntries = bitacoraData.filter((e: any) => String(e.estado || '').toLowerCase() === 'abierto' && pendingCategories.includes(String(e.categoria || '').toLowerCase()));
+    const pendingLog = pendingEntries.length;
+    const criticalLog = pendingEntries.filter((e: any) => ['alta', 'crítica'].includes(String(e.prioridad || '').toLowerCase())).length;
+    const alerts: OperationalAlert[] = [];
+    const push = (alert: OperationalAlert) => { if (alert.count > 0) alerts.push(alert); };
+
+    push({ id: 'dirty-arrivals', priority: 'critical', title: 'Llegadas con habitación no lista', detail: 'Recepción no debería entregar estas habitaciones todavía.', count: dirtyArrivals.length, action: '/limpieza', actionLabel: 'Priorizar limpieza' });
+    push({ id: 'departures', priority: 'critical', title: 'Salidas pendientes o vencidas', detail: 'Revisa el folio, el saldo y confirma la salida.', count: departures.length, action: '/reservas/checkout', actionLabel: 'Atender salidas' });
+    push({ id: 'unassigned', priority: 'critical', title: 'Llegadas sin habitación asignada', detail: 'Asigna habitación antes de que llegue el huésped.', count: unassigned.length, action: '/reservas', actionLabel: 'Asignar ahora' });
+    push({ id: 'overdue-arrivals', priority: 'critical', title: 'Llegadas anteriores sin resolver', detail: 'Confirma si llegaron, extendieron o deben marcarse como no-show.', count: overdueArrivals.length, action: '/reservas/checkin', actionLabel: 'Resolver llegadas' });
+    push({ id: 'balances', priority: 'warning', title: 'Reservas activas con saldo pendiente', detail: 'Hay dinero por cobrar o validar antes del check-out.', count: balances.length, action: '/reservas', actionLabel: 'Revisar saldos' });
+    push({ id: 'cleaning', priority: dirtyArrivals.length ? 'critical' : 'warning', title: 'Tareas de limpieza sin responsable', detail: 'Asigna a una persona y evita habitaciones detenidas.', count: cleaningUnassigned.length, action: '/limpieza', actionLabel: 'Asignar tareas' });
+    push({ id: 'maintenance', priority: 'critical', title: 'Mantenimientos prioritarios abiertos', detail: 'Pueden afectar la venta o la experiencia del huésped.', count: urgentMaintenance.length, action: '/mantenimiento', actionLabel: 'Atender mantenimiento' });
+    push({ id: 'log', priority: criticalLog ? 'critical' : 'warning', title: 'Pendientes abiertos en bitácora', detail: 'El siguiente turno necesita seguimiento y responsable.', count: pendingLog, action: '/turnos', actionLabel: 'Ver bitácora' });
+    if (!turnoData) {
+      alerts.push({ id: 'shift', priority: 'warning', title: 'No hay turno operativo abierto', detail: 'Abre el turno para controlar caja, responsables y entrega.', count: 1, action: '/turnos', actionLabel: 'Abrir turno' });
+    }
+
+    const criticalCount = alerts.filter((a) => a.priority === 'critical').reduce((s, a) => s + a.count, 0);
+    const warningCount = alerts.filter((a) => a.priority === 'warning').reduce((s, a) => s + a.count, 0);
+    const score = Math.max(0, Math.min(100, 100 - criticalCount * 12 - warningCount * 4));
+    return {
+      score,
+      alerts: alerts.sort((a, b) => ['critical', 'warning', 'info'].indexOf(a.priority) - ['critical', 'warning', 'info'].indexOf(b.priority)),
+      criticalCount,
+      warningCount,
+      openShift: turnoData,
+      dayClosure: cierreData,
+      pendingLog,
+      storageMode: turnoR.error || bitacoraR.error || cierreR.error ? 'local' : 'central',
+      updatedAt: new Date().toISOString(),
+    };
+  };
+
+  getOpenShift = async (usuarioId: string): Promise<any | null> => {
+    const { data, error } = await operationalDb.from('turnos_operativos').select('*')
+      .eq('hotel_id', this.hid()).eq('usuario_id', usuarioId).eq('estado', 'Abierto')
+      .order('abierto_at', { ascending: false }).limit(1).maybeSingle();
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      return this.readOperationalFallback<any[]>('turnos', [])
+        .filter((item) => item.usuario_id === usuarioId && item.estado === 'Abierto')
+        .sort((a, b) => new Date(b.abierto_at || 0).getTime() - new Date(a.abierto_at || 0).getTime())[0] || null;
+    }
+    return data || null;
+  };
+
+  getShiftHistory = async (): Promise<any[]> => {
+    const { data, error } = await operationalDb.from('turnos_operativos').select('*')
+      .eq('hotel_id', this.hid()).order('abierto_at', { ascending: false }).limit(50);
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      return this.readOperationalFallback<any[]>('turnos', [])
+        .sort((a, b) => new Date(b.abierto_at || 0).getTime() - new Date(a.abierto_at || 0).getTime())
+        .slice(0, 50);
+    }
+    return data || [];
+  };
+
+  openShift = async (payload: { usuario_id: string; usuario_nombre: string; fondo_inicial: number }): Promise<any> => {
+    const { data, error } = await operationalDb.from('turnos_operativos')
+      .insert({ ...payload, hotel_id: this.hid(), estado: 'Abierto' }).select().single();
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      const shifts = this.readOperationalFallback<any[]>('turnos', []);
+      const existing = shifts.find((item) => item.usuario_id === payload.usuario_id && item.estado === 'Abierto');
+      if (existing) throw new Error('Ya existe un turno abierto para este usuario.');
+      const now = new Date().toISOString();
+      const localShift = {
+        id: this.operationalId(),
+        hotel_id: this.hid(),
+        ...payload,
+        estado: 'Abierto',
+        abierto_at: now,
+        cerrado_at: null,
+        created_at: now,
+        updated_at: now,
+        _local_only: true,
+      };
+      this.writeOperationalFallback('turnos', [localShift, ...shifts]);
+      return localShift;
+    }
+    return data;
+  };
+
+  getShiftFinancialSummary = async (abiertoAt: string): Promise<any> => {
+    const hotelId = this.hid();
+    const [{ data: pagos }, { data: gastos }] = await Promise.all([
+      supabase.from('pagos').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
+      supabase.from('gastos').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
+    ]);
+    const summary = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, egresosEfectivo: 0, movimientos: [] as any[] };
+    (pagos || []).forEach((p: any) => {
+      const method = String(p.metodo_pago || '').toLowerCase();
+      const amount = Number(p.monto || 0);
+      if (method.includes('efectivo')) summary.efectivo += amount;
+      else if (method.includes('tarjeta')) summary.tarjeta += amount;
+      else if (method.includes('transfer')) summary.transferencia += amount;
+      else summary.otros += amount;
+      summary.movimientos.push({ id: p.id, tipo: 'Ingreso', concepto: p.concepto || p.numero_pago || 'Pago de reserva', metodo: p.metodo_pago || 'Otro', monto: amount, fecha: p.created_at || p.fecha });
+    });
+    (gastos || []).forEach((g: any) => {
+      const amount = Number(g.monto || 0);
+      if (String(g.metodo_pago || '').toLowerCase().includes('efectivo')) summary.egresosEfectivo += amount;
+      summary.movimientos.push({ id: g.id, tipo: 'Egreso', concepto: g.descripcion || g.categoria || 'Gasto', metodo: g.metodo_pago || 'Otro', monto: amount, fecha: g.created_at || g.fecha });
+    });
+    summary.movimientos.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
+    return summary;
+  };
+
+  closeShift = async (id: string, payload: Record<string, unknown>): Promise<any> => {
+    const { data, error } = await operationalDb.from('turnos_operativos').update({ ...payload, estado: 'Cerrado', cerrado_at: new Date().toISOString() })
+      .eq('id', id).eq('hotel_id', this.hid()).select().single();
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      const shifts = this.readOperationalFallback<any[]>('turnos', []);
+      const index = shifts.findIndex((item) => item.id === id);
+      if (index < 0) throw new Error('No se encontró el turno que se desea cerrar.');
+      const closed = { ...shifts[index], ...payload, estado: 'Cerrado', cerrado_at: new Date().toISOString(), updated_at: new Date().toISOString(), _local_only: true };
+      shifts[index] = closed;
+      this.writeOperationalFallback('turnos', shifts);
+      return closed;
+    }
+    return data;
+  };
+
+  getNightAuditSnapshot = async (date = todayLocal()): Promise<NightAuditSnapshot> => {
+    const hotelId = this.hid();
+    const [reservasR, habitacionesR, turnosR, bitacoraR, pagosR, gastosR, ventasR, cierreR] = await Promise.all([
+      supabase.from('reservas').select('*').eq('hotel_id', hotelId),
+      supabase.from('habitaciones').select('id,numero,estado_habitacion').eq('hotel_id', hotelId),
+      operationalDb.from('turnos_operativos').select('id').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
+      operationalDb.from('bitacora_operativa').select('id,categoria,prioridad').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
+      supabase.from('pagos').select('monto').eq('hotel_id', hotelId).eq('fecha', date),
+      supabase.from('gastos').select('monto').eq('hotel_id', hotelId).eq('fecha', date),
+      supabase.from('ventas').select('total').eq('hotel_id', hotelId).eq('fecha', date),
+      operationalDb.from('cierres_diarios').select('*').eq('hotel_id', hotelId).eq('fecha_operativa', date).maybeSingle(),
+    ]);
+    const reservas = reservasR.data || [];
+    const active = (r: any) => !['cancelada', 'finalizada', 'completada', 'checkout', 'check out', 'noshow', 'no show'].includes(String(r.estado || '').toLowerCase());
+    const arrivalsPending = reservas.filter((r: any) => r.fecha_checkin === date && active(r) && !r.checkin_realizado).length;
+    const departuresPendingRows = reservas.filter((r: any) => r.fecha_checkout <= date && active(r) && !r.checkout_realizado);
+    const departuresPending = departuresPendingRows.length;
+    const balances = departuresPendingRows.filter((r: any) => Number(r.saldo_pendiente || 0) > 0.01);
+    const activeRooms = new Set(reservas.filter((r: any) => active(r) && r.checkin_realizado && !r.checkout_realizado).map((r: any) => r.habitacion_id));
+    const inconsistentRooms = (habitacionesR.data || []).filter((h: any) => String(h.estado_habitacion || '').toLowerCase() === 'ocupada' && !activeRooms.has(h.id)).length;
+    const fallbackShifts = this.readOperationalFallback<any[]>('turnos', []);
+    const fallbackLog = this.readLegacyBitacora().map((entry) => this.localBitacoraToRow(entry));
+    const fallbackClosures = this.readOperationalFallback<any[]>('cierres', []);
+    const openShifts = turnosR.error ? fallbackShifts.filter((item) => item.estado === 'Abierto') : (turnosR.data || []);
+    const openLog = bitacoraR.error ? fallbackLog.filter((item) => item.estado === 'Abierto') : (bitacoraR.data || []);
+    const closure = cierreR.data || (cierreR.error ? fallbackClosures.find((item) => item.fecha_operativa === date) : null) || null;
+    const criticalLog = openLog.filter((e: any) => ['pendiente', 'incidente', 'mantenimiento', 'caja', 'entrega de turno'].includes(String(e.categoria || '').toLowerCase()) && ['alta', 'crítica'].includes(String(e.prioridad || '').toLowerCase())).length;
+    const checks: NightAuditCheck[] = [
+      { id: 'arrivals', label: 'Llegadas del día resueltas', detail: 'Check-in realizado o no-show documentado.', count: arrivalsPending, blocking: true, ok: arrivalsPending === 0, action: '/reservas/checkin' },
+      { id: 'departures', label: 'Salidas atendidas', detail: 'No quedan huéspedes con salida vencida.', count: departuresPending, blocking: true, ok: departuresPending === 0, action: '/reservas/checkout' },
+      { id: 'balances', label: 'Folios de salida sin saldo', detail: 'Todos los cobros del día están conciliados.', count: balances.length, blocking: true, ok: balances.length === 0, action: '/reservas/checkout' },
+      { id: 'shifts', label: 'Turnos y cajas cerrados', detail: 'No existe una caja operativa todavía abierta.', count: openShifts.length, blocking: true, ok: openShifts.length === 0, action: '/turnos' },
+      { id: 'rooms', label: 'Habitaciones consistentes', detail: 'Toda habitación ocupada tiene una estancia activa.', count: inconsistentRooms, blocking: true, ok: inconsistentRooms === 0, action: '/habitaciones' },
+      { id: 'log', label: 'Incidentes prioritarios documentados', detail: 'No quedan pendientes críticos sin seguimiento.', count: criticalLog, blocking: false, ok: criticalLog === 0, action: '/turnos' },
+    ];
+    const sum = (rows: any[], field: string) => rows.reduce((s, row) => s + Number(row[field] || 0), 0);
+    return {
+      date,
+      checks,
+      closure,
+      storageMode: turnosR.error || bitacoraR.error || cierreR.error ? 'local' : 'central',
+      totals: {
+        ingresos: sum(pagosR.data || [], 'monto'),
+        gastos: sum(gastosR.data || [], 'monto'),
+        ventas: sum(ventasR.data || [], 'total'),
+        saldoPendiente: balances.reduce((s: number, r: any) => s + Number(r.saldo_pendiente || 0), 0),
+      },
+    };
+  };
+
+  closeOperationalDay = async (payload: { fecha_operativa: string; checklist: unknown; resumen: unknown; observaciones?: string; cerrado_por?: string; cerrado_por_nombre?: string }): Promise<any> => {
+    const { data, error } = await operationalDb.from('cierres_diarios').upsert({ ...payload, hotel_id: this.hid(), estado: 'Cerrado', cerrado_at: new Date().toISOString(), reabierto_at: null, motivo_reapertura: null }, { onConflict: 'hotel_id,fecha_operativa' }).select().single();
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      const closures = this.readOperationalFallback<any[]>('cierres', []);
+      const now = new Date().toISOString();
+      const index = closures.findIndex((item) => item.fecha_operativa === payload.fecha_operativa);
+      const localClosure = {
+        ...(index >= 0 ? closures[index] : {}),
+        id: index >= 0 ? closures[index].id : this.operationalId(),
+        hotel_id: this.hid(),
+        ...payload,
+        estado: 'Cerrado',
+        cerrado_at: now,
+        reabierto_at: null,
+        motivo_reapertura: null,
+        updated_at: now,
+        created_at: index >= 0 ? closures[index].created_at : now,
+        _local_only: true,
+      };
+      if (index >= 0) closures[index] = localClosure;
+      else closures.unshift(localClosure);
+      this.writeOperationalFallback('cierres', closures);
+      return localClosure;
+    }
+    return data;
+  };
+
+  reopenOperationalDay = async (id: string, payload: { reabierto_por?: string; motivo_reapertura: string }): Promise<any> => {
+    const { data, error } = await operationalDb.from('cierres_diarios').update({ ...payload, estado: 'Reabierto', reabierto_at: new Date().toISOString() })
+      .eq('id', id).eq('hotel_id', this.hid()).select().single();
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      const closures = this.readOperationalFallback<any[]>('cierres', []);
+      const index = closures.findIndex((item) => item.id === id);
+      if (index < 0) throw new Error('No se encontró el cierre que se desea reabrir.');
+      const reopened = { ...closures[index], ...payload, estado: 'Reabierto', reabierto_at: new Date().toISOString(), updated_at: new Date().toISOString(), _local_only: true };
+      closures[index] = reopened;
+      this.writeOperationalFallback('cierres', closures);
+      return reopened;
+    }
+    return data;
+  };
+
+  getBitacoraOperativa = async (): Promise<any[]> => {
+    const { data, error } = await operationalDb.from('bitacora_operativa').select('*').eq('hotel_id', this.hid()).order('created_at', { ascending: false }).limit(300);
+    const localRows = this.readLegacyBitacora().map((entry) => this.localBitacoraToRow(entry));
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      return localRows;
+    }
+    const remoteRows = data || [];
+    const remoteIds = new Set(remoteRows.map((entry: any) => entry.id));
+    return [...remoteRows, ...localRows.filter((entry) => !remoteIds.has(entry.id))]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 300);
+  };
+
+  createBitacoraOperativa = async (payload: Record<string, unknown>): Promise<any> => {
+    const { data, error } = await operationalDb.from('bitacora_operativa').insert({ ...payload, hotel_id: this.hid() }).select().single();
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      const now = new Date().toISOString();
+      const row = { id: payload.id || this.operationalId(), hotel_id: this.hid(), ...payload, created_at: now, updated_at: now, _local_only: true } as any;
+      const localEntry = {
+        id: row.id,
+        hotelId: row.hotel_id,
+        fecha: row.created_at,
+        autor: row.autor_nombre || 'Usuario',
+        autorId: row.autor_id || 'anon',
+        categoria: row.categoria || 'General',
+        prioridad: row.prioridad || 'Normal',
+        titulo: row.titulo || 'Registro operativo',
+        detalle: row.detalle || '',
+        responsable: row.responsable || undefined,
+        turnoId: row.turno_id || undefined,
+        resuelto: row.estado === 'Resuelto',
+      };
+      const entries = this.readLegacyBitacora().filter((entry) => entry.id !== row.id);
+      this.writeLegacyBitacora([localEntry, ...entries]);
+      return row;
+    }
+    return data;
+  };
+
+  updateBitacoraOperativa = async (id: string, payload: Record<string, unknown>): Promise<any> => {
+    const { data, error } = await operationalDb.from('bitacora_operativa').update(payload).eq('id', id).eq('hotel_id', this.hid()).select().single();
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      let updated: any = null;
+      const entries = this.readLegacyBitacora().map((entry) => {
+        if (entry.id !== id) return entry;
+        updated = {
+          ...entry,
+          categoria: payload.categoria ?? entry.categoria,
+          prioridad: payload.prioridad ?? entry.prioridad,
+          titulo: payload.titulo ?? entry.titulo,
+          detalle: payload.detalle ?? entry.detalle,
+          responsable: payload.responsable ?? entry.responsable,
+          resuelto: payload.estado === undefined ? entry.resuelto : payload.estado === 'Resuelto',
+        };
+        return updated;
+      });
+      this.writeLegacyBitacora(entries);
+      return updated ? this.localBitacoraToRow(updated) : null;
+    }
+    return data;
+  };
+
+  deleteBitacoraOperativa = async (id: string): Promise<void> => {
+    const { error } = await operationalDb.from('bitacora_operativa').delete().eq('id', id).eq('hotel_id', this.hid());
+    if (error) {
+      if (!this.isMissingOperationalTable(error)) throw error;
+      this.writeLegacyBitacora(this.readLegacyBitacora().filter((entry) => entry.id !== id));
+    }
   };
 
   // ------- Habitaciones -------
@@ -949,7 +1390,7 @@ class ApiClient {
       .limit(limit);
     if (error) throw error;
     const userIds = Array.from(new Set((data || []).map((m: any) => m.usuario_id).filter(Boolean)));
-    let users: Record<string, string> = {};
+    const users: Record<string, string> = {};
     if (userIds.length) {
       const { data: profs } = await supabase.from('profiles').select('id, nombre, email').in('id', userIds);
       (profs || []).forEach((p: any) => { users[p.id] = p.nombre || p.email || p.id; });
@@ -1075,7 +1516,7 @@ class ApiClient {
       const idsSinNombre = items
         .filter((d: any) => !d.producto_nombre && d.producto_id)
         .map((d: any) => d.producto_id);
-      let nombresMap: Record<string, string> = {};
+      const nombresMap: Record<string, string> = {};
       if (idsSinNombre.length) {
         const { data: prods } = await supabase
           .from('productos')

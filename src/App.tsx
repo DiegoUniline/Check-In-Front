@@ -29,6 +29,7 @@ import Configuracion from "./pages/Configuracion";
 import CheckIn from "./pages/CheckIn";
 import CheckOut from "./pages/CheckOut";
 import Turnos from "./pages/Turnos";
+import AuditoriaNocturna from "./pages/AuditoriaNocturna";
 import Gastos from "./pages/Gastos";
 import Compras from "./pages/Compras";
 import Proveedores from "./pages/Proveedores";
@@ -304,6 +305,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="turnos">
           <Turnos />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/cierre-dia"
+      element={
+        <ProtectedRoute viewKey="cierre-dia">
+          <AuditoriaNocturna />
         </ProtectedRoute>
       }
     />
