@@ -1,5 +1,49 @@
 -- Control operativo VULO: turnos reales, bitácora compartida y cierre diario.
 
+-- Helpers propios de este módulo. La migración no depende de funciones creadas
+-- por versiones anteriores de VULO y respeta el hotel activo del usuario.
+CREATE OR REPLACE FUNCTION public.vulo_current_hotel_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(hotel_activo_id, hotel_id)
+  FROM public.profiles
+  WHERE id = auth.uid()
+$$;
+
+CREATE OR REPLACE FUNCTION public.vulo_is_superadmin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.user_roles
+    WHERE user_id = auth.uid()
+      AND role::text = 'SuperAdmin'
+  )
+$$;
+
+CREATE OR REPLACE FUNCTION public.vulo_can_close_day()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.user_roles
+    WHERE user_id = auth.uid()
+      AND role::text IN ('Admin', 'Gerente', 'SuperAdmin')
+  )
+$$;
+
 CREATE TABLE IF NOT EXISTS public.turnos_operativos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   hotel_id uuid NOT NULL REFERENCES public.hotels(id) ON DELETE CASCADE,
@@ -87,50 +131,53 @@ DROP POLICY IF EXISTS "hotel_turnos_insert" ON public.turnos_operativos;
 DROP POLICY IF EXISTS "hotel_turnos_update" ON public.turnos_operativos;
 DROP POLICY IF EXISTS "hotel_turnos_delete" ON public.turnos_operativos;
 CREATE POLICY "hotel_turnos_select" ON public.turnos_operativos FOR SELECT TO authenticated
-  USING (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  USING (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 CREATE POLICY "hotel_turnos_insert" ON public.turnos_operativos FOR INSERT TO authenticated
-  WITH CHECK (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  WITH CHECK (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 CREATE POLICY "hotel_turnos_update" ON public.turnos_operativos FOR UPDATE TO authenticated
-  USING (hotel_id = public.current_user_hotel_id() OR public.is_superadmin())
-  WITH CHECK (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  USING (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin())
+  WITH CHECK (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 CREATE POLICY "hotel_turnos_delete" ON public.turnos_operativos FOR DELETE TO authenticated
-  USING (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  USING (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 
 DROP POLICY IF EXISTS "hotel_bitacora_select" ON public.bitacora_operativa;
 DROP POLICY IF EXISTS "hotel_bitacora_insert" ON public.bitacora_operativa;
 DROP POLICY IF EXISTS "hotel_bitacora_update" ON public.bitacora_operativa;
 DROP POLICY IF EXISTS "hotel_bitacora_delete" ON public.bitacora_operativa;
 CREATE POLICY "hotel_bitacora_select" ON public.bitacora_operativa FOR SELECT TO authenticated
-  USING (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  USING (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 CREATE POLICY "hotel_bitacora_insert" ON public.bitacora_operativa FOR INSERT TO authenticated
-  WITH CHECK (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  WITH CHECK (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 CREATE POLICY "hotel_bitacora_update" ON public.bitacora_operativa FOR UPDATE TO authenticated
-  USING (hotel_id = public.current_user_hotel_id() OR public.is_superadmin())
-  WITH CHECK (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  USING (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin())
+  WITH CHECK (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 CREATE POLICY "hotel_bitacora_delete" ON public.bitacora_operativa FOR DELETE TO authenticated
-  USING (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  USING (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 
 DROP POLICY IF EXISTS "hotel_cierres_select" ON public.cierres_diarios;
 DROP POLICY IF EXISTS "hotel_cierres_insert" ON public.cierres_diarios;
 DROP POLICY IF EXISTS "hotel_cierres_update" ON public.cierres_diarios;
 DROP POLICY IF EXISTS "hotel_cierres_delete" ON public.cierres_diarios;
 CREATE POLICY "hotel_cierres_select" ON public.cierres_diarios FOR SELECT TO authenticated
-  USING (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  USING (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin());
 CREATE POLICY "hotel_cierres_insert" ON public.cierres_diarios FOR INSERT TO authenticated
   WITH CHECK (
-    (hotel_id = public.current_user_hotel_id() OR public.is_superadmin())
-    AND (public.has_role(auth.uid(), 'Admin'::app_role) OR public.has_role(auth.uid(), 'Gerente'::app_role) OR public.is_superadmin())
+    (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin())
+    AND public.vulo_can_close_day()
   );
 CREATE POLICY "hotel_cierres_update" ON public.cierres_diarios FOR UPDATE TO authenticated
   USING (
-    (hotel_id = public.current_user_hotel_id() OR public.is_superadmin())
-    AND (public.has_role(auth.uid(), 'Admin'::app_role) OR public.has_role(auth.uid(), 'Gerente'::app_role) OR public.is_superadmin())
+    (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin())
+    AND public.vulo_can_close_day()
   ) WITH CHECK (
-    (hotel_id = public.current_user_hotel_id() OR public.is_superadmin())
-    AND (public.has_role(auth.uid(), 'Admin'::app_role) OR public.has_role(auth.uid(), 'Gerente'::app_role) OR public.is_superadmin())
+    (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin())
+    AND public.vulo_can_close_day()
   );
 CREATE POLICY "hotel_cierres_delete" ON public.cierres_diarios FOR DELETE TO authenticated
-  USING (hotel_id = public.current_user_hotel_id() OR public.is_superadmin());
+  USING (
+    (hotel_id = public.vulo_current_hotel_id() OR public.vulo_is_superadmin())
+    AND public.vulo_can_close_day()
+  );
 
 CREATE OR REPLACE FUNCTION public.vulo_touch_updated_at()
 RETURNS trigger
