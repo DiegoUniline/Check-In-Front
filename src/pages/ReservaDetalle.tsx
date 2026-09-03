@@ -83,17 +83,23 @@ export default function ReservaDetalle() {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Volver"><ArrowLeft className="h-5 w-5" /></Button>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-lg font-bold text-[#10233F] sm:text-2xl">{reserva.numero_reserva || `Reserva ${reserva.id.slice(0, 8)}`}</h1>
+                <h1 className="truncate text-lg font-bold text-[#10233F] sm:text-2xl">{reserva.cliente_nombre || 'Huésped sin nombre'}</h1>
                 <Badge variant="outline" className={cn('border', statusStyles[reserva.estado])}>{reserva.estado}</Badge>
               </div>
-              <p className="truncate text-xs text-muted-foreground sm:text-sm">{reserva.cliente_nombre || 'Huésped sin nombre'} · Habitación {reserva.habitacion_numero || 'sin asignar'}</p>
+              <p className="truncate text-xs text-muted-foreground sm:text-sm">Habitación {reserva.habitacion_numero || 'sin asignar'} · {formatDate(reserva.fecha_checkin)} → {formatDate(reserva.fecha_checkout)}</p>
             </div>
           </div>
-          <div className="hidden items-center gap-2 sm:flex">
-            <Button variant="outline" onClick={() => void load(true)}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button>
-            <Button variant="outline" onClick={() => document.getElementById('operaciones')?.scrollIntoView({ behavior: 'smooth' })}>Editar estancia</Button>
-            {canCheckin && <Button onClick={() => navigate(`/checkin/${reserva.id}`)} className="bg-emerald-600 hover:bg-emerald-700"><DoorOpen className="mr-2 h-4 w-4" />Check-in</Button>}
-            {activeStay && <Button onClick={() => navigate(`/checkout/${reserva.id}`)} className="bg-[#10233F] hover:bg-[#10233F]/90"><LogOut className="mr-2 h-4 w-4" />Check-out</Button>}
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+            <div className="max-w-[118px] text-right sm:max-w-none">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:text-[10px]">Reserva</p>
+              <p className="truncate text-xs font-bold text-[#10233F] sm:text-sm">#{reserva.numero_reserva || reserva.id.slice(0, 8)}</p>
+            </div>
+            <div className="hidden items-center gap-2 xl:flex">
+              <Button variant="outline" onClick={() => void load(true)}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button>
+              <Button variant="outline" onClick={() => document.getElementById('operaciones')?.scrollIntoView({ behavior: 'smooth' })}>Editar estancia</Button>
+              {canCheckin && <Button onClick={() => navigate(`/checkin/${reserva.id}`)} className="bg-emerald-600 hover:bg-emerald-700"><DoorOpen className="mr-2 h-4 w-4" />Check-in</Button>}
+              {activeStay && <Button onClick={() => navigate(`/checkout/${reserva.id}`)} className="bg-[#10233F] hover:bg-[#10233F]/90"><LogOut className="mr-2 h-4 w-4" />Check-out</Button>}
+            </div>
           </div>
         </div>
       </header>
