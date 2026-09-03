@@ -3,8 +3,8 @@ import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   CalendarDays, BedDouble, Check, ChevronLeft, CalendarPlus, UserPlus, Clock, Percent,
-  DollarSign, Package, Plus, Minus, Trash2, Receipt, Phone, Mail, CreditCard, X, ArrowLeft,
-  Users, StickyNote,
+  DollarSign, Plus, Minus, Trash2, Receipt, Phone, Mail, CreditCard, X, ArrowLeft,
+  Users, StickyNote, AlertTriangle, RefreshCw,
 } from 'lucide-react';
 import {
   Dialog,
@@ -205,8 +205,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const [cargoMonto, setCargoMonto] = useState('');
 
   const [pagoMonto, setPagoMonto] = useState('');
-  const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
+  const [pagoMetodo, setPagoMetodo] = useState('');
+  const [metodosPago, setMetodosPago] = useState<any[]>([]);
   const [mostrarSelectorHabitacion, setMostrarSelectorHabitacion] = useState(false);
+  const [filtroTipoHabitacion, setFiltroTipoHabitacion] = useState('all');
+  const [availabilityStatus, setAvailabilityStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const surfaceRef = useRef<HTMLDivElement>(null);
   const availabilityRequestRef = useRef(0);
 
@@ -217,6 +220,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       setOrigen(preload?.origen || 'Reserva');
       setCrearNuevoCliente(false);
       setMostrarSelectorHabitacion(!preload?.habitacion?.id);
+      setFiltroTipoHabitacion('all');
+      setAvailabilityStatus('idle');
+      setPagoMonto('');
       setFormData(createInitialFormData(preload));
     }
   }, [open, preload]);
@@ -228,7 +234,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   useEffect(() => {
     if (!open) return;
     const timer = window.setTimeout(() => {
-      surfaceRef.current?.querySelector<HTMLElement>('[data-step-focus="dates"]')?.focus();
+      surfaceRef.current?.querySelector<HTMLElement>('[data-reservation-focus="checkin"]:not([disabled]), [data-reservation-focus="checkout"]')?.focus();
     }, 80);
     return () => window.clearTimeout(timer);
   }, [open]);
@@ -269,16 +275,22 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
   const cargarDatos = async () => {
     try {
-      const [tiposData, entregablesData, conceptosData, clientesData] = await Promise.all([
+      const [tiposData, entregablesData, conceptosData, clientesData, metodosData] = await Promise.all([
         api.getTiposHabitacion(),
         api.getEntregables?.() || Promise.resolve([]),
         api.getConceptosCargo?.() || Promise.resolve([]),
         api.getClientes?.() || Promise.resolve([]),
+        api.getMetodosPago({ soloActivos: true }).catch(() => []),
       ]);
       setTiposHabitacion(tiposData);
       setEntregables(entregablesData);
       setConceptosCargo(conceptosData);
       setClientes(Array.isArray(clientesData) ? clientesData : []);
+      const paymentMethods = Array.isArray(metodosData) ? metodosData : [];
+      setMetodosPago(paymentMethods);
+      setPagoMetodo((current) => paymentMethods.some((method: any) => method.nombre === current)
+        ? current
+        : paymentMethods[0]?.nombre || '');
     } catch (error) {
       console.error('Error cargando datos:', error);
     }
@@ -286,10 +298,17 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
   const buscarHabitaciones = async () => {
     const requestId = ++availabilityRequestRef.current;
+    setAvailabilityStatus('loading');
     const applyAvailability = (rooms: any[]) => {
       if (requestId !== availabilityRequestRef.current) return;
-      const availableRooms = Array.isArray(rooms) ? rooms : [];
+      const availableRooms = (Array.isArray(rooms) ? rooms : []).filter((room: any) => {
+        if (origen !== 'Recepcion') return true;
+        const cleaning = String(room.estado_limpieza || 'Limpia').toLowerCase();
+        const maintenance = String(room.estado_mantenimiento || 'OK').toLowerCase();
+        return room.estado_habitacion === 'Disponible' && cleaning === 'limpia' && maintenance === 'ok';
+      });
       setHabitacionesDisponibles(availableRooms);
+      setAvailabilityStatus('ready');
       setFormData((prev) => (
         prev.habitacionId && !availableRooms.some((room) => room.id === prev.habitacionId)
           ? { ...prev, habitacionId: '' }
@@ -299,17 +318,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     try {
       const checkin = format(formData.fechaCheckin, 'yyyy-MM-dd');
       const checkout = format(formData.fechaCheckout, 'yyyy-MM-dd');
-      const data = await api.getHabitacionesDisponibles(checkin, checkout, formData.tipoHabitacion || undefined);
+      const data = await api.getHabitacionesDisponibles(checkin, checkout);
       applyAvailability(data);
     } catch (error) {
-      try {
-        const data = await api.getHabitaciones({ estado_habitacion: 'Disponible' });
-        applyAvailability(data.filter((h: any) =>
-          !formData.tipoHabitacion || (h.tipo_habitacion_id || h.tipo_id) === formData.tipoHabitacion
-        ));
-      } catch (e) {
-        console.error('Error:', e);
-      }
+      if (requestId !== availabilityRequestRef.current) return;
+      console.error('No se pudo validar la disponibilidad:', error);
+      setHabitacionesDisponibles([]);
+      setAvailabilityStatus('error');
     }
   };
 
@@ -320,7 +335,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     }, 180);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, formData.fechaCheckin, formData.fechaCheckout, formData.tipoHabitacion]);
+  }, [open, origen, formData.fechaCheckin, formData.fechaCheckout]);
 
   const handleSelectCliente = (cliente: any) => {
     setFormData({ ...formData, clienteId: cliente.id, clienteData: cliente });
@@ -348,17 +363,40 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId) ||
     (preload?.habitacion?.id === formData.habitacionId ? preload.habitacion : null);
   const selectedTipo = tiposHabitacion.find(t => t.id === formData.tipoHabitacion) ||
+    selectedHabitacion?.tipos_habitacion ||
     (selectedHabitacion ? { precio_base: selectedHabitacion.precio_base, nombre: selectedHabitacion.tipo_nombre } : null);
 
   const tarifaNoche = selectedTipo?.precio_base || 0;
-  const { precio: tarifaTemporada, temporada: temporadaAplicable } = resolverPrecioTemporada(
-    tarifaNoche,
-    format(formData.fechaCheckin, 'yyyy-MM-dd'),
-    formData.tipoHabitacion,
-    formData.habitacionId,
-  );
-  const tarifaEfectiva = temporadaAplicable ? tarifaTemporada : tarifaNoche;
-  const subtotalHospedaje = tarifaEfectiva * noches;
+  const tarifasNocturnas = Array.from({ length: noches }, (_, index) => {
+    const fecha = format(addDays(formData.fechaCheckin, index), 'yyyy-MM-dd');
+    const resolved = resolverPrecioTemporada(
+      tarifaNoche,
+      fecha,
+      formData.tipoHabitacion,
+      formData.habitacionId,
+    );
+    return { fecha, precio: resolved.precio, temporada: resolved.temporada };
+  });
+  const subtotalHospedaje = tarifasNocturnas.reduce((sum, night) => sum + night.precio, 0);
+  // La base actual conserva una tarifa unitaria; el promedio permite que el
+  // recálculo transaccional mantenga el total exacto cuando hay varias temporadas.
+  const tarifaEfectiva = noches > 0 ? subtotalHospedaje / noches : tarifaNoche;
+  const tramosTarifa = tarifasNocturnas.reduce<Array<{
+    desde: string;
+    hasta: string;
+    precio: number;
+    noches: number;
+    temporada: (typeof tarifasNocturnas)[number]['temporada'];
+  }>>((groups, night) => {
+    const previous = groups[groups.length - 1];
+    if (previous && previous.precio === night.precio && previous.temporada?.id === night.temporada?.id) {
+      previous.hasta = night.fecha;
+      previous.noches += 1;
+      return groups;
+    }
+    groups.push({ desde: night.fecha, hasta: night.fecha, precio: night.precio, noches: 1, temporada: night.temporada });
+    return groups;
+  }, []);
   const totalPersonaExtra = formData.personasExtra * formData.cargoPersonaExtra * noches;
   const totalCargosExtras = formData.cargos.reduce((sum, c) => sum + c.total, 0);
   const subtotal = subtotalHospedaje + totalPersonaExtra + totalCargosExtras;
@@ -377,6 +415,36 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const total = Math.max(0, totalBruto - descuentoMonto);
   const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
   const saldoPendiente = total - totalPagado;
+
+  const ocupacionTotal = formData.adultos + formData.ninos;
+  const adultosTotales = formData.adultos;
+  const tipoDeHabitacion = (room: any) => room?.tipos_habitacion
+    || tiposHabitacion.find((item) => item.id === (room?.tipo_habitacion_id || room?.tipo_id));
+  const roomReadyForArrival = (room: any) => {
+    const cleaning = String(room?.estado_limpieza || 'Limpia').toLowerCase();
+    const maintenance = String(room?.estado_mantenimiento || 'OK').toLowerCase();
+    return room?.estado_habitacion === 'Disponible' && cleaning === 'limpia' && maintenance === 'ok';
+  };
+  const roomFitsOccupancy = (room: any) => {
+    const type = tipoDeHabitacion(room);
+    if (!type) return true;
+    const maximum = Number(type.capacidad_maxima) || 0;
+    const adults = Number(type.capacidad_adultos) || 0;
+    const children = Number(type.capacidad_ninos) || 0;
+    return (!maximum || ocupacionTotal <= maximum)
+      && (!adults || adultosTotales <= adults)
+      && (!children || formData.ninos <= children);
+  };
+  const habitacionesCompatibles = habitacionesDisponibles.filter((room) => {
+    const typeId = room.tipo_habitacion_id || room.tipo_id;
+    return (filtroTipoHabitacion === 'all' || typeId === filtroTipoHabitacion) && roomFitsOccupancy(room);
+  });
+  const selectedRoomFits = !selectedHabitacion || roomFitsOccupancy(selectedHabitacion);
+  const capacidadSeleccionada = selectedHabitacion ? tipoDeHabitacion(selectedHabitacion) : selectedTipo;
+  const extraGuestError = formData.personasExtra > ocupacionTotal
+    ? 'Los huéspedes con recargo no pueden superar la ocupación total'
+    : '';
+  const capacityError = extraGuestError || (selectedRoomFits ? '' : `La habitación admite máximo ${capacidadSeleccionada?.capacidad_maxima || 'menos'} huésped(es)`);
 
   const fmt = (n: number) => formatCurrency(n);
 
@@ -425,8 +493,19 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   };
 
   const handleAgregarPago = () => {
-    const monto = parseFloat(pagoMonto);
-    if (!monto || monto <= 0) return;
+    const monto = Number(pagoMonto.replace(/[$,\s]/g, ''));
+    if (!monto || monto <= 0) {
+      toast({ title: 'Importe inválido', description: 'Captura un pago mayor a cero.', variant: 'destructive' });
+      return;
+    }
+    if (!pagoMetodo) {
+      toast({ title: 'Falta la forma de pago', description: 'Selecciona un método configurado por el hotel.', variant: 'destructive' });
+      return;
+    }
+    if (monto > saldoPendiente + 0.009) {
+      toast({ title: 'El pago supera el saldo', description: `El máximo que puedes registrar es ${formatCurrency(Math.max(0, saldoPendiente))}.`, variant: 'destructive' });
+      return;
+    }
 
     setFormData(prev => ({
       ...prev,
@@ -438,6 +517,18 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       }]
     }));
     setPagoMonto('');
+  };
+
+  const setPagoRapido = (target: 'half' | 'full') => {
+    const amount = target === 'full'
+      ? Math.max(0, saldoPendiente)
+      : Math.max(0, (total * 0.5) - totalPagado);
+    setPagoMonto(amount > 0 ? amount.toFixed(2) : '');
+  };
+
+  const clearAdvancePayment = () => {
+    setPagoMonto('');
+    setFormData((prev) => ({ ...prev, pagos: [] }));
   };
 
   const handleEliminarPago = (pagoId: string) => {
@@ -463,6 +554,42 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         toast({ title: 'Fechas inválidas', description: 'El check-out debe ser posterior al check-in.', variant: 'destructive' });
         return;
       }
+      if (availabilityStatus === 'error') {
+        toast({ title: 'No se confirmó la disponibilidad', description: 'Vuelve a consultar antes de crear la reserva.', variant: 'destructive' });
+        return;
+      }
+      if (capacityError) {
+        toast({ title: 'Capacidad excedida', description: capacityError, variant: 'destructive' });
+        return;
+      }
+      if (totalPagado > total + 0.009) {
+        toast({ title: 'Revisa los pagos', description: 'Los anticipos no pueden superar el total de la reserva.', variant: 'destructive' });
+        return;
+      }
+
+      // Última comprobación inmediatamente antes de guardar. El trigger de la
+      // base repetirá este candado para cubrir otra reserva creada al mismo tiempo.
+      const freshRooms = await api.getHabitacionesDisponibles(
+        format(formData.fechaCheckin, 'yyyy-MM-dd'),
+        format(formData.fechaCheckout, 'yyyy-MM-dd'),
+      );
+      const freshRoom = (freshRooms || []).find((room: any) => room.id === formData.habitacionId);
+      if (!freshRoom) {
+        setFormData((prev) => ({ ...prev, habitacionId: '' }));
+        setMostrarSelectorHabitacion(true);
+        void buscarHabitaciones();
+        toast({ title: 'La habitación acaba de ocuparse', description: 'Elige otra opción disponible; no se creó la reserva.', variant: 'destructive' });
+        return;
+      }
+      if (origen === 'Recepcion' && !roomReadyForArrival(freshRoom)) {
+        void buscarHabitaciones();
+        toast({ title: 'La habitación ya no está lista', description: 'Revisa limpieza o mantenimiento y elige una habitación disponible.', variant: 'destructive' });
+        return;
+      }
+      if (!roomFitsOccupancy(freshRoom)) {
+        toast({ title: 'La ocupación excede la capacidad', description: 'Elige una habitación con mayor capacidad.', variant: 'destructive' });
+        return;
+      }
       const notasCombinadas = [formData.solicitudesEspeciales, formData.notasInternas]
         .filter(Boolean)
         .join('\n---\n');
@@ -485,6 +612,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         total_impuestos: totalImpuestos,
         solicitudes_especiales: formData.solicitudesEspeciales,
         notas: notasCombinadas || null,
+        notas_internas: formData.notasInternas || null,
         origen,
       };
 
@@ -563,11 +691,29 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     if (event.defaultPrevented || event.nativeEvent.isComposing) return;
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      if (!loading && noches > 0 && formData.habitacionId && (formData.clienteId || nuevoClienteValido)) void handleConfirm();
+      if (puedeGuardar) void handleConfirm();
     }
   };
 
-  const puedeGuardar = !loading && noches > 0 && Boolean(formData.habitacionId) && (Boolean(formData.clienteId) || nuevoClienteValido);
+  const validationIssues = [
+    noches < 1 ? { key: 'dates', label: 'Corrige las fechas' } : null,
+    availabilityStatus === 'error'
+      ? { key: 'room', label: 'Reintenta disponibilidad' }
+      : !formData.habitacionId ? { key: 'room', label: 'Elige habitación' } : null,
+    capacityError ? { key: 'occupancy', label: 'Corrige la ocupación' } : null,
+    !formData.clienteId && !nuevoClienteValido ? { key: 'guest', label: 'Completa el huésped' } : null,
+  ].filter((issue): issue is { key: string; label: string } => Boolean(issue));
+  const puedeGuardar = !loading && availabilityStatus === 'ready' && validationIssues.length === 0;
+
+  const focusReservationField = (key: string) => {
+    const target = surfaceRef.current?.querySelector<HTMLElement>(`[data-reservation-field="${key}"]`);
+    if (!target) return;
+    if (key === 'room' && availabilityStatus === 'error') void buscarHabitaciones();
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => {
+      target.querySelector<HTMLElement>('input:not([disabled]), button:not([disabled]), textarea:not([disabled]), [role="combobox"]')?.focus();
+    }, 250);
+  };
 
   const rateOf = (hab: any) => {
     const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
@@ -593,16 +739,17 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           <p className="truncate text-[11px] text-muted-foreground">
             {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona fechas'}
             {selectedHabitacion ? ` · Hab. #${selectedHabitacion.numero}` : ''}
-            {` · ${formData.adultos + formData.ninos + formData.personasExtra} huésped(es)`}
+            {` · ${formData.adultos + formData.ninos} huésped(es)`}
             {total > 0 ? ` · ${fmt(total)}` : ''}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted p-0.5">
           {([['Reserva', CalendarPlus], ['Recepcion', UserPlus]] as const).map(([value, Icon]) => (
-            <button
-              key={value}
-              type="button"
-              data-step-focus={value === 'Reserva' ? 'dates' : undefined}
+              <button
+                key={value}
+                type="button"
+                aria-label={value === 'Reserva' ? 'Crear reserva futura' : 'Registrar entrada hoy'}
+                data-step-focus={value === 'Reserva' ? 'dates' : undefined}
               onClick={() => handleOrigenChange(value)}
               className={cn(
                 'flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
@@ -610,22 +757,22 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               )}
             >
               <Icon className="h-3 w-3" />
-              <span className="hidden sm:inline">{value === 'Reserva' ? 'Reserva' : 'Recepción'}</span>
+                <span className="hidden sm:inline">{value === 'Reserva' ? 'Reserva futura' : 'Entrada hoy'}</span>
             </button>
           ))}
         </div>
       </header>
 
       {/* LAYOUT A TODO EL ANCHO */}
-      <div className="grid items-stretch gap-3 xl:min-h-0 xl:flex-1 xl:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
+      <div className="grid items-start gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
 
-        <div className="grid min-w-0 content-start gap-x-8 gap-y-5 rounded-xl xl:min-h-0 xl:overflow-y-auto border border-border bg-card p-4 shadow-sm lg:grid-cols-2 lg:p-5">
+        <div className="grid min-w-0 content-start gap-x-8 gap-y-5 rounded-xl border border-border bg-card p-4 shadow-sm lg:grid-cols-2 lg:p-5">
 
 
 
         {/* COLUMNA 1 — Estancia, ocupación y habitación */}
         <div className="min-w-0 space-y-5">
-          <FormSection icon={CalendarDays} title="Estancia" hint="Fechas y hora de llegada.">
+          <FormSection fieldKey="dates" icon={CalendarDays} title="Estancia" hint="Fechas y hora de llegada.">
             {origen === 'Recepcion' && (
               <div className="rounded-lg border border-[#FDBA74] bg-[#FFF7ED] px-2.5 py-1.5 text-[11px] text-[#9A3412]">
                 Check-in automático: la habitación queda ocupada hoy.
@@ -635,7 +782,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <Field label="Check-in">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal" disabled={origen === 'Recepcion'}>
+                    <Button data-reservation-focus="checkin" variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal" disabled={origen === 'Recepcion'}>
                       <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                       {formatDate(formData.fechaCheckin)}
                     </Button>
@@ -648,7 +795,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <Field label="Check-out">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal">
+                    <Button data-reservation-focus="checkout" variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal">
                       <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                       {formatDate(formData.fechaCheckout)}
                     </Button>
@@ -682,7 +829,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             </div>
           </FormSection>
 
-          <FormSection icon={Users} title="Ocupación" hint="Cantidades libres, sin límite de lista.">
+          <FormSection fieldKey="occupancy" icon={Users} title="Ocupación" hint="Adultos y niños son el total; “con recargo” sólo define a quién se cobra extra.">
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               <Field label="Adultos">
                 <Stepper min={1} value={formData.adultos} onChange={(v) => setFormData({ ...formData, adultos: v })} />
@@ -690,7 +837,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <Field label="Niños">
                 <Stepper min={0} value={formData.ninos} onChange={(v) => setFormData({ ...formData, ninos: v })} />
               </Field>
-              <Field label="Personas extra">
+              <Field label="Con recargo">
                 <Stepper min={0} value={formData.personasExtra} onChange={(v) => setFormData({ ...formData, personasExtra: v })} />
               </Field>
               <Field label="Cargo p/extra" hint={formData.personasExtra > 0 ? `${fmt(totalPersonaExtra)} por ${noches} noche(s)` : 'Por persona, por noche'}>
@@ -702,7 +849,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             </div>
           </FormSection>
 
-          <FormSection icon={BedDouble} title="Habitación" hint={mostrarSelectorHabitacion ? `${habitacionesDisponibles.length} libres en el rango seleccionado.` : 'Habitación asignada a esta reserva.'}>
+          <FormSection fieldKey="room" icon={BedDouble} title="Habitación" hint={mostrarSelectorHabitacion ? `${habitacionesCompatibles.length} compatibles y libres en el rango.` : 'Habitación asignada a esta reserva.'}>
             {!mostrarSelectorHabitacion && selectedHabitacion ? (
               <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-2.5">
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
@@ -713,6 +860,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   <p className="truncate text-[11px] text-muted-foreground">
                     {selectedHabitacion.tipo_nombre || tiposHabitacion.find((item) => item.id === (selectedHabitacion.tipo_habitacion_id || selectedHabitacion.tipo_id))?.nombre || 'Sin categoría'}
                     {' · '}{fmt(rateOf(selectedHabitacion))}/noche
+                    {capacidadSeleccionada?.capacidad_maxima ? ` · ${ocupacionTotal}/${capacidadSeleccionada.capacidad_maxima} huéspedes` : ''}
                   </p>
                 </div>
                 <Button type="button" variant="outline" size="sm" className="h-8 shrink-0 px-2.5 text-xs" onClick={() => setMostrarSelectorHabitacion(true)}>
@@ -721,77 +869,61 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </div>
             ) : (
               <div className="space-y-2">
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, tipoHabitacion: '', habitacionId: '' })}
-                    className={cn(
-                      'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                      !formData.tipoHabitacion ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
-                    )}
-                  >
-                    Todas
-                  </button>
-                  {tiposHabitacion.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, tipoHabitacion: t.id, habitacionId: '' })}
-                      className={cn(
-                        'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                        formData.tipoHabitacion === t.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
-                      )}
-                    >
-                      {t.nombre} · {formatCurrency(t.precio_base)}
-                    </button>
-                  ))}
+                <div className="grid gap-2 sm:grid-cols-[170px_minmax(0,1fr)]">
+                  <Select value={filtroTipoHabitacion} onValueChange={setFiltroTipoHabitacion}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las categorías</SelectItem>
+                      {tiposHabitacion.map((type) => <SelectItem key={type.id} value={type.id}>{type.nombre}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {availabilityStatus === 'loading' ? (
+                    <div className="flex h-9 items-center gap-2 rounded-md border border-input px-3 text-xs text-muted-foreground"><RefreshCw className="h-3.5 w-3.5 animate-spin" />Validando disponibilidad…</div>
+                  ) : availabilityStatus === 'error' ? (
+                    <Button type="button" variant="outline" className="h-9 justify-start border-amber-300 text-xs text-amber-800 dark:border-amber-700 dark:text-amber-300" onClick={() => void buscarHabitaciones()}>
+                      <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />No se pudo validar · Reintentar
+                    </Button>
+                  ) : (
+                    <ComboboxCreatable
+                      options={habitacionesCompatibles.map((hab) => {
+                        const type = tipoDeHabitacion(hab);
+                        const floor = hab.piso ? ` · Piso ${hab.piso}` : '';
+                        return { value: hab.id, label: `#${hab.numero} · ${type?.nombre || hab.tipo_nombre || 'Sin categoría'}${floor} · ${fmt(rateOf(hab))}/noche` };
+                      })}
+                      value={formData.habitacionId}
+                      onValueChange={(value) => {
+                        const room = habitacionesDisponibles.find((item) => item.id === value);
+                        if (room) { handleSelectRoom(room); setMostrarSelectorHabitacion(false); }
+                      }}
+                      placeholder={habitacionesCompatibles.length ? 'Buscar y elegir habitación…' : 'Sin habitaciones compatibles'}
+                      searchPlaceholder="Número, categoría, piso o precio…"
+                      emptyMessage="No hay habitaciones libres con esa capacidad."
+                      disabled={habitacionesCompatibles.length === 0}
+                      autoOpenOnFocus
+                      className="h-9 justify-start overflow-hidden px-2.5 text-left text-xs font-normal"
+                    />
+                  )}
                 </div>
 
-                {habitacionesDisponibles.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-border py-4 text-center text-[11px] text-muted-foreground">
-                    Sin disponibilidad para este rango. Ajusta fechas o categoría.
+                {availabilityStatus === 'ready' && habitacionesCompatibles.length === 0 && (
+                  <p className="rounded-lg border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                    {habitacionesDisponibles.length === 0
+                      ? 'No hay habitaciones libres en esas fechas.'
+                      : `No hay habitaciones con capacidad para ${ocupacionTotal} huésped(es).`}
                   </p>
-                ) : (
-                  <div className="grid max-h-[280px] grid-cols-2 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-3 xl:grid-cols-4">
-                    {habitacionesDisponibles.map((hab) => {
-                      const activo = formData.habitacionId === hab.id;
-                      const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
-                      return (
-                        <button
-                          key={hab.id}
-                          type="button"
-                          onClick={() => { handleSelectRoom(hab); setMostrarSelectorHabitacion(false); }}
-                          className={cn(
-                            'rounded-lg border p-2 text-left transition-colors',
-                            activo ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:border-primary/40',
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-sm font-semibold">#{hab.numero}</span>
-                            {activo && <Check className="h-3.5 w-3.5" />}
-                          </div>
-                          <p className={cn('truncate text-[10px]', activo ? 'text-white/75' : 'text-muted-foreground')}>
-                            {hab.tipo_nombre || tipo?.nombre || 'Sin categoría'}
-                          </p>
-                          <p className={cn('text-[11px] font-medium tabular-nums', activo ? 'text-primary-foreground' : 'text-foreground')}>
-                            {fmt(rateOf(hab))}/noche
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
                 )}
               </div>
             )}
-            {selectedHabitacion && temporadaAplicable && (
-              <Badge variant="outline" className="h-5 w-fit px-1.5 text-[10px]">Tarifa temporada: {temporadaAplicable.nombre}</Badge>
+            {capacityError && <p className="flex items-center gap-1.5 text-[11px] font-medium text-destructive"><AlertTriangle className="h-3.5 w-3.5" />{capacityError}</p>}
+            {selectedHabitacion && tramosTarifa.length > 1 && (
+              <Badge variant="outline" className="h-5 w-fit px-1.5 text-[10px]">{tramosTarifa.length} tarifas durante la estancia</Badge>
             )}
           </FormSection>
         </div>
 
         {/* COLUMNA 2 — Huésped, cargos, notas e impuestos */}
         <div className="min-w-0 space-y-5 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-          <FormSection icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
+          <FormSection fieldKey="guest" icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
             {!crearNuevoCliente ? (
               <div className="space-y-2">
                 <div className="flex gap-2">
@@ -808,6 +940,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     placeholder="Buscar huésped…"
                     searchPlaceholder="Nombre, teléfono, correo o documento…"
                     emptyMessage="No se encontró ningún huésped."
+                    autoOpenOnFocus
                     className="h-9 min-w-0 flex-1 justify-start overflow-hidden px-2.5 text-left text-xs font-normal"
                   />
                   {formData.clienteData ? (
@@ -855,21 +988,24 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     </div>
                   </Field>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Field label="Documento">
-                    <Select value={formData.nuevoCliente.tipo_documento} onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="INE">INE</SelectItem>
-                        <SelectItem value="Pasaporte">Pasaporte</SelectItem>
-                        <SelectItem value="Licencia">Licencia</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  <Field label="Número">
-                    <Input className="h-9 text-xs" value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
-                  </Field>
-                </div>
+                <details className="group rounded-lg border border-dashed border-border px-2.5 py-1.5">
+                  <summary className="cursor-pointer list-none text-[11px] font-medium text-muted-foreground group-open:mb-2">+ Documento de identidad (opcional)</summary>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Field label="Documento">
+                      <Select value={formData.nuevoCliente.tipo_documento} onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="INE">INE</SelectItem>
+                          <SelectItem value="Pasaporte">Pasaporte</SelectItem>
+                          <SelectItem value="Licencia">Licencia</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Número">
+                      <Input className="h-9 text-xs" value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
+                    </Field>
+                  </div>
+                </details>
               </div>
             )}
           </FormSection>
@@ -909,51 +1045,49 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             )}
           </FormSection>
 
-          <FormSection icon={Percent} title="Impuestos" hint="Se calculan sobre el subtotal de la estancia.">
-            <div className="flex items-center justify-between gap-2">
-              <Select value="" onValueChange={(value) => {
-                const sugerido = IMPUESTOS_MEXICO_SUGERIDOS.find((item) => item.nombre === value);
-                const nuevo = sugerido
-                  ? { id: `imp-${Date.now()}`, nombre: sugerido.nombre, tasa: sugerido.tasa }
-                  : { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 };
-                setFormData((p) => ({ ...p, impuestos: [...p.impuestos, nuevo] }));
-              }}>
-                <SelectTrigger className="h-9 flex-1 text-xs"><SelectValue placeholder="+ Agregar impuesto" /></SelectTrigger>
-                <SelectContent>
-                  {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
-                    <SelectItem key={sug.nombre} value={sug.nombre}>{sug.nombre}</SelectItem>
-                  ))}
-                  <SelectItem value="__custom">Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground">{fmt(totalImpuestos)}</span>
-            </div>
-            {formData.impuestos.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground">Sin impuestos aplicados.</p>
-            ) : (
-              <div className="space-y-1">
-                {formData.impuestos.map((imp) => (
-                  <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_76px_32px] items-center gap-1.5">
-                    <Input className="h-8 min-w-0 px-2 text-[11px]" value={imp.nombre} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))} />
-                    <div className="relative">
-                      <Input type="number" min="0" step="0.01" className="h-8 pr-5 text-right text-[11px]" value={imp.tasa} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))} />
-                      <Percent className="pointer-events-none absolute right-1.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 text-muted-foreground" />
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </FormSection>
+        </div>
 
-          <FormSection icon={StickyNote} title="Notas y entregables" hint="Opcional.">
-            <div className="grid gap-2 sm:grid-cols-2">
+        <div className="border-t border-border pt-4 lg:col-span-2">
+          <FormSection icon={StickyNote} title="Opcionales" hint="Notas, impuestos y entregables en una sola franja compacta.">
+            <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(280px,0.9fr)]">
               <Field label="Solicitudes del huésped">
-                <Textarea rows={2} className="min-h-[52px] resize-none text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
+                <Textarea rows={2} className="h-12 min-h-12 resize-none text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
               </Field>
               <Field label="Notas internas">
-                <Textarea rows={2} className="min-h-[52px] resize-none text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
+                <Textarea rows={2} className="h-12 min-h-12 resize-none text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
               </Field>
+              <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground"><Percent className="h-3 w-3" />Impuestos</Label>
+                  <span className="text-[11px] font-semibold tabular-nums">{fmt(totalImpuestos)}</span>
+                </div>
+                <Select value="" onValueChange={(value) => {
+                  const sugerido = IMPUESTOS_MEXICO_SUGERIDOS.find((item) => item.nombre === value);
+                  const nuevo = sugerido
+                    ? { id: `imp-${Date.now()}`, nombre: sugerido.nombre, tasa: sugerido.tasa }
+                    : { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 };
+                  setFormData((p) => ({ ...p, impuestos: [...p.impuestos, nuevo] }));
+                }}>
+                  <SelectTrigger className="h-8 bg-background text-xs"><SelectValue placeholder="+ Agregar impuesto" /></SelectTrigger>
+                  <SelectContent>
+                    {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
+                      <SelectItem key={sug.nombre} value={sug.nombre}>{sug.nombre}</SelectItem>
+                    ))}
+                    <SelectItem value="__custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.impuestos.map((imp) => (
+                  <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_64px_28px] items-center gap-1">
+                    <Input className="h-7 min-w-0 px-2 text-[11px]" value={imp.nombre} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))} />
+                    <div className="relative">
+                      <Input type="number" min="0" step="0.01" className="h-7 pr-5 text-right text-[11px]" value={imp.tasa} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))} />
+                      <Percent className="pointer-events-none absolute right-1.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 text-muted-foreground" />
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                  </div>
+                ))}
+                {formData.impuestos.length === 0 && <p className="text-center text-[10px] text-muted-foreground">Sin impuestos aplicados</p>}
+              </div>
             </div>
             {origen === 'Recepcion' && entregables.length > 0 && (
               <div className="space-y-1.5">
@@ -975,14 +1109,21 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
 
         {/* RESUMEN DE CUENTA */}
-        <aside className="min-w-0 xl:min-h-0 xl:overflow-y-auto">
+        <aside className="min-w-0 xl:sticky xl:top-0 xl:self-start">
           <div className="overflow-hidden rounded-xl bg-[#10233F] text-white shadow-lg">
             <div className="space-y-2 p-3">
               <p className="text-xs font-semibold">Resumen de cuenta</p>
 
               <div className="space-y-1 text-xs">
                 <Line label={`Hospedaje · ${noches || 0} noche${noches === 1 ? '' : 's'}`} value={fmt(subtotalHospedaje)} />
-                {temporadaAplicable && <Line small label={`Temporada ${temporadaAplicable.nombre} (${describirAjuste(temporadaAplicable)})`} value={`${fmt(tarifaEfectiva)}/noche`} />}
+                {tramosTarifa.map((rate, index) => (rate.temporada || tramosTarifa.length > 1) && (
+                  <Line
+                    key={`${rate.desde}-${rate.precio}-${index}`}
+                    small
+                    label={`${format(parseISO(rate.desde), 'd MMM', { locale: es })}${rate.noches > 1 ? `–${format(parseISO(rate.hasta), 'd MMM', { locale: es })}` : ''}${rate.temporada ? ` · ${rate.temporada.nombre} (${describirAjuste(rate.temporada)})` : ''}`}
+                    value={`${rate.noches} × ${fmt(rate.precio)}`}
+                  />
+                ))}
                 {totalPersonaExtra > 0 && <Line label={`Personas extra (${formData.personasExtra})`} value={fmt(totalPersonaExtra)} />}
                 {totalCargosExtras > 0 && <Line label={`Cargos extras (${formData.cargos.length})`} value={fmt(totalCargosExtras)} />}
                 {impuestosCalculados.map((imp) => imp.monto > 0 && <Line key={imp.id} label={`${imp.nombre} (${imp.tasa}%)`} value={fmt(imp.monto)} />)}
@@ -1021,26 +1162,40 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <Separator className="bg-white/20" />
 
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-1.5 text-[11px] text-white/80"><CreditCard className="h-3 w-3" />Registrar pago</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="flex items-center gap-1.5 text-[11px] text-white/80"><CreditCard className="h-3 w-3" />Anticipo</Label>
+                  <div className="flex items-center gap-1">
+                    <button type="button" className="rounded px-1.5 py-0.5 text-[10px] text-white/70 hover:bg-white/10 hover:text-white" onClick={clearAdvancePayment}>Sin anticipo</button>
+                    <button type="button" className="rounded px-1.5 py-0.5 text-[10px] text-white/70 hover:bg-white/10 hover:text-white" onClick={() => setPagoRapido('half')}>50%</button>
+                    <button type="button" className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white hover:bg-white/20" onClick={() => setPagoRapido('full')}>Liquidar</button>
+                  </div>
+                </div>
                 <div className="flex gap-1.5">
-                  <Input
-                    type="number"
-                    placeholder={saldoPendiente > 0 ? fmt(saldoPendiente) : 'Monto'}
-                    className="h-9 flex-1 border-input bg-background text-xs text-foreground"
-                    value={pagoMonto}
-                    onFocus={() => { if (!pagoMonto && saldoPendiente > 0) setPagoMonto(saldoPendiente.toFixed(2)); }}
-                    onChange={(e) => setPagoMonto(e.target.value)}
-                  />
+                  <div className="relative min-w-0 flex-1">
+                    <DollarSign className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      aria-label="Importe del anticipo"
+                      placeholder={saldoPendiente > 0 ? saldoPendiente.toFixed(2) : '0.00'}
+                      className="h-9 border-input bg-background pl-8 text-right text-xs tabular-nums text-foreground"
+                      value={pagoMonto}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+                        if (/^\d*(\.\d{0,2})?$/.test(value)) setPagoMonto(value);
+                      }}
+                      onBlur={() => { if (pagoMonto) setPagoMonto(Number(pagoMonto).toFixed(2)); }}
+                    />
+                  </div>
                   <Select value={pagoMetodo} onValueChange={setPagoMetodo}>
-                    <SelectTrigger className="h-9 w-24 border-input bg-background text-xs text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 w-28 border-input bg-background text-xs text-foreground" disabled={metodosPago.length === 0}><SelectValue placeholder="Método" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Efectivo">Efectivo</SelectItem>
-                      <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                      <SelectItem value="Transferencia">Transf.</SelectItem>
+                      {metodosPago.map((method) => <SelectItem key={method.id} value={method.nombre}>{method.nombre}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="secondary" className="h-9 w-9 px-0" onClick={handleAgregarPago} aria-label="Agregar pago"><Plus className="h-4 w-4" /></Button>
+                  <Button type="button" variant="secondary" className="h-9 w-9 px-0" onClick={handleAgregarPago} disabled={!pagoMonto || !pagoMetodo} aria-label="Agregar anticipo"><Plus className="h-4 w-4" /></Button>
                 </div>
+                {metodosPago.length === 0 && <p className="text-[10px] text-amber-200">Configura al menos una forma de pago en Catálogos.</p>}
                 {formData.pagos.length > 0 && (
                   <div className="space-y-1">
                     {formData.pagos.map(p => (
@@ -1063,6 +1218,19 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
               <Separator className="bg-white/20" />
 
+              {validationIssues.length > 0 && (
+                <div className="rounded-lg border border-white/15 bg-white/[0.07] p-2">
+                  <p className="mb-1.5 text-[10px] font-medium text-white/70">Falta para continuar</p>
+                  <div className="flex flex-wrap gap-1">
+                    {validationIssues.map((issue) => (
+                      <button key={`${issue.key}-${issue.label}`} type="button" onClick={() => focusReservationField(issue.key)} className="rounded-full bg-white/10 px-2 py-1 text-[10px] text-white transition-colors hover:bg-white/20">
+                        {issue.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <Button
                 data-confirm-reservation
                 type="button"
@@ -1076,7 +1244,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 {loading ? 'Procesando…' : <><Check className="mr-1.5 h-4 w-4" />{origen === 'Recepcion' ? 'Completar check-in' : 'Crear reserva'}</>}
               </Button>
               <p className="text-center text-[10px] text-white/65">
-                {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter' : 'Completa fechas, habitación y huésped'}
+                {availabilityStatus === 'loading' ? 'Comprobando disponibilidad…' : puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter' : 'Presiona lo pendiente para ir al campo'}
               </p>
             </div>
           </div>
@@ -1125,8 +1293,8 @@ function Stepper({ value, onChange, min = 0, max = 99 }: { value: number; onChan
   );
 }
 
-function FormSection({ icon: Icon, title, hint, children }: { icon: typeof CalendarDays; title: string; hint?: string; children: ReactNode }) {
-  return <section className="space-y-2 bg-card">
+function FormSection({ icon: Icon, title, hint, fieldKey, children }: { icon: typeof CalendarDays; title: string; hint?: string; fieldKey?: string; children: ReactNode }) {
+  return <section data-reservation-field={fieldKey} className="space-y-2 bg-card">
     <div className="flex min-w-0 items-center gap-2 border-b border-border pb-1.5">
       <Icon className="h-4 w-4 shrink-0 text-[#F97316]" />
       <div className="min-w-0">

@@ -16,7 +16,7 @@ if (!root[PATCH_KEY]) {
       .from('habitaciones')
       .select('*, tipos_habitacion(*)')
       .eq('hotel_id', hotelId)
-      .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio)');
+      .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio,Bloqueada)');
     if (tipoId) habitacionesQuery = habitacionesQuery.eq('tipo_habitacion_id', tipoId);
 
     let reservasQuery = db.from('reservas')
