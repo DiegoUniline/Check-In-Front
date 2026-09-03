@@ -145,7 +145,7 @@ export default function Dashboard() {
   }, []);
 
   const quickActions = [
-    { label: 'Nueva reserva', description: 'Crear una reservación', icon: CalendarPlus, onClick: () => navigate('/reservas') },
+    { label: 'Nueva reserva', description: 'Crear una reservación', icon: CalendarPlus, onClick: () => navigate('/reservas/nueva') },
     { label: 'Hacer check-in', description: `${checkinsHoy.length} pendiente${checkinsHoy.length === 1 ? '' : 's'} hoy`, icon: LogIn, onClick: () => navigate('/reservas/checkin') },
     { label: 'Hacer check-out', description: `${checkoutsHoy.length} salida${checkoutsHoy.length === 1 ? '' : 's'} hoy`, icon: LogOut, onClick: () => navigate('/reservas/checkout') },
     { label: 'Buscar huésped', description: 'Reserva, cliente o habitación', icon: Search, onClick: () => window.dispatchEvent(new CustomEvent('open-command-palette')) },
@@ -190,7 +190,7 @@ export default function Dashboard() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => navigate('/reservas')}
+                onClick={() => navigate('/reservas/nueva')}
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-95"
               >
                 <CalendarPlus className="h-4 w-4" />

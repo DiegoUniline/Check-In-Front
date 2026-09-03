@@ -33,7 +33,7 @@ import api, { todayLocal } from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid, type TimelineReservationAction } from '@/components/reservas/TimelineGrid';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
-import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
+import type { ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
@@ -193,8 +193,6 @@ export default function Reservas() {
   const [focusReservationId, setFocusReservationId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const [modalNuevaReserva, setModalNuevaReserva] = useState(false);
-  const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
   const validViews = ['recepcion', 'checkin', 'checkout', 'timeline', 'historico'] as const;
   type Vista = typeof validViews[number];
   const tabActiva: Vista = (validViews as readonly string[]).includes(vista || '')
@@ -336,13 +334,30 @@ export default function Reservas() {
     habitaciones.map(h => h.piso).filter(p => p != null && p !== '')
   )].sort((a: any, b: any) => Number(a) - Number(b));
 
-  const handleCreateReservation = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
+  const openNewReservation = (preload?: ReservationPreload) => {
     if (viewOnlyMode) {
       toast({ title: 'Modo sólo consulta', description: 'Abre un turno para crear reservaciones.' });
       return;
     }
-    setPreloadReserva({ habitacion, fechaCheckin, fechaCheckout });
-    setModalNuevaReserva(true);
+    const params = new URLSearchParams();
+    if (preload?.habitacion?.id) params.set('roomId', preload.habitacion.id);
+    if (preload?.fechaCheckin) params.set('checkin', format(preload.fechaCheckin, 'yyyy-MM-dd'));
+    if (preload?.fechaCheckout) params.set('checkout', format(preload.fechaCheckout, 'yyyy-MM-dd'));
+    if (preload?.origen) params.set('origin', preload.origen);
+    navigate(`/reservas/nueva${params.size ? `?${params.toString()}` : ''}`, {
+      state: {
+        reservationPreload: {
+          habitacion: preload?.habitacion,
+          fechaCheckin: preload?.fechaCheckin ? format(preload.fechaCheckin, 'yyyy-MM-dd') : undefined,
+          fechaCheckout: preload?.fechaCheckout ? format(preload.fechaCheckout, 'yyyy-MM-dd') : undefined,
+          origen: preload?.origen,
+        },
+      },
+    });
+  };
+
+  const handleCreateReservation = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
+    openNewReservation({ habitacion, fechaCheckin, fechaCheckout });
   };
 
   const handleReservationClick = (reserva: any) => {
@@ -389,13 +404,12 @@ export default function Reservas() {
       return;
     }
     const hoy = parseISO(todayLocal());
-    setPreloadReserva({
+    openNewReservation({
       habitacion,
       fechaCheckin: hoy,
       fechaCheckout: addDays(hoy, 1),
       origen: 'Recepcion',
     });
-    setModalNuevaReserva(true);
   };
 
   const totalHabitaciones = habitaciones.length;
@@ -419,8 +433,7 @@ export default function Reservas() {
             disabled={viewOnlyMode}
             title={viewOnlyMode ? 'Abre un turno para crear reservaciones' : undefined}
             onClick={() => {
-              setPreloadReserva(undefined);
-              setModalNuevaReserva(true);
+              openNewReservation();
             }}
           >
             <Plus className="mr-2 h-5 w-5" />
@@ -1181,13 +1194,6 @@ export default function Reservas() {
         tiposHabitacion={tiposHabitacion}
       />
 
-      {/* Modales */}
-      <NuevaReservaModal
-        open={modalNuevaReserva && !viewOnlyMode}
-        onOpenChange={setModalNuevaReserva}
-        preload={preloadReserva}
-        onSuccess={cargarDatos}
-      />
       {/* Modal: Llegadas de hoy */}
       <Dialog open={modalLlegadas} onOpenChange={setModalLlegadas}>
         <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[calc(100dvh-1rem)] sm:max-h-[80dvh] overflow-y-auto">

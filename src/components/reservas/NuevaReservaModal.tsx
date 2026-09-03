@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   CalendarDays, Search, BedDouble, Check, ChevronRight, ChevronLeft, 
   CalendarPlus, UserPlus, Clock, Percent, DollarSign, Package, Plus, Trash2, 
-  Receipt, Phone, Mail, CreditCard, X
+  Receipt, Phone, Mail, CreditCard, X, ArrowLeft
 } from 'lucide-react';
 import {
   Dialog,
@@ -52,7 +52,38 @@ interface NuevaReservaModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preload?: ReservationPreload;
-  onSuccess?: () => void;
+  onSuccess?: (reserva?: any) => void;
+  pageMode?: boolean;
+}
+
+function ReservationSurface({
+  pageMode,
+  open,
+  onClose,
+  surfaceRef,
+  onKeyDown,
+  children,
+}: {
+  pageMode: boolean;
+  open: boolean;
+  onClose: () => void;
+  surfaceRef: RefObject<HTMLDivElement>;
+  onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+  children: ReactNode;
+}) {
+  if (pageMode) {
+    return <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC] pb-24 lg:pb-8">
+      <div ref={surfaceRef} onKeyDown={onKeyDown} className="mx-auto max-w-[1680px] space-y-4 px-3 py-4 sm:px-6 lg:px-8">
+        {children}
+      </div>
+    </div>;
+  }
+
+  return <Dialog open={open} onOpenChange={onClose}>
+    <DialogContent ref={surfaceRef} onKeyDown={onKeyDown} className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-auto sm:w-[calc(100%-1rem)] sm:max-w-6xl sm:max-h-[92vh] sm:rounded-xl sm:border sm:p-5">
+      {children}
+    </DialogContent>
+  </Dialog>;
 }
 
 type Step = 1 | 2 | 3 | 4;
@@ -164,7 +195,7 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => {
   };
 };
 
-export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: NuevaReservaModalProps) {
+export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, pageMode = false }: NuevaReservaModalProps) {
   const [step, setStep] = useState<Step>(1);
   const [formData, setFormData] = useState<FormData>(createInitialFormData());
   const [searchCliente, setSearchCliente] = useState('');
@@ -185,6 +216,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
 
   const [pagoMonto, setPagoMonto] = useState('');
   const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
+  const surfaceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -197,6 +229,20 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
       setFormData(createInitialFormData(preload));
     }
   }, [open, preload]);
+
+  useEffect(() => {
+    if (!pageMode || !open) return;
+    const timer = window.setTimeout(() => {
+      const selectors: Record<Step, string> = {
+        1: '[data-step-focus="dates"]',
+        2: '[data-room-option]',
+        3: '[data-client-search], [data-new-client-name]',
+        4: '[data-confirm-reservation]',
+      };
+      surfaceRef.current?.querySelector<HTMLElement>(selectors[step])?.focus();
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [crearNuevoCliente, open, pageMode, step]);
 
   useEffect(() => {
     // Relacionado con `check-in-back/src/routes/tiposHabitacion.js` (GET `/tipos-habitacion`):
@@ -296,7 +342,16 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   const handleSelectCliente = (cliente: any) => {
     setFormData({ ...formData, clienteId: cliente.id, clienteData: cliente });
     setSearchCliente('');
-    setClientes([]);
+    if (pageMode) window.setTimeout(() => setStep(4), 60);
+  };
+
+  const handleSelectRoom = (habitacion: any) => {
+    setFormData({
+      ...formData,
+      habitacionId: habitacion.id,
+      tipoHabitacion: habitacion.tipo_habitacion_id || habitacion.tipo_id || formData.tipoHabitacion,
+    });
+    if (pageMode) window.setTimeout(() => setStep(3), 60);
   };
 
   const handleClearCliente = () => {
@@ -361,6 +416,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
   };
 
   const handleNext = async () => {
+    if (step === 1 && noches < 1) return;
+    if (step === 2 && !formData.habitacionId) return;
+    if (step === 3 && !formData.clienteId && !nuevoClienteValido) return;
     if (step === 1) {
       // Si ya hay habitación preseleccionada (vino del timeline), saltar paso 2
       if (preload?.habitacion?.id) {
@@ -532,8 +590,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         console.warn('WhatsApp confirmación falló:', err);
       }
 
-      onOpenChange(false);
-      onSuccess?.();
+      if (!pageMode) onOpenChange(false);
+      onSuccess?.(reserva);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -555,26 +613,74 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
     ? (step === 1 ? 1 : step === 3 ? 2 : step === 4 ? 3 : step)
     : step;
   const progressValue = (currentStepLabel / totalSteps) * 100;
+  const handleSurfaceKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!pageMode || event.defaultPrevented || event.nativeEvent.isComposing) return;
+    const target = event.target as HTMLElement;
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && step === 4) {
+      event.preventDefault();
+      if (!loading && noches > 0 && (formData.clienteId || nuevoClienteValido)) void handleConfirm();
+      return;
+    }
+    if (event.key === 'Enter' && target.dataset.enterNext === 'true') {
+      event.preventDefault();
+      void handleNext();
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
-      <DialogContent className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-auto sm:w-[calc(100%-1rem)] sm:max-w-6xl sm:max-h-[92vh] sm:rounded-xl sm:border sm:p-5">
-        <DialogHeader className="sticky top-0 z-20 -mx-3 -mt-3 border-b bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:p-0">
+    <ReservationSurface pageMode={pageMode} open={open} onClose={() => onOpenChange(false)} surfaceRef={surfaceRef} onKeyDown={handleSurfaceKeyDown}>
+        {pageMode ? (
+          <header className="sticky top-0 z-30 -mx-3 -mt-4 border-b border-[#10233F]/10 bg-white/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+            <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <Button type="button" variant="ghost" size="icon" onClick={() => onOpenChange(false)} aria-label="Volver a reservaciones"><ArrowLeft className="h-5 w-5" /></Button>
+                <div className="min-w-0"><h1 className="truncate text-xl font-bold text-[#10233F] sm:text-2xl">{origen === 'Recepcion' ? 'Nueva entrada' : 'Nueva reserva'}</h1><p className="text-xs text-muted-foreground sm:text-sm">Captura rápida · usa Tab para avanzar y Enter para seleccionar</p></div>
+              </div>
+              <Badge variant="outline" className="shrink-0 border-[#10233F]/15 text-[#10233F]">Paso {currentStepLabel} de {totalSteps}</Badge>
+            </div>
+          </header>
+        ) : (
+          <DialogHeader className="sticky top-0 z-20 -mx-3 -mt-3 border-b bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:p-0">
           <DialogTitle className="flex items-center gap-2">
             {origen === 'Recepcion' ? <><UserPlus className="h-5 w-5" /> Check-in Directo</> : <><CalendarPlus className="h-5 w-5" /> Nueva Reserva</>}
           </DialogTitle>
           <DialogDescription>
             Paso {currentStepLabel} de {totalSteps} - {step === 1 ? 'Fechas' : step === 2 ? 'Habitación' : step === 3 ? 'Huésped' : 'Confirmar'}
           </DialogDescription>
-        </DialogHeader>
+          </DialogHeader>
+        )}
 
-        <Progress value={progressValue} className="h-2 mb-4" />
+        <div className={cn('space-y-3', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-3 shadow-sm sm:p-4')}>
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {([
+              [1, 'Fechas'],
+              ...(!preload?.habitacion?.id ? [[2, 'Habitación']] : []),
+              [3, 'Huésped'],
+              [4, 'Confirmar'],
+            ] as [Step, string][]).map(([value, label], index) => {
+              const display = index + 1;
+              const current = value === step;
+              const completed = display < currentStepLabel;
+              return <button key={value} type="button" disabled={!completed && !current} onClick={() => completed && setStep(value)} className={cn('flex min-w-max flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors', current ? 'bg-[#10233F] text-white' : completed ? 'bg-[#10233F]/[0.06] text-[#10233F] hover:bg-[#10233F]/10' : 'text-muted-foreground')}><span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-[10px]', current ? 'bg-white/15' : completed ? 'bg-emerald-100 text-emerald-700' : 'bg-muted')}>{completed ? '✓' : display}</span>{label}</button>;
+            })}
+          </div>
+          <Progress value={progressValue} className="h-1.5" />
+        </div>
+
+        {pageMode && (
+          <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <MiniSummary icon={CalendarDays} label="Estancia" value={`${noches || 0} noche${noches === 1 ? '' : 's'}`} detail={`${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}`} />
+            <MiniSummary icon={BedDouble} label="Habitación" value={selectedHabitacion ? `#${selectedHabitacion.numero}` : 'Por elegir'} detail={selectedTipo?.nombre || 'Sin categoría'} />
+            <MiniSummary icon={UserPlus} label="Huésped" value={formData.clienteData?.nombre || formData.nuevoCliente.nombre || 'Por elegir'} detail={formData.clienteData?.telefono || formData.nuevoCliente.telefono || 'Sin teléfono'} />
+            <MiniSummary icon={CreditCard} label="Total estimado" value={fmt(total)} detail={`${fmt(totalPagado)} pagado · ${fmt(saldoPendiente)} pendiente`} danger={saldoPendiente > 0} />
+          </section>
+        )}
 
         {/* STEP 1 - FECHAS */}
         {step === 1 && (
-          <div className="space-y-4">
+          <div className={cn('space-y-5', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-6')}>
             <div className="flex gap-2 p-1 bg-muted rounded-lg">
-              <Button type="button" variant={origen === 'Reserva' ? 'default' : 'ghost'} className="flex-1" onClick={() => handleOrigenChange('Reserva')}>
+              <Button data-step-focus="dates" type="button" variant={origen === 'Reserva' ? 'default' : 'ghost'} className="flex-1" onClick={() => handleOrigenChange('Reserva')}>
                 <CalendarPlus className="h-4 w-4 mr-2" /> Reserva
               </Button>
               <Button type="button" variant={origen === 'Recepcion' ? 'default' : 'ghost'} className="flex-1" onClick={() => handleOrigenChange('Recepcion')}>
@@ -604,7 +710,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 <Label>Check-in</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start" disabled={origen === 'Recepcion'}>
+                    <Button data-step-focus="dates" variant="outline" className="w-full justify-start" disabled={origen === 'Recepcion'}>
                       <CalendarDays className="mr-2 h-4 w-4" />
                       {formatDate(formData.fechaCheckin)}
                     </Button>
@@ -688,11 +794,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
 
         {/* STEP 2 - HABITACIÓN */}
         {step === 2 && (
-          <div className="space-y-4">
+          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-6')}>
             <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles para {formatDate(formData.fechaCheckin)} - {formatDate(formData.fechaCheckout)}</p>
-            <div className="grid gap-3 max-h-[400px] overflow-y-auto">
+            <div className={cn('grid gap-3 overflow-y-auto', pageMode ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'max-h-[400px]')}>
               {habitacionesDisponibles.map(hab => (
-                <Card key={hab.id} className={cn("cursor-pointer hover:border-primary transition-colors", formData.habitacionId === hab.id && "border-primary bg-primary/5")} onClick={() => setFormData({ ...formData, habitacionId: hab.id, tipoHabitacion: hab.tipo_habitacion_id || hab.tipo_id || formData.tipoHabitacion })}>
+                <button key={hab.id} type="button" data-room-option className="rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[#10233F] focus-visible:ring-offset-2" onClick={() => handleSelectRoom(hab)}>
+                <Card className={cn("h-full cursor-pointer hover:border-primary transition-colors", formData.habitacionId === hab.id && "border-primary bg-primary/5")}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -709,6 +816,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                     </div>
                   </CardContent>
                 </Card>
+                </button>
               ))}
               {habitacionesDisponibles.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
@@ -721,7 +829,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
 
         {/* STEP 3 - HUÉSPED */}
         {step === 3 && (
-          <div className="space-y-4">
+          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-6')}>
             {formData.clienteData ? (
               <Card className="border-primary bg-primary/5">
                 <CardContent className="p-4">
@@ -760,13 +868,14 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                   <Label>Buscar cliente</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Nombre, email o teléfono..." className="pl-9" value={searchCliente} onChange={(e) => setSearchCliente(e.target.value)} />
+                    <Input data-client-search placeholder="Nombre, email o teléfono..." className="pl-9" value={searchCliente} onChange={(e) => setSearchCliente(e.target.value)} />
                   </div>
                 </div>
                 {clientesFiltrados.length > 0 && (
                   <div className="space-y-2 max-h-[260px] overflow-y-auto">
                     {clientesFiltrados.map(cliente => (
-                      <Card key={cliente.id} className="cursor-pointer hover:border-primary transition-colors" onClick={() => handleSelectCliente(cliente)}>
+                      <button key={cliente.id} type="button" className="w-full rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[#10233F] focus-visible:ring-offset-2" onClick={() => handleSelectCliente(cliente)}>
+                      <Card className="cursor-pointer hover:border-primary transition-colors">
                         <CardContent className="p-3 flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
@@ -780,6 +889,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                           {cliente.es_vip && <Badge>VIP</Badge>}
                         </CardContent>
                       </Card>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -794,7 +904,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre *</Label>
-                    <Input value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
+                    <Input data-new-client-name value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Ap. Paterno *</Label>
@@ -808,7 +918,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Teléfono *</Label>
-                    <Input value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
+                    <Input data-enter-next="true" value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Email</Label>
@@ -1229,21 +1339,45 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         )}
 
         {/* FOOTER */}
-        <div className="sticky bottom-0 z-20 -mx-3 flex gap-2 border-t bg-background/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:static sm:mx-0 sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none">
+        <div className={cn(
+          'sticky bottom-0 z-20 -mx-3 flex gap-2 border-t bg-background/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
+          pageMode ? 'sm:-mx-6 sm:justify-between sm:px-6 lg:-mx-8 lg:px-8' : 'sm:static sm:mx-0 sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none',
+        )}>
           <Button className="h-11 flex-1 sm:flex-none" variant="outline" onClick={step === 1 ? () => onOpenChange(false) : handleBack}>
             {step === 1 ? 'Cancelar' : <><ChevronLeft className="mr-1 h-4 w-4" /> Anterior</>}
           </Button>
+          {pageMode && <span className="hidden self-center text-xs text-muted-foreground md:block"><kbd className="rounded border bg-white px-1.5 py-0.5">Tab</kbd> cambia de campo · <kbd className="rounded border bg-white px-1.5 py-0.5">Enter</kbd> selecciona y continúa</span>}
           {step < 4 ? (
             <Button className="h-11 flex-1 sm:flex-none" onClick={handleNext} disabled={(step === 1 && noches < 1) || (step === 2 && !formData.habitacionId) || (step === 3 && !formData.clienteId && !nuevoClienteValido)}>
               Siguiente <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleConfirm} disabled={loading || noches < 1 || (!formData.clienteId && !nuevoClienteValido)} size="lg" className={cn('h-11 flex-1 sm:flex-none', origen === 'Recepcion' && 'bg-green-600 hover:bg-green-700')}>
+            <Button data-confirm-reservation onClick={handleConfirm} disabled={loading || noches < 1 || (!formData.clienteId && !nuevoClienteValido)} size="lg" className={cn('h-11 flex-1 sm:flex-none', origen === 'Recepcion' && 'bg-green-600 hover:bg-green-700')}>
               {loading ? 'Procesando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Completar Check-in' : 'Confirmar Reserva'}</>}
             </Button>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </ReservationSurface>
   );
+}
+
+function MiniSummary({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  danger = false,
+}: {
+  icon: typeof CalendarDays;
+  label: string;
+  value: string;
+  detail: string;
+  danger?: boolean;
+}) {
+  return <Card className="border-[#10233F]/10 shadow-none">
+    <CardContent className="flex min-h-24 items-start gap-3 p-3 sm:p-4">
+      <span className={cn('rounded-lg p-2', danger ? 'bg-orange-50 text-orange-600' : 'bg-[#10233F]/[0.07] text-[#10233F]')}><Icon className="h-4 w-4" /></span>
+      <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p><p className="truncate text-base font-bold text-[#10233F] sm:text-lg">{value}</p><p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{detail}</p></div>
+    </CardContent>
+  </Card>;
 }

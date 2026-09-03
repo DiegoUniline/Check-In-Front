@@ -58,7 +58,7 @@ export const GUIAS: Guia[] = [
       { titulo: 'Cambiar vista', detalle: 'Usa los chips Calendario · Card · Habitaciones para cambiar cómo se muestran las reservas.' },
       { titulo: 'Navegar fechas', detalle: 'Con Día · Semana · Mes ajustas el rango. El calendario abre un selector rápido de mes/año.' },
       { titulo: 'Filtrar por tipo', detalle: 'Chips Todas · Doble · Sencilla · Triple filtran habitaciones al instante.' },
-      { titulo: 'Crear reserva', detalle: 'Arrastra sobre celdas vacías o toca una celda para abrir el formulario de nueva reserva.' },
+      { titulo: 'Crear reserva', detalle: 'Arrastra sobre celdas vacías o toca una celda para abrir la captura completa de la nueva reserva.' },
       { titulo: 'Ver detalle', detalle: 'Da clic sobre una reserva existente para abrir el modal con toda su información, pagos y acciones.' },
     ],
     tips: ['Si filtras y ves vacío es porque no hay reservas en ese rango. Cambia el mes.'],
