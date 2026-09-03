@@ -558,8 +558,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
 
   return (
     <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
-      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-auto sm:w-[calc(100%-1rem)] sm:max-w-6xl sm:max-h-[92vh] sm:rounded-xl sm:border sm:p-5">
+        <DialogHeader className="sticky top-0 z-20 -mx-3 -mt-3 border-b bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:p-0">
           <DialogTitle className="flex items-center gap-2">
             {origen === 'Recepcion' ? <><UserPlus className="h-5 w-5" /> Check-in Directo</> : <><CalendarPlus className="h-5 w-5" /> Nueva Reserva</>}
           </DialogTitle>
@@ -909,8 +909,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
               <Card>
                 <CardContent className="p-4 space-y-3">
                   <Label className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Cargos Extras</Label>
-                  <div className="flex flex-wrap gap-2">
-                    <div className="flex-1 min-w-[160px]">
+                  <div className="grid grid-cols-[72px_minmax(0,1fr)_40px] gap-2 sm:grid-cols-[minmax(0,1fr)_72px_112px_40px]">
+                    <div className="col-span-3 min-w-0 sm:col-span-1">
                       <ComboboxCreatable
                         options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
                         value={cargoConcepto}
@@ -925,9 +925,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                         createLabel="Crear"
                       />
                     </div>
-                    <Input className="w-16 sm:w-20" type="number" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
-                    <Input className="w-24 sm:w-28" type="number" placeholder="$" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
-                    <Button onClick={handleAgregarCargo} disabled={!cargoConcepto}><Plus className="h-4 w-4" /></Button>
+                    <Input className="w-full px-2" type="number" inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+                    <Input className="w-full px-2" type="number" inputMode="decimal" placeholder="$" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
+                    <Button className="w-10 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto}><Plus className="h-4 w-4" /></Button>
                   </div>
                   {formData.cargos.map(c => (
                     <div key={c.id} className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded">
@@ -957,9 +957,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                         </p>
                       )}
                       {formData.impuestos.map((imp) => (
-                        <div key={imp.id} className="flex items-center gap-3">
+                        <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_82px_36px] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_112px_112px_36px]">
                           <Input
-                            className="h-9 w-64"
+                            className="h-9 w-full min-w-0"
                             placeholder="Nombre del impuesto"
                             value={imp.nombre}
                             onChange={(e) =>
@@ -971,7 +971,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                               }))
                             }
                           />
-                          <div className="relative w-28">
+                          <div className="relative w-full">
                             <Input
                               type="number"
                               min="0"
@@ -989,7 +989,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
                             />
                             <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                           </div>
-                          <span className="text-sm text-muted-foreground w-28 text-right tabular-nums">
+                          <span className="col-span-2 row-start-2 text-right text-xs tabular-nums text-muted-foreground sm:col-span-1 sm:row-start-auto sm:text-sm">
                             {fmt(subtotal * (imp.tasa / 100))}
                           </span>
                           <Button
@@ -1229,16 +1229,16 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess }: Nu
         )}
 
         {/* FOOTER */}
-        <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={step === 1 ? () => onOpenChange(false) : handleBack}>
+        <div className="sticky bottom-0 z-20 -mx-3 flex gap-2 border-t bg-background/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:static sm:mx-0 sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none">
+          <Button className="h-11 flex-1 sm:flex-none" variant="outline" onClick={step === 1 ? () => onOpenChange(false) : handleBack}>
             {step === 1 ? 'Cancelar' : <><ChevronLeft className="mr-1 h-4 w-4" /> Anterior</>}
           </Button>
           {step < 4 ? (
-            <Button onClick={handleNext} disabled={(step === 1 && noches < 1) || (step === 2 && !formData.habitacionId) || (step === 3 && !formData.clienteId && !nuevoClienteValido)}>
+            <Button className="h-11 flex-1 sm:flex-none" onClick={handleNext} disabled={(step === 1 && noches < 1) || (step === 2 && !formData.habitacionId) || (step === 3 && !formData.clienteId && !nuevoClienteValido)}>
               Siguiente <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleConfirm} disabled={loading || noches < 1 || (!formData.clienteId && !nuevoClienteValido)} size="lg" className={origen === 'Recepcion' ? 'bg-green-600 hover:bg-green-700' : ''}>
+            <Button onClick={handleConfirm} disabled={loading || noches < 1 || (!formData.clienteId && !nuevoClienteValido)} size="lg" className={cn('h-11 flex-1 sm:flex-none', origen === 'Recepcion' && 'bg-green-600 hover:bg-green-700')}>
               {loading ? 'Procesando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Completar Check-in' : 'Confirmar Reserva'}</>}
             </Button>
           )}

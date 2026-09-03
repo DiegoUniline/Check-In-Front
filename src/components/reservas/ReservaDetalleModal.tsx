@@ -728,18 +728,18 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-3xl w-[calc(100vw-1rem)] sm:w-auto max-h-[calc(100dvh-1rem)] sm:max-h-[88dvh] overflow-y-auto p-4 sm:p-6"
+        className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-auto sm:w-[calc(100vw-1rem)] sm:max-w-3xl sm:max-h-[88dvh] sm:rounded-xl sm:border sm:p-6"
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
               <DialogTitle className="text-xl">#{r.numero_reserva || r.id?.slice(0, 8)}</DialogTitle>
               {getEstadoBadge(r.estado)}
               {getOrigenBadge(r.origen)}
               {loading && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
-            <div className="flex gap-2">
+            <div className="flex max-w-full gap-2 overflow-x-auto pb-1 sm:overflow-visible sm:pb-0">
               {!editMode && r.estado !== 'CheckOut' && r.estado !== 'Cancelada' && (
                 <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
                   <Pencil className="h-4 w-4 mr-1" /> Editar
@@ -782,22 +782,24 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="resumen">Resumen</TabsTrigger>
-                <TabsTrigger value="huesped">Huésped</TabsTrigger>
-                <TabsTrigger value="cargos">Cargos {r.cargos?.length > 0 && `(${r.cargos.length})`}</TabsTrigger>
-                <TabsTrigger value="entregables">
-                  Entregables
-                  {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length > 0 && (
-                    <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 text-xs">
-                      {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="pagos">Pagos {r.pagos?.length > 0 && `(${r.pagos.length})`}</TabsTrigger>
-              </TabsList>
+              <div className="-mx-1 overflow-x-auto px-1 pb-1">
+                <TabsList className="inline-flex h-10 w-max min-w-full justify-start">
+                  <TabsTrigger className="min-w-[92px]" value="resumen">Resumen</TabsTrigger>
+                  <TabsTrigger className="min-w-[92px]" value="huesped">Huésped</TabsTrigger>
+                  <TabsTrigger className="min-w-[92px]" value="cargos">Cargos {r.cargos?.length > 0 && `(${r.cargos.length})`}</TabsTrigger>
+                  <TabsTrigger className="min-w-[112px]" value="entregables">
+                    Entregables
+                    {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length > 0 && (
+                      <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 text-xs">
+                        {reservaEntregables.filter(e => e.requiere_devolucion && !e.devuelto).length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger className="min-w-[92px]" value="pagos">Pagos {r.pagos?.length > 0 && `(${r.pagos.length})`}</TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* TAB RESUMEN */}
               <TabsContent value="resumen" className="space-y-4 mt-4">
@@ -1143,10 +1145,10 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-base">Registrar Pago</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="flex gap-2">
+                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_160px_auto]">
                       <Input type="number" placeholder="Monto" value={montoAbono} onChange={(e) => setMontoAbono(e.target.value)} className="flex-1" />
-                      <MetodoPagoSelect value={metodoPago} onChange={setMetodoPago} className="w-[160px]" />
-                      <Button onClick={handleAbonar} disabled={processing}>
+                      <MetodoPagoSelect value={metodoPago} onChange={setMetodoPago} className="w-full" />
+                      <Button className="w-full" onClick={handleAbonar} disabled={processing}>
                         <CreditCard className="h-4 w-4 mr-1" /> Pagar
                       </Button>
                     </div>

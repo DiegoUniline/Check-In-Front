@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { format, addDays, parseISO, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -51,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { addMonths } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Chips reutilizables para filtro de tipo de habitación
 const TipoChips = ({
@@ -142,6 +143,8 @@ type ViewMode = 'Dia' | 'Semana' | 'Mes';
 export default function Reservas() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
+  const mobileViewInitialized = useRef(false);
   const { vista } = useParams<{ vista?: string }>();
   const [loading, setLoading] = useState(true);
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
@@ -213,6 +216,15 @@ export default function Reservas() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  // En teléfono la lista de habitaciones es la vista operativa más clara.
+  // El calendario continúa disponible, pero ya no obliga a desplazarse al entrar.
+  useEffect(() => {
+    if (isMobile && !mobileViewInitialized.current) {
+      mobileViewInitialized.current = true;
+      setReservasSubView('card');
+    }
+  }, [isMobile]);
 
   // Realtime: refresca cuando cambian reservas o estados de habitación
   useRealtimeSync('reservas', () => cargarDatos());
@@ -302,6 +314,27 @@ export default function Reservas() {
         className="space-y-3"
         style={{ paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4rem))' }}
       >
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
+          <Button
+            className="col-span-2 h-12 justify-center text-sm font-semibold shadow-sm"
+            onClick={() => {
+              setPreloadReserva(undefined);
+              setModalNuevaReserva(true);
+            }}
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            Nueva reserva
+          </Button>
+          <Button variant="outline" className="h-11" onClick={() => navigate('/reservas/checkin')}>
+            <LogIn className="mr-2 h-4 w-4 text-emerald-600" />
+            Llegadas ({llegadasHoy})
+          </Button>
+          <Button variant="outline" className="h-11" onClick={() => navigate('/reservas/checkout')}>
+            <LogOut className="mr-2 h-4 w-4 text-orange-600" />
+            Salidas ({salidasHoy})
+          </Button>
+        </div>
+
         {/* KPI compactos, mobile-first */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Card className="p-3">
@@ -380,11 +413,11 @@ export default function Reservas() {
                     <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
                     <PisoChips value={filtroPiso} onChange={setFiltroPiso} pisos={pisosDisponibles} />
                   </div>
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                     <Input
                       placeholder="Buscar habitación..."
-                      className="pl-7 h-8 w-[200px] text-xs"
+                      className="h-10 w-full pl-8 text-sm sm:h-8 sm:w-[200px] sm:text-xs"
                       value={busqueda}
                       onChange={(e) => setBusqueda(e.target.value)}
                     />
@@ -454,7 +487,7 @@ export default function Reservas() {
           <TabsContent value="timeline" className="space-y-3 mt-3">
             {/* Selector Timeline / Card / Tabla */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="inline-flex bg-muted p-1 rounded-xl">
+              <div className="grid w-full grid-cols-3 rounded-xl bg-muted p-1 sm:inline-flex sm:w-auto">
                 {([
                   { key: 'timeline', label: 'Calendario' },
                   { key: 'card', label: 'Card' },
@@ -464,7 +497,7 @@ export default function Reservas() {
                     key={opt.key}
                     variant={reservasSubView === opt.key ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-10 w-28 sm:w-32 px-4 text-sm font-medium"
+                    className="h-10 w-full px-2 text-xs font-medium sm:w-32 sm:px-4 sm:text-sm"
                     onClick={() => setReservasSubView(opt.key)}
                   >
                     {opt.label}
@@ -534,11 +567,11 @@ export default function Reservas() {
                 <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
                 <PisoChips value={filtroPiso} onChange={setFiltroPiso} pisos={pisosDisponibles} />
               </div>
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Buscar habitación..."
-                  className="pl-8 h-8 w-[200px] text-xs"
+                  className="h-10 w-full pl-8 text-sm sm:h-8 sm:w-[200px] sm:text-xs"
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                 />
@@ -1171,7 +1204,7 @@ function CheckInOutPanel({
     <div className="space-y-3">
       {/* Header */}
       <Card className={`${palette.cardBorder} ${palette.cardBg}`}>
-        <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-lg ${palette.iconBg} flex items-center justify-center`}>
               <Icon className={`h-5 w-5 ${palette.iconText}`} />
@@ -1181,7 +1214,7 @@ function CheckInOutPanel({
               <p className="text-xs text-muted-foreground">{subtitulo}</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
             <div className="text-right">
               <p className={`text-2xl font-light tabular-nums leading-none ${palette.bigText}`}>
                 {filtrados.length}
@@ -1206,8 +1239,8 @@ function CheckInOutPanel({
       </Card>
 
       {/* Filtros */}
-      <div className="flex items-end gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-md">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-end">
+        <div className="relative col-span-2 min-w-0 sm:flex-1 sm:min-w-[220px] sm:max-w-md">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Buscar por huésped, habitación o número…"
@@ -1225,19 +1258,19 @@ function CheckInOutPanel({
             </button>
           )}
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Desde</label>
-          <Input type="date" value={desde} onChange={(e) => onDesdeChange(e.target.value)} className="h-9 text-sm w-[150px]" />
+          <Input type="date" value={desde} onChange={(e) => onDesdeChange(e.target.value)} className="h-10 w-full min-w-0 text-sm sm:h-9 sm:w-[150px]" />
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Hasta</label>
-          <Input type="date" value={hasta} onChange={(e) => onHastaChange(e.target.value)} className="h-9 text-sm w-[150px]" />
+          <Input type="date" value={hasta} onChange={(e) => onHastaChange(e.target.value)} className="h-10 w-full min-w-0 text-sm sm:h-9 sm:w-[150px]" />
         </div>
         {(desde || hasta) && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-9"
+            className="col-span-2 h-9 sm:col-auto"
             onClick={() => { onDesdeChange(''); onHastaChange(''); }}
           >
             Limpiar fechas
@@ -1251,7 +1284,7 @@ function CheckInOutPanel({
           <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : filtrados.length === 0 ? (
-        <Card className="p-12 text-center">
+        <Card className="p-8 text-center sm:p-12">
           <Icon className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">
             {busqueda ? 'No se encontraron reservas con ese término' : emptyText}
@@ -1316,7 +1349,7 @@ function CheckInOutPanel({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="opacity-60 group-hover:opacity-100 transition-opacity"
+                    className="hidden opacity-60 transition-opacity group-hover:opacity-100 sm:inline-flex"
                     onClick={(e) => {
                       e.stopPropagation();
                       onAction(r.id);
@@ -1326,6 +1359,17 @@ function CheckInOutPanel({
                     <ArrowRight className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 </div>
+                <Button
+                  size="sm"
+                  className="mt-3 h-10 w-full sm:hidden"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAction(r.id);
+                  }}
+                >
+                  {ctaLabel}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </Card>
             );
           })}

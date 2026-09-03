@@ -21,6 +21,10 @@ export function MobileBottomNav() {
       ? pathname === '/dashboard'
       : url === '/reservas'
       ? pathname === '/reservas'
+      : url === '/reservas/checkin'
+      ? pathname === '/reservas/checkin' || pathname.startsWith('/checkin/')
+      : url === '/reservas/checkout'
+      ? pathname === '/reservas/checkout' || pathname.startsWith('/checkout/')
       : pathname === url || pathname.startsWith(url + '/');
 
   const items = primary.filter((i) => !i.viewKey || canAccess(i.viewKey, user?.rol)).slice(0, 5);

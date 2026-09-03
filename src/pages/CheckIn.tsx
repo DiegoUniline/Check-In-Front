@@ -273,7 +273,7 @@ export default function CheckIn() {
       title="Check-In"
       subtitle={`Reserva ${reserva.numero_reserva || reserva.id?.slice(0, 8)}`}
     >
-      <div className="mx-auto max-w-7xl space-y-4 lg:space-y-5">
+      <div className="mx-auto max-w-7xl space-y-4 pb-24 lg:space-y-5 lg:pb-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate('/reservas/checkin')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -293,9 +293,9 @@ export default function CheckIn() {
 
         <Card className="overflow-hidden border-border/70 shadow-sm">
           <CardContent className="p-0">
-            <div className="grid divide-y sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+            <div className="grid grid-cols-4 divide-x">
               {steps.map((step, index) => (
-                <div key={step.label} className="flex items-center gap-3 px-4 py-3.5">
+                <div key={step.label} className="flex min-w-0 flex-col items-center gap-1 px-1.5 py-3 text-center sm:flex-row sm:gap-3 sm:px-4 sm:py-3.5 sm:text-left">
                   <div
                     className={cn(
                       'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
@@ -307,10 +307,10 @@ export default function CheckIn() {
                     {step.done ? <Check className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <p className="hidden text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:block">
                       Paso {index + 1}
                     </p>
-                    <p className="truncate text-sm font-medium">{step.label}</p>
+                    <p className="max-w-full truncate text-[10px] font-medium sm:text-sm">{step.label}</p>
                   </div>
                 </div>
               ))}
@@ -564,6 +564,26 @@ export default function CheckIn() {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+        </div>
+
+        <div
+          className="fixed inset-x-0 z-40 border-t border-brand-navy/15 bg-background/96 px-3 py-2 shadow-[0_-8px_28px_rgba(16,35,63,0.12)] backdrop-blur lg:hidden"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}
+        >
+          <div className="mx-auto flex max-w-lg items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Restante</p>
+              <p className="truncate text-base font-bold text-brand-navy">{formatCurrency(saldoRestante)}</p>
+            </div>
+            <Button
+              className="h-11 min-w-[176px] font-semibold"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !formData.habitacionId || !aceptaTerminos || !firma}
+            >
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+              Completar check-in
+            </Button>
           </div>
         </div>
       </div>
