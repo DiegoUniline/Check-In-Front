@@ -15,6 +15,7 @@ import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 import { StayConsumptionPicker, type StayConsumptionItem } from '@/components/reservas/StayConsumptionPicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -71,9 +72,65 @@ const groups: { title: string; operations: Operation[] }[] = [
 
 const DATE_OPERATIONS = ['extend_stay', 'early_departure', 'modify_dates'];
 const ROOM_OPERATIONS = ['room_change', 'category_change', 'early_checkin', 'room_out_of_service', 'reopen_checkout'];
+const ROUTINE_OPERATIONS = ['add_charge', 'partial_payment', 'add_guest', 'split_account'];
 
 const dateOnly = (value: any) => String(value || '').slice(0, 10);
 const money = (value: any) => Number(value || 0);
+const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+const dateFromValue = (value: any) => {
+  const [year, month, day] = dateOnly(value).split('-').map(Number);
+  return year && month && day ? new Date(year, month - 1, day, 12) : undefined;
+};
+const dateToValue = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+const nightsBetween = (checkin: any, checkout: any) => {
+  const start = dateFromValue(checkin);
+  const end = dateFromValue(checkout);
+  return start && end ? Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000)) : 1;
+};
+
+type FinancialSnapshot = {
+  nights: number;
+  lodging: number;
+  charges: number;
+  taxes: number;
+  discount: number;
+  total: number;
+  paid: number;
+  balance: number;
+};
+
+const calculateFinancialSnapshot = (reserva: any, options: {
+  checkin?: string;
+  checkout?: string;
+  nightlyRate?: number;
+  extraGuests?: number;
+  extraGuestRate?: number;
+  additionalCharges?: number;
+  paidDelta?: number;
+  discountType?: string | null;
+  discountValue?: number;
+} = {}): FinancialSnapshot => {
+  const nights = nightsBetween(options.checkin || reserva.fecha_checkin, options.checkout || reserva.fecha_checkout);
+  const nightlyRate = options.nightlyRate ?? money(reserva.tarifa_noche);
+  const extraGuests = options.extraGuests ?? money(reserva.personas_extra);
+  const extraGuestRate = options.extraGuestRate ?? money(reserva.cargo_persona_extra);
+  const lodging = roundMoney(nights * nightlyRate + nights * extraGuests * extraGuestRate);
+  const activeCharges = (reserva.cargos || []).filter((charge: any) => charge.estado !== 'Cancelado');
+  const charges = roundMoney(activeCharges.reduce((sum: number, charge: any) => sum + money(charge.total ?? (money(charge.subtotal) + money(charge.impuesto))), 0) + money(options.additionalCharges));
+  const inferredTaxRate = money(reserva.impuesto_hospedaje_porcentaje) || (money(reserva.subtotal_hospedaje) > 0 ? money(reserva.total_impuestos) * 100 / money(reserva.subtotal_hospedaje) : 0);
+  const taxes = roundMoney(lodging * Math.max(0, inferredTaxRate) / 100);
+  const base = Math.max(0, lodging + charges + taxes);
+  const discountType = options.discountType === undefined ? reserva.descuento_tipo : options.discountType;
+  const discountValue = options.discountValue === undefined ? money(reserva.descuento_valor) : options.discountValue;
+  let discount = money(reserva.descuento);
+  if (String(discountType || '').toLowerCase().startsWith('porc')) discount = base * Math.max(0, discountValue) / 100;
+  else if (String(discountType || '').toLowerCase().startsWith('monto')) discount = Math.max(0, discountValue);
+  else if (options.discountType === null) discount = 0;
+  discount = roundMoney(Math.min(base, discount));
+  const total = roundMoney(Math.max(0, base - discount));
+  const paid = roundMoney((reserva.pagos || []).filter((payment: any) => payment.estado !== 'Cancelado').reduce((sum: number, payment: any) => sum + money(payment.monto), 0) + money(options.paidDelta));
+  return { nights, lodging, charges, taxes, discount, total, paid, balance: roundMoney(total - paid) };
+};
 const shiftDate = (value: any, days: number) => {
   const [year, month, day] = dateOnly(value).split('-').map(Number);
   if (!year || !month || !day) return '';
@@ -149,6 +206,66 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
     });
   }, [availableRooms, roomFloorFilter, roomSearch, roomTypeFilter]);
   const isActiveStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && !reserva.checkout_realizado;
+  const nextRoomReservation = useMemo(() => reservations
+    .filter((item) => item.id !== reserva.id
+      && item.habitacion_id === reserva.habitacion_id
+      && !['Cancelada', 'NoShow', 'CheckOut'].includes(String(item.estado || ''))
+      && dateOnly(item.fecha_checkin) >= dateOnly(reserva.fecha_checkout))
+    .sort((a, b) => dateOnly(a.fecha_checkin).localeCompare(dateOnly(b.fecha_checkin)))[0] || null,
+  [reservations, reserva.fecha_checkout, reserva.habitacion_id, reserva.id]);
+  const financialPreview = useMemo(() => {
+    const current = calculateFinancialSnapshot(reserva);
+    if (!selected) return null;
+    const options: Parameters<typeof calculateFinancialSnapshot>[1] = {};
+    let visible = false;
+
+    if (DATE_OPERATIONS.includes(selected.id) || selected.id === 'reopen_checkout') {
+      options.checkin = dateOnly(payload.new_checkin || reserva.fecha_checkin);
+      options.checkout = dateOnly(payload.new_checkout || reserva.fecha_checkout);
+      visible = true;
+    } else if (['rate_change', 'category_change'].includes(selected.id)) {
+      options.nightlyRate = money(payload.new_rate);
+      visible = true;
+    } else if (selected.id === 'discount_change') {
+      if (payload.discount_type === 'Cortesia') {
+        options.discountType = 'Porcentaje'; options.discountValue = 100;
+      } else if (payload.discount_type === 'none') {
+        options.discountType = null; options.discountValue = 0;
+      } else {
+        options.discountType = payload.discount_type; options.discountValue = money(payload.discount_value);
+      }
+      visible = true;
+    } else if (selected.id === 'add_guest' && payload.generates_charge) {
+      const existingCount = money(reserva.personas_extra);
+      const existingRateTotal = existingCount * money(reserva.cargo_persona_extra);
+      options.extraGuests = existingCount + 1;
+      options.extraGuestRate = options.extraGuests > 0 ? (existingRateTotal + money(payload.charge_per_night)) / options.extraGuests : 0;
+      visible = true;
+    } else if (selected.id === 'add_charge') {
+      options.additionalCharges = ((payload.items || []) as StayConsumptionItem[]).reduce((sum, item) => sum + money(item.quantity) * money(item.unit_price), 0);
+      visible = true;
+    } else if (['late_checkout', 'early_checkin'].includes(selected.id)) {
+      options.additionalCharges = money(payload.charge_amount);
+      visible = true;
+    } else if (selected.id === 'partial_payment') {
+      options.paidDelta = money(payload.amount);
+      visible = true;
+    } else if (['update_charge', 'cancel_charge', 'restore_charge'].includes(selected.id) && payload.charge_id) {
+      const charge = (reserva.cargos || []).find((item: any) => item.id === payload.charge_id);
+      const currentCharge = charge?.estado === 'Cancelado' ? 0 : money(charge?.total ?? charge?.subtotal);
+      const nextCharge = selected.id === 'cancel_charge' ? 0
+        : selected.id === 'restore_charge' ? money(charge?.total ?? charge?.subtotal)
+          : money(payload.quantity) * money(payload.amount) + money(payload.tax);
+      options.additionalCharges = nextCharge - currentCharge;
+      visible = true;
+    } else if (['cancel_payment', 'restore_payment'].includes(selected.id) && payload.payment_id) {
+      const payment = (reserva.pagos || []).find((item: any) => item.id === payload.payment_id);
+      options.paidDelta = (selected.id === 'cancel_payment' ? -1 : 1) * money(payment?.monto);
+      visible = true;
+    }
+
+    return visible ? { current, next: calculateFinancialSnapshot(reserva, options) } : null;
+  }, [payload, reserva, selected]);
 
   const load = async () => {
     setLoading(true);
@@ -289,7 +406,16 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
       toast({ title: 'Selecciona el consumo', description: 'Agrega por lo menos un producto o servicio del catálogo.', variant: 'destructive' });
       return;
     }
-    if (reason.trim().length < 3) {
+    if (selected.id === 'partial_payment') {
+      const amount = money(payload.amount);
+      const currentBalance = calculateFinancialSnapshot(reserva).balance;
+      if (amount <= 0 || amount > currentBalance + 0.009 || !payload.payment_method) {
+        toast({ title: 'Revisa el pago', description: amount > currentBalance ? 'El abono no puede superar el saldo pendiente.' : 'Captura un importe válido y selecciona la forma de pago.', variant: 'destructive' });
+        return;
+      }
+    }
+    const requiresReason = !ROUTINE_OPERATIONS.includes(selected.id);
+    if (requiresReason && reason.trim().length < 3) {
       toast({ title: 'Escribe el motivo', description: 'La trazabilidad requiere una explicación breve.', variant: 'destructive' });
       return;
     }
@@ -299,7 +425,16 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
       for (const key of ['late_until', 'blocked_until']) {
         if (normalizedPayload[key]) normalizedPayload[key] = new Date(normalizedPayload[key]).toISOString();
       }
-      await api.applyStayOperation(reserva.id, selected.id, normalizedPayload, reason.trim());
+      await api.applyStayOperation(
+        reserva.id,
+        selected.id,
+        normalizedPayload,
+        requiresReason ? reason.trim() : selected.id === 'add_charge'
+          ? `Consumo cargado directamente a la habitación ${reserva.habitacion_numero || ''}`.trim()
+          : selected.id === 'partial_payment' ? `Abono registrado con ${payload.payment_method || 'forma de pago seleccionada'}`
+            : selected.id === 'add_guest' ? 'Huésped adicional registrado'
+              : 'Cuenta dividida desde la estancia',
+      );
       toast({ title: 'Operación completada', description: `${selected.label} se aplicó y quedó en el historial.` });
       setSelected(null); await onUpdate?.(); await load();
     } catch (error: any) {
@@ -371,7 +506,7 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
         <p className="mt-2 text-sm font-medium text-[#10233F]">No hay habitaciones con estos filtros</p>
         <p className="mt-1 text-xs text-muted-foreground">Cambia la búsqueda o los filtros. Nunca mostraremos una habitación con conflicto.</p>
         {(roomSearch || roomTypeFilter !== 'all' || roomFloorFilter !== 'all') && <Button type="button" variant="link" size="sm" onClick={() => { setRoomSearch(''); setRoomTypeFilter('all'); setRoomFloorFilter('all'); }}>Limpiar filtros</Button>}
-      </div> : <div className="max-h-[38dvh] space-y-2 overflow-y-auto pr-1 sm:grid sm:grid-cols-2 sm:gap-2 sm:space-y-0">
+      </div> : <div className="max-h-[40dvh] space-y-2 overflow-y-auto pr-1 sm:grid sm:grid-cols-2 sm:gap-2 sm:space-y-0 lg:grid-cols-3">
         {filteredAvailableRooms.map((room) => {
           const typeName = room.tipos_habitacion?.nombre || room.tipo_nombre || room.tipo || 'Sin categoría';
           const selectedRoomId = payload.new_room_id === room.id;
@@ -416,6 +551,64 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
     </div>;
   };
 
+  const financialImpactNotice = (mode: 'full' | 'payment' = 'full') => {
+    if (!financialPreview) return null;
+    return <FinancialPreview current={financialPreview.current} next={financialPreview.next} mode={mode} />;
+  };
+
+  const extensionCalendar = () => {
+    const currentCheckout = dateOnly(reserva.fecha_checkout);
+    const selectedCheckout = dateOnly(payload.new_checkout);
+    const limit = dateOnly(nextRoomReservation?.fecha_checkin);
+    return <div className="grid items-start gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="rounded-xl border border-[#10233F]/10 bg-white p-2">
+        <Calendar
+          mode="single"
+          selected={dateFromValue(selectedCheckout)}
+          defaultMonth={dateFromValue(selectedCheckout || currentCheckout)}
+          onSelect={(day) => day && set('new_checkout', dateToValue(day))}
+          disabled={(day) => {
+            const value = dateToValue(day);
+            return value <= currentCheckout || Boolean(limit && value > limit);
+          }}
+          modifiers={{
+            currentStay: (day) => {
+              const value = dateToValue(day);
+              return value >= dateOnly(reserva.fecha_checkin) && value < currentCheckout;
+            },
+            addedNight: (day) => {
+              const value = dateToValue(day);
+              return value >= currentCheckout && value < selectedCheckout;
+            },
+            nextArrival: (day) => Boolean(limit && dateToValue(day) === limit),
+          }}
+          modifiersClassNames={{
+            currentStay: 'bg-[#10233F]/[0.06] text-[#10233F]',
+            addedNight: 'bg-emerald-100 text-emerald-800 rounded-none',
+            nextArrival: 'ring-2 ring-amber-400 ring-inset font-bold',
+          }}
+          className="mx-auto w-fit"
+        />
+        <div className="flex flex-wrap gap-x-3 gap-y-1 border-t px-2 pt-2 text-[11px] text-muted-foreground">
+          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#10233F]/15" />Estancia actual</span>
+          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-200" />Noches nuevas</span>
+          {limit && <span><i className="mr-1 inline-block h-2 w-2 rounded-sm ring-2 ring-amber-400" />Siguiente llegada</span>}
+        </div>
+      </div>
+      <div className="space-y-3">
+        <div className="rounded-xl border border-[#10233F]/10 bg-[#F7F9FC] p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nueva salida</p>
+          <p className="mt-1 text-xl font-bold text-[#10233F]">{selectedCheckout ? formatDate(selectedCheckout) : 'Selecciona una fecha'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{limit
+            ? `Puedes extender como máximo hasta el ${formatDate(limit)}; ese día llega la siguiente reservación.`
+            : 'No hay otra reservación futura que limite esta habitación.'}</p>
+        </div>
+        {availabilityNotice()}
+        {financialImpactNotice()}
+      </div>
+    </div>;
+  };
+
   const reservationSelect = (key: string, label: string, sameGuest = false) => (
     <Field label={label}>
       <Select value={payload[key] || ''} onValueChange={(value) => set(key, value)}>
@@ -454,25 +647,25 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
     if (!selected) return null;
     switch (selected.id) {
       case 'extend_stay':
-        return <div><Field label="Nueva fecha de salida"><Input type="date" min={shiftDate(reserva.fecha_checkout, 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{availabilityNotice()}</div>;
+        return extensionCalendar();
       case 'early_departure':
-        return <div><Field label="Nueva fecha de salida"><Input type="date" min={isActiveStay ? todayLocal() : shiftDate(reserva.fecha_checkin, 1)} max={shiftDate(reserva.fecha_checkout, -1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{availabilityNotice()}</div>;
+        return <div className="space-y-3"><Field label="Nueva fecha de salida"><Input type="date" min={isActiveStay ? todayLocal() : shiftDate(reserva.fecha_checkin, 1)} max={shiftDate(reserva.fecha_checkout, -1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{availabilityNotice()}{financialImpactNotice()}</div>;
       case 'modify_dates':
-        return <div><div className="grid gap-3 sm:grid-cols-2"><Field label="Nueva entrada"><Input type="date" max={shiftDate(payload.new_checkout, -1)} value={payload.new_checkin || ''} onChange={(e) => set('new_checkin', e.target.value)} /></Field><Field label="Nueva salida"><Input type="date" min={shiftDate(payload.new_checkin, 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field></div>{availabilityNotice()}</div>;
+        return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Nueva entrada"><Input type="date" max={shiftDate(payload.new_checkout, -1)} value={payload.new_checkin || ''} onChange={(e) => set('new_checkin', e.target.value)} /></Field><Field label="Nueva salida"><Input type="date" min={shiftDate(payload.new_checkin, 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field></div>{availabilityNotice()}{financialImpactNotice()}</div>;
       case 'room_change': return roomSelect();
-      case 'category_change': return <div className="space-y-3">{roomSelect('Nueva habitación / categoría')}<Field label="Tipo de cambio"><Select value={payload.change_type || 'Upgrade'} onValueChange={(v) => { setPayload((current) => { const room = availableRooms.find((item) => item.id === current.new_room_id); return { ...current, change_type: v, new_rate: v === 'Cortesia' ? '0' : String(money(room?.precio_base ?? room?.tipos_habitacion?.precio_base ?? reserva.tarifa_noche)) }; }); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Upgrade">Upgrade</SelectItem><SelectItem value="Downgrade">Downgrade</SelectItem><SelectItem value="Cortesia">Cortesía</SelectItem><SelectItem value="CambioConCosto">Cambio con costo</SelectItem></SelectContent></Select></Field><Field label="Tarifa resultante por noche"><Input type="number" min="0" value={payload.new_rate || ''} onChange={(e) => set('new_rate', e.target.value)} /><p className="mt-1 text-xs text-muted-foreground">Se propone automáticamente la tarifa base de la categoría. Sólo gerencia puede modificarla.</p></Field></div>;
-      case 'late_checkout': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Salida autorizada"><Input type="datetime-local" value={payload.late_until || ''} onChange={(e) => set('late_until', e.target.value)} /></Field><Field label="Cargo adicional"><Input type="number" min="0" value={payload.charge_amount || ''} onChange={(e) => set('charge_amount', e.target.value)} /></Field></div>;
-      case 'early_checkin': return <div className="space-y-3">{roomSelect('Habitación limpia y lista')}<Field label="Cargo adicional"><Input type="number" min="0" value={payload.charge_amount || ''} onChange={(e) => set('charge_amount', e.target.value)} /></Field></div>;
-      case 'add_guest': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Nombre"><Input value={payload.name || ''} onChange={(e) => set('name', e.target.value)} /></Field><Field label="Apellido"><Input value={payload.last_name || ''} onChange={(e) => set('last_name', e.target.value)} /></Field><Field label="Tipo"><Select value={payload.guest_type} onValueChange={(v) => set('guest_type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Adulto">Adulto</SelectItem><SelectItem value="Menor">Menor</SelectItem></SelectContent></Select></Field><Field label="Documento"><Input value={payload.document || ''} onChange={(e) => set('document', e.target.value)} /></Field><label className="flex items-center gap-2 text-sm"><Checkbox checked={payload.generates_charge} onCheckedChange={(v) => set('generates_charge', v === true)} />Genera cargo por noche</label>{payload.generates_charge && <Field label="Cargo por noche"><Input type="number" min="0" value={payload.charge_per_night || ''} onChange={(e) => set('charge_per_night', e.target.value)} /></Field>}</div>;
+      case 'category_change': return <div className="space-y-3">{roomSelect('Nueva habitación / categoría')}<div className="grid gap-3 sm:grid-cols-2"><Field label="Tipo de cambio"><Select value={payload.change_type || 'Upgrade'} onValueChange={(v) => { setPayload((current) => { const room = availableRooms.find((item) => item.id === current.new_room_id); return { ...current, change_type: v, new_rate: v === 'Cortesia' ? '0' : String(money(room?.precio_base ?? room?.tipos_habitacion?.precio_base ?? reserva.tarifa_noche)) }; }); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Upgrade">Upgrade</SelectItem><SelectItem value="Downgrade">Downgrade</SelectItem><SelectItem value="Cortesia">Cortesía</SelectItem><SelectItem value="CambioConCosto">Cambio con costo</SelectItem></SelectContent></Select></Field><Field label="Tarifa resultante por noche"><MoneyInput value={payload.new_rate || ''} onChange={(value) => set('new_rate', value)} /><p className="mt-1 text-xs text-muted-foreground">Se propone automáticamente la tarifa base de la categoría. Sólo gerencia puede modificarla.</p></Field></div>{financialImpactNotice()}</div>;
+      case 'late_checkout': return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Salida autorizada"><Input type="datetime-local" value={payload.late_until || ''} onChange={(e) => set('late_until', e.target.value)} /></Field><Field label="Cargo adicional"><MoneyInput value={payload.charge_amount || ''} onChange={(value) => set('charge_amount', value)} /></Field></div>{financialImpactNotice()}</div>;
+      case 'early_checkin': return <div className="space-y-3">{roomSelect('Habitación limpia y lista')}<Field label="Cargo adicional"><MoneyInput value={payload.charge_amount || ''} onChange={(value) => set('charge_amount', value)} /></Field>{financialImpactNotice()}</div>;
+      case 'add_guest': return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Nombre"><Input value={payload.name || ''} onChange={(e) => set('name', e.target.value)} /></Field><Field label="Apellido"><Input value={payload.last_name || ''} onChange={(e) => set('last_name', e.target.value)} /></Field><Field label="Tipo"><Select value={payload.guest_type} onValueChange={(v) => set('guest_type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Adulto">Adulto</SelectItem><SelectItem value="Menor">Menor</SelectItem></SelectContent></Select></Field><Field label="Documento"><Input value={payload.document || ''} onChange={(e) => set('document', e.target.value)} /></Field><label className="flex items-center gap-2 text-sm"><Checkbox checked={payload.generates_charge} onCheckedChange={(v) => set('generates_charge', v === true)} />Genera cargo por noche</label>{payload.generates_charge && <Field label="Cargo por noche"><MoneyInput value={payload.charge_per_night || ''} onChange={(value) => set('charge_per_night', value)} /></Field>}</div>{payload.generates_charge && financialImpactNotice()}</div>;
       case 'room_out_of_service': return <div className="space-y-3">{['Pendiente','Confirmada','CheckIn','Hospedado'].includes(reserva.estado) && roomSelect('Reasignar reservación a')}<Field label="Bloqueada hasta (opcional)"><Input type="datetime-local" value={payload.blocked_until || ''} onChange={(e) => set('blocked_until', e.target.value)} /></Field></div>;
-      case 'rate_change': return <Field label="Nueva tarifa por noche"><Input type="number" min="0" value={payload.new_rate || ''} onChange={(e) => set('new_rate', e.target.value)} /></Field>;
-      case 'discount_change': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Tipo"><Select value={payload.discount_type} onValueChange={(v) => set('discount_type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Porcentaje">Porcentaje</SelectItem><SelectItem value="Monto">Monto fijo</SelectItem><SelectItem value="Cortesia">Cortesía 100%</SelectItem><SelectItem value="none">Retirar descuento</SelectItem></SelectContent></Select></Field>{!['Cortesia','none'].includes(payload.discount_type) && <Field label="Valor"><Input type="number" min="0" value={payload.discount_value || ''} onChange={(e) => set('discount_value', e.target.value)} /></Field>}</div>;
-      case 'add_charge': return <div className="space-y-3"><StayConsumptionPicker value={(payload.items || []) as StayConsumptionItem[]} onChange={(items) => set('items', items)} />{accountSelect()}<Field label="Notas del consumo (opcional)"><Input value={payload.notes || ''} onChange={(e) => set('notes', e.target.value)} placeholder="Ej. Entregar en la habitación" /></Field></div>;
+      case 'rate_change': return <div className="space-y-3"><Field label="Nueva tarifa por noche"><MoneyInput value={payload.new_rate || ''} onChange={(value) => set('new_rate', value)} /></Field>{financialImpactNotice()}</div>;
+      case 'discount_change': return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Tipo"><Select value={payload.discount_type} onValueChange={(v) => set('discount_type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Porcentaje">Porcentaje</SelectItem><SelectItem value="Monto">Monto fijo</SelectItem><SelectItem value="Cortesia">Cortesía 100%</SelectItem><SelectItem value="none">Retirar descuento</SelectItem></SelectContent></Select></Field>{!['Cortesia','none'].includes(payload.discount_type) && <Field label={payload.discount_type === 'Porcentaje' ? 'Porcentaje' : 'Monto'}>{payload.discount_type === 'Monto' ? <MoneyInput value={payload.discount_value || ''} onChange={(value) => set('discount_value', value)} /> : <Input type="number" min="0" max="100" value={payload.discount_value || ''} onChange={(e) => set('discount_value', e.target.value)} />}</Field>}</div>{financialImpactNotice()}</div>;
+      case 'add_charge': return <div className="space-y-3"><StayConsumptionPicker value={(payload.items || []) as StayConsumptionItem[]} onChange={(items) => set('items', items)} /><div className="grid gap-3 sm:grid-cols-2">{accountSelect()}<Field label="Notas del consumo (opcional)"><Input value={payload.notes || ''} onChange={(e) => set('notes', e.target.value)} placeholder="Ej. Entregar en la habitación" /></Field></div>{financialImpactNotice()}</div>;
       case 'update_charge': return <div className="space-y-3">{chargeSelect()}<ChargeFields payload={payload} set={set} /></div>;
       case 'cancel_charge': return chargeSelect();
       case 'restore_charge': return chargeSelect(cancelledCharges);
       case 'transfer_charge': return <div className="space-y-3">{chargeSelect()}{reservationSelect('target_reservation_id','Folio destino')}</div>;
-      case 'partial_payment': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Importe"><Input type="number" min="0.01" value={payload.amount || ''} onChange={(e) => set('amount', e.target.value)} /></Field><PaymentMethod payload={payload} set={set} /><Field label="Referencia"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field>{accountSelect()}</div>;
+      case 'partial_payment': return <div className="space-y-4">{financialImpactNotice('payment')}<div className="grid gap-3 sm:grid-cols-2"><Field label="Importe del abono"><MoneyInput value={payload.amount || ''} onChange={(value) => set('amount', value)} autoFocus /></Field><PaymentMethod payload={payload} set={set} /><Field label="Referencia"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field>{accountSelect()}</div></div>;
       case 'payment_method_change': return <div className="space-y-3">{paymentSelect()}<PaymentMethod payload={payload} set={set} /><Field label="Nueva referencia (opcional)"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field></div>;
       case 'cancel_payment': return paymentSelect();
       case 'restore_payment': return paymentSelect(cancelledPayments);
@@ -487,6 +680,12 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
   const dateOperationBlocked = Boolean(selected && DATE_OPERATIONS.includes(selected.id) && ['checking', 'unavailable', 'invalid'].includes(dateAvailability.status));
   const roomOperationBlocked = Boolean(selected && ROOM_OPERATIONS.includes(selected.id) && (checkingRooms || !payload.new_room_id));
   const consumptionBlocked = Boolean(selected?.id === 'add_charge' && (!Array.isArray(payload.items) || payload.items.length === 0));
+  const partialPaymentBlocked = Boolean(selected?.id === 'partial_payment' && (
+    money(payload.amount) <= 0
+    || money(payload.amount) > calculateFinancialSnapshot(reserva).balance + 0.009
+    || !payload.payment_method
+  ));
+  const selectedRequiresReason = Boolean(selected && !ROUTINE_OPERATIONS.includes(selected.id));
   const validatingAvailability = Boolean(selected && (
     (DATE_OPERATIONS.includes(selected.id) && dateAvailability.status === 'checking') ||
     (ROOM_OPERATIONS.includes(selected.id) && checkingRooms)
@@ -558,13 +757,50 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
       {movements.length === 0 ? <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay movimientos operativos.</p> : movements.map((move, index) => <div key={move.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-medium capitalize">{String(move.operacion).replaceAll('_',' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p><p className="mt-1 text-xs">{move.motivo}</p></div>{move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => setReverseMovement(move)}>Revertir</Button> : null}</div></div>)}
     </section>
 
-    <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-xl"><DialogHeader><DialogTitle>{selected?.label}</DialogTitle><DialogDescription>{selected?.detail} La disponibilidad, cargos y saldos se validarán antes de guardar.</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}<Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button><Button onClick={submit} disabled={processing || reason.trim().length < 3 || dateOperationBlocked || roomOperationBlocked || consumptionBlocked} className="bg-[#10233F] hover:bg-[#10233F]/90">{processing ? 'Procesando…' : validatingAvailability ? 'Validando disponibilidad…' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className={cn(
+      'h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[92dvh] sm:rounded-xl',
+      selected?.id === 'add_charge' ? 'sm:max-w-6xl'
+        : selected?.id === 'extend_stay' || selected?.id === 'modify_dates' ? 'sm:max-w-4xl'
+          : selected && ROOM_OPERATIONS.includes(selected.id) ? 'sm:max-w-5xl' : 'sm:max-w-3xl',
+    )}><DialogHeader><DialogTitle>{selected?.label}</DialogTitle><DialogDescription>{selected?.id === 'add_charge'
+      ? 'Selecciona productos o servicios y cárgalos directamente a la cuenta de la habitación.'
+      : `${selected?.detail || ''} La disponibilidad, cargos y saldos se validarán antes de guardar.`}</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}{selectedRequiresReason && <><Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></>}</div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button><Button onClick={submit} disabled={processing || (selectedRequiresReason && reason.trim().length < 3) || dateOperationBlocked || roomOperationBlocked || consumptionBlocked || partialPaymentBlocked} className="bg-[#10233F] hover:bg-[#10233F]/90">{processing ? 'Procesando…' : validatingAvailability ? 'Validando disponibilidad…' : selected?.id === 'add_charge' ? 'Cargar a la habitación' : selected?.id === 'partial_payment' ? 'Registrar abono' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
 
     <Dialog open={Boolean(reverseMovement)} onOpenChange={(open) => !open && setReverseMovement(null)}><DialogContent><DialogHeader><DialogTitle>Revertir operación</DialogTitle><DialogDescription>Se validará nuevamente la disponibilidad y se restaurarán los valores anteriores.</DialogDescription></DialogHeader><Field label="Motivo de reversión"><Textarea value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => setReverseMovement(null)}>Cancelar</Button><Button variant="destructive" onClick={reverse} disabled={processing || reverseReason.trim().length < 3}>Revertir con control</Button></DialogFooter></DialogContent></Dialog>
   </div>;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) { return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>; }
+function MoneyInput({ value, onChange, autoFocus = false }: { value: string; onChange: (value: string) => void; autoFocus?: boolean }) {
+  return <div>
+    <div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-[#10233F]">$</span><Input autoFocus={autoFocus} type="text" inputMode="decimal" value={value} onChange={(event) => onChange(event.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'))} className="pl-7 text-base font-semibold" placeholder="0.00" /></div>
+    {value && <p className="mt-1 text-xs text-muted-foreground">Importe: <span className="font-semibold text-[#10233F]">{formatCurrency(money(value))}</span></p>}
+  </div>;
+}
+function FinancialPreview({ current, next, mode }: { current: FinancialSnapshot; next: FinancialSnapshot; mode: 'full' | 'payment' }) {
+  const nightDelta = next.nights - current.nights;
+  const balanceLabel = next.balance < -0.01 ? 'Saldo a favor' : 'Saldo pendiente';
+  const changed = (before: number, after: number) => Math.abs(after - before) > 0.009;
+  return <section className="overflow-hidden rounded-xl border border-[#10233F]/10 bg-white">
+    <div className="flex flex-wrap items-center justify-between gap-2 bg-[#10233F] px-4 py-3 text-white">
+      <div><p className="text-xs text-white/65">Cuenta después de aplicar</p><p className="text-lg font-bold">{balanceLabel}: {formatCurrency(Math.abs(next.balance))}</p></div>
+      {mode === 'full' && nightDelta !== 0 && <Badge className="bg-white/15 text-white hover:bg-white/15">{nightDelta > 0 ? '+' : ''}{nightDelta} noche{Math.abs(nightDelta) === 1 ? '' : 's'}</Badge>}
+      {mode === 'payment' && changed(current.paid, next.paid) && <Badge className="bg-emerald-500/25 text-emerald-100 hover:bg-emerald-500/25">+{formatCurrency(next.paid - current.paid)} abonado</Badge>}
+    </div>
+    <div className="grid grid-cols-2 gap-px bg-[#10233F]/10 sm:grid-cols-5">
+      {(mode === 'payment' ? [
+        ['Total', current.total, next.total], ['Pagado', current.paid, next.paid], ['Saldo actual', current.balance, current.balance], ['Nuevo saldo', next.balance, next.balance],
+      ] : [
+        ['Noches', current.nights, next.nights, true], ['Hospedaje', current.lodging, next.lodging], ['Impuestos', current.taxes, next.taxes], ['Total', current.total, next.total], ['Saldo', current.balance, next.balance],
+      ]).map(([label, before, after, count]) => <div key={String(label)} className="bg-white p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className={cn('mt-1 text-sm font-bold text-[#10233F]', changed(Number(before), Number(after)) && 'text-emerald-700')}>{count ? after : formatCurrency(Math.abs(Number(after)))}</p>
+        {changed(Number(before), Number(after)) && <p className="mt-0.5 text-[10px] text-muted-foreground">Antes: {count ? before : formatCurrency(Math.abs(Number(before)))}</p>}
+      </div>)}
+    </div>
+    {mode === 'full' && changed(current.total, next.total) && <div className="flex items-center justify-between border-t px-4 py-2.5 text-sm"><span>{next.total > current.total ? 'Aumento del total' : 'Reducción del total'}</span><strong className={next.total > current.total ? 'text-[#10233F]' : 'text-emerald-700'}>{next.total > current.total ? '+' : '−'}{formatCurrency(Math.abs(next.total - current.total))}</strong></div>}
+  </section>;
+}
 function ChargeFields({ payload, set }: { payload: any; set: (key: string, value: any) => void }) { return <div className="grid gap-3 sm:grid-cols-2"><Field label="Concepto"><Input value={payload.concept || ''} onChange={(e) => set('concept', e.target.value)} /></Field><Field label="Cantidad"><Input type="number" min="0.01" value={payload.quantity || ''} onChange={(e) => set('quantity', e.target.value)} /></Field><Field label="Precio unitario"><Input type="number" min="0" value={payload.amount || ''} onChange={(e) => set('amount', e.target.value)} /></Field><Field label="Impuesto"><Input type="number" min="0" value={payload.tax || ''} onChange={(e) => set('tax', e.target.value)} /></Field><div className="sm:col-span-2"><Field label="Notas"><Input value={payload.notes || ''} onChange={(e) => set('notes', e.target.value)} /></Field></div></div>; }
 function PaymentMethod({ payload, set }: { payload: any; set: (key: string, value: any) => void }) { return <Field label="Forma de pago"><MetodoPagoSelect value={payload.payment_method || ''} onChange={(value) => set('payment_method', value)} /></Field>; }
 function MovementChecks({ title, items, selected, onChange, label }: { title: string; items: any[]; selected: string[]; onChange: (ids: string[]) => void; label: (item: any) => string }) { return <div className="space-y-2"><Label>{title}</Label><div className="max-h-32 space-y-2 overflow-y-auto rounded-lg border p-2">{items.length === 0 ? <p className="text-xs text-muted-foreground">Sin movimientos disponibles</p> : items.map((item) => <label key={item.id} className="flex items-center gap-2 text-sm"><Checkbox checked={selected.includes(item.id)} onCheckedChange={(checked) => onChange(checked ? [...selected,item.id] : selected.filter((id) => id !== item.id))}/><span>{label(item)}</span></label>)}</div></div>; }

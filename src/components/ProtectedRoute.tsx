@@ -1,14 +1,17 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/useAuth';
 import { canAccess } from '@/lib/permissions';
+import { useShift } from '@/contexts/useShift';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   viewKey?: string;
+  requireShift?: boolean;
 }
 
-export function ProtectedRoute({ children, viewKey }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, viewKey, requireShift = true }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { hasOpenShift, loading: shiftLoading, shiftRequired } = useShift();
   const location = useLocation();
 
   if (isLoading) {
@@ -39,6 +42,21 @@ export function ProtectedRoute({ children, viewKey }: ProtectedRouteProps) {
 
   if (viewKey && !canAccess(viewKey, user?.rol)) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireShift && shiftRequired && shiftLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#10233F] border-t-transparent" />
+          <p className="text-muted-foreground">Validando turno operativo…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (requireShift && shiftRequired && !hasOpenShift && location.pathname !== '/turnos') {
+    return <Navigate to="/turnos" state={{ shiftRequired: true, returnTo: `${location.pathname}${location.search}${location.hash}` }} replace />;
   }
 
   return <>{children}</>;

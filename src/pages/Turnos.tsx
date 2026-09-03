@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowDownCircle,
@@ -27,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BitacoraPanel } from '@/components/turnos/BitacoraPanel';
 import { ExportButton } from '@/components/ExportButton';
 import { useAuth } from '@/contexts/useAuth';
+import { useShift } from '@/contexts/useShift';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { formatCurrency } from '@/lib/currency';
@@ -40,13 +42,17 @@ type ShiftSummary = {
   otros: number;
   egresosEfectivo: number;
   movimientos: Array<{ id: string; tipo: 'Ingreso' | 'Egreso'; concepto: string; metodo: string; monto: number; fecha: string }>;
+  linkedToShift?: boolean;
 };
 
 const emptySummary: ShiftSummary = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, egresosEfectivo: 0, movimientos: [] };
 
 export default function Turnos() {
   const { user } = useAuth();
+  const { refreshShift } = useShift();
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [turno, setTurno] = useState<any | null>(null);
   const [historial, setHistorial] = useState<any[]>([]);
   const [summary, setSummary] = useState<ShiftSummary>(emptySummary);
@@ -61,6 +67,7 @@ export default function Turnos() {
   const [pendientesEntrega, setPendientesEntrega] = useState('');
   const [motivoDiferencia, setMotivoDiferencia] = useState('');
   const [checks, setChecks] = useState({ caja: false, pendientes: false, llegadas: false, incidentes: false });
+  const shiftPromptShown = useRef(false);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -69,7 +76,7 @@ export default function Turnos() {
       const [current, history] = await Promise.all([api.getOpenShift(user.id), api.getShiftHistory()]);
       setTurno(current);
       setHistorial(history);
-      setSummary(current ? await api.getShiftFinancialSummary(current.abierto_at) : emptySummary);
+      setSummary(current ? await api.getShiftFinancialSummary(current.id, current.abierto_at) : emptySummary);
     } catch (error: any) {
       toast({ title: 'No se pudieron cargar los turnos', description: error?.message, variant: 'destructive' });
     } finally {
@@ -78,6 +85,13 @@ export default function Turnos() {
   }, [toast, user?.id]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const wasRequired = (location.state as { shiftRequired?: boolean } | null)?.shiftRequired;
+    if (!loading && !turno && wasRequired && !shiftPromptShown.current) {
+      shiftPromptShown.current = true;
+      setOpenDialog(true);
+    }
+  }, [loading, location.state, turno]);
 
   const efectivoEsperado = useMemo(
     () => Number(turno?.fondo_inicial || 0) + summary.efectivo - summary.egresosEfectivo,
@@ -99,7 +113,9 @@ export default function Turnos() {
       toast({ title: 'Turno abierto', description: `Fondo inicial: ${formatCurrency(fondo)}` });
       setFondoInicial('');
       setOpenDialog(false);
-      await load();
+      await Promise.all([load(), refreshShift()]);
+      const returnTo = (location.state as { shiftRequired?: boolean; returnTo?: string } | null)?.returnTo;
+      if (returnTo) navigate(returnTo, { replace: true });
     } catch (error: any) {
       toast({ title: 'No se pudo abrir el turno', description: error?.message, variant: 'destructive' });
     } finally {
@@ -159,7 +175,7 @@ export default function Turnos() {
       setPendientesEntrega('');
       setMotivoDiferencia('');
       setChecks({ caja: false, pendientes: false, llegadas: false, incidentes: false });
-      await load();
+      await Promise.all([load(), refreshShift()]);
     } catch (error: any) {
       toast({ title: 'No se pudo cerrar el turno', description: error?.message, variant: 'destructive' });
     } finally {
@@ -174,6 +190,10 @@ export default function Turnos() {
   return (
     <MainLayout title="Turnos" subtitle="Nadie entrega el hotel de memoria">
       <div className="space-y-5">
+        {!turno && (location.state as { shiftRequired?: boolean } | null)?.shiftRequired && <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+          <Lock className="mt-0.5 h-5 w-5 shrink-0" />
+          <div><p className="font-semibold">Abre tu turno para comenzar</p><p className="mt-1 text-sm text-amber-900/75">Reservas, caja, ventas y operaciones quedan protegidas hasta registrar el efectivo inicial de tu turno.</p></div>
+        </div>}
         <Card className={cn('overflow-hidden border-2', turno ? 'border-emerald-200' : 'border-amber-200')}>
           <CardContent className={cn('p-5', turno ? 'bg-emerald-50/60' : 'bg-amber-50/60')}>
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -210,6 +230,7 @@ export default function Turnos() {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Receipt className="h-5 w-5" />Movimientos reales desde la apertura</CardTitle></CardHeader>
               <CardContent className="overflow-x-auto">
+                {summary.linkedToShift === false && <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">La migración de turnos aún no está aplicada; estos totales usan el horario de apertura como respaldo. Al aplicarla, cada movimiento quedará ligado a esta caja.</div>}
                 <Table><TableHeader><TableRow><TableHead>Hora</TableHead><TableHead>Tipo</TableHead><TableHead>Concepto</TableHead><TableHead>Método</TableHead><TableHead className="text-right">Monto</TableHead></TableRow></TableHeader>
                   <TableBody>{summary.movimientos.length === 0 ? <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Todavía no hay movimientos en este turno.</TableCell></TableRow> : summary.movimientos.map((m) => <TableRow key={`${m.tipo}-${m.id}`}><TableCell>{m.fecha ? formatDateTime(m.fecha) : '—'}</TableCell><TableCell><Badge variant={m.tipo === 'Ingreso' ? 'secondary' : 'destructive'}>{m.tipo}</Badge></TableCell><TableCell>{m.concepto}</TableCell><TableCell>{m.metodo}</TableCell><TableCell className={cn('text-right font-semibold', m.tipo === 'Ingreso' ? 'text-emerald-700' : 'text-red-700')}>{m.tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(m.monto)}</TableCell></TableRow>)}</TableBody>
                 </Table>

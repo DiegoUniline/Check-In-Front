@@ -108,8 +108,9 @@ export function StayConsumptionPicker({ value, onChange }: Props) {
     onChange(value.map((current) => keyOf(current) === itemKey ? { ...current, quantity: next } : current));
   };
 
-  return <div className="space-y-4">
+  return <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,.75fr)]">
     <div className="rounded-xl border border-[#10233F]/10 bg-[#F7F9FC] p-3">
+      <div className="mb-3"><h4 className="text-sm font-semibold text-[#10233F]">Productos y servicios</h4><p className="text-xs text-muted-foreground">Toca un artículo para agregarlo a la habitación.</p></div>
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px]">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -124,7 +125,7 @@ export function StayConsumptionPicker({ value, onChange }: Props) {
       {loading ? <div className="flex min-h-36 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Cargando productos y precios…</div>
         : error ? <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
         : filtered.length === 0 ? <div className="flex min-h-32 flex-col items-center justify-center text-center text-sm text-muted-foreground"><PackageOpen className="mb-2 h-6 w-6" />No hay coincidencias en el catálogo.</div>
-        : <div className="mt-3 grid max-h-64 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+        : <div className="mt-3 grid max-h-[52dvh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((item) => {
             const selected = value.some((current) => keyOf(current) === keyOf(item));
             const soldOut = item.source === 'product' && number(item.stock) <= 0;
@@ -136,18 +137,18 @@ export function StayConsumptionPicker({ value, onChange }: Props) {
         </div>}
     </div>
 
-    <section className="rounded-xl border">
-      <div className="flex items-center justify-between border-b px-3 py-2.5"><h4 className="flex items-center gap-2 text-sm font-semibold text-[#10233F]"><ShoppingCart className="h-4 w-4" />Consumo</h4><Badge variant="secondary">{value.reduce((sum, item) => sum + item.quantity, 0)} artículos</Badge></div>
-      {value.length === 0 ? <p className="p-6 text-center text-sm text-muted-foreground">Selecciona uno o varios productos o servicios.</p> : <div className="divide-y">
+    <section className="overflow-hidden rounded-xl border bg-white lg:sticky lg:top-0">
+      <div className="flex items-center justify-between border-b bg-[#10233F] px-3 py-3 text-white"><h4 className="flex items-center gap-2 text-sm font-semibold"><ShoppingCart className="h-4 w-4" />Cargo a habitación</h4><Badge className="bg-white/15 text-white hover:bg-white/15">{value.reduce((sum, item) => sum + item.quantity, 0)} artículos</Badge></div>
+      {value.length === 0 ? <div className="flex min-h-44 flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground"><ShoppingCart className="mb-2 h-7 w-7 text-[#10233F]/35" /><p>Aún no agregas artículos.</p><p className="mt-1 text-xs">Elige productos del catálogo de la izquierda.</p></div> : <div className="max-h-[44dvh] divide-y overflow-y-auto">
         {value.map((item) => <div key={keyOf(item)} className="flex items-center gap-2 p-3">
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{formatCurrency(item.unit_price)} c/u · precio del catálogo</p></div>
           <div className="flex shrink-0 items-center rounded-lg border"><Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => changeQuantity(item, -1)}><Minus className="h-3 w-3" /></Button><span className="w-7 text-center text-sm font-semibold">{item.quantity}</span><Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => changeQuantity(item, 1)} disabled={item.source === 'product' && item.quantity >= number(item.stock)}><Plus className="h-3 w-3" /></Button></div>
           <p className="w-20 shrink-0 text-right text-sm font-semibold">{formatCurrency(item.quantity * item.unit_price)}</p>
           <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600" onClick={() => onChange(value.filter((current) => keyOf(current) !== keyOf(item)))}><Trash2 className="h-3.5 w-3.5" /></Button>
         </div>)}
-        <div className="flex items-center justify-between bg-[#10233F]/[0.03] px-3 py-3"><span className="text-sm font-semibold">Total del consumo</span><span className="text-xl font-bold text-[#10233F]">{formatCurrency(total)}</span></div>
       </div>}
+      <div className="flex items-center justify-between border-t bg-[#10233F]/[0.03] px-4 py-4"><span className="text-sm font-semibold">Total del consumo</span><span className="text-2xl font-bold text-[#10233F]">{formatCurrency(total)}</span></div>
+      <p className="border-t px-4 py-3 text-xs text-muted-foreground">Se cargará directo a la cuenta. El precio y la existencia se validan otra vez al confirmar.</p>
     </section>
-    <p className="text-xs text-muted-foreground">El precio se toma del catálogo. Al guardar se vuelve a validar existencia y todo se registra en una sola transacción.</p>
   </div>;
 }

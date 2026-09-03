@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ShiftProvider } from "@/contexts/ShiftContext";
 import { useAuth } from "@/contexts/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { UnsavedChangesProvider } from "@/contexts/UnsavedChangesContext";
@@ -112,7 +113,7 @@ const AppRoutes = () => (
     <Route
       path="/admin-plataforma"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute requireShift={false}>
           <SuperAdminRoute>
             <AdminPlataforma />
           </SuperAdminRoute>
@@ -314,7 +315,7 @@ const AppRoutes = () => (
     <Route
       path="/turnos"
       element={
-        <ProtectedRoute viewKey="turnos">
+        <ProtectedRoute viewKey="turnos" requireShift={false}>
           <Turnos />
         </ProtectedRoute>
       }
@@ -322,7 +323,7 @@ const AppRoutes = () => (
     <Route
       path="/cierre-dia"
       element={
-        <ProtectedRoute viewKey="cierre-dia">
+        <ProtectedRoute viewKey="cierre-dia" requireShift={false}>
           <AuditoriaNocturna />
         </ProtectedRoute>
       }
@@ -400,6 +401,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
+        <ShiftProvider>
           <TooltipProvider>
             <UnsavedChangesProvider>
               <ConfirmProvider>
@@ -412,6 +414,7 @@ const App = () => (
               </ConfirmProvider>
             </UnsavedChangesProvider>
           </TooltipProvider>
+        </ShiftProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

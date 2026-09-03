@@ -543,37 +543,80 @@ class ApiClient {
         _local_only: true,
       };
       this.writeOperationalFallback('turnos', [localShift, ...shifts]);
+      window.dispatchEvent(new CustomEvent('vulo:shift-changed'));
       return localShift;
     }
+    window.dispatchEvent(new CustomEvent('vulo:shift-changed'));
     return data;
   };
 
-  getShiftFinancialSummary = async (abiertoAt: string): Promise<any> => {
+  getShiftFinancialSummary = async (turnoId: string, abiertoAt: string): Promise<any> => {
     const hotelId = this.hid();
-    const [{ data: pagos }, { data: gastos }] = await Promise.all([
-      supabase.from('pagos').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
-      supabase.from('gastos').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
+    const getLinked = async (table: string) => (supabase as any).from(table).select('*').eq('hotel_id', hotelId).eq('turno_id', turnoId);
+    let [pagosR, gastosR, ventasR, comprasR] = await Promise.all([
+      getLinked('pagos'), getLinked('gastos'), getLinked('ventas'), getLinked('pagos_compras'),
     ]);
-    const summary = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, egresosEfectivo: 0, movimientos: [] as any[] };
-    (pagos || []).forEach((p: any) => {
-      const method = String(p.metodo_pago || '').toLowerCase();
-      const amount = Number(p.monto || 0);
+    const linkedToShift = ![pagosR, gastosR, ventasR, comprasR].some((result) => result.error);
+    if (!linkedToShift) {
+      [pagosR, gastosR, ventasR, comprasR] = await Promise.all([
+        supabase.from('pagos').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
+        supabase.from('gastos').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
+        supabase.from('ventas').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
+        (supabase as any).from('pagos_compras').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
+      ] as any);
+    }
+    const summary = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, egresosEfectivo: 0, movimientos: [] as any[], linkedToShift };
+    const addIncome = (methodValue: any, amountValue: any) => {
+      const method = String(methodValue || '').toLowerCase();
+      const amount = Number(amountValue || 0);
       if (method.includes('efectivo')) summary.efectivo += amount;
       else if (method.includes('tarjeta')) summary.tarjeta += amount;
       else if (method.includes('transfer')) summary.transferencia += amount;
       else summary.otros += amount;
+    };
+    (pagosR.data || []).filter((p: any) => p.estado !== 'Cancelado').forEach((p: any) => {
+      const method = String(p.metodo_pago || '').toLowerCase();
+      const amount = Number(p.monto || 0);
+      addIncome(method, amount);
       summary.movimientos.push({ id: p.id, tipo: 'Ingreso', concepto: p.concepto || p.numero_pago || 'Pago de reserva', metodo: p.metodo_pago || 'Otro', monto: amount, fecha: p.created_at || p.fecha });
     });
-    (gastos || []).forEach((g: any) => {
+    (ventasR.data || []).filter((sale: any) => !sale.reserva_id && sale.estado !== 'Cancelada').forEach((sale: any) => {
+      const amount = Number(sale.total || 0);
+      addIncome(sale.metodo_pago, amount);
+      summary.movimientos.push({ id: sale.id, tipo: 'Ingreso', concepto: sale.folio || sale.numero_venta || 'Venta POS', metodo: sale.metodo_pago || 'Otro', monto: amount, fecha: sale.created_at || sale.fecha });
+    });
+    (gastosR.data || []).forEach((g: any) => {
       const amount = Number(g.monto || 0);
       if (String(g.metodo_pago || '').toLowerCase().includes('efectivo')) summary.egresosEfectivo += amount;
       summary.movimientos.push({ id: g.id, tipo: 'Egreso', concepto: g.descripcion || g.categoria || 'Gasto', metodo: g.metodo_pago || 'Otro', monto: amount, fecha: g.created_at || g.fecha });
+    });
+    (comprasR.data || []).forEach((payment: any) => {
+      const amount = Number(payment.monto || 0);
+      if (String(payment.metodo_pago || '').toLowerCase().includes('efectivo')) summary.egresosEfectivo += amount;
+      summary.movimientos.push({ id: payment.id, tipo: 'Egreso', concepto: 'Pago a proveedor', metodo: payment.metodo_pago || 'Otro', monto: amount, fecha: payment.created_at || payment.fecha });
     });
     summary.movimientos.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
     return summary;
   };
 
   closeShift = async (id: string, payload: Record<string, unknown>): Promise<any> => {
+    const { data: closedByServer, error: closeError } = await (operationalDb as any).rpc('vulo_close_shift', {
+      p_turno_id: id,
+      p_efectivo_contado: Number(payload.efectivo_contado || 0),
+      p_entrega_a: payload.entrega_a || null,
+      p_resumen_entrega: payload.resumen_entrega || '',
+      p_pendientes_entrega: payload.pendientes_entrega || '',
+      p_motivo_diferencia: payload.motivo_diferencia || null,
+      p_checklist: payload.checklist_cierre || {},
+    });
+    if (!closeError) {
+      window.dispatchEvent(new CustomEvent('vulo:shift-changed'));
+      return closedByServer;
+    }
+    const missingCloseFunction = closeError.code === '42883' || /vulo_close_shift|schema cache/i.test(closeError.message || '');
+    if (!missingCloseFunction) throw closeError;
+
+    // Compatibilidad temporal hasta aplicar la migración de turno obligatorio.
     const { data, error } = await operationalDb.from('turnos_operativos').update({ ...payload, estado: 'Cerrado', cerrado_at: new Date().toISOString() })
       .eq('id', id).eq('hotel_id', this.hid()).select().single();
     if (error) {
@@ -584,8 +627,10 @@ class ApiClient {
       const closed = { ...shifts[index], ...payload, estado: 'Cerrado', cerrado_at: new Date().toISOString(), updated_at: new Date().toISOString(), _local_only: true };
       shifts[index] = closed;
       this.writeOperationalFallback('turnos', shifts);
+      window.dispatchEvent(new CustomEvent('vulo:shift-changed'));
       return closed;
     }
+    window.dispatchEvent(new CustomEvent('vulo:shift-changed'));
     return data;
   };
 
