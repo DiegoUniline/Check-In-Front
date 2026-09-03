@@ -611,9 +611,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       </header>
 
       {/* LAYOUT A TODO EL ANCHO */}
-      <div className="grid items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
+      <div className="grid min-h-0 flex-1 items-stretch gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
 
-        <div className="grid min-w-0 content-start gap-x-8 gap-y-5 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm lg:grid-cols-2 lg:p-5">
+        <div className="grid min-h-0 min-w-0 content-start gap-x-8 gap-y-5 overflow-y-auto rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm lg:grid-cols-2 lg:p-5">
+
 
 
         {/* COLUMNA 1 — Estancia, ocupación y habitación */}
