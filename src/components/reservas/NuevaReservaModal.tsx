@@ -623,7 +623,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 Check-in automático: la habitación queda ocupada hoy.
               </div>
             )}
-            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_120px]">
+            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_140px]">
               <Field label="Check-in">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -653,7 +653,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <Field label="Hora">
                 <div className="relative">
                   <Clock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input type="time" className="h-9 pl-8 text-xs" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
+                  <Input type="time" className="h-9 w-full pl-8 pr-1 text-xs" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
                 </div>
               </Field>
             </div>
