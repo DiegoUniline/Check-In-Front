@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0';
 import { cleanPhone, corsHeaders, evoFetch } from '../_shared/evolution.ts';
+import { getHeaderBannerUrl } from '../_shared/waBanner.ts';
+
 
 /**
  * Envía un mensaje de WhatsApp vía Evolution (WhatsApp vinculado por QR).
@@ -26,10 +28,11 @@ Deno.serve(async (req) => {
 
     const { data: hotel, error: hErr } = await supabase
       .from('hotels')
-      .select('id, nombre')
+      .select('id, nombre, logo_url')
       .eq('id', hotel_id)
       .single();
     if (hErr || !hotel) throw new Error('Hotel no encontrado');
+
 
     const { data: inst } = await supabase
       .from('wa_instancias')
@@ -67,10 +70,33 @@ Deno.serve(async (req) => {
 
     const number = String(phone).includes('@g.us') ? String(phone) : cleanPhone(String(phone));
 
-    const resp = await evoFetch(`/message/sendText/${inst.instance_name}`, {
-      method: 'POST',
-      body: JSON.stringify({ number, text: String(message) }),
-    });
+    // Pie de marca: nombre del hotel + VULO como SaaS.
+    const firma = `\n\n— ${hotel.nombre}\n_Enviado con VULO · Software de Gestión Hotelera_`;
+    const texto = `${String(message)}${firma}`;
+
+    // Encabezado con fondo blanco: logo del hotel arriba y franja VULO abajo.
+    // Si el hotel no tiene logo o falla la composición, se envía solo texto.
+    const bannerUrl = body.sin_encabezado
+      ? null
+      : await getHeaderBannerUrl(supabase, hotel_id, hotel.logo_url);
+
+    const resp = bannerUrl
+      ? await evoFetch(`/message/sendMedia/${inst.instance_name}`, {
+          method: 'POST',
+          body: JSON.stringify({
+            number,
+            mediatype: 'image',
+            mimetype: 'image/jpeg',
+            media: bannerUrl,
+            fileName: 'encabezado.jpg',
+            caption: texto,
+          }),
+        })
+      : await evoFetch(`/message/sendText/${inst.instance_name}`, {
+          method: 'POST',
+          body: JSON.stringify({ number, text: texto }),
+        });
+
     const ok = resp.ok;
     const respText = typeof resp.body === 'string' ? resp.body : JSON.stringify(resp.body);
 
@@ -79,7 +105,7 @@ Deno.serve(async (req) => {
       reserva_id: reserva_id ?? null,
       template_key: template_key ?? 'manual',
       phone: number,
-      mensaje: message,
+      mensaje: texto,
       status: ok ? 'sent' : 'error',
       error: ok ? null : respText.slice(0, 500),
     });
