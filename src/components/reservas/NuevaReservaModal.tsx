@@ -757,7 +757,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </FormSection>
 
           {/* 2. HUÉSPED */}
-          <FormSection icon={UserPlus} title="Huésped" hint="Busca uno existente o captúralo aquí mismo.">
+          <FormSection icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
             {!crearNuevoCliente ? (
               <div className="space-y-2">
                 <div className="flex gap-2">
@@ -771,60 +771,60 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       const client = clientes.find((item) => item.id === value);
                       if (client) handleSelectCliente(client);
                     }}
-                    placeholder="Buscar huésped por nombre o teléfono…"
+                    placeholder="Buscar huésped…"
                     searchPlaceholder="Nombre, teléfono, correo o documento…"
                     emptyMessage="No se encontró ningún huésped."
-                    className="h-11 min-w-0 flex-1 justify-start overflow-hidden text-left font-normal"
+                    className="h-9 min-w-0 flex-1 justify-start overflow-hidden px-2.5 text-left text-xs font-normal"
                   />
                   {formData.clienteData ? (
-                    <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
                   ) : (
-                    <Button type="button" variant="outline" className="h-11 shrink-0" onClick={() => setCrearNuevoCliente(true)}><UserPlus className="mr-1.5 h-4 w-4" />Nuevo</Button>
+                    <Button type="button" variant="outline" className="h-9 shrink-0 px-2.5 text-xs" onClick={() => setCrearNuevoCliente(true)}><UserPlus className="mr-1 h-3.5 w-3.5" />Nuevo</Button>
                   )}
                 </div>
                 {formData.clienteData && (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[10px] bg-[#F8FAFC] px-3 py-2 text-xs text-[#475569]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#475569]">
                     <span className="font-medium text-[#10233F]">{formData.clienteData.nombre} {formData.clienteData.apellido_paterno || ''}</span>
-                    {formData.clienteData.telefono && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{formData.clienteData.telefono}</span>}
-                    {formData.clienteData.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{formData.clienteData.email}</span>}
-                    {formData.clienteData.es_vip && <Badge className="h-5 px-1.5 text-[10px]">VIP</Badge>}
+                    {formData.clienteData.telefono && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{formData.clienteData.telefono}</span>}
+                    {formData.clienteData.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{formData.clienteData.email}</span>}
+                    {formData.clienteData.es_vip && <Badge className="h-4 px-1 text-[10px]">VIP</Badge>}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
-                <Button variant="ghost" size="sm" className="-ml-2 h-8" onClick={() => setCrearNuevoCliente(false)}>
-                  <ChevronLeft className="mr-1 h-4 w-4" /> Buscar existente
+              <div className="space-y-2">
+                <Button variant="ghost" size="sm" className="-ml-2 h-7 text-xs" onClick={() => setCrearNuevoCliente(false)}>
+                  <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Buscar existente
                 </Button>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-3">
                   <Field label="Nombre" required>
-                    <Input data-new-client-name className="h-11" value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
+                    <Input data-new-client-name className="h-9 text-xs" value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
                   </Field>
                   <Field label="Apellido paterno" required>
-                    <Input className="h-11" value={formData.nuevoCliente.apellido_paterno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_paterno: e.target.value } })} />
+                    <Input className="h-9 text-xs" value={formData.nuevoCliente.apellido_paterno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_paterno: e.target.value } })} />
                   </Field>
                   <Field label="Apellido materno">
-                    <Input className="h-11" value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
+                    <Input className="h-9 text-xs" value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
                   </Field>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   <Field label="Teléfono" required>
                     <div className="relative">
-                      <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input className="h-11 pl-9" inputMode="tel" value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
+                      <Phone className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <Input className="h-9 pl-8 text-xs" inputMode="tel" value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
                     </div>
                   </Field>
                   <Field label="Correo">
                     <div className="relative">
-                      <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input type="email" className="h-11 pl-9" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
+                      <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <Input type="email" className="h-9 pl-8 text-xs" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
                     </div>
                   </Field>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Tipo de documento">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Field label="Documento">
                     <Select value={formData.nuevoCliente.tipo_documento} onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}>
-                      <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="INE">INE</SelectItem>
                         <SelectItem value="Pasaporte">Pasaporte</SelectItem>
@@ -832,8 +832,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Field label="Número de documento">
-                    <Input className="h-11" value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
+                  <Field label="Número">
+                    <Input className="h-9 text-xs" value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
                   </Field>
                 </div>
               </div>
