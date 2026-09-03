@@ -69,7 +69,7 @@ function ReservationSurface({
   children: ReactNode;
 }) {
   if (pageMode) {
-    return <div className="min-h-[calc(100dvh-4rem)] bg-white xl:h-[calc(100dvh-4rem)] xl:overflow-hidden">
+    return <div className="h-full min-h-0 overflow-y-auto bg-white xl:overflow-hidden">
       <div ref={surfaceRef} onKeyDown={onKeyDown} className="flex w-full flex-col px-3 pb-3 pt-2 sm:px-4 lg:px-5 xl:h-full xl:min-h-0">
         {children}
       </div>

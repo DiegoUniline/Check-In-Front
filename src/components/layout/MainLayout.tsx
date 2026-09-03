@@ -17,9 +17,10 @@ interface MainLayoutProps {
   children: ReactNode;
   title?: string;
   subtitle?: string;
+  fitViewport?: boolean;
 }
 
-export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
+export function MainLayout({ children, title, subtitle, fitViewport = false }: MainLayoutProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const { openShift, shiftRequired, viewOnlyMode } = useShift();
   const location = useLocation();
@@ -179,10 +180,12 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           <main
             data-scroll-container
             data-shift-read-only={readOnlyActive ? 'true' : undefined}
-            className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5 lg:px-7 lg:py-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-7"
+            className={fitViewport
+              ? 'flex-1 min-h-0 min-w-0 overflow-hidden'
+              : 'flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5 lg:px-7 lg:py-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-7'}
             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
           >
-            <div className="mx-auto w-full max-w-[1600px]">
+            <div className={fitViewport ? 'mx-auto flex h-full w-full max-w-[1600px] flex-col overflow-hidden' : 'mx-auto w-full max-w-[1600px]'}>
               {children}
             </div>
           </main>
