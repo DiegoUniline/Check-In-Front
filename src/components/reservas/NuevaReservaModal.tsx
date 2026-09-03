@@ -955,9 +955,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             )}
           </FormSection>
         </div>
+        </div>
 
-        {/* COLUMNA 3 — Resumen de cuenta */}
-        <aside className="min-w-0 lg:col-span-2 xl:col-span-1 xl:sticky xl:top-16">
+        {/* RESUMEN DE CUENTA */}
+        <aside className="min-w-0 xl:sticky xl:top-16">
           <div className="overflow-hidden rounded-xl bg-[#10233F] text-white shadow-lg">
             <div className="space-y-2 p-3">
               <p className="text-xs font-semibold">Resumen de cuenta</p>
