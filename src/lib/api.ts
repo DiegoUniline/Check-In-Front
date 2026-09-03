@@ -3,6 +3,7 @@ import { registrarAuditoria } from '@/lib/auditoria';
 import { crearNotificacion } from '@/lib/notificaciones';
 import { setHotelCurrency, formatCurrency } from '@/lib/currency';
 import { withOfflineCache } from '@/lib/offlineCache';
+import { assertShiftWriteAllowed } from '@/lib/shiftAccess';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const operationalDb = supabase as any;
@@ -2121,5 +2122,20 @@ class ApiClient {
   };
 }
 
-export const api = new ApiClient();
+const apiClient = new ApiClient();
+const WRITE_METHOD = /^(create|update|delete|close|reopen|apply|reverse|complete|checkin|checkout|cancelar|confirmar|asignar|devolver|sincronizar|movimiento|ajustar|extender|eliminar|suspender|reactivar|save|registrar|rechazar|aprobar|recibir|marcar|activar|desactivar|guardar|editar|procesar|pagar)/i;
+const WRITE_WITHOUT_SHIFT = new Set(['openShift']);
+
+export const api = new Proxy(apiClient, {
+  get(target, property, receiver) {
+    const value = Reflect.get(target, property, receiver);
+    if (typeof property !== 'string' || typeof value !== 'function' || !WRITE_METHOD.test(property) || WRITE_WITHOUT_SHIFT.has(property)) {
+      return value;
+    }
+    return (...args: unknown[]) => {
+      assertShiftWriteAllowed();
+      return value.apply(target, args);
+    };
+  },
+});
 export default api;

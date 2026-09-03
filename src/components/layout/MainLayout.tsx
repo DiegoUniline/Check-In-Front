@@ -32,26 +32,32 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
     });
   };
 
-  const handleReadOnlyClick = (event: React.MouseEvent<HTMLElement>) => {
+  useEffect(() => {
     if (!readOnlyActive) return;
-    const target = event.target as HTMLElement;
-    if (target.closest('a[href]')) return;
-    const action = target.closest<HTMLElement>('button, [role="menuitem"], [role="button"]');
-    if (!action) return;
-    const label = `${action.getAttribute('aria-label') || ''} ${action.textContent || ''}`.trim();
-    const readOnlyAction = /ver|consultar|detalle|historial|reporte|actualizar|refrescar|buscar|filtrar|filtro|anterior|siguiente|hoy|semana|mes|calendario|lista|cerrar|volver|regresar|expandir|mostrar|ocultar|descargar|exportar|imprimir/i.test(label);
-    if (readOnlyAction) return;
-    event.preventDefault();
-    event.stopPropagation();
-    explainReadOnly();
-  };
-
-  const handleReadOnlySubmit = (event: React.FormEvent<HTMLElement>) => {
-    if (!readOnlyActive) return;
-    event.preventDefault();
-    event.stopPropagation();
-    explainReadOnly();
-  };
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target || target.closest('a[href]')) return;
+      const action = target.closest<HTMLElement>('button, [role="menuitem"], [role="button"]');
+      if (!action) return;
+      const label = `${action.getAttribute('aria-label') || ''} ${action.textContent || ''}`.trim();
+      const readOnlyAction = /ver|consultar|detalle|historial|reporte|actualizar|refrescar|buscar|filtrar|filtro|anterior|siguiente|hoy|semana|mes|calendario|lista|cerrar|volver|regresar|expandir|mostrar|ocultar|descargar|exportar|imprimir/i.test(label);
+      if (readOnlyAction) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      explainReadOnly();
+    };
+    const onSubmit = (event: SubmitEvent) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      explainReadOnly();
+    };
+    document.addEventListener('click', onClick, true);
+    document.addEventListener('submit', onSubmit, true);
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      document.removeEventListener('submit', onSubmit, true);
+    };
+  }, [readOnlyActive]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -103,8 +109,6 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
           <main
             data-scroll-container
             data-shift-read-only={readOnlyActive ? 'true' : undefined}
-            onClickCapture={handleReadOnlyClick}
-            onSubmitCapture={handleReadOnlySubmit}
             className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5 lg:px-7 lg:py-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-7"
             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
           >

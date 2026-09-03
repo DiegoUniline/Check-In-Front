@@ -3,6 +3,7 @@ import api from '@/lib/api';
 import { useAuth } from '@/contexts/useAuth';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { ShiftContext } from './shift-context';
+import { setShiftViewOnlyActive } from '@/lib/shiftAccess';
 
 const SHIFT_ROLES = new Set(['Admin', 'Gerente', 'Recepcion']);
 
@@ -19,19 +20,24 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!viewOnlyStorageKey) {
       setViewOnlyMode(false);
+      setShiftViewOnlyActive(false);
       return;
     }
-    setViewOnlyMode(sessionStorage.getItem(viewOnlyStorageKey) === '1');
+    const restored = sessionStorage.getItem(viewOnlyStorageKey) === '1';
+    setViewOnlyMode(restored);
+    setShiftViewOnlyActive(restored);
   }, [viewOnlyStorageKey]);
 
   const exitViewOnlyMode = useCallback(() => {
     if (viewOnlyStorageKey) sessionStorage.removeItem(viewOnlyStorageKey);
     setViewOnlyMode(false);
+    setShiftViewOnlyActive(false);
   }, [viewOnlyStorageKey]);
 
   const continueWithoutShift = useCallback(() => {
     if (viewOnlyStorageKey) sessionStorage.setItem(viewOnlyStorageKey, '1');
     setViewOnlyMode(true);
+    setShiftViewOnlyActive(true);
   }, [viewOnlyStorageKey]);
 
   const refreshShift = useCallback(async () => {
@@ -47,6 +53,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       if (current) {
         if (viewOnlyStorageKey) sessionStorage.removeItem(viewOnlyStorageKey);
         setViewOnlyMode(false);
+        setShiftViewOnlyActive(false);
       }
       return current;
     } catch {
