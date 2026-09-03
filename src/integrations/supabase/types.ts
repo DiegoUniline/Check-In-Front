@@ -137,58 +137,91 @@ export type Database = {
       }
       cargos: {
         Row: {
+          actualizado_at: string | null
+          actualizado_por: string | null
+          cancelado_at: string | null
+          cancelado_por: string | null
           cantidad: number | null
           concepto: string
           concepto_cargo_id: string | null
           concepto_id: string | null
           created_at: string | null
+          created_by: string | null
+          cuenta_estancia_id: string | null
+          estado: string
           fecha: string | null
           habitacion_id: string | null
           hotel_id: string
           id: string
           impuesto: number
+          motivo_cancelacion: string | null
           notas: string | null
           precio_unitario: number | null
           producto_id: string | null
           reserva_id: string | null
           subtotal: number
           total: number | null
+          turno_id: string | null
+          venta_detalle_id: string | null
+          venta_id: string | null
         }
         Insert: {
+          actualizado_at?: string | null
+          actualizado_por?: string | null
+          cancelado_at?: string | null
+          cancelado_por?: string | null
           cantidad?: number | null
           concepto: string
           concepto_cargo_id?: string | null
           concepto_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          cuenta_estancia_id?: string | null
+          estado?: string
           fecha?: string | null
           habitacion_id?: string | null
           hotel_id: string
           id?: string
           impuesto?: number
+          motivo_cancelacion?: string | null
           notas?: string | null
           precio_unitario?: number | null
           producto_id?: string | null
           reserva_id?: string | null
           subtotal?: number
           total?: number | null
+          turno_id?: string | null
+          venta_detalle_id?: string | null
+          venta_id?: string | null
         }
         Update: {
+          actualizado_at?: string | null
+          actualizado_por?: string | null
+          cancelado_at?: string | null
+          cancelado_por?: string | null
           cantidad?: number | null
           concepto?: string
           concepto_cargo_id?: string | null
           concepto_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          cuenta_estancia_id?: string | null
+          estado?: string
           fecha?: string | null
           habitacion_id?: string | null
           hotel_id?: string
           id?: string
           impuesto?: number
+          motivo_cancelacion?: string | null
           notas?: string | null
           precio_unitario?: number | null
           producto_id?: string | null
           reserva_id?: string | null
           subtotal?: number
           total?: number | null
+          turno_id?: string | null
+          venta_detalle_id?: string | null
+          venta_id?: string | null
         }
         Relationships: [
           {
@@ -196,6 +229,13 @@ export type Database = {
             columns: ["concepto_cargo_id"]
             isOneToOne: false
             referencedRelation: "conceptos_cargo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_cuenta_estancia_id_fkey"
+            columns: ["cuenta_estancia_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_estancia"
             referencedColumns: ["id"]
           },
           {
@@ -224,6 +264,27 @@ export type Database = {
             columns: ["reserva_id"]
             isOneToOne: false
             referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_venta_detalle_id_fkey"
+            columns: ["venta_detalle_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_detalle"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
         ]
@@ -461,6 +522,7 @@ export type Database = {
           proveedor_nombre: string | null
           subtotal: number | null
           total: number | null
+          turno_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -478,6 +540,7 @@ export type Database = {
           proveedor_nombre?: string | null
           subtotal?: number | null
           total?: number | null
+          turno_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -495,6 +558,7 @@ export type Database = {
           proveedor_nombre?: string | null
           subtotal?: number | null
           total?: number | null
+          turno_id?: string | null
         }
         Relationships: [
           {
@@ -516,6 +580,13 @@ export type Database = {
             columns: ["proveedor_id"]
             isOneToOne: false
             referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
             referencedColumns: ["id"]
           },
         ]
@@ -603,6 +674,61 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cuentas_estancia: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          estado: string
+          hotel_id: string
+          id: string
+          nombre: string
+          reserva_id: string
+          responsable: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          hotel_id: string
+          id?: string
+          nombre: string
+          reserva_id: string
+          responsable?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          reserva_id?: string
+          responsable?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuentas_estancia_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuentas_estancia_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuentas_estancia_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
             referencedColumns: ["id"]
           },
         ]
@@ -799,6 +925,98 @@ export type Database = {
           },
         ]
       }
+      estancia_movimientos: {
+        Row: {
+          created_at: string
+          datos_antes: Json
+          datos_despues: Json
+          hotel_id: string
+          id: string
+          metadata: Json
+          motivo: string
+          motivo_reversion: string | null
+          operacion: string
+          reserva_id: string
+          reversible: boolean
+          revertido: boolean
+          revertido_at: string | null
+          revertido_por: string | null
+          turno_id: string | null
+          usuario_email: string | null
+          usuario_id: string | null
+          usuario_nombre: string | null
+        }
+        Insert: {
+          created_at?: string
+          datos_antes?: Json
+          datos_despues?: Json
+          hotel_id: string
+          id?: string
+          metadata?: Json
+          motivo: string
+          motivo_reversion?: string | null
+          operacion: string
+          reserva_id: string
+          reversible?: boolean
+          revertido?: boolean
+          revertido_at?: string | null
+          revertido_por?: string | null
+          turno_id?: string | null
+          usuario_email?: string | null
+          usuario_id?: string | null
+          usuario_nombre?: string | null
+        }
+        Update: {
+          created_at?: string
+          datos_antes?: Json
+          datos_despues?: Json
+          hotel_id?: string
+          id?: string
+          metadata?: Json
+          motivo?: string
+          motivo_reversion?: string | null
+          operacion?: string
+          reserva_id?: string
+          reversible?: boolean
+          revertido?: boolean
+          revertido_at?: string | null
+          revertido_por?: string | null
+          turno_id?: string | null
+          usuario_email?: string | null
+          usuario_id?: string | null
+          usuario_nombre?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estancia_movimientos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estancia_movimientos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estancia_movimientos_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estancia_movimientos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gastos: {
         Row: {
           categoria: string
@@ -816,6 +1034,7 @@ export type Database = {
           proveedor: string | null
           proveedor_id: string | null
           proveedor_nombre: string | null
+          turno_id: string | null
         }
         Insert: {
           categoria: string
@@ -833,6 +1052,7 @@ export type Database = {
           proveedor?: string | null
           proveedor_id?: string | null
           proveedor_nombre?: string | null
+          turno_id?: string | null
         }
         Update: {
           categoria?: string
@@ -850,6 +1070,7 @@ export type Database = {
           proveedor?: string | null
           proveedor_id?: string | null
           proveedor_nombre?: string | null
+          turno_id?: string | null
         }
         Relationships: [
           {
@@ -873,6 +1094,13 @@ export type Database = {
             referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "gastos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       habitaciones: {
@@ -883,6 +1111,9 @@ export type Database = {
           estado_mantenimiento: string | null
           excluida_publica: boolean
           fotos: string[]
+          fuera_servicio_desde: string | null
+          fuera_servicio_hasta: string | null
+          fuera_servicio_motivo: string | null
           hotel_id: string
           id: string
           notas: string | null
@@ -898,6 +1129,9 @@ export type Database = {
           estado_mantenimiento?: string | null
           excluida_publica?: boolean
           fotos?: string[]
+          fuera_servicio_desde?: string | null
+          fuera_servicio_hasta?: string | null
+          fuera_servicio_motivo?: string | null
           hotel_id: string
           id?: string
           notas?: string | null
@@ -913,6 +1147,9 @@ export type Database = {
           estado_mantenimiento?: string | null
           excluida_publica?: boolean
           fotos?: string[]
+          fuera_servicio_desde?: string | null
+          fuera_servicio_hasta?: string | null
+          fuera_servicio_motivo?: string | null
           hotel_id?: string
           id?: string
           notas?: string | null
@@ -1106,6 +1343,7 @@ export type Database = {
           stock_anterior: number | null
           stock_nuevo: number | null
           tipo: string
+          turno_id: string | null
           usuario_id: string | null
         }
         Insert: {
@@ -1118,6 +1356,7 @@ export type Database = {
           stock_anterior?: number | null
           stock_nuevo?: number | null
           tipo: string
+          turno_id?: string | null
           usuario_id?: string | null
         }
         Update: {
@@ -1130,6 +1369,7 @@ export type Database = {
           stock_anterior?: number | null
           stock_nuevo?: number | null
           tipo?: string
+          turno_id?: string | null
           usuario_id?: string | null
         }
         Relationships: [
@@ -1138,6 +1378,13 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
             referencedColumns: ["id"]
           },
         ]
@@ -1183,48 +1430,76 @@ export type Database = {
       }
       pagos: {
         Row: {
+          actualizado_at: string | null
+          actualizado_por: string | null
           concepto: string | null
           created_at: string | null
+          created_by: string | null
+          cuenta_estancia_id: string | null
+          estado: string
           fecha: string | null
           hotel_id: string
           id: string
           metodo_pago: string | null
           monto: number
+          motivo_cambio: string | null
           notas: string | null
           numero_pago: string | null
           referencia: string | null
           reserva_id: string | null
           tipo: string | null
+          turno_id: string | null
         }
         Insert: {
+          actualizado_at?: string | null
+          actualizado_por?: string | null
           concepto?: string | null
           created_at?: string | null
+          created_by?: string | null
+          cuenta_estancia_id?: string | null
+          estado?: string
           fecha?: string | null
           hotel_id: string
           id?: string
           metodo_pago?: string | null
           monto: number
+          motivo_cambio?: string | null
           notas?: string | null
           numero_pago?: string | null
           referencia?: string | null
           reserva_id?: string | null
           tipo?: string | null
+          turno_id?: string | null
         }
         Update: {
+          actualizado_at?: string | null
+          actualizado_por?: string | null
           concepto?: string | null
           created_at?: string | null
+          created_by?: string | null
+          cuenta_estancia_id?: string | null
+          estado?: string
           fecha?: string | null
           hotel_id?: string
           id?: string
           metodo_pago?: string | null
           monto?: number
+          motivo_cambio?: string | null
           notas?: string | null
           numero_pago?: string | null
           referencia?: string | null
           reserva_id?: string | null
           tipo?: string | null
+          turno_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pagos_cuenta_estancia_id_fkey"
+            columns: ["cuenta_estancia_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_estancia"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pagos_hotel_id_fkey"
             columns: ["hotel_id"]
@@ -1244,6 +1519,13 @@ export type Database = {
             columns: ["reserva_id"]
             isOneToOne: false
             referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
             referencedColumns: ["id"]
           },
         ]
@@ -1519,6 +1801,82 @@ export type Database = {
           },
         ]
       }
+      reserva_huespedes: {
+        Row: {
+          activo: boolean
+          apellido_paterno: string | null
+          cargo_por_noche: number
+          created_at: string
+          created_by: string | null
+          documento: string | null
+          genera_cargo: boolean
+          hotel_id: string
+          id: string
+          motivo_retiro: string | null
+          nombre: string
+          reserva_id: string
+          retirado_at: string | null
+          retirado_por: string | null
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          apellido_paterno?: string | null
+          cargo_por_noche?: number
+          created_at?: string
+          created_by?: string | null
+          documento?: string | null
+          genera_cargo?: boolean
+          hotel_id: string
+          id?: string
+          motivo_retiro?: string | null
+          nombre: string
+          reserva_id: string
+          retirado_at?: string | null
+          retirado_por?: string | null
+          tipo?: string
+        }
+        Update: {
+          activo?: boolean
+          apellido_paterno?: string | null
+          cargo_por_noche?: number
+          created_at?: string
+          created_by?: string | null
+          documento?: string | null
+          genera_cargo?: boolean
+          hotel_id?: string
+          id?: string
+          motivo_retiro?: string | null
+          nombre?: string
+          reserva_id?: string
+          retirado_at?: string | null
+          retirado_por?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reserva_huespedes_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reserva_huespedes_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reserva_huespedes_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reservas: {
         Row: {
           adultos: number | null
@@ -1530,13 +1888,17 @@ export type Database = {
           descuento: number | null
           descuento_tipo: string | null
           descuento_valor: number
+          early_checkin_at: string | null
           estado: string | null
           fecha_checkin: string
           fecha_checkout: string
           habitacion_id: string | null
+          hora_checkout: string | null
           hora_llegada: string | null
           hotel_id: string
           id: string
+          impuesto_hospedaje_porcentaje: number | null
+          late_checkout_until: string | null
           ninos: number | null
           noches: number | null
           notas: string | null
@@ -1544,6 +1906,9 @@ export type Database = {
           numero_reserva: string | null
           origen: string | null
           personas_extra: number
+          reabierta_at: string | null
+          reabierta_por: string | null
+          reserva_anterior_id: string | null
           revisada_at: string | null
           revisada_por: string | null
           saldo_pendiente: number | null
@@ -1555,6 +1920,7 @@ export type Database = {
           total_impuestos: number | null
           total_pagado: number | null
           updated_at: string | null
+          version_operativa: number
         }
         Insert: {
           adultos?: number | null
@@ -1566,13 +1932,17 @@ export type Database = {
           descuento?: number | null
           descuento_tipo?: string | null
           descuento_valor?: number
+          early_checkin_at?: string | null
           estado?: string | null
           fecha_checkin: string
           fecha_checkout: string
           habitacion_id?: string | null
+          hora_checkout?: string | null
           hora_llegada?: string | null
           hotel_id: string
           id?: string
+          impuesto_hospedaje_porcentaje?: number | null
+          late_checkout_until?: string | null
           ninos?: number | null
           noches?: number | null
           notas?: string | null
@@ -1580,6 +1950,9 @@ export type Database = {
           numero_reserva?: string | null
           origen?: string | null
           personas_extra?: number
+          reabierta_at?: string | null
+          reabierta_por?: string | null
+          reserva_anterior_id?: string | null
           revisada_at?: string | null
           revisada_por?: string | null
           saldo_pendiente?: number | null
@@ -1591,6 +1964,7 @@ export type Database = {
           total_impuestos?: number | null
           total_pagado?: number | null
           updated_at?: string | null
+          version_operativa?: number
         }
         Update: {
           adultos?: number | null
@@ -1602,13 +1976,17 @@ export type Database = {
           descuento?: number | null
           descuento_tipo?: string | null
           descuento_valor?: number
+          early_checkin_at?: string | null
           estado?: string | null
           fecha_checkin?: string
           fecha_checkout?: string
           habitacion_id?: string | null
+          hora_checkout?: string | null
           hora_llegada?: string | null
           hotel_id?: string
           id?: string
+          impuesto_hospedaje_porcentaje?: number | null
+          late_checkout_until?: string | null
           ninos?: number | null
           noches?: number | null
           notas?: string | null
@@ -1616,6 +1994,9 @@ export type Database = {
           numero_reserva?: string | null
           origen?: string | null
           personas_extra?: number
+          reabierta_at?: string | null
+          reabierta_por?: string | null
+          reserva_anterior_id?: string | null
           revisada_at?: string | null
           revisada_por?: string | null
           saldo_pendiente?: number | null
@@ -1627,6 +2008,7 @@ export type Database = {
           total_impuestos?: number | null
           total_pagado?: number | null
           updated_at?: string | null
+          version_operativa?: number
         }
         Relationships: [
           {
@@ -1655,6 +2037,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_reserva_anterior_id_fkey"
+            columns: ["reserva_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
             referencedColumns: ["id"]
           },
           {
@@ -2075,6 +2464,68 @@ export type Database = {
           },
         ]
       }
+      turno_eventos: {
+        Row: {
+          created_at: string
+          detalle: Json
+          hotel_id: string
+          id: string
+          reserva_id: string | null
+          tipo: string
+          turno_id: string
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detalle?: Json
+          hotel_id: string
+          id?: string
+          reserva_id?: string | null
+          tipo: string
+          turno_id: string
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detalle?: Json
+          hotel_id?: string
+          id?: string
+          reserva_id?: string | null
+          tipo?: string
+          turno_id?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turno_eventos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turno_eventos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turno_eventos_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turno_eventos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       turnos_operativos: {
         Row: {
           abierto_at: string
@@ -2086,6 +2537,7 @@ export type Database = {
           efectivo_esperado: number | null
           egresos_efectivo: number
           entrega_a: string | null
+          entrega_a_usuario_id: string | null
           estado: string
           fondo_inicial: number
           hotel_id: string
@@ -2096,6 +2548,7 @@ export type Database = {
           motivo_diferencia: string | null
           otros_ingresos: number
           pendientes_entrega: string | null
+          reporte_cierre: Json
           resumen_entrega: string | null
           updated_at: string
           usuario_id: string
@@ -2111,6 +2564,7 @@ export type Database = {
           efectivo_esperado?: number | null
           egresos_efectivo?: number
           entrega_a?: string | null
+          entrega_a_usuario_id?: string | null
           estado?: string
           fondo_inicial?: number
           hotel_id: string
@@ -2121,6 +2575,7 @@ export type Database = {
           motivo_diferencia?: string | null
           otros_ingresos?: number
           pendientes_entrega?: string | null
+          reporte_cierre?: Json
           resumen_entrega?: string | null
           updated_at?: string
           usuario_id: string
@@ -2136,6 +2591,7 @@ export type Database = {
           efectivo_esperado?: number | null
           egresos_efectivo?: number
           entrega_a?: string | null
+          entrega_a_usuario_id?: string | null
           estado?: string
           fondo_inicial?: number
           hotel_id?: string
@@ -2146,12 +2602,20 @@ export type Database = {
           motivo_diferencia?: string | null
           otros_ingresos?: number
           pendientes_entrega?: string | null
+          reporte_cierre?: Json
           resumen_entrega?: string | null
           updated_at?: string
           usuario_id?: string
           usuario_nombre?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "turnos_entrega_usuario_fkey"
+            columns: ["entrega_a_usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "turnos_operativos_hotel_id_fkey"
             columns: ["hotel_id"]
@@ -2192,6 +2656,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           detalle: Json | null
+          estado: string
           fecha: string | null
           folio: string | null
           habitacion_id: string | null
@@ -2205,12 +2670,14 @@ export type Database = {
           reserva_id: string | null
           subtotal: number | null
           total: number | null
+          turno_id: string | null
         }
         Insert: {
           cliente_nombre?: string | null
           created_at?: string | null
           created_by?: string | null
           detalle?: Json | null
+          estado?: string
           fecha?: string | null
           folio?: string | null
           habitacion_id?: string | null
@@ -2224,12 +2691,14 @@ export type Database = {
           reserva_id?: string | null
           subtotal?: number | null
           total?: number | null
+          turno_id?: string | null
         }
         Update: {
           cliente_nombre?: string | null
           created_at?: string | null
           created_by?: string | null
           detalle?: Json | null
+          estado?: string
           fecha?: string | null
           folio?: string | null
           habitacion_id?: string | null
@@ -2243,6 +2712,7 @@ export type Database = {
           reserva_id?: string | null
           subtotal?: number | null
           total?: number | null
+          turno_id?: string | null
         }
         Relationships: [
           {
@@ -2273,12 +2743,23 @@ export type Database = {
             referencedRelation: "reservas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ventas_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ventas_detalle: {
         Row: {
+          cancelado_at: string | null
+          cancelado_por: string | null
           cantidad: number | null
+          estado: string
           id: string
+          motivo_cancelacion: string | null
           precio_unitario: number | null
           producto_id: string | null
           producto_nombre: string | null
@@ -2286,8 +2767,12 @@ export type Database = {
           venta_id: string
         }
         Insert: {
+          cancelado_at?: string | null
+          cancelado_por?: string | null
           cantidad?: number | null
+          estado?: string
           id?: string
+          motivo_cancelacion?: string | null
           precio_unitario?: number | null
           producto_id?: string | null
           producto_nombre?: string | null
@@ -2295,8 +2780,12 @@ export type Database = {
           venta_id: string
         }
         Update: {
+          cancelado_at?: string | null
+          cancelado_por?: string | null
           cantidad?: number | null
+          estado?: string
           id?: string
+          motivo_cancelacion?: string | null
           precio_unitario?: number | null
           producto_id?: string | null
           producto_nombre?: string | null
@@ -2878,15 +3367,6 @@ export type Database = {
         Returns: Json
       }
       current_hotel_id: { Args: never; Returns: string }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
-      email_queue_dispatch: { Args: never; Returns: undefined }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
-      }
       get_metricas_plataforma: {
         Args: never
         Returns: {
@@ -2908,23 +3388,6 @@ export type Database = {
         Returns: boolean
       }
       is_superadmin: { Args: never; Returns: boolean }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       recalculate_reservation_financials: {
         Args: { p_reserva_id: string }
         Returns: undefined
@@ -2933,9 +3396,96 @@ export type Database = {
         Args: { _modulo: string; _rol?: string }
         Returns: boolean
       }
+      vulo_adjust_stay_charge: {
+        Args: {
+          p_action: string
+          p_charge_id: string
+          p_motivo?: string
+          p_payload?: Json
+          p_reserva_id: string
+        }
+        Returns: Json
+      }
+      vulo_apply_stay_operation: {
+        Args: {
+          p_motivo?: string
+          p_operacion: string
+          p_payload?: Json
+          p_reserva_id: string
+        }
+        Returns: Json
+      }
+      vulo_assert_open_shift: { Args: { p_hotel_id?: string }; Returns: string }
+      vulo_assign_deliverable: {
+        Args: {
+          p_cantidad?: number
+          p_entregable_id: string
+          p_reserva_id: string
+        }
+        Returns: Json
+      }
+      vulo_build_shift_report: { Args: { p_turno_id: string }; Returns: Json }
       vulo_can_close_day: { Args: never; Returns: boolean }
+      vulo_close_shift: {
+        Args: {
+          p_checklist: Json
+          p_efectivo_contado: number
+          p_entrega_a: string
+          p_motivo_diferencia: string
+          p_pendientes_entrega: string
+          p_resumen_entrega: string
+          p_turno_id: string
+        }
+        Returns: Json
+      }
       vulo_current_hotel_id: { Args: never; Returns: string }
+      vulo_current_role: { Args: never; Returns: string }
       vulo_is_superadmin: { Args: never; Returns: boolean }
+      vulo_operation_allowed: {
+        Args: { p_operacion: string }
+        Returns: boolean
+      }
+      vulo_register_sale: {
+        Args: {
+          p_cuenta_estancia_id?: string
+          p_habitacion_id?: string
+          p_items: Json
+          p_metodo_pago?: string
+          p_motivo?: string
+          p_notas?: string
+          p_reserva_id?: string
+        }
+        Returns: Json
+      }
+      vulo_reopen_checkout: {
+        Args: {
+          p_motivo: string
+          p_new_checkout: string
+          p_new_room_id: string
+          p_reserva_id: string
+        }
+        Returns: Json
+      }
+      vulo_return_deliverable: {
+        Args: { p_assignment_id: string; p_cantidad_devuelta: number }
+        Returns: Json
+      }
+      vulo_reverse_stay_operation: {
+        Args: { p_motivo: string; p_movement_id: string }
+        Returns: Json
+      }
+      vulo_room_available_for_stay: {
+        Args: {
+          p_desde: string
+          p_habitacion_id: string
+          p_hasta: string
+          p_hotel_id: string
+          p_require_ready?: boolean
+          p_reserva_id: string
+        }
+        Returns: boolean
+      }
+      vulo_user_requires_shift: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role:
