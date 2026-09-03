@@ -577,54 +577,43 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </DialogHeader>
       )}
 
-      {/* ENCABEZADO */}
-      <header className={cn(
-        'sticky top-0 z-30 border-b border-[#10233F]/10 bg-white/95 backdrop-blur',
-        pageMode
-          ? '-mx-3 -mt-2 px-3 py-2 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6'
-          : '-mx-3 -mt-3 px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4 sm:rounded-t-xl',
-      )}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="min-w-0">
-              <h2 className="truncate text-sm font-semibold text-[#10233F]">
-                {origen === 'Recepcion' ? 'Nueva entrada · Check-in' : 'Nueva reserva'}
-              </h2>
-              <p className="truncate text-[11px] text-muted-foreground">
-                {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona fechas'}
-                {selectedHabitacion ? ` · Hab. #${selectedHabitacion.numero}` : ''}
-                {` · ${formData.adultos + formData.ninos + formData.personasExtra} huésped(es)`}
-                {total > 0 ? ` · ${fmt(total)}` : ''}
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-0.5">
-            {([['Reserva', CalendarPlus], ['Recepcion', UserPlus]] as const).map(([value, Icon]) => (
-              <button
-                key={value}
-                type="button"
-                data-step-focus={value === 'Reserva' ? 'dates' : undefined}
-                onClick={() => handleOrigenChange(value)}
-                className={cn(
-                  'flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
-                  origen === value ? 'bg-[#10233F] text-white shadow-sm' : 'text-[#475569] hover:text-[#10233F]',
-                )}
-              >
-                <Icon className="h-3 w-3" />
-                <span className="hidden sm:inline">{value === 'Reserva' ? 'Reserva' : 'Recepción'}</span>
-              </button>
-            ))}
-          </div>
+      {/* ENCABEZADO COMPACTO */}
+      <header className="flex items-center justify-between gap-2 pb-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona fechas'}
+            {selectedHabitacion ? ` · Hab. #${selectedHabitacion.numero}` : ''}
+            {` · ${formData.adultos + formData.ninos + formData.personasExtra} huésped(es)`}
+            {total > 0 ? ` · ${fmt(total)}` : ''}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-0.5">
+          {([['Reserva', CalendarPlus], ['Recepcion', UserPlus]] as const).map(([value, Icon]) => (
+            <button
+              key={value}
+              type="button"
+              data-step-focus={value === 'Reserva' ? 'dates' : undefined}
+              onClick={() => handleOrigenChange(value)}
+              className={cn(
+                'flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
+                origen === value ? 'bg-[#10233F] text-white shadow-sm' : 'text-[#475569] hover:text-[#10233F]',
+              )}
+            >
+              <Icon className="h-3 w-3" />
+              <span className="hidden sm:inline">{value === 'Reserva' ? 'Reserva' : 'Recepción'}</span>
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* LAYOUT A TODO EL ANCHO: una sola tarjeta blanca + resumen */}
-      <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
+      {/* LAYOUT A TODO EL ANCHO */}
+      <div className="grid items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
 
-        <div className="grid min-w-0 gap-x-8 gap-y-5 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm lg:grid-cols-2 lg:p-5">
+        <div className="grid min-w-0 content-start gap-x-8 gap-y-5 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm lg:grid-cols-2 lg:p-5">
+
 
         {/* COLUMNA 1 — Estancia, ocupación y habitación */}
         <div className="min-w-0 space-y-5">
