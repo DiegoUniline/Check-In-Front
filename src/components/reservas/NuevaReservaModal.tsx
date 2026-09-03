@@ -71,7 +71,7 @@ function ReservationSurface({
   children: ReactNode;
 }) {
   if (pageMode) {
-    return <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC] pb-24 lg:pb-8">
+    return <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC] pb-8">
       <div ref={surfaceRef} onKeyDown={onKeyDown} className="mx-auto max-w-[1680px] space-y-4 px-3 py-4 sm:px-6 lg:px-8">
         {children}
       </div>
@@ -841,8 +841,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </FormSection>
 
 
-          {/* 3. CARGOS E IMPUESTOS */}
-          <FormSection icon={Receipt} title="Cargos e impuestos" hint="Consumos anticipados e impuestos.">
+          {/* 3. CARGOS */}
+          <FormSection icon={Receipt} title="Cargos adicionales" hint="Consumos o servicios anticipados.">
             <div className="grid grid-cols-[minmax(0,1fr)_56px_88px_36px] gap-1.5">
               <ComboboxCreatable
                 options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
@@ -876,58 +876,54 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </div>
             )}
 
-            <Separator />
-
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5 text-[11px] font-medium text-[#475569]"><Percent className="h-3 w-3" />Impuestos</Label>
-              {formData.impuestos.length === 0 && <p className="text-[11px] text-muted-foreground">Sin impuestos. Agrega uno.</p>}
-              {formData.impuestos.map((imp) => (
-                <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_72px_84px_36px] items-center gap-1.5">
-                  <Input
-                    className="h-8 w-full min-w-0 text-xs"
-                    placeholder="Nombre del impuesto"
-                    value={imp.nombre}
-                    onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))}
-                  />
-                  <div className="relative">
-                    <Input
-                      type="number" min="0" step="0.01"
-                      className="h-8 pr-6 text-right text-xs"
-                      value={imp.tasa}
-                      onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))}
-                    />
-                    <Percent className="absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-                  </div>
-                  <span className="text-right text-[11px] tabular-nums text-muted-foreground">{fmt(subtotal * (imp.tasa / 100))}</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
-                </div>
-              ))}
-              <div className="flex flex-wrap gap-1 pt-0.5">
-                {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
-                  <button key={sug.nombre} type="button" title={sug.descripcion}
-                    className="rounded-full border border-dashed border-[#CBD5E1] px-2 py-0.5 text-[11px] text-[#475569] transition-colors hover:border-[#10233F]/40 hover:text-[#10233F]"
-                    onClick={() => setFormData((p) => ({ ...p, impuestos: [...p.impuestos, { id: `imp-${Date.now()}`, nombre: sug.nombre, tasa: sug.tasa }] }))}>
-                    + {sug.nombre}
-                  </button>
-                ))}
-                <button type="button"
-                  className="rounded-full border border-dashed border-[#F97316]/50 px-2 py-0.5 text-[11px] text-[#C2410C] transition-colors hover:bg-[#FFF7ED]"
-                  onClick={() => setFormData((p) => ({ ...p, impuestos: [...p.impuestos, { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 }] }))}>
-                  + Personalizado
-                </button>
-              </div>
-            </div>
           </FormSection>
 
-          {/* 4. NOTAS Y ENTREGABLES (opcional, plegable) */}
-          <FormSection collapsible icon={Package} title="Notas y entregables" hint="Opcional · solicitudes, notas internas y entregables.">
-            <div className="grid gap-2 sm:grid-cols-2">
+          {/* 4. DETALLES OPCIONALES EN UNA SOLA FRANJA */}
+          <FormSection icon={Package} title="Notas e impuestos" hint="Todo lo opcional, compacto y visible en una sola fila.">
+            <div className="grid items-start gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(260px,0.9fr)]">
               <Field label="Solicitudes del huésped">
-                <Textarea rows={2} className="min-h-[60px] text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
+                <Textarea rows={2} className="min-h-[68px] resize-none text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
               </Field>
               <Field label="Notas internas">
-                <Textarea rows={2} className="min-h-[60px] text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
+                <Textarea rows={2} className="min-h-[68px] resize-none text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
               </Field>
+              <div className="min-w-0 space-y-1.5 rounded-lg border border-[#10233F]/10 bg-[#F8FAFC] p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="flex items-center gap-1 text-[11px] font-medium text-[#475569]"><Percent className="h-3 w-3" />Impuestos</Label>
+                  <span className="text-[11px] font-semibold tabular-nums text-[#10233F]">{fmt(totalImpuestos)}</span>
+                </div>
+                <Select value="" onValueChange={(value) => {
+                  const sugerido = IMPUESTOS_MEXICO_SUGERIDOS.find((item) => item.nombre === value);
+                  const nuevo = sugerido
+                    ? { id: `imp-${Date.now()}`, nombre: sugerido.nombre, tasa: sugerido.tasa }
+                    : { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 };
+                  setFormData((p) => ({ ...p, impuestos: [...p.impuestos, nuevo] }));
+                }}>
+                  <SelectTrigger className="h-8 bg-white text-xs"><SelectValue placeholder="+ Agregar impuesto" /></SelectTrigger>
+                  <SelectContent>
+                    {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
+                      <SelectItem key={sug.nombre} value={sug.nombre}>{sug.nombre}</SelectItem>
+                    ))}
+                    <SelectItem value="__custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.impuestos.length === 0 ? (
+                  <p className="py-1 text-center text-[10px] text-muted-foreground">Sin impuestos aplicados</p>
+                ) : (
+                  <div className="max-h-[76px] space-y-1 overflow-y-auto pr-0.5">
+                    {formData.impuestos.map((imp) => (
+                      <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_62px_28px] items-center gap-1">
+                        <Input className="h-7 min-w-0 px-2 text-[11px]" value={imp.nombre} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))} />
+                        <div className="relative">
+                          <Input type="number" min="0" step="0.01" className="h-7 pr-5 text-right text-[11px]" value={imp.tasa} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))} />
+                          <Percent className="pointer-events-none absolute right-1.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 text-muted-foreground" />
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             {origen === 'Recepcion' && entregables.length > 0 && (
               <div className="space-y-1.5">
@@ -1034,30 +1030,29 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   <p className="text-[10px] text-white/70">{fmt(totalPagado)} pagado</p>
                 </div>
               </div>
+
+              <Separator className="bg-white/20" />
+
+              <Button
+                data-confirm-reservation
+                type="button"
+                onClick={handleConfirm}
+                disabled={!puedeGuardar}
+                className={cn(
+                  'h-11 w-full bg-white font-semibold text-[#10233F] shadow-sm hover:bg-white/90 disabled:bg-white/35 disabled:text-white/60',
+                  origen === 'Recepcion' && 'bg-emerald-500 text-white hover:bg-emerald-600 disabled:bg-emerald-500/35',
+                )}
+              >
+                {loading ? 'Procesando…' : <><Check className="mr-1.5 h-4 w-4" />{origen === 'Recepcion' ? 'Completar check-in' : 'Crear reserva'}</>}
+              </Button>
+              <p className="text-center text-[10px] text-white/65">
+                {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter' : 'Completa fechas, habitación y huésped'}
+              </p>
             </CardContent>
           </Card>
         </aside>
       </div>
 
-      {/* ACCIONES */}
-      <div className={cn(
-        'sticky bottom-0 z-20 -mx-3 mt-2 flex items-center gap-2 border-t bg-background/95 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
-        pageMode ? 'sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8' : 'sm:-mx-5 sm:px-5',
-      )}>
-        <Button type="button" className="h-9 flex-1 text-xs sm:flex-none" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-        <span className="hidden flex-1 text-center text-[11px] text-muted-foreground md:block">
-          {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter' : 'Completa fechas, habitación y huésped'}
-        </span>
-        <Button
-          data-confirm-reservation
-          type="button"
-          onClick={handleConfirm}
-          disabled={!puedeGuardar}
-          className={cn('h-9 flex-1 text-xs sm:min-w-44 sm:flex-none', origen === 'Recepcion' && 'bg-emerald-600 hover:bg-emerald-700')}
-        >
-          {loading ? 'Procesando…' : <><Check className="mr-1.5 h-3.5 w-3.5" />{origen === 'Recepcion' ? 'Completar check-in' : 'Crear reserva'}</>}
-        </Button>
-      </div>
     </ReservationSurface>
   );
 }
@@ -1103,4 +1098,3 @@ function Line({ label, value, accent, small }: { label: string; value: string; a
     <span className={cn('shrink-0 tabular-nums', accent && 'text-emerald-300')}>{value}</span>
   </div>;
 }
-
