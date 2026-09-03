@@ -20,6 +20,9 @@ const TABLES = [
   'clientes',
   'tareas_limpieza',
   'tareas_mantenimiento',
+  'reserva_huespedes',
+  'cuentas_estancia',
+  'estancia_movimientos',
   'notificaciones',
 ];
 

@@ -22,11 +22,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import { useConfirm } from '@/hooks/useConfirm';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { StayOperationsPanel } from '@/components/reservas/StayOperationsPanel';
 
 interface ReservaDetalleModalProps {
   open: boolean;
@@ -37,7 +37,6 @@ interface ReservaDetalleModalProps {
 
 export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicial, onUpdate }: ReservaDetalleModalProps) {
   const { toast } = useToast();
-  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState('resumen');
   const [processing, setProcessing] = useState(false);
   const [reserva, setReserva] = useState<any>(null);
@@ -47,6 +46,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const [editMode, setEditMode] = useState(false);
   const [fechaCheckout, setFechaCheckout] = useState<Date>(new Date());
   const [habitacionId, setHabitacionId] = useState('');
+  const [editReason, setEditReason] = useState('');
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   
   // Check-in
@@ -98,6 +98,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       cargarChecklists();
       // Reset estados
       setEditMode(false);
+      setEditReason('');
       setMarcadosCheckin({});
       setMarcadosCheckout({});
       setDevolucionExpandidaId(null);
@@ -199,7 +200,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const personasExtra = r.personas_extra || 0;
   const cargoPersonaExtra = safeNumber(r.cargo_persona_extra);
   const totalPersonaExtra = personasExtra * cargoPersonaExtra * nochesActuales;
-  const totalCargos = r.cargos?.reduce((sum: number, c: any) => sum + safeNumber(c.total, safeNumber(c.subtotal)), 0) || 0;
+  const totalCargos = r.cargos?.filter((c: any) => c.estado !== 'Cancelado').reduce((sum: number, c: any) => sum + safeNumber(c.total, safeNumber(c.subtotal)), 0) || 0;
   // No aplicar IVA automático: se respetan los impuestos configurados en la reserva.
   const impuestos = safeNumber(r.total_impuestos);
   const totalBruto = subtotalHospedaje + totalPersonaExtra + totalCargos + impuestos;
@@ -243,7 +244,11 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       if (habitacionId && habitacionId !== r.habitacion_id) updates.habitacion_id = habitacionId;
 
       if (Object.keys(updates).length > 0) {
-        await api.updateReserva(r.id, updates);
+        if (editReason.trim().length < 3) throw new Error('Escribe el motivo de la modificación');
+        await api.applyStayOperation(r.id, 'reservation_correction', {
+          new_checkout: updates.fecha_checkout,
+          new_room_id: updates.habitacion_id,
+        }, editReason.trim());
         toast({ title: '✅ Reserva actualizada' });
         await cargarReserva();
         setEditMode(false);
@@ -262,6 +267,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
   const handleCancelarEdicion = () => {
     setFechaCheckout(parseStayDate(r.fecha_checkout));
     setHabitacionId(r.habitacion_id || '');
+    setEditReason('');
     setEditMode(false);
   };
 
@@ -363,12 +369,9 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     
     setProcessing(true);
     try {
-      await api.createPago({
-        reserva_id: r.id,
-        monto,
-        metodo_pago: metodoPago,
-        concepto: 'Abono a reserva',
-      });
+      await api.applyStayOperation(r.id, 'partial_payment', {
+        amount: monto, payment_method: metodoPago, concept: 'Abono a reserva',
+      }, 'Abono registrado en la estancia');
       toast({ title: '✅ Pago registrado', description: `${formatCurrency(monto)} con ${metodoPago}` });
       setMontoAbono('');
       await cargarReserva();
@@ -389,23 +392,15 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
     const concepto = conceptosCargo.find(c => c.id === cargoConcepto);
     const cantidad = safeNumber(cargoCantidad, 1);
     const precioUnitario = safeNumber(cargoMonto);
-    const subtotal = cantidad * precioUnitario;
     // Los impuestos por cargo dependen del concepto configurado; sin tasa fija por defecto.
     const impuesto = 0;
     
     setProcessing(true);
     try {
-      await api.createCargo({
-        reserva_id: r.id,
-        concepto_id: cargoConcepto,
-        concepto: concepto?.nombre || 'Cargo adicional',
-        cantidad,
-        precio_unitario: precioUnitario,
-        subtotal,
-        impuesto,
-        total: subtotal + impuesto,
-        notas: cargoNotas,
-      });
+      await api.applyStayOperation(r.id, 'add_charge', {
+        concept_id: cargoConcepto, concept: concepto?.nombre || 'Cargo adicional',
+        quantity: cantidad, amount: precioUnitario, tax: impuesto, notes: cargoNotas,
+      }, cargoNotas.trim() || `Cargo: ${concepto?.nombre || 'adicional'}`);
       toast({ title: '✅ Cargo agregado' });
       setCargoConcepto('');
       setCargoMonto('');
@@ -506,28 +501,6 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
       await api.confirmarReserva(r.id);
       toast({ title: '✓ Reserva confirmada' });
       await cargarReserva();
-      onUpdate?.();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleCancelar = async () => {
-    const ok = await confirm({
-      title: 'Cancelar reserva',
-      description: '¿Seguro que desea cancelar esta reserva?',
-      confirmText: 'Sí, cancelar',
-      destructive: true,
-    });
-    if (!ok) return;
-    
-    setProcessing(true);
-    try {
-      await api.cancelarReserva(r.id);
-      toast({ title: 'Reserva cancelada' });
-      onOpenChange(false);
       onUpdate?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -798,6 +771,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     )}
                   </TabsTrigger>
                   <TabsTrigger className="min-w-[92px]" value="pagos">Pagos {r.pagos?.length > 0 && `(${r.pagos.length})`}</TabsTrigger>
+                  <TabsTrigger className="min-w-[112px]" value="operaciones">Operaciones</TabsTrigger>
                 </TabsList>
               </div>
 
@@ -923,6 +897,21 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                       </Card>
                     )}
                   </div>
+                )}
+
+                {editMode && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <Label className="text-muted-foreground text-xs">Motivo obligatorio del cambio</Label>
+                      <Textarea
+                        value={editReason}
+                        onChange={(event) => setEditReason(event.target.value)}
+                        placeholder="Ej. El huésped solicitó una noche adicional"
+                        rows={2}
+                        className="mt-1"
+                      />
+                    </CardContent>
+                  </Card>
                 )}
 
                 {r.estado === 'Confirmada' && checklistCheckin.length > 0 && (
@@ -1058,9 +1047,9 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     {r.cargos && r.cargos.length > 0 ? (
                       <div className="space-y-2">
                         {r.cargos.map((cargo: any, idx: number) => (
-                          <div key={cargo.id || idx} className="flex items-center justify-between py-2 border-b last:border-0">
+                          <div key={cargo.id || idx} className={`flex items-center justify-between py-2 border-b last:border-0 ${cargo.estado === 'Cancelado' ? 'opacity-55' : ''}`}>
                             <div>
-                              <p className="font-medium">{cargo.concepto || cargo.producto_nombre}</p>
+                              <p className="font-medium">{cargo.concepto || cargo.producto_nombre} {cargo.estado === 'Cancelado' && <Badge variant="outline" className="ml-1">Cancelado</Badge>}</p>
                               <p className="text-xs text-muted-foreground">
                                 {cargo.cantidad} x {formatCurrency(safeNumber(cargo.precio_unitario))}
                                 {cargo.notas && ` • ${cargo.notas}`}
@@ -1166,9 +1155,9 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     {r.pagos && r.pagos.length > 0 ? (
                       <div className="space-y-2">
                         {r.pagos.map((pago: any, idx: number) => (
-                          <div key={pago.id || idx} className="flex items-center justify-between py-2 border-b last:border-0">
+                          <div key={pago.id || idx} className={`flex items-center justify-between py-2 border-b last:border-0 ${pago.estado === 'Cancelado' ? 'opacity-55' : ''}`}>
                             <div>
-                              <p className="font-medium">{formatCurrency(safeNumber(pago.monto))}</p>
+                              <p className="font-medium">{formatCurrency(safeNumber(pago.monto))} {pago.estado === 'Cancelado' && <Badge variant="outline" className="ml-1">Cancelado</Badge>}</p>
                               <p className="text-xs text-muted-foreground">{pago.metodo_pago} • {pago.concepto}</p>
                             </div>
                             <span className="text-xs text-muted-foreground">
@@ -1182,6 +1171,17 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="operaciones" className="mt-4">
+                <StayOperationsPanel
+                  reserva={r}
+                  habitaciones={habitaciones}
+                  onUpdate={async () => {
+                    await cargarReserva();
+                    onUpdate?.();
+                  }}
+                />
               </TabsContent>
             </Tabs>
           </div>
@@ -1239,8 +1239,8 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 </div>
                 
                 <div className={`p-4 rounded-lg text-center ${saldoPendiente > 0 ? 'bg-red-500/20' : 'bg-green-500/20'}`}>
-                  <p className="text-xs opacity-80">Saldo pendiente</p>
-                  <p className="text-2xl font-bold">{formatCurrency(saldoPendiente)}</p>
+                  <p className="text-xs opacity-80">{saldoPendiente < -0.01 ? 'Saldo a favor del huésped' : 'Saldo pendiente'}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(Math.abs(saldoPendiente))}</p>
                 </div>
               </CardContent>
             </Card>
@@ -1250,9 +1250,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                 <Button className="w-full" size="lg" onClick={handleConfirmar} disabled={processing}>
                   {processing ? 'Procesando...' : '✓ Confirmar Reserva'}
                 </Button>
-                <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
-                  Cancelar Reserva
-                </Button>
+                <Button variant="outline" className="w-full" size="sm" onClick={() => setActiveTab('operaciones')}>Cancelar o marcar no-show</Button>
               </div>
             )}
 
@@ -1267,9 +1265,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   {processing ? 'Procesando...' : <><DoorOpen className="h-5 w-5 mr-2" /> Hacer Check-in</>}
                 </Button>
 
-                <Button variant="destructive" className="w-full" size="sm" onClick={handleCancelar} disabled={processing}>
-                  Cancelar Reserva
-                </Button>
+                <Button variant="outline" className="w-full" size="sm" onClick={() => setActiveTab('operaciones')}>Más operaciones</Button>
               </div>
             )}
 

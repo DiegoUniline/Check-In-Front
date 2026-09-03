@@ -1038,6 +1038,7 @@ class ApiClient {
       subtotal_hospedaje: subtotal,
       descuento,
       total_impuestos: impuestos,
+      impuesto_hospedaje_porcentaje: subtotal > 0 ? (impuestos * 100) / subtotal : 0,
       total,
       saldo_pendiente: Math.max(0, total - totalPagado),
       estado: data.estado || 'Confirmada',
@@ -1063,6 +1064,42 @@ class ApiClient {
   updateReserva = async (id: string, data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('reservas').update(data).eq('id', id).select().single();
     if (error) throw error; return r;
+  };
+  applyStayOperation = async (id: string, operation: string, payload: Record<string, any> = {}, reason = ''): Promise<any> => {
+    const { data, error } = await operationalDb.rpc('vulo_apply_stay_operation', {
+      p_reserva_id: id,
+      p_operacion: operation,
+      p_payload: payload,
+      p_motivo: reason,
+    });
+    if (error) throw error;
+    return data;
+  };
+  reverseStayOperation = async (movementId: string, reason: string): Promise<any> => {
+    const { data, error } = await operationalDb.rpc('vulo_reverse_stay_operation', {
+      p_movement_id: movementId,
+      p_motivo: reason,
+    });
+    if (error) throw error;
+    return data;
+  };
+  getStayMovements = async (reservaId: string): Promise<any[]> => {
+    const { data, error } = await operationalDb.from('estancia_movimientos').select('*')
+      .eq('reserva_id', reservaId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  };
+  getStayGuests = async (reservaId: string): Promise<any[]> => {
+    const { data, error } = await operationalDb.from('reserva_huespedes').select('*')
+      .eq('reserva_id', reservaId).order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  };
+  getStayAccounts = async (reservaId: string): Promise<any[]> => {
+    const { data, error } = await operationalDb.from('cuentas_estancia').select('*')
+      .eq('reserva_id', reservaId).order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
   };
   createReservationBundle = async (input: {
     reserva: any;
