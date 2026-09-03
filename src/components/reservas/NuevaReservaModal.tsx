@@ -1089,7 +1089,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 function Stepper({ value, onChange, min = 0, max = 99 }: { value: number; onChange: (v: number) => void; min?: number; max?: number }) {
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
   return (
-    <div className="flex h-9 items-center overflow-hidden rounded-lg border border-input bg-white">
+    <div className="flex h-9 items-center overflow-hidden rounded-lg border border-input bg-background">
       <button
         type="button"
         aria-label="Restar"
