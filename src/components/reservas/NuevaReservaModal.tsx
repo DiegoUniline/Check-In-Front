@@ -69,15 +69,16 @@ function ReservationSurface({
   children: ReactNode;
 }) {
   if (pageMode) {
-    return <div className="min-h-[calc(100dvh-4rem)] bg-white">
-      <div ref={surfaceRef} onKeyDown={onKeyDown} className="w-full px-3 pb-3 pt-2 sm:px-4 lg:px-5">
+    return <div className="min-h-[calc(100dvh-4rem)] bg-white xl:h-[calc(100dvh-4rem)] xl:overflow-hidden">
+      <div ref={surfaceRef} onKeyDown={onKeyDown} className="flex w-full flex-col px-3 pb-3 pt-2 sm:px-4 lg:px-5 xl:h-full xl:min-h-0">
         {children}
       </div>
     </div>;
   }
 
+
   return <Dialog open={open} onOpenChange={onClose}>
-    <DialogContent ref={surfaceRef} onKeyDown={onKeyDown} className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-[94vh] sm:w-[calc(100vw-2rem)] sm:max-w-none sm:rounded-xl sm:border sm:p-4">
+    <DialogContent ref={surfaceRef} onKeyDown={onKeyDown} className="flex h-[100dvh] w-screen max-w-none max-h-none flex-col overflow-hidden rounded-none border-0 p-3 sm:h-[94vh] sm:w-[calc(100vw-2rem)] sm:max-w-none sm:rounded-xl sm:border sm:p-4">
       {children}
     </DialogContent>
   </Dialog>;
@@ -578,7 +579,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       )}
 
       {/* ENCABEZADO COMPACTO */}
-      <header className="flex items-center justify-between gap-2 pb-2">
+      <header className="flex shrink-0 items-center justify-between gap-2 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
             <ArrowLeft className="h-4 w-4" />
@@ -610,9 +611,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       </header>
 
       {/* LAYOUT A TODO EL ANCHO */}
-      <div className="grid items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
+      <div className="grid items-stretch gap-3 xl:min-h-0 xl:flex-1 xl:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
 
-        <div className="grid min-w-0 content-start gap-x-8 gap-y-5 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm lg:grid-cols-2 lg:p-5">
+        <div className="grid min-w-0 content-start gap-x-8 gap-y-5 rounded-xl xl:min-h-0 xl:overflow-y-auto border border-[#10233F]/10 bg-white p-4 shadow-sm lg:grid-cols-2 lg:p-5">
+
 
 
         {/* COLUMNA 1 — Estancia, ocupación y habitación */}
@@ -947,7 +949,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
 
         {/* RESUMEN DE CUENTA */}
-        <aside className="min-w-0 xl:sticky xl:top-16">
+        <aside className="min-w-0 xl:min-h-0 xl:overflow-y-auto">
           <div className="overflow-hidden rounded-xl bg-[#10233F] text-white shadow-lg">
             <div className="space-y-2 p-3">
               <p className="text-xs font-semibold">Resumen de cuenta</p>
