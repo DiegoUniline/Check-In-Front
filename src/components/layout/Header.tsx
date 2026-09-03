@@ -1,4 +1,4 @@
-import { Search, Sun, Moon, LogOut, User, Settings, Hotel, Command, Clock3 } from 'lucide-react';
+import { Search, Sun, Moon, LogOut, User, Settings, Hotel, Command, Clock3, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Logo } from '@/components/Logo';
@@ -29,7 +29,7 @@ interface HeaderProps {
 export function Header({ title, subtitle }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const { openShift, shiftRequired } = useShift();
+  const { openShift, shiftRequired, viewOnlyMode } = useShift();
   const queryClient = useQueryClient();
   const isSuperAdmin = user?.email === 'diego.leon@uniline.mx' || user?.rol === 'SuperAdmin';
 
@@ -97,8 +97,10 @@ export function Header({ title, subtitle }: HeaderProps) {
       <div className="flex items-center gap-1.5 lg:gap-2">
         {shiftRequired && <Button asChild variant="outline" size="sm" className={openShift
           ? 'h-9 border-emerald-200 bg-emerald-50 px-2 text-emerald-700 hover:bg-emerald-100 sm:px-3'
-          : 'h-9 border-amber-200 bg-amber-50 px-2 text-amber-800 hover:bg-amber-100 sm:px-3'}>
-          <Link to="/turnos"><Clock3 className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">{openShift ? 'Turno abierto' : 'Sin turno'}</span></Link>
+          : viewOnlyMode
+            ? 'h-9 border-sky-200 bg-sky-50 px-2 text-sky-800 hover:bg-sky-100 sm:px-3'
+            : 'h-9 border-amber-200 bg-amber-50 px-2 text-amber-800 hover:bg-amber-100 sm:px-3'}>
+          <Link to="/turnos">{viewOnlyMode && !openShift ? <Eye className="h-4 w-4 sm:mr-2" /> : <Clock3 className="h-4 w-4 sm:mr-2" />}<span className="hidden sm:inline">{openShift ? 'Turno abierto' : viewOnlyMode ? 'Sólo consulta' : 'Sin turno'}</span></Link>
         </Button>}
         <Button
           variant="ghost"

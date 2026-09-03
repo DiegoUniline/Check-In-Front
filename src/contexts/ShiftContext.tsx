@@ -10,7 +10,29 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const shiftRequired = Boolean(user && SHIFT_ROLES.has(user.rol));
   const [openShift, setOpenShift] = useState<any | null>(null);
+  const [viewOnlyMode, setViewOnlyMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const viewOnlyStorageKey = user?.id
+    ? `vulo:view-only-without-shift:${user.id}:${typeof window !== 'undefined' ? localStorage.getItem('hotel_id') || 'hotel' : 'hotel'}`
+    : '';
+
+  useEffect(() => {
+    if (!viewOnlyStorageKey) {
+      setViewOnlyMode(false);
+      return;
+    }
+    setViewOnlyMode(sessionStorage.getItem(viewOnlyStorageKey) === '1');
+  }, [viewOnlyStorageKey]);
+
+  const exitViewOnlyMode = useCallback(() => {
+    if (viewOnlyStorageKey) sessionStorage.removeItem(viewOnlyStorageKey);
+    setViewOnlyMode(false);
+  }, [viewOnlyStorageKey]);
+
+  const continueWithoutShift = useCallback(() => {
+    if (viewOnlyStorageKey) sessionStorage.setItem(viewOnlyStorageKey, '1');
+    setViewOnlyMode(true);
+  }, [viewOnlyStorageKey]);
 
   const refreshShift = useCallback(async () => {
     if (!isAuthenticated || !user?.id || !shiftRequired) {
@@ -22,6 +44,10 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     try {
       const current = await api.getOpenShift(user.id);
       setOpenShift(current);
+      if (current) {
+        if (viewOnlyStorageKey) sessionStorage.removeItem(viewOnlyStorageKey);
+        setViewOnlyMode(false);
+      }
       return current;
     } catch {
       setOpenShift(null);
@@ -29,7 +55,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, shiftRequired, user?.id]);
+  }, [isAuthenticated, shiftRequired, user?.id, viewOnlyStorageKey]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -52,8 +78,11 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     loading: authLoading || loading,
     shiftRequired,
     hasOpenShift: !shiftRequired || Boolean(openShift),
+    viewOnlyMode: shiftRequired && !openShift && viewOnlyMode,
+    continueWithoutShift,
+    exitViewOnlyMode,
     refreshShift,
-  }), [authLoading, loading, openShift, refreshShift, shiftRequired]);
+  }), [authLoading, continueWithoutShift, exitViewOnlyMode, loading, openShift, refreshShift, shiftRequired, viewOnlyMode]);
 
   return <ShiftContext.Provider value={value}>{children}</ShiftContext.Provider>;
 }

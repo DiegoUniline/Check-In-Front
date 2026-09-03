@@ -10,6 +10,7 @@ import {
   Clock3,
   CreditCard,
   FileText,
+  Eye,
   LogIn,
   LogOut,
   Lock,
@@ -120,7 +121,7 @@ function ShiftReport({ report }: { report: any }) {
 
 export default function Turnos() {
   const { user } = useAuth();
-  const { refreshShift } = useShift();
+  const { refreshShift, continueWithoutShift } = useShift();
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -205,6 +206,17 @@ export default function Turnos() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const continuarSoloConsulta = () => {
+    continueWithoutShift();
+    setOpenDialog(false);
+    toast({
+      title: 'Modo sólo consulta activado',
+      description: 'Podrás revisar todo VULO. Para registrar cambios deberás abrir un turno.',
+    });
+    const returnTo = (location.state as { shiftRequired?: boolean; returnTo?: string } | null)?.returnTo;
+    navigate(returnTo || '/dashboard', { replace: true });
   };
 
   const abrirCierre = async () => {
@@ -431,10 +443,12 @@ export default function Turnos() {
             </div>
           </div>
 
-          <DialogFooter className="flex-row border-t border-[#10233F]/10 bg-slate-50/80 px-5 py-4 sm:justify-between sm:px-6">
-            <Button variant="ghost" className="flex-1 sm:flex-none" onClick={() => setOpenDialog(false)}>Cancelar</Button>
-            <Button className="flex-1 bg-[#10233F] hover:bg-[#10233F]/90 sm:min-w-60" onClick={abrirTurno} disabled={saving || !validOpeningAmount}>
-              {saving ? 'Abriendo turno…' : openingAmount > 0 ? `Abrir con ${formatCurrency(openingAmount)}` : 'Abrir sin fondo'}
+          <DialogFooter className="flex-col gap-2 border-t border-[#10233F]/10 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+            <Button variant="outline" className="w-full border-sky-200 bg-white text-sky-800 hover:bg-sky-50 sm:mr-auto sm:w-auto" onClick={continuarSoloConsulta}>
+              <Eye className="mr-2 h-4 w-4" />Entrar sólo a consultar
+            </Button>
+            <Button className="w-full bg-[#10233F] hover:bg-[#10233F]/90 sm:min-w-60 sm:w-auto" onClick={abrirTurno} disabled={saving || !validOpeningAmount}>
+              {saving ? 'Abriendo turno…' : openingAmount > 0 ? `Abrir turno con ${formatCurrency(openingAmount)}` : 'Abrir turno sin fondo'}
             </Button>
           </DialogFooter>
         </DialogContent>

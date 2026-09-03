@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, viewKey, requireShift = true }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { hasOpenShift, loading: shiftLoading, shiftRequired } = useShift();
+  const { hasOpenShift, loading: shiftLoading, shiftRequired, viewOnlyMode } = useShift();
   const location = useLocation();
 
   if (isLoading) {
@@ -55,7 +55,7 @@ export function ProtectedRoute({ children, viewKey, requireShift = true }: Prote
     );
   }
 
-  if (requireShift && shiftRequired && !hasOpenShift && location.pathname !== '/turnos') {
+  if (requireShift && shiftRequired && !hasOpenShift && !viewOnlyMode && location.pathname !== '/turnos') {
     return <Navigate to="/turnos" state={{ shiftRequired: true, returnTo: `${location.pathname}${location.search}${location.hash}` }} replace />;
   }
 

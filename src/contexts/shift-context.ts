@@ -5,6 +5,9 @@ export type ShiftContextValue = {
   loading: boolean;
   shiftRequired: boolean;
   hasOpenShift: boolean;
+  viewOnlyMode: boolean;
+  continueWithoutShift: () => void;
+  exitViewOnlyMode: () => void;
   refreshShift: () => Promise<any | null>;
 };
 
