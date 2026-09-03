@@ -49,7 +49,7 @@ export default function NuevaReserva() {
 
   if (viewOnlyMode) return <Navigate to="/reservas" replace />;
 
-  return <MainLayout>
+  return <MainLayout fitViewport>
     {loadingRoom ? <div className="flex min-h-[60vh] items-center justify-center"><div className="text-center"><RefreshCw className="mx-auto h-7 w-7 animate-spin text-[#10233F]" /><p className="mt-3 text-sm text-muted-foreground">Preparando la reservación…</p></div></div> : (
       <NuevaReservaModal
         open
