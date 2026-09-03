@@ -773,7 +773,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
 
         {/* COLUMNA 2 — Huésped, cargos, notas e impuestos */}
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0 space-y-5 border-t border-[#10233F]/10 pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
           <FormSection icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
             {!crearNuevoCliente ? (
               <div className="space-y-2">
