@@ -617,180 +617,157 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     }
   };
 
+  const puedeGuardar = !loading && noches > 0 && Boolean(formData.habitacionId) && (Boolean(formData.clienteId) || nuevoClienteValido);
+  const nombreHuesped = (formData.clienteData?.nombre || formData.nuevoCliente.nombre || '').trim();
+
   return (
     <ReservationSurface pageMode={pageMode} open={open} onClose={() => onOpenChange(false)} surfaceRef={surfaceRef} onKeyDown={handleSurfaceKeyDown}>
-        {pageMode ? (
-          <header className="sticky top-0 z-30 -mx-3 -mt-4 border-b border-[#10233F]/10 bg-white/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-            <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <Button type="button" variant="ghost" size="icon" onClick={() => onOpenChange(false)} aria-label="Volver a reservaciones"><ArrowLeft className="h-5 w-5" /></Button>
-                <div className="min-w-0"><h1 className="truncate text-xl font-bold text-[#10233F] sm:text-2xl">{origen === 'Recepcion' ? 'Nueva entrada' : 'Nueva reserva'}</h1><p className="text-xs text-muted-foreground sm:text-sm">Captura rápida · usa Tab para avanzar y Enter para seleccionar</p></div>
-              </div>
-              <Badge variant="outline" className="shrink-0 border-[#10233F]/15 text-[#10233F]">Todo en una sola vista</Badge>
-            </div>
-          </header>
-        ) : (
-          <DialogHeader className="sticky top-0 z-20 -mx-3 -mt-3 border-b bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:p-0">
-          <DialogTitle className="flex items-center gap-2">
-            {origen === 'Recepcion' ? <><UserPlus className="h-5 w-5" /> Check-in Directo</> : <><CalendarPlus className="h-5 w-5" /> Nueva Reserva</>}
-          </DialogTitle>
-          <DialogDescription>
-            Paso {currentStepLabel} de {totalSteps} - {step === 1 ? 'Fechas' : step === 2 ? 'Habitación' : step === 3 ? 'Huésped' : 'Confirmar'}
-          </DialogDescription>
-          </DialogHeader>
-        )}
+      {!pageMode && (
+        <DialogHeader className="sr-only">
+          <DialogTitle>{origen === 'Recepcion' ? 'Nueva entrada' : 'Nueva reserva'}</DialogTitle>
+          <DialogDescription>Captura completa en una sola vista</DialogDescription>
+        </DialogHeader>
+      )}
 
-        {!pageMode && <div className="space-y-3">
-          <div className="flex items-center gap-2 overflow-x-auto">
-            {([
-              [1, 'Fechas'],
-              ...(!preload?.habitacion?.id ? [[2, 'Habitación']] : []),
-              [3, 'Huésped'],
-              [4, 'Confirmar'],
-            ] as [Step, string][]).map(([value, label], index) => {
-              const display = index + 1;
-              const current = value === step;
-              const completed = display < currentStepLabel;
-              return <button key={value} type="button" disabled={!completed && !current} onClick={() => completed && setStep(value)} className={cn('flex min-w-max flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors', current ? 'bg-[#10233F] text-white' : completed ? 'bg-[#10233F]/[0.06] text-[#10233F] hover:bg-[#10233F]/10' : 'text-muted-foreground')}><span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-[10px]', current ? 'bg-white/15' : completed ? 'bg-emerald-100 text-emerald-700' : 'bg-muted')}>{completed ? '✓' : display}</span>{label}</button>;
-            })}
+      {/* ENCABEZADO */}
+      <header className={cn(
+        'sticky top-0 z-30 border-b border-[#10233F]/10 bg-white/95 backdrop-blur',
+        pageMode
+          ? '-mx-3 -mt-4 px-3 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'
+          : '-mx-3 -mt-3 px-3 py-3 sm:-mx-5 sm:-mt-5 sm:px-5 sm:rounded-t-xl',
+      )}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold text-[#10233F] sm:text-xl">
+                {origen === 'Recepcion' ? 'Nueva entrada · Check-in' : 'Nueva reserva'}
+              </h2>
+              <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
+                {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona el rango de fechas'}
+              </p>
+            </div>
           </div>
-          <Progress value={progressValue} className="h-1.5" />
-        </div>}
+          <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-1">
+            {([['Reserva', CalendarPlus], ['Recepcion', UserPlus]] as const).map(([value, Icon]) => (
+              <button
+                key={value}
+                type="button"
+                data-step-focus={value === 'Reserva' ? 'dates' : undefined}
+                onClick={() => handleOrigenChange(value)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  origen === value ? 'bg-[#10233F] text-white shadow-sm' : 'text-[#475569] hover:text-[#10233F]',
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{value === 'Reserva' ? 'Reserva' : 'Recepción'}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
 
-        {pageMode && (
-          <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <MiniSummary icon={CalendarDays} label="Estancia" value={`${noches || 0} noche${noches === 1 ? '' : 's'}`} detail={`${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}`} />
-            <MiniSummary icon={BedDouble} label="Habitación" value={selectedHabitacion ? `#${selectedHabitacion.numero}` : 'Por elegir'} detail={selectedTipo?.nombre || 'Sin categoría'} />
-            <MiniSummary icon={UserPlus} label="Huésped" value={formData.clienteData?.nombre || formData.nuevoCliente.nombre || 'Por elegir'} detail={formData.clienteData?.telefono || formData.nuevoCliente.telefono || 'Sin teléfono'} />
-            <MiniSummary icon={CreditCard} label="Total estimado" value={fmt(total)} detail={`${fmt(totalPagado)} pagado · ${fmt(saldoPendiente)} pendiente`} danger={saldoPendiente > 0} />
-          </section>
-        )}
+      {/* RESUMEN RÁPIDO */}
+      <section className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <MiniSummary icon={CalendarDays} label="Estancia" value={`${noches || 0} noche${noches === 1 ? '' : 's'}`} detail={`${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}`} />
+        <MiniSummary icon={BedDouble} label="Habitación" value={selectedHabitacion ? `#${selectedHabitacion.numero}` : 'Por elegir'} detail={selectedTipo?.nombre || 'Sin categoría'} />
+        <MiniSummary icon={UserPlus} label="Huésped" value={nombreHuesped || 'Por elegir'} detail={formData.clienteData?.telefono || formData.nuevoCliente.telefono || 'Sin teléfono'} />
+        <MiniSummary icon={CreditCard} label="Total" value={fmt(total)} detail={`${fmt(totalPagado)} pagado · ${fmt(saldoPendiente)} pendiente`} danger={saldoPendiente > 0.01} />
+      </section>
 
-        <div className={cn(pageMode && 'grid items-start gap-4 xl:grid-cols-3')}>
-        {/* STEP 1 - FECHAS */}
-        {(pageMode || step === 1) && (
-          <div className={cn('space-y-5', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm xl:col-span-2')}>
-            {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">1. Estancia</h2><p className="text-xs text-muted-foreground">Fechas, ocupación y tipo de operación.</p></div>}
-            <div className="flex gap-2 p-1 bg-muted rounded-lg">
-              <Button data-step-focus="dates" type="button" variant={origen === 'Reserva' ? 'default' : 'ghost'} className="flex-1" onClick={() => handleOrigenChange('Reserva')}>
-                <CalendarPlus className="h-4 w-4 mr-2" /> Reserva
-              </Button>
-              <Button type="button" variant={origen === 'Recepcion' ? 'default' : 'ghost'} className="flex-1" onClick={() => handleOrigenChange('Recepcion')}>
-                <UserPlus className="h-4 w-4 mr-2" /> Recepción
-              </Button>
-            </div>
-
+      <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-3">
+          {/* 1. ESTANCIA + HABITACIÓN */}
+          <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo se listan habitaciones libres en todo el rango.">
             {origen === 'Recepcion' && (
-              <Card className="bg-amber-50 border-amber-200 dark:bg-amber-950/20">
-                <CardContent className="p-3 text-sm text-amber-800 dark:text-amber-200">
-                  🚶 Check-in automático al confirmar
-                </CardContent>
-              </Card>
+              <div className="rounded-[10px] border border-[#FDBA74] bg-[#FFF7ED] px-3 py-2 text-xs text-[#9A3412]">
+                Check-in automático al confirmar: la habitación queda ocupada hoy.
+              </div>
             )}
 
-            {preload?.habitacion && !pageMode && (
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <BedDouble className="h-5 w-5 text-primary" />
-                  <span className="font-medium">Hab. {preload.habitacion.numero} - {preload.habitacion.tipo_nombre}</span>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className={cn("grid gap-4", origen === 'Recepcion' ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3")}>
-              <div className="space-y-2">
-                <Label>Check-in</Label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Check-in">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button data-step-focus="dates" variant="outline" className="w-full justify-start" disabled={origen === 'Recepcion'}>
-                      <CalendarDays className="mr-2 h-4 w-4" />
+                    <Button variant="outline" className="h-11 w-full justify-start font-normal" disabled={origen === 'Recepcion'}>
+                      <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
                       {formatDate(formData.fechaCheckin)}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d })} disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))} />
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d >= formData.fechaCheckout ? addDays(d, 1) : formData.fechaCheckout })} disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))} />
                   </PopoverContent>
                 </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label>Check-out</Label>
+              </Field>
+              <Field label="Check-out">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarDays className="mr-2 h-4 w-4" />
+                    <Button variant="outline" className="h-11 w-full justify-start font-normal">
+                      <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
                       {formatDate(formData.fechaCheckout)}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={formData.fechaCheckout} onSelect={(d) => d && setFormData({ ...formData, fechaCheckout: d })} disabled={(d) => d <= formData.fechaCheckin} />
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" locale={es} selected={formData.fechaCheckout} onSelect={(d) => d && setFormData({ ...formData, fechaCheckout: d })} disabled={(d) => d <= formData.fechaCheckin} />
                   </PopoverContent>
                 </Popover>
-              </div>
-              {origen !== 'Recepcion' && (
-                <div className="space-y-2">
-                  <Label>Hora llegada estimada</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input type="time" className="pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
-                  </div>
+              </Field>
+              <Field label="Hora de llegada">
+                <div className="relative">
+                  <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input type="time" className="h-11 pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
                 </div>
-              )}
+              </Field>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>Adultos</Label>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Field label="Adultos">
                 <Select value={formData.adultos.toString()} onValueChange={(v) => setFormData({ ...formData, adultos: parseInt(v) })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{[1,2,3,4,5,6].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>{[1, 2, 3, 4, 5, 6].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Niños</Label>
+              </Field>
+              <Field label="Niños">
                 <Select value={formData.ninos.toString()} onValueChange={(v) => setFormData({ ...formData, ninos: parseInt(v) })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{[0,1,2,3,4].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>{[0, 1, 2, 3, 4].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Extras</Label>
+              </Field>
+              <Field label="Personas extra">
                 <Select value={formData.personasExtra.toString()} onValueChange={(v) => setFormData({ ...formData, personasExtra: parseInt(v) })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{[0,1,2,3].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>{[0, 1, 2, 3].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Cargo extra</Label>
-                <Input type="number" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
-              </div>
+              </Field>
+              <Field label="Cargo por extra" hint={formData.personasExtra === 0 ? 'Sin extras' : 'Por noche'}>
+                <div className="relative">
+                  <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input type="number" inputMode="decimal" className="h-11 pl-9" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
+                </div>
+              </Field>
             </div>
 
-            {!preload?.habitacion?.id && (
-              <div className="space-y-2">
-                <Label>Tipo de habitación</Label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Categoría">
                 <ComboboxCreatable
-                  options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} - ${formatCurrency(t.precio_base)}/noche` }))}
+                  options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} · ${formatCurrency(t.precio_base)}/noche` }))}
                   value={formData.tipoHabitacion}
                   onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
                   onCreate={async (nombre) => {
                     const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
                     setTiposHabitacion([...tiposHabitacion, newTipo]);
-                    return { value: newTipo.id, label: `${newTipo.nombre} - ${formatCurrency(1000)}/noche` };
+                    return { value: newTipo.id, label: `${newTipo.nombre} · ${formatCurrency(1000)}/noche` };
                   }}
-                  placeholder="Seleccionar..." searchPlaceholder="Buscar..." createLabel="Crear"
+                  placeholder="Todas las categorías"
+                  searchPlaceholder="Buscar categoría…"
+                  createLabel="Crear"
+                  className="h-11 justify-start text-left font-normal"
                 />
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className={cn(pageMode ? 'space-y-4' : 'contents')}>
-          {/* STEP 2 - HABITACIÓN */}
-          {(pageMode || step === 2) && (
-            <div className={cn('space-y-3', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm')}>
-              {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">2. Habitación</h2><p className="text-xs text-muted-foreground">Elige únicamente entre las disponibles para todo el rango.</p></div>}
-              <div className="space-y-2">
-                <Label>Habitación disponible</Label>
+              </Field>
+              <Field label="Habitación" hint={`${habitacionesDisponibles.length} disponibles en el rango`}>
                 <ComboboxCreatable
                   options={habitacionesDisponibles.map((hab) => {
                     const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
@@ -803,55 +780,53 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     const room = habitacionesDisponibles.find((item) => item.id === value);
                     if (room) handleSelectRoom(room);
                   }}
-                  placeholder={habitacionesDisponibles.length ? 'Buscar y elegir habitación…' : 'Sin habitaciones disponibles'}
+                  placeholder={habitacionesDisponibles.length ? 'Elegir habitación…' : 'Sin disponibilidad'}
                   searchPlaceholder="Número, categoría o precio…"
                   emptyMessage="No hay coincidencias disponibles."
                   disabled={habitacionesDisponibles.length === 0}
-                  autoOpenOnFocus={pageMode}
                   className="h-11 justify-start text-left font-normal"
                 />
-              </div>
-              <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                <span>{habitacionesDisponibles.length} disponibles · {formatDate(formData.fechaCheckin)} al {formatDate(formData.fechaCheckout)}</span>
-                {selectedHabitacion && <span className="shrink-0 font-medium text-emerald-700"><Check className="mr-1 inline h-3.5 w-3.5" />Disponible</span>}
-              </div>
+              </Field>
             </div>
-          )}
 
-        {/* STEP 3 - HUÉSPED */}
-          {(pageMode || step === 3) && (
-          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm')}>
-            {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">3. Huésped</h2><p className="text-xs text-muted-foreground">Busca un cliente existente o captura uno nuevo aquí mismo.</p></div>}
+            {selectedHabitacion && (
+              <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-[#F8FAFC] px-3 py-2 text-xs text-[#475569]">
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                Hab. {selectedHabitacion.numero} disponible · {fmt(tarifaEfectiva)}/noche
+                {temporadaAplicable && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{temporadaAplicable.nombre}</Badge>}
+              </div>
+            )}
+          </FormSection>
+
+          {/* 2. HUÉSPED */}
+          <FormSection icon={UserPlus} title="Huésped" hint="Busca uno existente o captúralo aquí mismo.">
             {!crearNuevoCliente ? (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Huésped principal</Label>
-                  <div className="flex gap-2">
-                    <ComboboxCreatable
-                      options={clientes.map((cliente) => ({
-                        value: cliente.id,
-                        label: `${cliente.nombre || ''} ${cliente.apellido_paterno || ''} ${cliente.apellido_materno || ''}${cliente.telefono ? ` · ${cliente.telefono}` : cliente.email ? ` · ${cliente.email}` : ''}`.trim(),
-                      }))}
-                      value={formData.clienteId}
-                      onValueChange={(value) => {
-                        const client = clientes.find((item) => item.id === value);
-                        if (client) handleSelectCliente(client);
-                      }}
-                      placeholder="Buscar y elegir huésped…"
-                      searchPlaceholder="Nombre, teléfono, correo o documento…"
-                      emptyMessage="No se encontró ningún huésped."
-                      autoOpenOnFocus={pageMode}
-                      className="h-11 min-w-0 flex-1 justify-start overflow-hidden text-left font-normal"
-                    />
-                    {formData.clienteData ? (
-                      <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
-                    ) : (
-                      <Button type="button" variant="outline" className="h-11 shrink-0" onClick={() => setCrearNuevoCliente(true)}><UserPlus className="mr-1.5 h-4 w-4" />Nuevo</Button>
-                    )}
-                  </div>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <ComboboxCreatable
+                    options={clientes.map((cliente) => ({
+                      value: cliente.id,
+                      label: `${cliente.nombre || ''} ${cliente.apellido_paterno || ''} ${cliente.apellido_materno || ''}${cliente.telefono ? ` · ${cliente.telefono}` : cliente.email ? ` · ${cliente.email}` : ''}`.trim(),
+                    }))}
+                    value={formData.clienteId}
+                    onValueChange={(value) => {
+                      const client = clientes.find((item) => item.id === value);
+                      if (client) handleSelectCliente(client);
+                    }}
+                    placeholder="Buscar huésped por nombre o teléfono…"
+                    searchPlaceholder="Nombre, teléfono, correo o documento…"
+                    emptyMessage="No se encontró ningún huésped."
+                    className="h-11 min-w-0 flex-1 justify-start overflow-hidden text-left font-normal"
+                  />
+                  {formData.clienteData ? (
+                    <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
+                  ) : (
+                    <Button type="button" variant="outline" className="h-11 shrink-0" onClick={() => setCrearNuevoCliente(true)}><UserPlus className="mr-1.5 h-4 w-4" />Nuevo</Button>
+                  )}
                 </div>
                 {formData.clienteData && (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-[#10233F]/[0.04] px-3 py-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[10px] bg-[#F8FAFC] px-3 py-2 text-xs text-[#475569]">
+                    <span className="font-medium text-[#10233F]">{formData.clienteData.nombre} {formData.clienteData.apellido_paterno || ''}</span>
                     {formData.clienteData.telefono && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{formData.clienteData.telefono}</span>}
                     {formData.clienteData.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{formData.clienteData.email}</span>}
                     {formData.clienteData.es_vip && <Badge className="h-5 px-1.5 text-[10px]">VIP</Badge>}
@@ -859,476 +834,302 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 )}
               </div>
             ) : (
-              <div className="space-y-4">
-                <Button variant="ghost" size="sm" onClick={() => setCrearNuevoCliente(false)}>
+              <div className="space-y-3">
+                <Button variant="ghost" size="sm" className="-ml-2 h-8" onClick={() => setCrearNuevoCliente(false)}>
                   <ChevronLeft className="mr-1 h-4 w-4" /> Buscar existente
                 </Button>
-                <div className={cn('grid gap-3', pageMode ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3')}>
-                  <div className="space-y-2">
-                    <Label>Nombre *</Label>
-                    <Input data-new-client-name value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ap. Paterno *</Label>
-                    <Input value={formData.nuevoCliente.apellido_paterno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_paterno: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ap. Materno</Label>
-                    <Input value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
-                  </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field label="Nombre" required>
+                    <Input data-new-client-name className="h-11" value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
+                  </Field>
+                  <Field label="Apellido paterno" required>
+                    <Input className="h-11" value={formData.nuevoCliente.apellido_paterno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_paterno: e.target.value } })} />
+                  </Field>
+                  <Field label="Apellido materno">
+                    <Input className="h-11" value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
+                  </Field>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Teléfono *</Label>
-                    <Input value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input type="email" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
-                  </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Teléfono" required>
+                    <div className="relative">
+                      <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input className="h-11 pl-9" inputMode="tel" value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
+                    </div>
+                  </Field>
+                  <Field label="Correo">
+                    <div className="relative">
+                      <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input type="email" className="h-11 pl-9" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
+                    </div>
+                  </Field>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Tipo documento</Label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Tipo de documento">
                     <Select value={formData.nuevoCliente.tipo_documento} onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="INE">INE</SelectItem>
                         <SelectItem value="Pasaporte">Pasaporte</SelectItem>
                         <SelectItem value="Licencia">Licencia</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Número documento</Label>
-                    <Input value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
-                  </div>
+                  </Field>
+                  <Field label="Número de documento">
+                    <Input className="h-11" value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
+                  </Field>
                 </div>
               </div>
             )}
-          </div>
-          )}
+          </FormSection>
+
+          {/* 3. NOTAS Y ENTREGABLES */}
+          <FormSection icon={Package} title="Notas y entregables" hint="Opcional. Todo lo que recepción necesita saber.">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Solicitudes del huésped">
+                <Textarea rows={2} value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
+              </Field>
+              <Field label="Notas internas">
+                <Textarea rows={2} value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
+              </Field>
+            </div>
+            {origen === 'Recepcion' && entregables.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-[#475569]">Entregables al huésped</Label>
+                <div className="flex flex-wrap gap-2">
+                  {entregables.map(ent => {
+                    const activo = formData.entregablesSeleccionados.includes(ent.id);
+                    return (
+                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors', activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40')}>
+                        {activo && <Check className="h-3.5 w-3.5" />}{ent.nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </FormSection>
+
+          {/* 4. CARGOS E IMPUESTOS */}
+          <FormSection icon={Receipt} title="Cargos e impuestos" hint="Consumos anticipados e impuestos aplicables.">
+            <div className="grid grid-cols-[minmax(0,1fr)_68px_104px_44px] gap-2">
+              <ComboboxCreatable
+                options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
+                value={cargoConcepto}
+                onValueChange={(v) => {
+                  setCargoConcepto(v);
+                  const c = conceptosCargo.find(x => x.id === v);
+                  if (c?.precio) setCargoMonto(c.precio.toString());
+                }}
+                onCreate={handleCrearConcepto}
+                placeholder="Concepto…"
+                searchPlaceholder="Buscar o crear concepto…"
+                createLabel="Crear"
+                className="h-11 justify-start text-left font-normal"
+              />
+              <Input className="h-11 px-2 text-center" type="number" inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+              <Input className="h-11 px-2 text-right" type="number" inputMode="decimal" placeholder="$0.00" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
+              <Button type="button" className="h-11 w-11 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-4 w-4" /></Button>
+            </div>
+            {formData.cargos.length > 0 && (
+              <div className="divide-y rounded-[10px] border">
+                {formData.cargos.map(c => (
+                  <div key={c.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                    <span className="min-w-0 truncate">{c.concepto_nombre} <span className="text-muted-foreground">×{c.cantidad}</span></span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="font-medium tabular-nums">{formatCurrency(c.total)}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFormData(p => ({ ...p, cargos: p.cargos.filter(x => x.id !== c.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-xs font-medium text-[#475569]"><Percent className="h-3.5 w-3.5" />Impuestos</Label>
+              {formData.impuestos.length === 0 && <p className="text-xs text-muted-foreground">Sin impuestos. Agrega uno con un toque.</p>}
+              {formData.impuestos.map((imp) => (
+                <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_86px_96px_40px] items-center gap-2">
+                  <Input
+                    className="h-10 w-full min-w-0"
+                    placeholder="Nombre del impuesto"
+                    value={imp.nombre}
+                    onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))}
+                  />
+                  <div className="relative">
+                    <Input
+                      type="number" min="0" step="0.01"
+                      className="h-10 pr-7 text-right"
+                      value={imp.tasa}
+                      onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))}
+                    />
+                    <Percent className="absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  </div>
+                  <span className="text-right text-xs tabular-nums text-muted-foreground">{fmt(subtotal * (imp.tasa / 100))}</span>
+                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
+                  <button key={sug.nombre} type="button" title={sug.descripcion}
+                    className="rounded-full border border-dashed border-[#CBD5E1] px-2.5 py-1 text-xs text-[#475569] transition-colors hover:border-[#10233F]/40 hover:text-[#10233F]"
+                    onClick={() => setFormData((p) => ({ ...p, impuestos: [...p.impuestos, { id: `imp-${Date.now()}`, nombre: sug.nombre, tasa: sug.tasa }] }))}>
+                    + {sug.nombre}
+                  </button>
+                ))}
+                <button type="button"
+                  className="rounded-full border border-dashed border-[#F97316]/50 px-2.5 py-1 text-xs text-[#C2410C] transition-colors hover:bg-[#FFF7ED]"
+                  onClick={() => setFormData((p) => ({ ...p, impuestos: [...p.impuestos, { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 }] }))}>
+                  + Personalizado
+                </button>
+              </div>
+            </div>
+          </FormSection>
         </div>
 
-        {/* STEP 4 - CONFIRMACIÓN */}
-        {(pageMode || step === 4) && (
-          <div className={cn('grid grid-cols-1 gap-4 lg:grid-cols-5', pageMode && 'xl:col-span-3')}>
-            <div className="lg:col-span-3 space-y-4">
-              {pageMode && <div className="rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm"><h2 className="text-base font-bold text-[#10233F]">4. Detalles de la reserva</h2><p className="text-xs text-muted-foreground">Solicitudes, cargos e impuestos opcionales. Si no necesitas agregarlos, puedes crear la reserva directamente.</p></div>}
-              {/* Resumen de reserva */}
-              {!pageMode && <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <BedDouble className="h-8 w-8 text-primary" />
-                      <div>
-                        <p className="font-bold text-lg">Habitación {selectedHabitacion?.numero}</p>
-                        <p className="text-sm text-muted-foreground">{selectedTipo?.nombre}</p>
-                      </div>
-                    </div>
-                    <Badge variant={origen === 'Recepcion' ? 'default' : 'secondary'} className={origen === 'Recepcion' ? 'bg-green-600' : ''}>
-                      {origen === 'Recepcion' ? 'Check-in Directo' : 'Reserva'}
-                    </Badge>
-                  </div>
-                  <Separator className="my-3" />
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div><p className="text-muted-foreground">Check-in</p><p className="font-medium">{formatDate(formData.fechaCheckin)}</p></div>
-                    <div><p className="text-muted-foreground">Check-out</p><p className="font-medium">{formatDate(formData.fechaCheckout)}</p></div>
-                    <div><p className="text-muted-foreground">Noches</p><p className="font-medium">{noches}</p></div>
-                    <div><p className="text-muted-foreground">Huéspedes</p><p className="font-medium">{formData.adultos + formData.ninos}</p></div>
-                  </div>
-                  <Separator className="my-3" />
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                      {(formData.clienteData?.nombre || formData.nuevoCliente.nombre)?.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-medium">{formData.clienteData?.nombre || formData.nuevoCliente.nombre} {formData.clienteData?.apellido_paterno || formData.nuevoCliente.apellido_paterno}</p>
-                      <p className="text-sm text-muted-foreground">{formData.clienteData?.telefono || formData.nuevoCliente.telefono}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>}
+        {/* RESUMEN DE CUENTA */}
+        <aside className="min-w-0 xl:sticky xl:top-24">
+          <Card className="overflow-hidden border-0 bg-[#10233F] text-white shadow-lg">
+            <CardContent className="space-y-3 p-4">
+              <p className="text-sm font-semibold">Resumen de cuenta</p>
 
-              {/* Notas */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Solicitudes especiales</Label>
-                  <Textarea rows={2} value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto..." />
-                </div>
-                <div className="space-y-2">
-                  <Label>Notas internas</Label>
-                  <Textarea rows={2} value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Para staff..." />
+              <div className="space-y-1.5 text-sm">
+                <Line label={`Hospedaje · ${noches || 0} noche${noches === 1 ? '' : 's'}`} value={fmt(subtotalHospedaje)} />
+                {temporadaAplicable && <Line small label={`Temporada ${temporadaAplicable.nombre} (${describirAjuste(temporadaAplicable)})`} value={`${fmt(tarifaEfectiva)}/noche`} />}
+                {totalPersonaExtra > 0 && <Line label={`Personas extra (${formData.personasExtra})`} value={fmt(totalPersonaExtra)} />}
+                {totalCargosExtras > 0 && <Line label={`Cargos extras (${formData.cargos.length})`} value={fmt(totalCargosExtras)} />}
+                {impuestosCalculados.map((imp) => imp.monto > 0 && <Line key={imp.id} label={`${imp.nombre} (${imp.tasa}%)`} value={fmt(imp.monto)} />)}
+                {descuentoMonto > 0 && <Line accent label={`Descuento${formData.descuentoTipo === 'Porcentaje' ? ` (${formData.descuentoValor}%)` : ''}`} value={`−${fmt(descuentoMonto)}`} />}
+              </div>
+
+              <Separator className="bg-white/20" />
+
+              <div className="space-y-2 rounded-[10px] bg-white/10 p-3">
+                <Label className="flex items-center gap-2 text-xs text-white/80"><Percent className="h-3.5 w-3.5" />Descuento sobre el total</Label>
+                <div className="flex gap-2">
+                  <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}>
+                    <SelectTrigger className="h-10 w-32 border-input bg-background text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Ninguno</SelectItem>
+                      <SelectItem value="Monto">Monto</SelectItem>
+                      <SelectItem value="Porcentaje">Porcentaje</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formData.descuentoTipo !== 'none' && (
+                    <div className="relative flex-1">
+                      {formData.descuentoTipo === 'Porcentaje'
+                        ? <Percent className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        : <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />}
+                      <Input type="number" className="h-10 border-input bg-background pl-9 text-foreground" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Entregables - Solo para Recepción */}
-              {origen === 'Recepcion' && entregables.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <Label className="flex items-center gap-2 mb-3"><Package className="h-4 w-4" /> Entregables</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {entregables.map(ent => (
-                        <div key={ent.id} className="flex items-center space-x-2">
-                          <Checkbox id={ent.id} checked={formData.entregablesSeleccionados.includes(ent.id)} onCheckedChange={() => toggleEntregable(ent.id)} />
-                          <label htmlFor={ent.id} className="text-sm cursor-pointer">{ent.nombre}</label>
+              <div className="flex items-end justify-between">
+                <span className="text-sm font-medium">Total</span>
+                <span className="text-2xl font-bold tabular-nums">{fmt(total)}</span>
+              </div>
+
+              <Separator className="bg-white/20" />
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-xs text-white/80"><CreditCard className="h-3.5 w-3.5" />Registrar pago</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder={saldoPendiente > 0 ? fmt(saldoPendiente) : 'Monto'}
+                    className="h-10 flex-1 border-input bg-background text-foreground"
+                    value={pagoMonto}
+                    onFocus={() => { if (!pagoMonto && saldoPendiente > 0) setPagoMonto(saldoPendiente.toFixed(2)); }}
+                    onChange={(e) => setPagoMonto(e.target.value)}
+                  />
+                  <Select value={pagoMetodo} onValueChange={setPagoMetodo}>
+                    <SelectTrigger className="h-10 w-28 border-input bg-background text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Efectivo">Efectivo</SelectItem>
+                      <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                      <SelectItem value="Transferencia">Transfer.</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="secondary" className="h-10 w-10 px-0" onClick={handleAgregarPago} aria-label="Agregar pago"><Plus className="h-4 w-4" /></Button>
+                </div>
+                {formData.pagos.length > 0 && (
+                  <div className="space-y-1.5">
+                    {formData.pagos.map(p => (
+                      <div key={p.id} className="flex items-center justify-between rounded-[10px] bg-white/10 px-3 py-2 text-sm">
+                        <span>{p.metodo_pago}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium tabular-nums">{formatCurrency(p.monto)}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => handleEliminarPago(p.id)}><X className="h-3 w-3" /></Button>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Cargos extras */}
-              <Card>
-                <CardContent className="p-4 space-y-3">
-                  <Label className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Cargos Extras</Label>
-                  <div className="grid grid-cols-[72px_minmax(0,1fr)_40px] gap-2 sm:grid-cols-[minmax(0,1fr)_72px_112px_40px]">
-                    <div className="col-span-3 min-w-0 sm:col-span-1">
-                      <ComboboxCreatable
-                        options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
-                        value={cargoConcepto}
-                        onValueChange={(v) => {
-                          setCargoConcepto(v);
-                          const c = conceptosCargo.find(x => x.id === v);
-                          if (c?.precio) setCargoMonto(c.precio.toString());
-                        }}
-                        onCreate={handleCrearConcepto}
-                        placeholder="Concepto..."
-                        searchPlaceholder="Buscar o crear concepto..."
-                        createLabel="Crear"
-                      />
-                    </div>
-                    <Input className="w-full px-2" type="number" inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
-                    <Input className="w-full px-2" type="number" inputMode="decimal" placeholder="$" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
-                    <Button className="w-10 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto}><Plus className="h-4 w-4" /></Button>
-                  </div>
-                  {formData.cargos.map(c => (
-                    <div key={c.id} className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded">
-                      <span className="text-sm">{c.concepto_nombre} x{c.cantidad}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{formatCurrency(c.total)}</span>
-                        <Button variant="ghost" size="sm" onClick={() => setFormData(p => ({ ...p, cargos: p.cargos.filter(x => x.id !== c.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Impuestos (descuento ahora se aplica en el panel verde de Resumen) */}
-              <Card>
-                <CardContent className="p-4">
-                  <div>
-                    <Label className="mb-3 block flex items-center gap-2">
-                      <Percent className="h-4 w-4" /> Impuestos
-                    </Label>
-
-                    {/* Tabla editable de impuestos */}
-                    <div className="space-y-2">
-                      {formData.impuestos.length === 0 && (
-                        <p className="text-xs text-muted-foreground italic">
-                          Sin impuestos. Agrega uno desde las sugerencias o personalizado.
-                        </p>
-                      )}
-                      {formData.impuestos.map((imp) => (
-                        <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_82px_36px] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_112px_112px_36px]">
-                          <Input
-                            className="h-9 w-full min-w-0"
-                            placeholder="Nombre del impuesto"
-                            value={imp.nombre}
-                            onChange={(e) =>
-                              setFormData((p) => ({
-                                ...p,
-                                impuestos: p.impuestos.map((x) =>
-                                  x.id === imp.id ? { ...x, nombre: e.target.value } : x,
-                                ),
-                              }))
-                            }
-                          />
-                          <div className="relative w-full">
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              className="h-9 pr-7 text-right"
-                              value={imp.tasa}
-                              onChange={(e) =>
-                                setFormData((p) => ({
-                                  ...p,
-                                  impuestos: p.impuestos.map((x) =>
-                                    x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x,
-                                  ),
-                                }))
-                              }
-                            />
-                            <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          </div>
-                          <span className="col-span-2 row-start-2 text-right text-xs tabular-nums text-muted-foreground sm:col-span-1 sm:row-start-auto sm:text-sm">
-                            {fmt(subtotal * (imp.tasa / 100))}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 p-0"
-                            onClick={() =>
-                              setFormData((p) => ({
-                                ...p,
-                                impuestos: p.impuestos.filter((x) => x.id !== imp.id),
-                              }))
-                            }
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ))}
-
-                      {/* Sugerencias de impuestos en México */}
-                      <div className="flex flex-wrap gap-1 pt-2">
-                        {IMPUESTOS_MEXICO_SUGERIDOS.filter(
-                          (s) => !formData.impuestos.some((i) => i.nombre === s.nombre),
-                        ).map((sug) => (
-                          <button
-                            key={sug.nombre}
-                            type="button"
-                            title={sug.descripcion}
-                            className="text-xs px-2 py-1 rounded-full border border-dashed border-muted-foreground/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                            onClick={() =>
-                              setFormData((p) => ({
-                                ...p,
-                                impuestos: [
-                                  ...p.impuestos,
-                                  { id: `imp-${Date.now()}`, nombre: sug.nombre, tasa: sug.tasa },
-                                ],
-                              }))
-                            }
-                          >
-                            + {sug.nombre}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          className="text-xs px-2 py-1 rounded-full border border-dashed border-primary/40 text-primary hover:bg-primary/10 transition-colors"
-                          onClick={() =>
-                            setFormData((p) => ({
-                              ...p,
-                              impuestos: [
-                                ...p.impuestos,
-                                { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 },
-                              ],
-                            }))
-                          }
-                        >
-                          + Personalizado
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* COLUMNA DERECHA - TOTALES Y PAGOS */}
-            <div className="lg:col-span-2">
-              <Card className={cn('sticky bg-primary text-primary-foreground', pageMode ? 'top-20' : 'top-0')}>
-                <CardContent className="p-4 space-y-4">
-                  <p className="font-bold text-lg">Resumen de Cuenta</p>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between opacity-80">
-                      <span>Hospedaje ({noches} {noches === 1 ? 'noche' : 'noches'})</span>
-                      <span>{fmt(subtotalHospedaje)}</span>
-                    </div>
-                    {temporadaAplicable && (
-                      <div className="flex justify-between text-xs opacity-90 -mt-1">
-                        <span className="italic">
-                          Temporada: {temporadaAplicable.nombre} ({describirAjuste(temporadaAplicable)})
-                        </span>
-                        <span>{fmt(tarifaEfectiva)}/noche</span>
-                      </div>
-                    )}
-                    {totalPersonaExtra > 0 && (
-                      <div className="flex justify-between opacity-80">
-                        <span>Persona extra ({formData.personasExtra})</span>
-                        <span>{fmt(totalPersonaExtra)}</span>
-                      </div>
-                    )}
-                    {totalCargosExtras > 0 && (
-                      <div className="flex justify-between opacity-80">
-                        <span>Cargos extras ({formData.cargos.length})</span>
-                        <span>{fmt(totalCargosExtras)}</span>
-                      </div>
-                    )}
-                    {impuestosCalculados.map((imp) => (
-                      imp.monto > 0 && (
-                        <div key={imp.id} className="flex justify-between opacity-80">
-                          <span>{imp.nombre} ({imp.tasa}%)</span>
-                          <span>{fmt(imp.monto)}</span>
-                        </div>
-                      )
                     ))}
-                    {descuentoMonto > 0 && (
-                      <div className="flex justify-between text-green-300">
-                        <span>
-                          Descuento{formData.descuentoTipo === 'Porcentaje' ? ` (${formData.descuentoValor}%)` : ''}
-                        </span>
-                        <span>-{fmt(descuentoMonto)}</span>
-                      </div>
-                    )}
                   </div>
-                  
-                  <Separator className="bg-primary-foreground/20" />
+                )}
+                <div className={cn('rounded-[10px] p-3 text-center', saldoPendiente > 0.01 ? 'bg-[#F97316]/25' : 'bg-emerald-500/20')}>
+                  <p className="text-[11px] text-white/75">{saldoPendiente < -0.01 ? 'Saldo a favor' : 'Saldo pendiente'}</p>
+                  <p className="mt-0.5 text-xl font-bold tabular-nums">{fmt(Math.abs(saldoPendiente))}</p>
+                  <p className="mt-0.5 text-[11px] text-white/70">{fmt(totalPagado)} pagado</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
 
-                  {/* Descuento aplicado sobre el total — input dentro del panel de resumen */}
-                  <div className="space-y-2 rounded-md bg-primary-foreground/10 p-3">
-                    <Label className="text-primary-foreground text-sm flex items-center gap-2">
-                      <Percent className="h-4 w-4" /> Descuento (sobre el total)
-                    </Label>
-                    <div className="flex gap-2">
-                      <Select
-                        value={formData.descuentoTipo}
-                        onValueChange={(v) =>
-                          setFormData({
-                            ...formData,
-                            descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje',
-                            descuentoValor: 0,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-36 bg-background border-input text-foreground">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin descuento</SelectItem>
-                          <SelectItem value="Monto">Monto fijo</SelectItem>
-                          <SelectItem value="Porcentaje">Porcentaje</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {formData.descuentoTipo !== 'none' && (
-                        <div className="relative flex-1">
-                          {formData.descuentoTipo === 'Porcentaje' ? (
-                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          )}
-                          <Input
-                            type="number"
-                            className="pl-9 bg-background border-input text-foreground"
-                            value={formData.descuentoValor}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                descuentoValor: parseFloat(e.target.value) || 0,
-                              })
-                            }
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator className="bg-primary-foreground/20" />
-
-                  <div className="flex justify-between font-bold text-2xl">
-                    <span>Total</span>
-                     <span>{fmt(total)}</span>
-                  </div>
-                  
-                  <Separator className="bg-primary-foreground/20" />
-                  
-                  {/* Pagos */}
-                  <div className="space-y-3">
-                    <Label className="text-primary-foreground flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" /> Pagos
-                    </Label>
-                    
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        // Placeholder muestra el saldo pendiente; al enfocar, si el campo está vacío,
-                        // lo autollenamos con el saldo para que el usuario solo confirme con "+".
-                        placeholder={saldoPendiente > 0 ? fmt(saldoPendiente) : 'Monto'}
-                        className="bg-background border-input text-foreground flex-1"
-                        value={pagoMonto}
-                        onFocus={() => {
-                          if (!pagoMonto && saldoPendiente > 0) {
-                            setPagoMonto(saldoPendiente.toFixed(2));
-                          }
-                        }}
-                        onChange={(e) => setPagoMonto(e.target.value)}
-                      />
-                      <Select value={pagoMetodo} onValueChange={setPagoMetodo}>
-                        <SelectTrigger className="w-32 bg-background border-input text-foreground">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Efectivo">Efectivo</SelectItem>
-                          <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                          <SelectItem value="Transferencia">Transfer</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button variant="secondary" onClick={handleAgregarPago}><Plus className="h-4 w-4" /></Button>
-                    </div>
-                    
-                    {formData.pagos.length > 0 && (
-                      <div className="space-y-2">
-                        {formData.pagos.map(p => (
-                          <div key={p.id} className="flex justify-between items-center py-2 px-3 bg-primary-foreground/10 rounded">
-                            <span className="text-sm">{p.metodo_pago}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{formatCurrency(p.monto)}</span>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-primary-foreground/20" onClick={() => handleEliminarPago(p.id)}>
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="p-3 rounded-lg bg-primary-foreground/10 space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Pagado:</span>
-                        <span>{fmt(totalPagado)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold">
-                        <span>Saldo pendiente:</span>
-                        <span className={saldoPendiente <= 0 ? 'text-green-300' : 'text-yellow-300'}>{fmt(saldoPendiente)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-        </div>
-
-        {/* FOOTER */}
-        <div className={cn(
-          'sticky bottom-0 z-20 -mx-3 flex gap-2 border-t bg-background/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
-          pageMode ? 'sm:-mx-6 sm:justify-between sm:px-6 lg:-mx-8 lg:px-8' : 'sm:static sm:mx-0 sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none',
-        )}>
-          <Button className="h-11 flex-1 sm:flex-none" variant="outline" onClick={pageMode || step === 1 ? () => onOpenChange(false) : handleBack}>
-            {pageMode || step === 1 ? 'Cancelar' : <><ChevronLeft className="mr-1 h-4 w-4" /> Anterior</>}
-          </Button>
-          {pageMode && <span className="hidden self-center text-xs text-muted-foreground md:block"><kbd className="rounded border bg-white px-1.5 py-0.5">Tab</kbd> cambia de campo · <kbd className="rounded border bg-white px-1.5 py-0.5">Enter</kbd> selecciona · <kbd className="rounded border bg-white px-1.5 py-0.5">⌘ Enter</kbd> guarda</span>}
-          {pageMode ? (
-            <Button data-confirm-reservation onClick={handleConfirm} disabled={loading || noches < 1 || !formData.habitacionId || (!formData.clienteId && !nuevoClienteValido)} size="lg" className={cn('h-11 flex-1 sm:min-w-52 sm:flex-none', origen === 'Recepcion' && 'bg-green-600 hover:bg-green-700')}>
-              {loading ? 'Procesando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Completar Check-in' : 'Crear reserva'}</>}
-            </Button>
-          ) : step < 4 ? (
-            <Button className="h-11 flex-1 sm:flex-none" onClick={handleNext} disabled={(step === 1 && noches < 1) || (step === 2 && !formData.habitacionId) || (step === 3 && !formData.clienteId && !nuevoClienteValido)}>
-              Siguiente <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button data-confirm-reservation onClick={handleConfirm} disabled={loading || noches < 1 || (!formData.clienteId && !nuevoClienteValido)} size="lg" className={cn('h-11 flex-1 sm:flex-none', origen === 'Recepcion' && 'bg-green-600 hover:bg-green-700')}>
-              {loading ? 'Procesando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Completar Check-in' : 'Confirmar Reserva'}</>}
-            </Button>
-          )}
-        </div>
+      {/* ACCIONES */}
+      <div className={cn(
+        'sticky bottom-0 z-20 -mx-3 mt-3 flex items-center gap-2 border-t bg-background/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
+        pageMode ? 'sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8' : 'sm:-mx-5 sm:px-5',
+      )}>
+        <Button type="button" className="h-11 flex-1 sm:flex-none" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+        <span className="hidden flex-1 text-center text-xs text-muted-foreground md:block">
+          {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter para guardar' : 'Completa fechas, habitación y huésped'}
+        </span>
+        <Button
+          data-confirm-reservation
+          type="button"
+          onClick={handleConfirm}
+          disabled={!puedeGuardar}
+          className={cn('h-11 flex-1 sm:min-w-52 sm:flex-none', origen === 'Recepcion' && 'bg-emerald-600 hover:bg-emerald-700')}
+        >
+          {loading ? 'Procesando…' : <><Check className="mr-2 h-4 w-4" />{origen === 'Recepcion' ? 'Completar check-in' : 'Crear reserva'}</>}
+        </Button>
+      </div>
     </ReservationSurface>
   );
 }
+
+function FormSection({ icon: Icon, title, hint, children }: { icon: typeof CalendarDays; title: string; hint?: string; children: ReactNode }) {
+  return <section className="space-y-3 rounded-[14px] border border-[#10233F]/10 bg-white p-4 shadow-sm">
+    <div className="flex items-start gap-2.5">
+      <span className="rounded-[10px] bg-[#10233F]/[0.07] p-2 text-[#10233F]"><Icon className="h-4 w-4" /></span>
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold text-[#10233F]">{title}</h3>
+        {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+      </div>
+    </div>
+    {children}
+  </section>;
+}
+
+function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: ReactNode }) {
+  return <div className="min-w-0 space-y-1.5">
+    <Label className="text-xs font-medium text-[#475569]">{label}{required && <span className="ml-0.5 text-[#F97316]">*</span>}</Label>
+    {children}
+    {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+  </div>;
+}
+
+function Line({ label, value, accent, small }: { label: string; value: string; accent?: boolean; small?: boolean }) {
+  return <div className={cn('flex justify-between gap-3', small && 'text-xs')}>
+    <span className={cn('min-w-0 truncate', accent ? 'text-emerald-300' : 'text-white/70')}>{label}</span>
+    <span className={cn('shrink-0 tabular-nums', accent && 'text-emerald-300')}>{value}</span>
+  </div>;
+}
+
 
 function MiniSummary({
   icon: Icon,
