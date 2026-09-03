@@ -1,7 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
-import { parseEmailWebhookPayload } from 'npm:@lovable.dev/email-js'
-import { WebhookError, verifyWebhookRequest } from 'npm:@lovable.dev/webhooks-js'
+import { createAuthEmailHandler } from 'npm:@lovable.dev/email-js@0.1.0'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { SignupEmail } from '../_shared/email-templates/signup.tsx'
 import { InviteEmail } from '../_shared/email-templates/invite.tsx'
@@ -16,16 +15,14 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
-}
+// Configuration
+const SITE_NAME = "VULO"
+const SENDER_DOMAIN = "notify.hospedapp.com"
+const ROOT_DOMAIN = "hospedapp.com"
+const FROM_DOMAIN = "hospedapp.com"
+const SITE_URL = `https://${ROOT_DOMAIN}`
 
-// Template mapping
+// Template mapping for preview mode
 const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
   signup: SignupEmail,
   invite: InviteEmail,
@@ -35,18 +32,12 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
   reauthentication: ReauthenticationEmail,
 }
 
-// Configuration
-const SITE_NAME = "VULO"
-const SENDER_DOMAIN = "notify.hospedapp.com"
-const ROOT_DOMAIN = "hospedapp.com"
-const FROM_DOMAIN = "hospedapp.com" // Domain shown in From address (may be root or sender subdomain)
-
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.
 // The sample email uses a fixed placeholder (RFC 6761 .test TLD) so the Go backend
 // can always find-and-replace it with the actual recipient when sending test emails,
 // even if the project's domain has changed since the template was scaffolded.
-const SAMPLE_PROJECT_URL = "https://harbor-haven.lovable.app"
+const SAMPLE_PROJECT_URL = "https://vulo.lovable.app"
 const SAMPLE_EMAIL = "user@example.test"
 const SAMPLE_DATA: Record<string, object> = {
   signup: {
@@ -136,208 +127,118 @@ async function handlePreview(req: Request): Promise<Response> {
   })
 }
 
-// Webhook handler - verifies signature and sends email
-async function handleWebhook(req: Request): Promise<Response> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY')
-
-  if (!apiKey) {
-    console.error('LOVABLE_API_KEY not configured')
-    return new Response(
-      JSON.stringify({ error: 'Server configuration error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-
-  // Verify signature + timestamp, then parse payload.
-  let payload: any
-  let run_id = ''
+// Resolve the recipient's hotel name so auth emails stay co-branded with the
+// hotel the user belongs to. Auth emails are load-bearing, so this never throws:
+// when the lookup fails we simply send the VULO-branded version.
+async function resolveHotelName(data: {
+  user?: { id?: string; user_metadata?: Record<string, unknown> }
+  user_id?: string
+}): Promise<string | undefined> {
   try {
-    const verified = await verifyWebhookRequest({
-      req,
-      secret: apiKey,
-      parser: parseEmailWebhookPayload,
-    })
-    payload = verified.payload
-    run_id = payload.run_id
-  } catch (error) {
-    if (error instanceof WebhookError) {
-      switch (error.code) {
-        case 'invalid_signature':
-        case 'missing_timestamp':
-        case 'invalid_timestamp':
-        case 'stale_timestamp':
-          console.error('Invalid webhook signature', { error: error.message })
-          return new Response(JSON.stringify({ error: 'Invalid signature' }), {
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          })
-        case 'invalid_payload':
-        case 'invalid_json':
-          console.error('Invalid webhook payload', { error: error.message })
-          return new Response(
-            JSON.stringify({ error: 'Invalid webhook payload' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-      }
-    }
+    const meta = (data.user?.user_metadata ?? {}) as Record<string, unknown>
+    const fromMeta = (meta.hotel_name ?? meta.hotelName) as string | undefined
+    if (fromMeta) return fromMeta
 
-    console.error('Webhook verification failed', { error })
-    return new Response(
-      JSON.stringify({ error: 'Invalid webhook payload' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    const userId = data.user?.id ?? data.user_id
+    if (!userId) return undefined
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
-  }
 
-  if (!run_id) {
-    console.error('Webhook payload missing run_id')
-    return new Response(
-      JSON.stringify({ error: 'Invalid webhook payload' }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
-  }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('hotel_id, hotel_activo_id')
+      .eq('id', userId)
+      .maybeSingle()
 
-  if (payload.version !== '1') {
-    console.error('Unsupported payload version', { version: payload.version, run_id })
-    return new Response(
-      JSON.stringify({ error: `Unsupported payload version: ${payload.version}` }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
-  }
+    const hotelId = profile?.hotel_activo_id || profile?.hotel_id
+    if (!hotelId) return undefined
 
-  // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
-  // payload.type is the hook event type ("auth")
-  const emailType = payload.data.action_type
-  console.log('Received auth event', { emailType, email: payload.data.email, run_id })
+    const { data: hotel } = await supabase
+      .from('hotels')
+      .select('nombre')
+      .eq('id', hotelId)
+      .maybeSingle()
 
-  const EmailTemplate = EMAIL_TEMPLATES[emailType]
-  if (!EmailTemplate) {
-    console.error('Unknown email type', { emailType, run_id })
-    return new Response(
-      JSON.stringify({ error: `Unknown email type: ${emailType}` }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-
-  // Look up the recipient's hotel name so the email is co-branded with the hotel
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
-
-  let hotelName: string | undefined
-  try {
-    const userId = payload.data.user?.id || payload.data.user_id
-    const userMeta = payload.data.user?.user_metadata || {}
-    // 1) Prefer explicit metadata provided at signup (hotel_name / hotelName)
-    hotelName = userMeta.hotel_name || userMeta.hotelName
-    // 2) Otherwise resolve via profiles -> hotels
-    if (!hotelName && userId) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('hotel_id, hotel_activo_id')
-        .eq('id', userId)
-        .maybeSingle()
-      const hotelId = profile?.hotel_activo_id || profile?.hotel_id
-      if (hotelId) {
-        const { data: hotel } = await supabase
-          .from('hotels')
-          .select('nombre')
-          .eq('id', hotelId)
-          .maybeSingle()
-        hotelName = hotel?.nombre || undefined
-      }
-    }
+    return (hotel?.nombre as string | undefined) || undefined
   } catch (err) {
-    console.warn('Could not resolve hotel name for email', err)
+    console.warn('Could not resolve hotel name for auth email', err)
+    return undefined
   }
-
-  // Build template props from payload.data (HookData structure)
-  const templateProps = {
-    siteName: SITE_NAME,
-    siteUrl: `https://${ROOT_DOMAIN}`,
-    recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
-    token: payload.data.token,
-    email: payload.data.email,
-    oldEmail: payload.data.old_email,
-    newEmail: payload.data.new_email,
-    hotelName,
-  }
-
-  // Render React Email to HTML and plain text
-  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
-    plainText: true,
-  })
-
-  // Enqueue email for async processing by the dispatcher (process-email-queue).
-  const messageId = crypto.randomUUID()
-
-  // Subject line: include hotel name when we have one for stronger co-branding.
-  const baseSubjects: Record<string, string> = {
-    signup: 'Confirma tu correo',
-    invite: 'Te invitaron a colaborar',
-    magiclink: 'Tu enlace de acceso',
-    recovery: 'Restablece tu contraseña',
-    email_change: 'Confirma tu nuevo correo',
-    reauthentication: 'Tu código de verificación',
-  }
-  const subjectBase = baseSubjects[emailType] || EMAIL_SUBJECTS[emailType] || 'Notificación'
-  const subject = hotelName ? `${subjectBase} · ${hotelName}` : `${subjectBase} · VULO`
-
-  // Log pending BEFORE enqueue so we have a record even if enqueue crashes
-  await supabase.from('email_send_log').insert({
-    message_id: messageId,
-    template_name: emailType,
-    recipient_email: payload.data.email,
-    status: 'pending',
-  })
-
-  const { error: enqueueError } = await supabase.rpc('enqueue_email', {
-    queue_name: 'auth_emails',
-    payload: {
-      run_id,
-      message_id: messageId,
-      to: payload.data.email,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-      sender_domain: SENDER_DOMAIN,
-      subject,
-      html,
-      text,
-      purpose: 'transactional',
-      label: emailType,
-      queued_at: new Date().toISOString(),
-    },
-  })
-
-  if (enqueueError) {
-    console.error('Failed to enqueue auth email', { error: enqueueError, run_id, emailType })
-    await supabase.from('email_send_log').insert({
-      message_id: messageId,
-      template_name: emailType,
-      recipient_email: payload.data.email,
-      status: 'failed',
-      error_message: 'Failed to enqueue email',
-    })
-    return new Response(JSON.stringify({ error: 'Failed to enqueue email' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
-
-  console.log('Auth email enqueued', { emailType, email: payload.data.email, run_id })
-
-  return new Response(
-    JSON.stringify({ success: true, queued: true }),
-    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  )
 }
+
+// The SDK handler owns verification, dispatch, and retry semantics; this file
+// owns only the email decisions: subjects, templates, and per-type props.
+const handler = createAuthEmailHandler({
+  apiKey: Deno.env.get('LOVABLE_API_KEY')!,
+  from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+  senderDomain: SENDER_DOMAIN,
+  sendUrl: Deno.env.get('LOVABLE_SEND_URL'),
+  emails: {
+    signup: {
+      subject: 'Confirma tu correo · VULO',
+      render: async (data) =>
+        React.createElement(SignupEmail, {
+          siteName: SITE_NAME,
+          siteUrl: SITE_URL,
+          recipient: data.email,
+          confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
+        }),
+    },
+    invite: {
+      subject: 'Te invitaron a colaborar · VULO',
+      render: async (data) =>
+        React.createElement(InviteEmail, {
+          siteName: SITE_NAME,
+          siteUrl: SITE_URL,
+          confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
+        }),
+    },
+    magiclink: {
+      subject: 'Tu enlace de acceso · VULO',
+      render: async (data) =>
+        React.createElement(MagicLinkEmail, {
+          siteName: SITE_NAME,
+          confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
+        }),
+    },
+    recovery: {
+      subject: 'Restablece tu contraseña · VULO',
+      render: async (data) =>
+        React.createElement(RecoveryEmail, {
+          siteName: SITE_NAME,
+          confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
+        }),
+    },
+    email_change: {
+      subject: 'Confirma tu nuevo correo · VULO',
+      render: async (data) =>
+        React.createElement(EmailChangeEmail, {
+          siteName: SITE_NAME,
+          oldEmail: data.old_email ?? '',
+          email: data.email,
+          newEmail: data.new_email ?? '',
+          confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
+        }),
+    },
+    reauthentication: {
+      subject: 'Tu código de verificación · VULO',
+      render: async (data) =>
+        React.createElement(ReauthenticationEmail, {
+          token: data.token ?? '',
+          hotelName: await resolveHotelName(data as never),
+        }),
+    },
+  },
+})
+
 
 Deno.serve(async (req) => {
   const url = new URL(req.url)
@@ -352,15 +253,5 @@ Deno.serve(async (req) => {
     return handlePreview(req)
   }
 
-  // Main webhook handler
-  try {
-    return await handleWebhook(req)
-  } catch (error) {
-    console.error('Webhook handler error:', error)
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
+  return handler(req)
 })

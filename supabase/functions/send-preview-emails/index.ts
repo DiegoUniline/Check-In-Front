@@ -1,5 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
+import { sendLovableEmail, EmailAPIError } from 'npm:@lovable.dev/email-js@0.1.0'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { z } from 'npm:zod@3.23.8'
@@ -65,60 +66,93 @@ Deno.serve(async (req) => {
     }
     const to = parsed.data.recipient.toLowerCase()
 
+    const apiKey = Deno.env.get('LOVABLE_API_KEY')!
+    const sendUrl = Deno.env.get('LOVABLE_SEND_URL')
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    const { data: existingToken, error: tokenLookupError } = await supabase
-      .from('email_unsubscribe_tokens')
-      .select('token')
-      .eq('email', to)
-      .maybeSingle()
-    if (tokenLookupError) throw tokenLookupError
-
-    let unsubscribeToken = existingToken?.token as string | undefined
-    if (!unsubscribeToken) {
-      unsubscribeToken = crypto.randomUUID()
-      const { error: tokenInsertError } = await supabase
-        .from('email_unsubscribe_tokens')
-        .insert({ email: to, token: unsubscribeToken })
-      if (tokenInsertError) throw tokenInsertError
+    const logSend = async (
+      type: string,
+      status: 'sent' | 'suppressed' | 'failed',
+      errorMessage?: string,
+    ) => {
+      const { error } = await supabase.from('email_send_log').insert({
+        template_name: type,
+        recipient_email: to,
+        status,
+        error_message: errorMessage?.slice(0, 1000) ?? null,
+      })
+      if (error) console.error('Failed to write email_send_log row', { type, status, error })
     }
 
-    const results: any[] = []
+    const results: Array<{ type: string; ok: boolean; status: string; error?: string }> = []
+
     for (const [type, tpl] of Object.entries(TEMPLATES)) {
       const html = await renderAsync(React.createElement(tpl.component, tpl.props))
       const text = await renderAsync(React.createElement(tpl.component, tpl.props), { plainText: true })
-      const messageId = crypto.randomUUID()
       const subject = `[Preview] ${tpl.subject} · ${tpl.props.hotelName ?? SITE_NAME}`
 
-      await supabase.from('email_send_log').insert({
-        message_id: messageId,
-        template_name: type,
-        recipient_email: to,
-        status: 'pending',
-      })
+      try {
+        await sendLovableEmail(
+          {
+            to,
+            from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+            sender_domain: SENDER_DOMAIN,
+            subject,
+            html,
+            text,
+            purpose: 'transactional',
+            label: `preview-${type}`,
+            idempotency_key: `preview-${type}-${crypto.randomUUID()}`,
+          },
+          { apiKey, sendUrl },
+        )
+        await logSend(type, 'sent')
+        results.push({ type, ok: true, status: 'sent' })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
 
-      const { error } = await supabase.rpc('enqueue_email', {
-        queue_name: 'auth_emails',
-        payload: {
-          message_id: messageId,
-          idempotency_key: `preview-${type}-${messageId}`,
-          to,
-          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-          sender_domain: SENDER_DOMAIN,
-          subject,
-          html,
-          text,
-          purpose: 'transactional',
-          label: type,
-          unsubscribe_token: unsubscribeToken,
-          queued_at: new Date().toISOString(),
-        },
-      })
+        if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
+          await logSend(type, 'suppressed', message)
+          results.push({ type, ok: false, status: 'suppressed' })
+          continue
+        }
 
-      results.push({ type, ok: !error, error: error?.message, messageId })
+        if (error instanceof EmailAPIError && error.status === 429) {
+          const wait = (error.retryAfterSeconds ?? 60) * 1000
+          await new Promise((r) => setTimeout(r, wait))
+          try {
+            await sendLovableEmail(
+              {
+                to,
+                from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+                sender_domain: SENDER_DOMAIN,
+                subject,
+                html,
+                text,
+                purpose: 'transactional',
+                label: `preview-${type}`,
+                idempotency_key: `preview-${type}-${crypto.randomUUID()}`,
+              },
+              { apiKey, sendUrl },
+            )
+            await logSend(type, 'sent')
+            results.push({ type, ok: true, status: 'sent' })
+            continue
+          } catch (retryError) {
+            const retryMessage =
+              retryError instanceof Error ? retryError.message : String(retryError)
+            await logSend(type, 'failed', retryMessage)
+            results.push({ type, ok: false, status: 'failed', error: retryMessage })
+            continue
+          }
+        }
+
+        await logSend(type, 'failed', message)
+        results.push({ type, ok: false, status: 'failed', error: message })
+      }
     }
 
     return new Response(JSON.stringify({ recipient: to, results }, null, 2), {
