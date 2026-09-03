@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { format, addDays, parseISO, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Plus, Search, 
   CalendarDays, BedDouble, Users, RefreshCw, Calendar,
   LogIn, LogOut, Clock, ArrowRight, X, Eye, History, SlidersHorizontal,
-  CheckCircle, XCircle, AlertCircle
+  CheckCircle, XCircle, AlertCircle, Wrench, DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import api, { todayLocal } from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { TimelineGrid } from '@/components/reservas/TimelineGrid';
+import { TimelineGrid, type TimelineReservationAction } from '@/components/reservas/TimelineGrid';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
@@ -145,6 +145,7 @@ const PisoChips = ({
 };
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
+type OperationalFilter = 'all' | 'available' | 'occupied' | 'arrivals' | 'departures' | 'balance' | 'pending' | 'maintenance';
 
 export default function Reservas() {
   const navigate = useNavigate();
@@ -188,6 +189,9 @@ export default function Reservas() {
   const [filtroTipo, setFiltroTipo] = useState<string>(savedView.filtroTipo || 'all');
   const [filtroPiso, setFiltroPiso] = useState<string>(savedView.filtroPiso || 'all');
   const [busqueda, setBusqueda] = useState(savedView.busqueda || '');
+  const [operationalFilter, setOperationalFilter] = useState<OperationalFilter>(savedView.operationalFilter || 'all');
+  const [focusReservationId, setFocusReservationId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const [modalNuevaReserva, setModalNuevaReserva] = useState(false);
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
@@ -226,9 +230,9 @@ export default function Reservas() {
   useEffect(() => {
     sessionStorage.setItem(RESERVAS_VIEW_KEY, JSON.stringify({
       startDate: format(startDate, 'yyyy-MM-dd'), viewMode, filtroTipo, filtroPiso,
-      busqueda, reservasSubView, filtros,
+      busqueda, reservasSubView, filtros, operationalFilter,
     }));
-  }, [startDate, viewMode, filtroTipo, filtroPiso, busqueda, reservasSubView, filtros]);
+  }, [startDate, viewMode, filtroTipo, filtroPiso, busqueda, reservasSubView, filtros, operationalFilter]);
 
   // En teléfono la lista de habitaciones es la vista operativa más clara.
   // El calendario continúa disponible, pero ya no obliga a desplazarse al entrar.
@@ -277,12 +281,53 @@ export default function Reservas() {
     setStartDate(prev => direccion === 'next' ? addDays(prev, dias) : subDays(prev, dias));
   };
 
+  const reservationSearchText = (reservation: any) => [
+    reservation.numero_reserva,
+    reservation.cliente_nombre,
+    reservation.clientes?.nombre,
+    reservation.clientes?.apellido_paterno,
+    reservation.clientes?.apellido_materno,
+    reservation.clientes?.telefono,
+    reservation.clientes?.email,
+    reservation.cliente_telefono,
+    reservation.cliente_email,
+    reservation.habitacion_numero,
+    reservation.habitaciones?.numero,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const matchingReservations = useMemo(() => {
+    const search = busqueda.trim().toLowerCase();
+    if (search.length < 2) return [];
+    return reservas.filter((reservation) => reservationSearchText(reservation).includes(search)).slice(0, 6);
+  }, [busqueda, reservas]);
+
   const habitacionesFiltradas = habitaciones.filter(h => {
     if (filtroTipo !== 'all' && h.tipo_habitacion_id !== filtroTipo) return false;
     if (filtroPiso !== 'all' && (h.piso == null || h.piso.toString() !== filtroPiso)) return false;
+    const today = todayLocal();
+    const roomReservations = reservas.filter((reservation) => {
+      const roomId = reservation.habitacion_id || reservation.habitaciones?.id;
+      return roomId === h.id && !['Cancelada', 'NoShow'].includes(String(reservation.estado || ''));
+    });
+    const occupiedToday = roomReservations.some((reservation) => {
+      const checkin = String(reservation.fecha_checkin || '').slice(0, 10);
+      const checkout = String(reservation.fecha_checkout || '').slice(0, 10);
+      return checkin <= today && today < checkout;
+    });
+    const maintenance = String(h.estado_mantenimiento || 'OK').toLowerCase() !== 'ok'
+      || String(h.estado_habitacion || '').toLowerCase().includes('mantenimiento');
+    if (operationalFilter === 'available' && (occupiedToday || maintenance)) return false;
+    if (operationalFilter === 'occupied' && !occupiedToday) return false;
+    if (operationalFilter === 'arrivals' && !roomReservations.some((r) => String(r.fecha_checkin || '').slice(0, 10) === today)) return false;
+    if (operationalFilter === 'departures' && !roomReservations.some((r) => String(r.fecha_checkout || '').slice(0, 10) === today)) return false;
+    if (operationalFilter === 'balance' && !roomReservations.some((r) => Number(r.saldo_pendiente || 0) > 0)) return false;
+    if (operationalFilter === 'pending' && !roomReservations.some((r) => r.estado === 'Pendiente')) return false;
+    if (operationalFilter === 'maintenance' && !maintenance) return false;
     if (busqueda) {
       const search = busqueda.toLowerCase();
-      return h.numero?.toLowerCase().includes(search) || h.tipo_nombre?.toLowerCase().includes(search);
+      const roomMatches = String(h.numero || '').toLowerCase().includes(search)
+        || String(h.tipo_nombre || '').toLowerCase().includes(search);
+      return roomMatches || roomReservations.some((reservation) => reservationSearchText(reservation).includes(search));
     }
     return true;
   });
@@ -302,6 +347,40 @@ export default function Reservas() {
 
   const handleReservationClick = (reserva: any) => {
     navigate(`/reservas/detalle/${reserva.id}`);
+  };
+
+  const handleTimelineAction = (
+    reserva: any,
+    action: TimelineReservationAction,
+    params: Record<string, string> = {},
+  ) => {
+    if (action === 'view') {
+      const operation = params.operation;
+      if (!operation) return handleReservationClick(reserva);
+      const query = new URLSearchParams({ operation, ...(params.checkout ? { checkout: params.checkout } : {}) });
+      navigate(`/reservas/detalle/${reserva.id}?${query.toString()}`);
+      return;
+    }
+    if (action === 'checkin') return navigate(`/checkin/${reserva.id}`);
+    if (action === 'checkout') return navigate(`/checkout/${reserva.id}`);
+    if (viewOnlyMode) {
+      toast({ title: 'Modo sólo consulta', description: 'Abre un turno para realizar esta operación.' });
+      return;
+    }
+    const query = new URLSearchParams({ operation: action });
+    if (params.checkout) query.set('checkout', params.checkout);
+    if (params.roomId) query.set('roomId', params.roomId);
+    navigate(`/reservas/detalle/${reserva.id}?${query.toString()}`);
+  };
+
+  const focusReservation = (reserva: any) => {
+    if (reserva.fecha_checkin) setStartDate(subDays(parseISO(String(reserva.fecha_checkin).slice(0, 10)), 1));
+    setViewMode('Semana');
+    setFiltroTipo('all');
+    setFiltroPiso('all');
+    setOperationalFilter('all');
+    setFocusReservationId(reserva.id);
+    setSearchOpen(false);
   };
 
   const handleRecepcionLibreClick = (habitacion: any) => {
@@ -592,12 +671,54 @@ export default function Reservas() {
               <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar habitación..."
-                  className="h-10 w-full pl-8 text-sm sm:h-8 sm:w-[200px] sm:text-xs"
+                  placeholder="Huésped, folio, teléfono o habitación…"
+                  className="h-10 w-full pl-8 pr-8 text-sm sm:h-9 sm:w-[320px] sm:text-xs"
                   value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
+                  onFocus={() => setSearchOpen(true)}
+                  onBlur={() => window.setTimeout(() => setSearchOpen(false), 120)}
+                  onChange={(e) => { setBusqueda(e.target.value); setSearchOpen(true); setFocusReservationId(null); }}
                 />
+                {busqueda && <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted" onMouseDown={(event) => event.preventDefault()} onClick={() => { setBusqueda(''); setFocusReservationId(null); }} aria-label="Limpiar búsqueda"><X className="h-3.5 w-3.5" /></button>}
+                {searchOpen && matchingReservations.length > 0 && (
+                  <div className="absolute right-0 top-full z-50 mt-1 w-full min-w-[320px] overflow-hidden rounded-xl border bg-white shadow-xl">
+                    <p className="border-b px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Reservas encontradas</p>
+                    {matchingReservations.map((reservation) => {
+                      const name = reservation.cliente_nombre || [reservation.clientes?.nombre, reservation.clientes?.apellido_paterno, reservation.clientes?.apellido_materno].filter(Boolean).join(' ') || 'Sin nombre';
+                      return <button key={reservation.id} type="button" className="flex w-full items-center justify-between gap-3 border-b px-3 py-2.5 text-left last:border-0 hover:bg-muted/50" onMouseDown={(event) => event.preventDefault()} onClick={() => focusReservation(reservation)}>
+                        <span className="min-w-0"><span className="block truncate text-sm font-semibold text-[#10233F]">{name}</span><span className="block truncate text-xs text-muted-foreground">Hab. {reservation.habitacion_numero || reservation.habitaciones?.numero || '—'} · {reservation.numero_reserva || 'Sin folio'}</span></span>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">{formatDate(reservation.fecha_checkin)}</span>
+                      </button>;
+                    })}
+                  </div>
+                )}
               </div>
+            </div>
+
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+              {([
+                ['all', 'Todas', CalendarDays],
+                ['available', 'Disponibles hoy', CheckCircle],
+                ['occupied', 'Ocupadas hoy', BedDouble],
+                ['arrivals', 'Llegadas hoy', LogIn],
+                ['departures', 'Salidas hoy', LogOut],
+                ['balance', 'Con saldo', DollarSign],
+                ['pending', 'Pendientes', Clock],
+                ['maintenance', 'Mantenimiento', Wrench],
+              ] as [OperationalFilter, string, typeof CalendarDays][]).map(([value, label, Icon]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setOperationalFilter(value)}
+                  className={cn(
+                    'flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors',
+                    operationalFilter === value
+                      ? 'border-[#10233F] bg-[#10233F] text-white'
+                      : 'border-[#10233F]/10 bg-white text-[#10233F] hover:border-[#10233F]/30 hover:bg-[#10233F]/[0.03]',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />{label}
+                </button>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -608,6 +729,10 @@ export default function Reservas() {
             <div className="absolute inset-0 flex items-center justify-center border rounded-lg bg-card">
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
+          ) : habitacionesFiltradas.length === 0 ? (
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg border bg-card p-6 text-center">
+              <div><Search className="mx-auto h-8 w-8 text-muted-foreground/40" /><p className="mt-3 font-semibold text-[#10233F]">No hay habitaciones con estos filtros</p><p className="mt-1 text-sm text-muted-foreground">Prueba otra búsqueda o vuelve a mostrar toda la operación.</p><Button variant="outline" size="sm" className="mt-3" onClick={() => { setBusqueda(''); setFiltroTipo('all'); setFiltroPiso('all'); setOperationalFilter('all'); }}>Limpiar filtros</Button></div>
+            </div>
           ) : (
             <TimelineGrid
               habitaciones={habitacionesFiltradas}
@@ -615,7 +740,9 @@ export default function Reservas() {
               startDate={startDate}
               daysToShow={daysToShow}
               onReservationClick={handleReservationClick}
+              onReservationAction={handleTimelineAction}
               onCreateReservation={handleCreateReservation}
+              focusReservationId={focusReservationId}
               canCreate={!viewOnlyMode}
             />
           )}

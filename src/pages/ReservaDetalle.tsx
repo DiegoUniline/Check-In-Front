@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, BedDouble, CalendarDays, Clock, CreditCard, DoorOpen,
   LogOut, Mail, Phone, Receipt, RefreshCw,
@@ -35,6 +35,7 @@ const number = (value: unknown) => Number(value || 0);
 export default function ReservaDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [reserva, setReserva] = useState<any>(null);
   const [rooms, setRooms] = useState<any[]>([]);
@@ -118,7 +119,14 @@ export default function ReservaDetalle() {
         </section>
 
         <section id="operaciones" className="scroll-mt-24">
-          <StayOperationsPanel reserva={reserva} habitaciones={rooms} onUpdate={refreshAll}>
+          <StayOperationsPanel
+            reserva={reserva}
+            habitaciones={rooms}
+            onUpdate={refreshAll}
+            initialOperationId={searchParams.get('operation')}
+            initialCheckout={searchParams.get('checkout')}
+            initialRoomId={searchParams.get('roomId')}
+          >
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 space-y-4">
             <section className="grid gap-4 lg:grid-cols-2">

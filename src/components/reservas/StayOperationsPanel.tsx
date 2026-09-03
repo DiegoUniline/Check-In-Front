@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeftRight, BadgeDollarSign, BedDouble, CalendarClock, CalendarDays,
   CheckCircle2, ChevronDown, Clock, History, Loader2, LogIn, LogOut, Plus,
@@ -28,9 +28,16 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
 
-type Props = { reserva: any; habitaciones?: any[]; onUpdate?: () => void | Promise<void>; children?: ReactNode };
+type Props = {
+  reserva: any;
+  habitaciones?: any[];
+  onUpdate?: () => void | Promise<void>;
+  children?: ReactNode;
+  initialOperationId?: string | null;
+  initialCheckout?: string | null;
+  initialRoomId?: string | null;
+};
 type Operation = { id: string; label: string; detail: string; icon: any; sensitive?: boolean };
 
 const groups: { title: string; operations: Operation[] }[] = [
@@ -139,7 +146,14 @@ const shiftDate = (value: any, days: number) => {
   return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(shifted.getUTCDate()).padStart(2, '0')}`;
 };
 
-export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
+export function StayOperationsPanel({
+  reserva,
+  onUpdate,
+  children,
+  initialOperationId,
+  initialCheckout,
+  initialRoomId,
+}: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selected, setSelected] = useState<Operation | null>(null);
@@ -160,6 +174,7 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
   const [reservations, setReservations] = useState<any[]>([]);
   const [reverseMovement, setReverseMovement] = useState<any | null>(null);
   const [reverseReason, setReverseReason] = useState('');
+  const openedInitialOperation = useRef('');
 
   const activeCharges = useMemo(() => (reserva.cargos || []).filter((c: any) => c.estado !== 'Cancelado'), [reserva.cargos]);
   const activePayments = useMemo(() => (reserva.pagos || []).filter((p: any) => p.estado !== 'Cancelado'), [reserva.pagos]);
@@ -391,6 +406,23 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
     });
   };
 
+  useEffect(() => {
+    if (!initialOperationId) return;
+    const initialKey = `${reserva.id}:${initialOperationId}:${initialCheckout || ''}:${initialRoomId || ''}`;
+    if (openedInitialOperation.current === initialKey) return;
+    const operation = groups.flatMap((group) => group.operations)
+      .find((item) => item.id === initialOperationId);
+    if (!operation || !operationApplies(operation.id) || !canAccess(`reservas.operacion.${operation.id}`, user?.rol)) return;
+
+    openedInitialOperation.current = initialKey;
+    openOperation(operation);
+    setPayload((current) => ({
+      ...current,
+      ...(initialCheckout ? { new_checkout: dateOnly(initialCheckout) } : {}),
+      ...(initialRoomId ? { new_room_id: initialRoomId } : {}),
+    }));
+  }, [initialCheckout, initialOperationId, initialRoomId, reserva.id, user?.rol]);
+
   const set = (key: string, value: any) => setPayload((current) => ({ ...current, [key]: value }));
 
   const submit = async () => {
@@ -516,7 +548,7 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
             type="button"
             onClick={() => {
               setPayload((current) => {
-                const next: any = { ...current, new_room_id: room.id };
+                const next = { ...current, new_room_id: room.id };
                 if (selected?.id === 'category_change' && current.change_type !== 'Cortesia') {
                   next.new_rate = String(money(room.precio_base ?? room.tipos_habitacion?.precio_base));
                 }
@@ -755,7 +787,7 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
     {accounts.length > 0 && <AccountBreakdown accounts={accounts} charges={reserva.cargos || []} payments={reserva.pagos || []} />}
 
     <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Historial de operaciones</h4><Button variant="ghost" size="sm" onClick={load}><RefreshCcw className="h-3.5 w-3.5" /></Button></div>
-      {movements.length === 0 ? <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay movimientos operativos.</p> : movements.map((move, index) => <div key={move.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-medium capitalize">{String(move.operacion).split('_').join(' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p><p className="mt-1 text-xs">{move.motivo}</p></div>{move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => setReverseMovement(move)}>Revertir</Button> : null}</div></div>)}
+      {movements.length === 0 ? <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay movimientos operativos.</p> : movements.map((move, index) => <div key={move.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-medium capitalize">{String(move.operacion).replaceAll('_',' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p><p className="mt-1 text-xs">{move.motivo}</p></div>{move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => setReverseMovement(move)}>Revertir</Button> : null}</div></div>)}
     </section>
 
     <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className={cn(
