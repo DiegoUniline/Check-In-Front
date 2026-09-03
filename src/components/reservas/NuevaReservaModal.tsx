@@ -1064,41 +1064,41 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
 function FormSection({ icon: Icon, title, hint, collapsible, children }: { icon: typeof CalendarDays; title: string; hint?: string; collapsible?: boolean; children: ReactNode }) {
   const head = (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <span className="rounded-[10px] bg-[#10233F]/[0.07] p-1.5 text-[#10233F]"><Icon className="h-4 w-4" /></span>
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="rounded-lg bg-[#10233F]/[0.07] p-1 text-[#10233F]"><Icon className="h-3.5 w-3.5" /></span>
       <div className="min-w-0">
-        <h3 className="truncate text-sm font-semibold text-[#10233F]">{title}</h3>
-        {hint && <p className="truncate text-[11px] text-muted-foreground">{hint}</p>}
+        <h3 className="truncate text-xs font-semibold text-[#10233F]">{title}</h3>
+        {hint && <p className="truncate text-[10px] text-muted-foreground">{hint}</p>}
       </div>
     </div>
   );
 
   if (collapsible) {
-    return <details className="group rounded-[14px] border border-[#10233F]/10 bg-white px-3 py-2.5 shadow-sm">
+    return <details className="group rounded-xl border border-[#10233F]/10 bg-white px-2.5 py-2 shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
         {head}
-        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
       </summary>
-      <div className="mt-3 space-y-2.5">{children}</div>
+      <div className="mt-2 space-y-2">{children}</div>
     </details>;
   }
 
-  return <section className="space-y-2.5 rounded-[14px] border border-[#10233F]/10 bg-white px-3 py-3 shadow-sm">
+  return <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white px-2.5 py-2.5 shadow-sm">
     {head}
     {children}
   </section>;
 }
 
 function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: ReactNode }) {
-  return <div className="min-w-0 space-y-1">
-    <Label className="text-xs font-medium text-[#475569]">{label}{required && <span className="ml-0.5 text-[#F97316]">*</span>}</Label>
+  return <div className="min-w-0 space-y-0.5">
+    <Label className="text-[11px] font-medium text-[#475569]">{label}{required && <span className="ml-0.5 text-[#F97316]">*</span>}</Label>
     {children}
     {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
   </div>;
 }
 
 function Line({ label, value, accent, small }: { label: string; value: string; accent?: boolean; small?: boolean }) {
-  return <div className={cn('flex justify-between gap-3', small && 'text-xs')}>
+  return <div className={cn('flex justify-between gap-3', small && 'text-[11px]')}>
     <span className={cn('min-w-0 truncate', accent ? 'text-emerald-300' : 'text-white/70')}>{label}</span>
     <span className={cn('shrink-0 tabular-nums', accent && 'text-emerald-300')}>{value}</span>
   </div>;
