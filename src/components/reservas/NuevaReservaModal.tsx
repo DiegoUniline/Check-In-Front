@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type R
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  CalendarDays, Search, BedDouble, Check, ChevronRight, ChevronLeft, 
+  CalendarDays, BedDouble, Check, ChevronRight, ChevronLeft,
   CalendarPlus, UserPlus, Clock, Percent, DollarSign, Package, Plus, Trash2, 
   Receipt, Phone, Mail, CreditCard, X, ArrowLeft
 } from 'lucide-react';
@@ -198,7 +198,6 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => {
 export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, pageMode = false }: NuevaReservaModalProps) {
   const [step, setStep] = useState<Step>(1);
   const [formData, setFormData] = useState<FormData>(createInitialFormData());
-  const [searchCliente, setSearchCliente] = useState('');
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
   const [loading, setLoading] = useState(false);
   const [origen, setOrigen] = useState<'Reserva' | 'Recepcion'>('Reserva');
@@ -226,7 +225,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       setStep(1);
       setOrigen(preload?.origen || 'Reserva');
       setCrearNuevoCliente(false);
-      setSearchCliente('');
       setFormData(createInitialFormData(preload));
     }
   }, [open, preload]);
@@ -336,27 +334,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, pageMode, formData.fechaCheckin, formData.fechaCheckout, formData.tipoHabitacion]);
 
-  // Filtrado local de clientes: trabaja sobre la lista completa cargada en `cargarDatos`.
-  // Si no hay búsqueda, mostramos sólo algunos clientes recientes para no saturar la UI.
-  const clientesFiltrados = (() => {
-    const q = searchCliente.trim().toLowerCase();
-    if (!q) return clientes.slice(0, pageMode ? 4 : 8);
-    return clientes
-      .filter((c: any) => {
-        const nombre = `${c.nombre || ''} ${c.apellido_paterno || ''} ${c.apellido_materno || ''}`.toLowerCase();
-        return (
-          nombre.includes(q) ||
-          (c.email || '').toLowerCase().includes(q) ||
-          (c.telefono || '').toLowerCase().includes(q) ||
-          (c.numero_documento || '').toLowerCase().includes(q)
-        );
-      })
-      .slice(0, 20);
-  })();
-
   const handleSelectCliente = (cliente: any) => {
     setFormData({ ...formData, clienteId: cliente.id, clienteData: cliente });
-    setSearchCliente('');
   };
 
   const handleSelectRoom = (habitacion: any) => {
@@ -709,7 +688,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </Card>
             )}
 
-            {preload?.habitacion && (
+            {preload?.habitacion && !pageMode && (
               <Card className="bg-primary/5 border-primary/20">
                 <CardContent className="p-3 flex items-center gap-3">
                   <BedDouble className="h-5 w-5 text-primary" />
@@ -805,118 +784,86 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </div>
         )}
 
-        {/* STEP 2 - HABITACIÓN */}
-        {(pageMode || step === 2) && (
-          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm')}>
-            {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">2. Habitación</h2><p className="text-xs text-muted-foreground">Sólo aparecen opciones libres para toda la estancia.</p></div>}
-            <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles para {formatDate(formData.fechaCheckin)} - {formatDate(formData.fechaCheckout)}</p>
-            <div className={cn('grid gap-3 overflow-y-auto', pageMode ? 'max-h-[390px] grid-cols-1 pr-1' : 'max-h-[400px]')}>
-              {habitacionesDisponibles.map(hab => (
-                <button key={hab.id} type="button" data-room-option className="rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[#10233F] focus-visible:ring-offset-2" onClick={() => handleSelectRoom(hab)}>
-                <Card className={cn("h-full cursor-pointer hover:border-primary transition-colors", formData.habitacionId === hab.id && "border-primary bg-primary/5")}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <BedDouble className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold">Habitación {hab.numero}</p>
-                        <p className="text-sm text-muted-foreground">{hab.tipo_nombre}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg">{formatCurrency(hab.precio_base)}</p>
-                      <p className="text-xs text-muted-foreground">/noche</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                </button>
-              ))}
-              {habitacionesDisponibles.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No hay habitaciones disponibles para las fechas seleccionadas
-                </div>
-              )}
+        <div className={cn(pageMode ? 'space-y-4' : 'contents')}>
+          {/* STEP 2 - HABITACIÓN */}
+          {(pageMode || step === 2) && (
+            <div className={cn('space-y-3', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm')}>
+              {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">2. Habitación</h2><p className="text-xs text-muted-foreground">Elige únicamente entre las disponibles para todo el rango.</p></div>}
+              <div className="space-y-2">
+                <Label>Habitación disponible</Label>
+                <ComboboxCreatable
+                  options={habitacionesDisponibles.map((hab) => {
+                    const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
+                    const roomRate = Number(hab.precio_base) || 0;
+                    const rate = roomRate > 0 ? roomRate : Number(tipo?.precio_base) || 0;
+                    return { value: hab.id, label: `Hab. ${hab.numero} · ${hab.tipo_nombre || tipo?.nombre || 'Sin categoría'} · ${fmt(rate)}/noche` };
+                  })}
+                  value={formData.habitacionId}
+                  onValueChange={(value) => {
+                    const room = habitacionesDisponibles.find((item) => item.id === value);
+                    if (room) handleSelectRoom(room);
+                  }}
+                  placeholder={habitacionesDisponibles.length ? 'Buscar y elegir habitación…' : 'Sin habitaciones disponibles'}
+                  searchPlaceholder="Número, categoría o precio…"
+                  emptyMessage="No hay coincidencias disponibles."
+                  disabled={habitacionesDisponibles.length === 0}
+                  autoOpenOnFocus={pageMode}
+                  className="h-11 justify-start text-left font-normal"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <span>{habitacionesDisponibles.length} disponibles · {formatDate(formData.fechaCheckin)} al {formatDate(formData.fechaCheckout)}</span>
+                {selectedHabitacion && <span className="shrink-0 font-medium text-emerald-700"><Check className="mr-1 inline h-3.5 w-3.5" />Disponible</span>}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* STEP 3 - HUÉSPED */}
-        {(pageMode || step === 3) && (
-          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm xl:col-span-3')}>
+          {(pageMode || step === 3) && (
+          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm')}>
             {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">3. Huésped</h2><p className="text-xs text-muted-foreground">Busca un cliente existente o captura uno nuevo aquí mismo.</p></div>}
-            {formData.clienteData ? (
-              <Card className="border-primary bg-primary/5">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
-                        {formData.clienteData.nombre?.charAt(0)}{formData.clienteData.apellido_paterno?.charAt(0)}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {formData.clienteData.nombre} {formData.clienteData.apellido_paterno} {formData.clienteData.apellido_materno}
-                        </h3>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                          {formData.clienteData.telefono && (
-                            <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{formData.clienteData.telefono}</span>
-                          )}
-                          {formData.clienteData.email && (
-                            <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{formData.clienteData.email}</span>
-                          )}
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          {formData.clienteData.es_vip && <Badge>VIP</Badge>}
-                          {formData.clienteData.total_estancias > 0 && <Badge variant="outline">{formData.clienteData.total_estancias} estancias</Badge>}
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={handleClearCliente}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : !crearNuevoCliente ? (
-              <>
+            {!crearNuevoCliente ? (
+              <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Buscar cliente</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input data-client-search placeholder="Nombre, email o teléfono..." className="pl-9" value={searchCliente} onChange={(e) => setSearchCliente(e.target.value)} />
+                  <Label>Huésped principal</Label>
+                  <div className="flex gap-2">
+                    <ComboboxCreatable
+                      options={clientes.map((cliente) => ({
+                        value: cliente.id,
+                        label: `${cliente.nombre || ''} ${cliente.apellido_paterno || ''} ${cliente.apellido_materno || ''}${cliente.telefono ? ` · ${cliente.telefono}` : cliente.email ? ` · ${cliente.email}` : ''}`.trim(),
+                      }))}
+                      value={formData.clienteId}
+                      onValueChange={(value) => {
+                        const client = clientes.find((item) => item.id === value);
+                        if (client) handleSelectCliente(client);
+                      }}
+                      placeholder="Buscar y elegir huésped…"
+                      searchPlaceholder="Nombre, teléfono, correo o documento…"
+                      emptyMessage="No se encontró ningún huésped."
+                      autoOpenOnFocus={pageMode}
+                      className="h-11 min-w-0 flex-1 justify-start overflow-hidden text-left font-normal"
+                    />
+                    {formData.clienteData ? (
+                      <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
+                    ) : (
+                      <Button type="button" variant="outline" className="h-11 shrink-0" onClick={() => setCrearNuevoCliente(true)}><UserPlus className="mr-1.5 h-4 w-4" />Nuevo</Button>
+                    )}
                   </div>
                 </div>
-                {clientesFiltrados.length > 0 && (
-                  <div className={cn('max-h-[260px] overflow-y-auto', pageMode ? 'grid gap-2 md:grid-cols-2' : 'space-y-2')}>
-                    {clientesFiltrados.map(cliente => (
-                      <button key={cliente.id} type="button" className="w-full rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[#10233F] focus-visible:ring-offset-2" onClick={() => handleSelectCliente(cliente)}>
-                      <Card className="cursor-pointer hover:border-primary transition-colors">
-                        <CardContent className="p-3 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                              {cliente.nombre?.charAt(0)}{cliente.apellido_paterno?.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-medium">{cliente.nombre} {cliente.apellido_paterno}</p>
-                              <p className="text-sm text-muted-foreground">{cliente.telefono || cliente.email}</p>
-                            </div>
-                          </div>
-                          {cliente.es_vip && <Badge>VIP</Badge>}
-                        </CardContent>
-                      </Card>
-                      </button>
-                    ))}
+                {formData.clienteData && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-[#10233F]/[0.04] px-3 py-2 text-xs text-muted-foreground">
+                    {formData.clienteData.telefono && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{formData.clienteData.telefono}</span>}
+                    {formData.clienteData.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{formData.clienteData.email}</span>}
+                    {formData.clienteData.es_vip && <Badge className="h-5 px-1.5 text-[10px]">VIP</Badge>}
                   </div>
                 )}
-                <Separator />
-                <Button variant="outline" className="w-full" onClick={() => setCrearNuevoCliente(true)}>+ Nuevo cliente</Button>
-              </>
+              </div>
             ) : (
               <div className="space-y-4">
                 <Button variant="ghost" size="sm" onClick={() => setCrearNuevoCliente(false)}>
                   <ChevronLeft className="mr-1 h-4 w-4" /> Buscar existente
                 </Button>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className={cn('grid gap-3', pageMode ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3')}>
                   <div className="space-y-2">
                     <Label>Nombre *</Label>
                     <Input data-new-client-name value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
@@ -930,7 +877,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     <Input value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Teléfono *</Label>
                     <Input value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
@@ -940,7 +887,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     <Input type="email" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Tipo documento</Label>
                     <Select value={formData.nuevoCliente.tipo_documento} onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}>
@@ -960,7 +907,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </div>
             )}
           </div>
-        )}
+          )}
+        </div>
 
         {/* STEP 4 - CONFIRMACIÓN */}
         {(pageMode || step === 4) && (
@@ -1396,9 +1344,9 @@ function MiniSummary({
   danger?: boolean;
 }) {
   return <Card className="border-[#10233F]/10 shadow-none">
-    <CardContent className="flex min-h-24 items-start gap-3 p-3 sm:p-4">
-      <span className={cn('rounded-lg p-2', danger ? 'bg-orange-50 text-orange-600' : 'bg-[#10233F]/[0.07] text-[#10233F]')}><Icon className="h-4 w-4" /></span>
-      <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p><p className="truncate text-base font-bold text-[#10233F] sm:text-lg">{value}</p><p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{detail}</p></div>
+    <CardContent className="flex min-h-[76px] items-start gap-2.5 p-3">
+      <span className={cn('rounded-lg p-1.5', danger ? 'bg-orange-50 text-orange-600' : 'bg-[#10233F]/[0.07] text-[#10233F]')}><Icon className="h-4 w-4" /></span>
+      <div className="min-w-0"><p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p><p className="truncate text-base font-bold text-[#10233F]">{value}</p><p className="mt-0.5 truncate text-[10px] text-muted-foreground">{detail}</p></div>
     </CardContent>
   </Card>;
 }
