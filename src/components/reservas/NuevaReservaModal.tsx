@@ -949,7 +949,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
 
         {/* RESUMEN DE CUENTA */}
-        <aside className="min-w-0 xl:sticky xl:top-16">
+        <aside className="min-h-0 min-w-0 overflow-y-auto">
           <div className="overflow-hidden rounded-xl bg-[#10233F] text-white shadow-lg">
             <div className="space-y-2 p-3">
               <p className="text-xs font-semibold">Resumen de cuenta</p>
