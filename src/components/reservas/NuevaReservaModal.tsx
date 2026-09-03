@@ -636,9 +636,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
       </header>
 
-      <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
-
-        <div className="min-w-0 space-y-3">
+      <div className="mt-2 grid items-start gap-2 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-2">
           {/* 1. ESTANCIA + HABITACIÓN */}
           <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo se listan habitaciones libres en todo el rango.">
             {origen === 'Recepcion' && (
