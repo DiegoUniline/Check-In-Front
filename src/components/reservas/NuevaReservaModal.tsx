@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  CalendarDays, BedDouble, Check, ChevronLeft, ChevronDown,
-  CalendarPlus, UserPlus, Clock, Percent, DollarSign, Package, Plus, Trash2, 
-  Receipt, Phone, Mail, CreditCard, X, ArrowLeft
-
+import {
+  CalendarDays, BedDouble, Check, ChevronLeft, CalendarPlus, UserPlus, Clock, Percent,
+  DollarSign, Package, Plus, Minus, Trash2, Receipt, Phone, Mail, CreditCard, X, ArrowLeft,
+  Users, StickyNote,
 } from 'lucide-react';
 import {
   Dialog,
@@ -28,7 +27,6 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/currency';
 import { cn } from '@/lib/utils';
@@ -71,15 +69,15 @@ function ReservationSurface({
   children: ReactNode;
 }) {
   if (pageMode) {
-    return <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC] pb-8">
-      <div ref={surfaceRef} onKeyDown={onKeyDown} className="mx-auto max-w-[1440px] space-y-3 px-3 py-3 sm:px-5 lg:px-6">
+    return <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC]">
+      <div ref={surfaceRef} onKeyDown={onKeyDown} className="w-full px-3 pb-6 pt-2 sm:px-4 lg:px-6">
         {children}
       </div>
     </div>;
   }
 
   return <Dialog open={open} onOpenChange={onClose}>
-    <DialogContent ref={surfaceRef} onKeyDown={onKeyDown} className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-auto sm:w-[calc(100%-1rem)] sm:max-w-6xl sm:max-h-[92vh] sm:rounded-xl sm:border sm:p-5">
+    <DialogContent ref={surfaceRef} onKeyDown={onKeyDown} className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-[94vh] sm:w-[calc(100vw-2rem)] sm:max-w-none sm:rounded-xl sm:border sm:p-4">
       {children}
     </DialogContent>
   </Dialog>;
@@ -112,7 +110,6 @@ interface ImpuestoTemp {
 }
 
 // Catálogo de impuestos típicos en México aplicables a hospedaje.
-// El usuario puede agregar/quitar/editar libremente.
 const IMPUESTOS_MEXICO_SUGERIDOS: { nombre: string; tasa: number; descripcion: string }[] = [
   { nombre: 'IVA 16%', tasa: 16, descripcion: 'Impuesto al Valor Agregado general' },
   { nombre: 'IVA Frontera 8%', tasa: 8, descripcion: 'IVA región fronteriza norte/sur' },
@@ -164,9 +161,6 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => {
     adultos: 2,
     ninos: 0,
     personasExtra: 0,
-    // Relacionado con `check-in-back/src/routes/tiposHabitacion.js`:
-    // El costo por persona extra debe venir de `tipos_habitacion.precio_persona_extra`,
-    // no debe estar hardcodeado. Se autocompleta cuando el usuario selecciona el tipo.
     cargoPersonaExtra: 0,
     tipoHabitacion: preload?.habitacion?.tipo_habitacion_id || preload?.habitacion?.tipo_id || '',
     habitacionId: preload?.habitacion?.id || '',
@@ -233,10 +227,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   }, [open]);
 
   useEffect(() => {
-    // Relacionado con `check-in-back/src/routes/tiposHabitacion.js` (GET `/tipos-habitacion`):
-    // Cuando cambia el tipo de habitación, autocompletamos el cargo por persona extra usando
-    // `precio_persona_extra` del tipo. Esto corrige el bug donde se ponía $250 fijo.
-    // Nota UX: el input sigue siendo editable; solo se “resetea” automáticamente al cambiar tipo.
+    // El costo por persona extra viene de `tipos_habitacion.precio_persona_extra`.
     if (!open) return;
     const tipoId = formData.tipoHabitacion;
     if (!tipoId) return;
@@ -252,9 +243,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     });
   }, [open, formData.tipoHabitacion, tiposHabitacion]);
 
-  // Prellena los impuestos configurados por defecto para la habitación/tipo/hotel
-  // cuando el usuario selecciona un tipo o una habitación. Genera IDs efímeros para
-  // que el editor pueda manipular la lista libremente.
+  // Prellena los impuestos configurados por defecto (habitación → tipo → hotel).
   useEffect(() => {
     if (!open) return;
     const defaults = resolveImpuestosDefault(
@@ -282,8 +271,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       setTiposHabitacion(tiposData);
       setEntregables(entregablesData);
       setConceptosCargo(conceptosData);
-      // Cargamos TODOS los clientes una sola vez al abrir el modal y filtramos en memoria.
-      // Así el campo "Buscar cliente" muestra resultados desde la primera letra sin esperar al backend.
       setClientes(Array.isArray(clientesData) ? clientesData : []);
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -325,7 +312,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       void buscarHabitaciones();
     }, 180);
     return () => window.clearTimeout(timer);
-    // En la captura completa la disponibilidad se actualiza al cambiar rango o categoría.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, formData.fechaCheckin, formData.fechaCheckout, formData.tipoHabitacion]);
 
@@ -352,9 +338,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     && formData.nuevoCliente.apellido_paterno.trim()
     && formData.nuevoCliente.telefono.trim(),
   );
-  const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId) || 
+  const selectedHabitacion = habitacionesDisponibles.find(h => h.id === formData.habitacionId) ||
     (preload?.habitacion?.id === formData.habitacionId ? preload.habitacion : null);
-  const selectedTipo = tiposHabitacion.find(t => t.id === formData.tipoHabitacion) || 
+  const selectedTipo = tiposHabitacion.find(t => t.id === formData.tipoHabitacion) ||
     (selectedHabitacion ? { precio_base: selectedHabitacion.precio_base, nombre: selectedHabitacion.tipo_nombre } : null);
 
   const tarifaNoche = selectedTipo?.precio_base || 0;
@@ -370,8 +356,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const totalCargosExtras = formData.cargos.reduce((sum, c) => sum + c.total, 0);
   const subtotal = subtotalHospedaje + totalPersonaExtra + totalCargosExtras;
 
-  // Impuestos configurables manualmente (tabla editable, 0 por default)
-  // Cada impuesto se calcula sobre el subtotal y se suman en `totalImpuestos`.
   const impuestosCalculados = formData.impuestos.map((imp) => ({
     ...imp,
     monto: subtotal * ((imp.tasa || 0) / 100),
@@ -379,7 +363,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const totalImpuestos = impuestosCalculados.reduce((s, i) => s + i.monto, 0);
   const totalBruto = subtotal + totalImpuestos;
 
-  // Descuento se aplica sobre el total con los impuestos seleccionados.
   let descuentoMonto = 0;
   if (formData.descuentoTipo === 'Monto') descuentoMonto = formData.descuentoValor;
   else if (formData.descuentoTipo === 'Porcentaje') descuentoMonto = totalBruto * (formData.descuentoValor / 100);
@@ -390,13 +373,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
   const fmt = (n: number) => formatCurrency(n);
 
-  // FIX: Solo cambiar checkin a hoy, mantener checkout seleccionado
   const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
     setOrigen(nuevoOrigen);
     if (nuevoOrigen === 'Recepcion') {
       const hoy = hotelToday();
       const checkoutActual = formData.fechaCheckout;
-      // Si el checkout es menor o igual a hoy, ajustarlo a mañana
       const nuevoCheckout = checkoutActual <= hoy ? addDays(hoy, 1) : checkoutActual;
       setFormData({ ...formData, fechaCheckin: hoy, fechaCheckout: nuevoCheckout });
     }
@@ -408,12 +389,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     const cantidad = parseFloat(cargoCantidad) || 1;
     const precioUnitario = parseFloat(cargoMonto);
     const subtotalCargo = cantidad * precioUnitario;
-    // IVA de cargos extras: NO automático, se incluye en el IVA global configurable
     const aplicaIva = false;
     const impuestoCargo = 0;
 
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       cargos: [...prev.cargos, {
         id: `temp-${Date.now()}`,
         concepto_id: cargoConcepto,
@@ -421,7 +401,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         cantidad, precio_unitario: precioUnitario, aplica_iva: aplicaIva,
         subtotal: subtotalCargo, impuesto: impuestoCargo, total: subtotalCargo + impuestoCargo,
         notas: '',
-      }] 
+      }]
     }));
     setCargoConcepto(''); setCargoCantidad('1'); setCargoMonto('');
   };
@@ -440,7 +420,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const handleAgregarPago = () => {
     const monto = parseFloat(pagoMonto);
     if (!monto || monto <= 0) return;
-    
+
     setFormData(prev => ({
       ...prev,
       pagos: [...prev.pagos, {
@@ -529,7 +509,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         description: `Habitación ${selectedHabitacion?.numero} - ${formData.clienteData?.nombre || formData.nuevoCliente.nombre}`,
       });
 
-      // Envío de confirmación por WhatsApp (no bloquea la UI si falla)
       try {
         const telefono = formData.clienteData?.telefono || formData.nuevoCliente.telefono;
         const nombreCli = formData.clienteData?.nombre || formData.nuevoCliente.nombre || '';
@@ -582,7 +561,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   };
 
   const puedeGuardar = !loading && noches > 0 && Boolean(formData.habitacionId) && (Boolean(formData.clienteId) || nuevoClienteValido);
-  const nombreHuesped = (formData.clienteData?.nombre || formData.nuevoCliente.nombre || '').trim();
+
+  const rateOf = (hab: any) => {
+    const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
+    const roomRate = Number(hab.precio_base) || 0;
+    return roomRate > 0 ? roomRate : Number(tipo?.precio_base) || 0;
+  };
 
   return (
     <ReservationSurface pageMode={pageMode} open={open} onClose={() => onOpenChange(false)} surfaceRef={surfaceRef} onKeyDown={handleSurfaceKeyDown}>
@@ -597,8 +581,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       <header className={cn(
         'sticky top-0 z-30 border-b border-[#10233F]/10 bg-white/95 backdrop-blur',
         pageMode
-          ? '-mx-3 -mt-3 px-3 py-2 sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6'
-          : '-mx-3 -mt-3 px-3 py-2 sm:-mx-5 sm:-mt-5 sm:px-5 sm:rounded-t-xl',
+          ? '-mx-3 -mt-2 px-3 py-2 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6'
+          : '-mx-3 -mt-3 px-3 py-2 sm:-mx-4 sm:-mt-4 sm:px-4 sm:rounded-t-xl',
       )}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -612,6 +596,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <p className="truncate text-[11px] text-muted-foreground">
                 {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona fechas'}
                 {selectedHabitacion ? ` · Hab. #${selectedHabitacion.numero}` : ''}
+                {` · ${formData.adultos + formData.ninos + formData.personasExtra} huésped(es)`}
                 {total > 0 ? ` · ${fmt(total)}` : ''}
               </p>
             </div>
@@ -636,18 +621,18 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
       </header>
 
-      <div className="mt-2 grid items-start gap-2 xl:grid-cols-[minmax(0,980px)_320px] xl:justify-center">
+      {/* LAYOUT A TODO EL ANCHO: 3 columnas en pantallas grandes */}
+      <div className="mt-2 grid items-start gap-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(300px,340px)]">
+
+        {/* COLUMNA 1 — Estancia, ocupación y habitación */}
         <div className="min-w-0 space-y-2">
-          {/* 1. ESTANCIA + HABITACIÓN */}
-          <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo habitaciones libres en el rango.">
+          <FormSection icon={CalendarDays} title="Estancia" hint="Fechas y hora de llegada.">
             {origen === 'Recepcion' && (
               <div className="rounded-lg border border-[#FDBA74] bg-[#FFF7ED] px-2.5 py-1.5 text-[11px] text-[#9A3412]">
                 Check-in automático: la habitación queda ocupada hoy.
               </div>
             )}
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-6 xl:grid-cols-12">
-              <div className="col-span-2 sm:col-span-3 xl:col-span-3">
+            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_120px]">
               <Field label="Check-in">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -661,8 +646,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   </PopoverContent>
                 </Popover>
               </Field>
-              </div>
-              <div className="col-span-2 sm:col-span-3 xl:col-span-3">
               <Field label="Check-out">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -676,98 +659,122 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   </PopoverContent>
                 </Popover>
               </Field>
-              </div>
-              <div className="col-span-2 sm:col-span-2 xl:col-span-2">
               <Field label="Hora">
                 <div className="relative">
                   <Clock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input type="time" className="h-9 pl-8 text-xs" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
                 </div>
               </Field>
-              </div>
-              <div className="sm:col-span-1 xl:col-span-1">
-              <Field label="Adultos">
-                <Select value={formData.adultos.toString()} onValueChange={(v) => setFormData({ ...formData, adultos: parseInt(v) })}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>{[1, 2, 3, 4, 5, 6].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              </div>
-              <div className="sm:col-span-1 xl:col-span-1">
-              <Field label="Niños">
-                <Select value={formData.ninos.toString()} onValueChange={(v) => setFormData({ ...formData, ninos: parseInt(v) })}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>{[0, 1, 2, 3, 4].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              </div>
-              <div className="sm:col-span-1 xl:col-span-1">
-              <Field label="Extras">
-                <Select value={formData.personasExtra.toString()} onValueChange={(v) => setFormData({ ...formData, personasExtra: parseInt(v) })}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>{[0, 1, 2, 3].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              </div>
-              <div className="sm:col-span-1 xl:col-span-1">
-              <Field label="Cargo" hint={formData.personasExtra === 0 ? undefined : 'Por noche'}>
-                <div className="relative">
-                  <DollarSign className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input type="number" inputMode="decimal" className="h-9 pl-8 text-xs" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
-                </div>
-              </Field>
-              </div>
             </div>
-
-            <div className="grid gap-2 sm:grid-cols-12">
-              <div className="sm:col-span-5">
-              <Field label="Categoría">
-                <ComboboxCreatable
-                  options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} · ${formatCurrency(t.precio_base)}/noche` }))}
-                  value={formData.tipoHabitacion}
-                  onValueChange={(v) => setFormData({ ...formData, tipoHabitacion: v, habitacionId: '' })}
-                  onCreate={async (nombre) => {
-                    const newTipo = await api.createTipoHabitacion({ nombre, precio_base: 1000 });
-                    setTiposHabitacion([...tiposHabitacion, newTipo]);
-                    return { value: newTipo.id, label: `${newTipo.nombre} · ${formatCurrency(1000)}/noche` };
-                  }}
-                  placeholder="Todas las categorías"
-                  searchPlaceholder="Buscar categoría…"
-                  createLabel="Crear"
-                  className="h-9 justify-start px-2.5 text-left text-xs font-normal"
-                />
-              </Field>
-              </div>
-              <div className="sm:col-span-7">
-              <Field label="Habitación" hint={selectedHabitacion ? `${habitacionesDisponibles.length} disponibles · Hab. ${selectedHabitacion.numero} libre a ${fmt(tarifaEfectiva)}/noche` : `${habitacionesDisponibles.length} disponibles`}>
-                <ComboboxCreatable
-                  options={habitacionesDisponibles.map((hab) => {
-                    const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
-                    const roomRate = Number(hab.precio_base) || 0;
-                    const rate = roomRate > 0 ? roomRate : Number(tipo?.precio_base) || 0;
-                    return { value: hab.id, label: `Hab. ${hab.numero} · ${hab.tipo_nombre || tipo?.nombre || 'Sin categoría'} · ${fmt(rate)}/noche` };
-                  })}
-                  value={formData.habitacionId}
-                  onValueChange={(value) => {
-                    const room = habitacionesDisponibles.find((item) => item.id === value);
-                    if (room) handleSelectRoom(room);
-                  }}
-                  placeholder={habitacionesDisponibles.length ? 'Elegir habitación…' : 'Sin disponibilidad'}
-                  searchPlaceholder="Número, categoría o precio…"
-                  emptyMessage="No hay coincidencias disponibles."
-                  disabled={habitacionesDisponibles.length === 0}
-                  className="h-9 justify-start px-2.5 text-left text-xs font-normal"
-                />
-              </Field>
-              </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[1, 2, 3, 7].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, fechaCheckout: addDays(formData.fechaCheckin, n) })}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                    noches === n ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
+                  )}
+                >
+                  {n} noche{n === 1 ? '' : 's'}
+                </button>
+              ))}
             </div>
-            {selectedHabitacion && temporadaAplicable && <Badge variant="outline" className="h-5 w-fit px-1.5 text-[10px]">Tarifa: {temporadaAplicable.nombre}</Badge>}
           </FormSection>
 
-          {/* 2. HUÉSPED */}
+          <FormSection icon={Users} title="Ocupación" hint="Cantidades libres, sin límite de lista.">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <Field label="Adultos">
+                <Stepper min={1} value={formData.adultos} onChange={(v) => setFormData({ ...formData, adultos: v })} />
+              </Field>
+              <Field label="Niños">
+                <Stepper min={0} value={formData.ninos} onChange={(v) => setFormData({ ...formData, ninos: v })} />
+              </Field>
+              <Field label="Personas extra">
+                <Stepper min={0} value={formData.personasExtra} onChange={(v) => setFormData({ ...formData, personasExtra: v })} />
+              </Field>
+              <Field label="Cargo p/extra" hint={formData.personasExtra > 0 ? `${fmt(totalPersonaExtra)} por ${noches} noche(s)` : 'Por persona, por noche'}>
+                <div className="relative">
+                  <DollarSign className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input type="number" min={0} inputMode="decimal" className="h-9 pl-8 text-xs" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
+                </div>
+              </Field>
+            </div>
+          </FormSection>
+
+          <FormSection icon={BedDouble} title="Habitación" hint={`${habitacionesDisponibles.length} libres en el rango seleccionado.`}>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, tipoHabitacion: '', habitacionId: '' })}
+                className={cn(
+                  'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                  !formData.tipoHabitacion ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
+                )}
+              >
+                Todas
+              </button>
+              {tiposHabitacion.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, tipoHabitacion: t.id, habitacionId: '' })}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                    formData.tipoHabitacion === t.id ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
+                  )}
+                >
+                  {t.nombre} · {formatCurrency(t.precio_base)}
+                </button>
+              ))}
+            </div>
+
+            {habitacionesDisponibles.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-[#CBD5E1] py-4 text-center text-[11px] text-muted-foreground">
+                Sin disponibilidad para este rango. Ajusta fechas o categoría.
+              </p>
+            ) : (
+              <div className="grid max-h-[280px] grid-cols-2 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-3 xl:grid-cols-4">
+                {habitacionesDisponibles.map((hab) => {
+                  const activo = formData.habitacionId === hab.id;
+                  const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
+                  return (
+                    <button
+                      key={hab.id}
+                      type="button"
+                      onClick={() => handleSelectRoom(hab)}
+                      className={cn(
+                        'rounded-lg border p-2 text-left transition-colors',
+                        activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] bg-white hover:border-[#10233F]/40',
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-sm font-semibold">#{hab.numero}</span>
+                        {activo && <Check className="h-3.5 w-3.5" />}
+                      </div>
+                      <p className={cn('truncate text-[10px]', activo ? 'text-white/75' : 'text-muted-foreground')}>
+                        {hab.tipo_nombre || tipo?.nombre || 'Sin categoría'}
+                      </p>
+                      <p className={cn('text-[11px] font-medium tabular-nums', activo ? 'text-white' : 'text-[#10233F]')}>
+                        {fmt(rateOf(hab))}/noche
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {selectedHabitacion && temporadaAplicable && (
+              <Badge variant="outline" className="h-5 w-fit px-1.5 text-[10px]">Tarifa temporada: {temporadaAplicable.nombre}</Badge>
+            )}
+          </FormSection>
+        </div>
+
+        {/* COLUMNA 2 — Huésped, cargos, notas e impuestos */}
+        <div className="min-w-0 space-y-2">
           <FormSection icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
             {!crearNuevoCliente ? (
-              <div className="max-w-4xl space-y-2">
+              <div className="space-y-2">
                 <div className="flex gap-2">
                   <ComboboxCreatable
                     options={clientes.map((cliente) => ({
@@ -848,10 +855,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             )}
           </FormSection>
 
-
-          {/* 3. CARGOS */}
           <FormSection icon={Receipt} title="Cargos adicionales" hint="Consumos o servicios anticipados.">
-            <div className="grid max-w-3xl grid-cols-[minmax(180px,1fr)_56px_96px_36px] gap-1.5">
+            <div className="grid grid-cols-[minmax(120px,1fr)_64px_100px_36px] gap-1.5">
               <ComboboxCreatable
                 options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
                 value={cargoConcepto}
@@ -866,7 +871,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 createLabel="Crear"
                 className="h-9 justify-start px-2.5 text-left text-xs font-normal"
               />
-              <Input className="h-9 px-1.5 text-center text-xs" type="number" inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+              <Input className="h-9 px-1.5 text-center text-xs" type="number" min={1} inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
               <Input className="h-9 px-1.5 text-right text-xs" type="number" inputMode="decimal" placeholder="$0" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
               <Button type="button" className="h-9 w-9 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-4 w-4" /></Button>
             </div>
@@ -883,55 +888,53 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 ))}
               </div>
             )}
-
           </FormSection>
 
-          {/* 4. DETALLES OPCIONALES EN UNA SOLA FRANJA */}
-          <FormSection icon={Package} title="Notas e impuestos" hint="Todo lo opcional, compacto y visible en una sola fila.">
-            <div className="grid items-start gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(260px,0.9fr)]">
+          <FormSection icon={Percent} title="Impuestos" hint="Se calculan sobre el subtotal de la estancia.">
+            <div className="flex items-center justify-between gap-2">
+              <Select value="" onValueChange={(value) => {
+                const sugerido = IMPUESTOS_MEXICO_SUGERIDOS.find((item) => item.nombre === value);
+                const nuevo = sugerido
+                  ? { id: `imp-${Date.now()}`, nombre: sugerido.nombre, tasa: sugerido.tasa }
+                  : { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 };
+                setFormData((p) => ({ ...p, impuestos: [...p.impuestos, nuevo] }));
+              }}>
+                <SelectTrigger className="h-9 flex-1 text-xs"><SelectValue placeholder="+ Agregar impuesto" /></SelectTrigger>
+                <SelectContent>
+                  {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
+                    <SelectItem key={sug.nombre} value={sug.nombre}>{sug.nombre}</SelectItem>
+                  ))}
+                  <SelectItem value="__custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="shrink-0 text-xs font-semibold tabular-nums text-[#10233F]">{fmt(totalImpuestos)}</span>
+            </div>
+            {formData.impuestos.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground">Sin impuestos aplicados.</p>
+            ) : (
+              <div className="space-y-1">
+                {formData.impuestos.map((imp) => (
+                  <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_76px_32px] items-center gap-1.5">
+                    <Input className="h-8 min-w-0 px-2 text-[11px]" value={imp.nombre} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))} />
+                    <div className="relative">
+                      <Input type="number" min="0" step="0.01" className="h-8 pr-5 text-right text-[11px]" value={imp.tasa} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))} />
+                      <Percent className="pointer-events-none absolute right-1.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 text-muted-foreground" />
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </FormSection>
+
+          <FormSection icon={StickyNote} title="Notas y entregables" hint="Opcional.">
+            <div className="grid gap-2 sm:grid-cols-2">
               <Field label="Solicitudes del huésped">
-                <Textarea rows={2} className="h-12 min-h-12 resize-none text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
+                <Textarea rows={2} className="min-h-[52px] resize-none text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
               </Field>
               <Field label="Notas internas">
-                <Textarea rows={2} className="h-12 min-h-12 resize-none text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
+                <Textarea rows={2} className="min-h-[52px] resize-none text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
               </Field>
-              <div className="min-w-0 space-y-1.5 rounded-lg border border-[#10233F]/10 bg-[#F8FAFC] p-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="flex items-center gap-1 text-[11px] font-medium text-[#475569]"><Percent className="h-3 w-3" />Impuestos</Label>
-                  <span className="text-[11px] font-semibold tabular-nums text-[#10233F]">{fmt(totalImpuestos)}</span>
-                </div>
-                <Select value="" onValueChange={(value) => {
-                  const sugerido = IMPUESTOS_MEXICO_SUGERIDOS.find((item) => item.nombre === value);
-                  const nuevo = sugerido
-                    ? { id: `imp-${Date.now()}`, nombre: sugerido.nombre, tasa: sugerido.tasa }
-                    : { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 };
-                  setFormData((p) => ({ ...p, impuestos: [...p.impuestos, nuevo] }));
-                }}>
-                  <SelectTrigger className="h-8 bg-white text-xs"><SelectValue placeholder="+ Agregar impuesto" /></SelectTrigger>
-                  <SelectContent>
-                    {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
-                      <SelectItem key={sug.nombre} value={sug.nombre}>{sug.nombre}</SelectItem>
-                    ))}
-                    <SelectItem value="__custom">Personalizado</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formData.impuestos.length === 0 ? (
-                  <p className="py-1 text-center text-[10px] text-muted-foreground">Sin impuestos aplicados</p>
-                ) : (
-                  <div className="max-h-[76px] space-y-1 overflow-y-auto pr-0.5">
-                    {formData.impuestos.map((imp) => (
-                      <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_62px_28px] items-center gap-1">
-                        <Input className="h-7 min-w-0 px-2 text-[11px]" value={imp.nombre} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))} />
-                        <div className="relative">
-                          <Input type="number" min="0" step="0.01" className="h-7 pr-5 text-right text-[11px]" value={imp.tasa} onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))} />
-                          <Percent className="pointer-events-none absolute right-1.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 text-muted-foreground" />
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
             {origen === 'Recepcion' && entregables.length > 0 && (
               <div className="space-y-1.5">
@@ -949,13 +952,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </div>
             )}
           </FormSection>
-
         </div>
 
-        {/* RESUMEN DE CUENTA */}
-        <aside className="min-w-0 xl:sticky xl:top-20">
-          <Card className="overflow-hidden border-0 bg-[#10233F] text-white shadow-lg">
-            <CardContent className="space-y-2 p-3">
+        {/* COLUMNA 3 — Resumen de cuenta */}
+        <aside className="min-w-0 lg:col-span-2 xl:col-span-1 xl:sticky xl:top-16">
+          <div className="overflow-hidden rounded-xl bg-[#10233F] text-white shadow-lg">
+            <div className="space-y-2 p-3">
               <p className="text-xs font-semibold">Resumen de cuenta</p>
 
               <div className="space-y-1 text-xs">
@@ -1056,17 +1058,55 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <p className="text-center text-[10px] text-white/65">
                 {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter' : 'Completa fechas, habitación y huésped'}
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </aside>
       </div>
-
     </ReservationSurface>
   );
 }
 
-function FormSection({ icon: Icon, title, hint, collapsible, children }: { icon: typeof CalendarDays; title: string; hint?: string; collapsible?: boolean; children: ReactNode }) {
-  const head = (
+function Stepper({ value, onChange, min = 0, max = 99 }: { value: number; onChange: (v: number) => void; min?: number; max?: number }) {
+  const clamp = (n: number) => Math.min(max, Math.max(min, n));
+  return (
+    <div className="flex h-9 items-center overflow-hidden rounded-lg border border-input bg-white">
+      <button
+        type="button"
+        aria-label="Restar"
+        onClick={() => onChange(clamp(value - 1))}
+        disabled={value <= min}
+        className="grid h-full w-8 shrink-0 place-items-center text-[#475569] transition-colors hover:bg-[#F1F5F9] disabled:opacity-40"
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </button>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === '') { onChange(min); return; }
+          onChange(clamp(parseInt(raw, 10) || min));
+        }}
+        className="h-full w-full min-w-0 border-0 bg-transparent text-center text-xs font-medium tabular-nums text-[#10233F] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+      <button
+        type="button"
+        aria-label="Sumar"
+        onClick={() => onChange(clamp(value + 1))}
+        disabled={value >= max}
+        className="grid h-full w-8 shrink-0 place-items-center text-[#475569] transition-colors hover:bg-[#F1F5F9] disabled:opacity-40"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function FormSection({ icon: Icon, title, hint, children }: { icon: typeof CalendarDays; title: string; hint?: string; children: ReactNode }) {
+  return <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white px-2.5 py-2.5 shadow-sm">
     <div className="flex min-w-0 items-center gap-2">
       <span className="rounded-lg bg-[#10233F]/[0.07] p-1 text-[#10233F]"><Icon className="h-3.5 w-3.5" /></span>
       <div className="min-w-0">
@@ -1074,20 +1114,6 @@ function FormSection({ icon: Icon, title, hint, collapsible, children }: { icon:
         {hint && <p className="truncate text-[10px] text-muted-foreground">{hint}</p>}
       </div>
     </div>
-  );
-
-  if (collapsible) {
-    return <details className="group rounded-xl border border-[#10233F]/10 bg-white px-2.5 py-2 shadow-sm">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
-        {head}
-        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="mt-2 space-y-2">{children}</div>
-    </details>;
-  }
-
-  return <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white px-2.5 py-2.5 shadow-sm">
-    {head}
     {children}
   </section>;
 }
