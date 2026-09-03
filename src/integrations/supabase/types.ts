@@ -56,6 +56,85 @@ export type Database = {
         }
         Relationships: []
       }
+      bitacora_operativa: {
+        Row: {
+          autor_id: string | null
+          autor_nombre: string
+          categoria: string
+          created_at: string
+          detalle: string | null
+          estado: string
+          fecha_limite: string | null
+          hotel_id: string
+          id: string
+          prioridad: string
+          responsable: string | null
+          resuelto_at: string | null
+          resuelto_por: string | null
+          titulo: string
+          turno_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          autor_id?: string | null
+          autor_nombre?: string
+          categoria?: string
+          created_at?: string
+          detalle?: string | null
+          estado?: string
+          fecha_limite?: string | null
+          hotel_id: string
+          id?: string
+          prioridad?: string
+          responsable?: string | null
+          resuelto_at?: string | null
+          resuelto_por?: string | null
+          titulo: string
+          turno_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          autor_id?: string | null
+          autor_nombre?: string
+          categoria?: string
+          created_at?: string
+          detalle?: string | null
+          estado?: string
+          fecha_limite?: string | null
+          hotel_id?: string
+          id?: string
+          prioridad?: string
+          responsable?: string | null
+          resuelto_at?: string | null
+          resuelto_por?: string | null
+          titulo?: string
+          turno_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bitacora_operativa_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bitacora_operativa_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bitacora_operativa_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos_operativos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargos: {
         Row: {
           cantidad: number | null
@@ -220,6 +299,75 @@ export type Database = {
           tipo?: string
         }
         Relationships: []
+      }
+      cierres_diarios: {
+        Row: {
+          cerrado_at: string
+          cerrado_por: string | null
+          cerrado_por_nombre: string | null
+          checklist: Json
+          created_at: string
+          estado: string
+          fecha_operativa: string
+          hotel_id: string
+          id: string
+          motivo_reapertura: string | null
+          observaciones: string | null
+          reabierto_at: string | null
+          reabierto_por: string | null
+          resumen: Json
+          updated_at: string
+        }
+        Insert: {
+          cerrado_at?: string
+          cerrado_por?: string | null
+          cerrado_por_nombre?: string | null
+          checklist?: Json
+          created_at?: string
+          estado?: string
+          fecha_operativa: string
+          hotel_id: string
+          id?: string
+          motivo_reapertura?: string | null
+          observaciones?: string | null
+          reabierto_at?: string | null
+          reabierto_por?: string | null
+          resumen?: Json
+          updated_at?: string
+        }
+        Update: {
+          cerrado_at?: string
+          cerrado_por?: string | null
+          cerrado_por_nombre?: string | null
+          checklist?: Json
+          created_at?: string
+          estado?: string
+          fecha_operativa?: string
+          hotel_id?: string
+          id?: string
+          motivo_reapertura?: string | null
+          observaciones?: string | null
+          reabierto_at?: string | null
+          reabierto_por?: string | null
+          resumen?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cierres_diarios_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cierres_diarios_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clientes: {
         Row: {
@@ -1927,6 +2075,99 @@ export type Database = {
           },
         ]
       }
+      turnos_operativos: {
+        Row: {
+          abierto_at: string
+          cerrado_at: string | null
+          checklist_cierre: Json
+          created_at: string
+          diferencia: number | null
+          efectivo_contado: number | null
+          efectivo_esperado: number | null
+          egresos_efectivo: number
+          entrega_a: string | null
+          estado: string
+          fondo_inicial: number
+          hotel_id: string
+          id: string
+          ingresos_efectivo: number
+          ingresos_tarjeta: number
+          ingresos_transferencia: number
+          motivo_diferencia: string | null
+          otros_ingresos: number
+          pendientes_entrega: string | null
+          resumen_entrega: string | null
+          updated_at: string
+          usuario_id: string
+          usuario_nombre: string
+        }
+        Insert: {
+          abierto_at?: string
+          cerrado_at?: string | null
+          checklist_cierre?: Json
+          created_at?: string
+          diferencia?: number | null
+          efectivo_contado?: number | null
+          efectivo_esperado?: number | null
+          egresos_efectivo?: number
+          entrega_a?: string | null
+          estado?: string
+          fondo_inicial?: number
+          hotel_id: string
+          id?: string
+          ingresos_efectivo?: number
+          ingresos_tarjeta?: number
+          ingresos_transferencia?: number
+          motivo_diferencia?: string | null
+          otros_ingresos?: number
+          pendientes_entrega?: string | null
+          resumen_entrega?: string | null
+          updated_at?: string
+          usuario_id: string
+          usuario_nombre: string
+        }
+        Update: {
+          abierto_at?: string
+          cerrado_at?: string | null
+          checklist_cierre?: Json
+          created_at?: string
+          diferencia?: number | null
+          efectivo_contado?: number | null
+          efectivo_esperado?: number | null
+          egresos_efectivo?: number
+          entrega_a?: string | null
+          estado?: string
+          fondo_inicial?: number
+          hotel_id?: string
+          id?: string
+          ingresos_efectivo?: number
+          ingresos_tarjeta?: number
+          ingresos_transferencia?: number
+          motivo_diferencia?: string | null
+          otros_ingresos?: number
+          pendientes_entrega?: string | null
+          resumen_entrega?: string | null
+          updated_at?: string
+          usuario_id?: string
+          usuario_nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turnos_operativos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_operativos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -2692,6 +2933,9 @@ export type Database = {
         Args: { _modulo: string; _rol?: string }
         Returns: boolean
       }
+      vulo_can_close_day: { Args: never; Returns: boolean }
+      vulo_current_hotel_id: { Args: never; Returns: string }
+      vulo_is_superadmin: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role:
