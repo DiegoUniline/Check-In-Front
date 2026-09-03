@@ -10,41 +10,41 @@ import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 import { EmailChangeEmail } from '../_shared/email-templates/email-change.tsx'
 import { ReauthenticationEmail } from '../_shared/email-templates/reauthentication.tsx'
 
-const SITE_NAME = 'HospedApp'
+const SITE_NAME = 'VULO'
 const SENDER_DOMAIN = 'notify.hospedapp.com'
 const FROM_DOMAIN = 'hospedapp.com'
-const SITE_URL = 'https://hospedapp.com'
+const SITE_URL = 'https://vulo.mx'
 
 const TEMPLATES: Record<string, { component: React.ComponentType<any>; subject: string; props: any }> = {
   signup: {
     component: SignupEmail,
     subject: 'Confirma tu correo',
-    props: { siteName: SITE_NAME, siteUrl: SITE_URL, confirmationUrl: `${SITE_URL}/auth/confirm`, hotelName: 'Hotel Vista Mar' },
+    props: { siteName: SITE_NAME, siteUrl: SITE_URL, confirmationUrl: `${SITE_URL}/auth/confirm`, hotelName: 'Hotel Decos' },
   },
   magiclink: {
     component: MagicLinkEmail,
     subject: 'Tu enlace de acceso',
-    props: { siteName: SITE_NAME, confirmationUrl: `${SITE_URL}/auth/magic`, hotelName: 'Hotel Vista Mar' },
+    props: { siteName: SITE_NAME, confirmationUrl: `${SITE_URL}/auth/magic`, hotelName: 'Hotel Decos' },
   },
   recovery: {
     component: RecoveryEmail,
     subject: 'Restablece tu contraseña',
-    props: { siteName: SITE_NAME, confirmationUrl: `${SITE_URL}/auth/reset`, hotelName: 'Hotel Vista Mar' },
+    props: { siteName: SITE_NAME, confirmationUrl: `${SITE_URL}/auth/reset`, hotelName: 'Hotel Decos' },
   },
   invite: {
     component: InviteEmail,
     subject: 'Te invitaron a colaborar',
-    props: { siteName: SITE_NAME, siteUrl: SITE_URL, confirmationUrl: `${SITE_URL}/auth/invite`, hotelName: 'Hotel Vista Mar' },
+    props: { siteName: SITE_NAME, siteUrl: SITE_URL, confirmationUrl: `${SITE_URL}/auth/invite`, hotelName: 'Hotel Decos' },
   },
   email_change: {
     component: EmailChangeEmail,
     subject: 'Confirma tu nuevo correo',
-    props: { siteName: SITE_NAME, oldEmail: 'anterior@example.com', newEmail: 'nuevo@example.com', email: 'nuevo@example.com', confirmationUrl: `${SITE_URL}/auth/email-change`, hotelName: 'Hotel Vista Mar' },
+    props: { siteName: SITE_NAME, oldEmail: 'anterior@example.com', newEmail: 'nuevo@example.com', email: 'nuevo@example.com', confirmationUrl: `${SITE_URL}/auth/email-change`, hotelName: 'Hotel Decos' },
   },
   reauthentication: {
     component: ReauthenticationEmail,
     subject: 'Tu código de verificación',
-    props: { token: '123456', hotelName: 'Hotel Vista Mar' },
+    props: { token: '123456', hotelName: 'Hotel Decos' },
   },
 }
 
