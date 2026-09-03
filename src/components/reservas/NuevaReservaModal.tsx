@@ -597,27 +597,26 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       <header className={cn(
         'sticky top-0 z-30 border-b border-[#10233F]/10 bg-white/95 backdrop-blur',
         pageMode
-          ? '-mx-3 -mt-4 px-3 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'
-          : '-mx-3 -mt-3 px-3 py-3 sm:-mx-5 sm:-mt-5 sm:px-5 sm:rounded-t-xl',
+          ? '-mx-3 -mt-4 px-3 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'
+          : '-mx-3 -mt-3 px-3 py-2 sm:-mx-5 sm:-mt-5 sm:px-5 sm:rounded-t-xl',
       )}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
-              <ArrowLeft className="h-5 w-5" />
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold text-[#10233F] sm:text-xl">
+              <h2 className="truncate text-sm font-semibold text-[#10233F]">
                 {origen === 'Recepcion' ? 'Nueva entrada · Check-in' : 'Nueva reserva'}
               </h2>
-              <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
-                {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona el rango de fechas'}
+              <p className="truncate text-[11px] text-muted-foreground">
+                {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona fechas'}
                 {selectedHabitacion ? ` · Hab. #${selectedHabitacion.numero}` : ''}
                 {total > 0 ? ` · ${fmt(total)}` : ''}
               </p>
-
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-1">
+          <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-0.5">
             {([['Reserva', CalendarPlus], ['Recepcion', UserPlus]] as const).map(([value, Icon]) => (
               <button
                 key={value}
@@ -625,11 +624,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 data-step-focus={value === 'Reserva' ? 'dates' : undefined}
                 onClick={() => handleOrigenChange(value)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  'flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
                   origen === value ? 'bg-[#10233F] text-white shadow-sm' : 'text-[#475569] hover:text-[#10233F]',
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3 w-3" />
                 <span className="hidden sm:inline">{value === 'Reserva' ? 'Reserva' : 'Recepción'}</span>
               </button>
             ))}
