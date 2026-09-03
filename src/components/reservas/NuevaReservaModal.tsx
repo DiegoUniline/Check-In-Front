@@ -597,7 +597,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             {total > 0 ? ` · ${fmt(total)}` : ''}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-0.5">
+        <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted p-0.5">
           {([['Reserva', CalendarPlus], ['Recepcion', UserPlus]] as const).map(([value, Icon]) => (
             <button
               key={value}
