@@ -206,6 +206,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
   const [pagoMonto, setPagoMonto] = useState('');
   const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
+  const [mostrarSelectorHabitacion, setMostrarSelectorHabitacion] = useState(false);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const availabilityRequestRef = useRef(0);
 
