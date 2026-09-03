@@ -216,9 +216,14 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       loadTemporadas().catch(() => {});
       setOrigen(preload?.origen || 'Reserva');
       setCrearNuevoCliente(false);
+      setMostrarSelectorHabitacion(!preload?.habitacion?.id);
       setFormData(createInitialFormData(preload));
     }
   }, [open, preload]);
+
+  useEffect(() => {
+    if (!formData.habitacionId) setMostrarSelectorHabitacion(true);
+  }, [formData.habitacionId]);
 
   useEffect(() => {
     if (!open) return;
