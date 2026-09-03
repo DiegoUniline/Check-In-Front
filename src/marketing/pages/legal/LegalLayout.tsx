@@ -1,12 +1,15 @@
 import { Helmet } from "react-helmet-async";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { LEGAL } from "@/marketing/lib/legal";
 
 const NAV = [
   { to: "/legal/privacidad", label: "Aviso de Privacidad" },
   { to: "/legal/terminos", label: "Términos y Condiciones" },
   { to: "/legal/seguridad", label: "Seguridad" },
+  { to: "/ayuda", label: "Soporte y ayuda" },
 ];
+
 
 export default function LegalLayout({
   title,
@@ -61,22 +64,26 @@ export default function LegalLayout({
             <div className="mt-16 rounded-2xl border border-border/60 bg-secondary/40 p-6">
               <p className="text-sm text-muted-foreground">
                 ¿Dudas sobre este documento? Escríbenos a{" "}
-                <a href="mailto:hola@vulo.mx" className="text-primary hover:underline">
-                  hola@vulo.mx
+                <a href={`mailto:${LEGAL.email}`} className="text-primary hover:underline">
+                  {LEGAL.email}
                 </a>{" "}
                 o al WhatsApp{" "}
                 <a
-                  href="https://wa.me/523171035768"
+                  href={LEGAL.whatsapp}
                   target="_blank"
                   rel="noreferrer"
                   className="text-primary hover:underline"
                 >
-                  +52 317 103 5768
+                  {LEGAL.telefono}
                 </a>
-                .
+                . Atención: {LEGAL.horario}.
+              </p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Responsable: {LEGAL.titular} · RFC {LEGAL.rfc} · {LEGAL.domicilio}
               </p>
             </div>
           </article>
+
         </div>
       </div>
     </>

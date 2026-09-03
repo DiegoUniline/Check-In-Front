@@ -51,6 +51,7 @@ import Funciones from "@/pages/Funciones";
 import Precios from "@/pages/Precios";
 import Empresa from "@/pages/Empresa";
 import Contacto from "@/pages/Contacto";
+import Ayuda from "@/pages/Ayuda";
 import Features from "@/marketing/pages/Features";
 import Pricing from "@/marketing/pages/Pricing";
 import About from "@/marketing/pages/About";
@@ -96,6 +97,7 @@ const AppRoutes = () => (
     <Route path="/precios" element={<Precios />} />
     <Route path="/empresa" element={<Empresa />} />
     <Route path="/contacto" element={<Contacto />} />
+    <Route path="/ayuda" element={<Ayuda />} />
     <Route element={<MarketingLayout />}>
       <Route path="/features" element={<Features />} />
       <Route path="/pricing" element={<Pricing />} />

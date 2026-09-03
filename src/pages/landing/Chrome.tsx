@@ -77,11 +77,11 @@ export function LandingFooter() {
       t: 'Contacto',
       l: [
         ['WhatsApp 317 103 5768', 'https://wa.me/523171035768'],
-        ['hola@vulo.mx', 'mailto:hola@vulo.mx'],
+        ['sistema@vulo.mx', 'mailto:sistema@vulo.mx'],
         ['Autlán de Navarro, Jalisco', '/contacto'],
       ],
     },
-    { t: 'Legal', l: [['Términos', '#'], ['Privacidad', '#']] },
+    { t: 'Legal', l: [['Soporte y ayuda', '/ayuda'], ['Términos', '/legal/terminos'], ['Privacidad', '/legal/privacidad'], ['Seguridad', '/legal/seguridad']] },
   ];
   return (
     <footer className="border-t border-slate-100 bg-white py-16">

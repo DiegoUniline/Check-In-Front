@@ -93,7 +93,7 @@ export function SiteFooter() {
           </p>
           <div className="flex items-center gap-5 text-xs text-muted-foreground">
             <a href="https://wa.me/523171035768" target="_blank" rel="noreferrer" className="hover:text-foreground">WhatsApp</a>
-            <a href="mailto:hola@vulo.mx" className="hover:text-foreground">hola@vulo.mx</a>
+            <a href="mailto:sistema@vulo.mx" className="hover:text-foreground">sistema@vulo.mx</a>
             <a href="https://vulo.mx" className="hover:text-foreground">vulo.mx</a>
           </div>
         </div>
