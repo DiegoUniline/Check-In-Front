@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ArrowLeftRight, BadgeDollarSign, BedDouble, CalendarClock, CalendarDays,
-  ChevronDown, Clock, History, LogIn, LogOut, Plus, Receipt, RefreshCcw, ShieldAlert,
-  Split, UserMinus, UserPlus, Wrench,
+  CheckCircle2, ChevronDown, Clock, History, Loader2, LogIn, LogOut, Plus,
+  Receipt, RefreshCcw, Search, ShieldAlert, Split, UserMinus, UserPlus, Wrench,
+  XCircle,
 } from 'lucide-react';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 import { canAccess } from '@/lib/permissions';
 import { useAuth } from '@/contexts/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/currency';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,10 +67,19 @@ const groups: { title: string; operations: Operation[] }[] = [
   ]},
 ];
 
+const DATE_OPERATIONS = ['extend_stay', 'early_departure', 'modify_dates'];
+const ROOM_OPERATIONS = ['room_change', 'category_change', 'early_checkin', 'room_out_of_service'];
+
 const dateOnly = (value: any) => String(value || '').slice(0, 10);
 const money = (value: any) => Number(value || 0);
+const shiftDate = (value: any, days: number) => {
+  const [year, month, day] = dateOnly(value).split('-').map(Number);
+  if (!year || !month || !day) return '';
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(shifted.getUTCDate()).padStart(2, '0')}`;
+};
 
-export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], onUpdate, children }: Props) {
+export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selected, setSelected] = useState<Operation | null>(null);
@@ -77,7 +87,13 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
   const [reason, setReason] = useState('');
   const [processing, setProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [rooms, setRooms] = useState<any[]>(initialRooms);
+  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+  const [roomSearch, setRoomSearch] = useState('');
+  const [roomTypeFilter, setRoomTypeFilter] = useState('all');
+  const [roomFloorFilter, setRoomFloorFilter] = useState('all');
+  const [checkingRooms, setCheckingRooms] = useState(false);
+  const [roomAvailabilityError, setRoomAvailabilityError] = useState('');
+  const [dateAvailability, setDateAvailability] = useState<{ status: 'idle' | 'checking' | 'available' | 'unavailable' | 'invalid'; message: string }>({ status: 'idle', message: '' });
   const [movements, setMovements] = useState<any[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -109,23 +125,136 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
     .map((operationId) => groups.flatMap((group) => group.operations).find((operation) => operation.id === operationId))
     .filter(Boolean) as Operation[];
 
+  const roomTypes = useMemo<{ id: string; name: string }[]>(() => {
+    const types = new Map<string, string>();
+    availableRooms.forEach((room) => {
+      if (room.tipo_habitacion_id) {
+        types.set(room.tipo_habitacion_id, room.tipos_habitacion?.nombre || room.tipo_nombre || room.tipo || 'Sin categoría');
+      }
+    });
+    return Array.from(types, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [availableRooms]);
+  const roomFloors = useMemo(() => Array.from(new Set(availableRooms.map((room) => String(room.piso || '')).filter(Boolean))).sort(), [availableRooms]);
+  const filteredAvailableRooms = useMemo(() => {
+    const search = roomSearch.trim().toLowerCase();
+    return availableRooms.filter((room) => {
+      const roomType = room.tipos_habitacion?.nombre || room.tipo_nombre || room.tipo || '';
+      const matchesSearch = !search || `${room.numero} ${roomType} ${room.piso || ''}`.toLowerCase().includes(search);
+      const matchesType = roomTypeFilter === 'all' || room.tipo_habitacion_id === roomTypeFilter;
+      const matchesFloor = roomFloorFilter === 'all' || String(room.piso || '') === roomFloorFilter;
+      return matchesSearch && matchesType && matchesFloor;
+    });
+  }, [availableRooms, roomFloorFilter, roomSearch, roomTypeFilter]);
+  const isActiveStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && !reserva.checkout_realizado;
+
   const load = async () => {
     setLoading(true);
     try {
-      const [moveData, guestData, accountData, roomData, reservationData] = await Promise.all([
+      const [moveData, guestData, accountData, reservationData] = await Promise.all([
         api.getStayMovements(reserva.id), api.getStayGuests(reserva.id), api.getStayAccounts(reserva.id),
-        api.getHabitaciones(), api.getReservas(),
+        api.getReservas(),
       ]);
       setMovements(moveData); setGuests(guestData); setAccounts(accountData);
-      setRooms(roomData || initialRooms); setReservations(reservationData || []);
+      setReservations(reservationData || []);
     } catch (error: any) {
       // La migración puede no estar aplicada todavía durante el despliegue.
-      setRooms(initialRooms);
       toast({ title: 'No se pudieron cargar las operaciones', description: error.message, variant: 'destructive' });
     } finally { setLoading(false); }
   };
 
   useEffect(() => { void load(); }, [reserva.id]);
+
+  useEffect(() => {
+    if (!selected || !DATE_OPERATIONS.includes(selected.id)) {
+      setDateAvailability({ status: 'idle', message: '' });
+      return;
+    }
+    const checkin = dateOnly(payload.new_checkin || reserva.fecha_checkin);
+    const checkout = dateOnly(payload.new_checkout || reserva.fecha_checkout);
+    const originalCheckout = dateOnly(reserva.fecha_checkout);
+    if (!checkin || !checkout || checkout <= checkin) {
+      setDateAvailability({ status: 'invalid', message: 'La salida debe ser posterior a la entrada.' });
+      return;
+    }
+    if (selected.id === 'extend_stay' && checkout <= originalCheckout) {
+      setDateAvailability({ status: 'invalid', message: `Para extender, selecciona una fecha posterior al ${formatDate(originalCheckout)}.` });
+      return;
+    }
+    if (selected.id === 'early_departure' && checkout >= originalCheckout) {
+      setDateAvailability({ status: 'invalid', message: `Para una salida anticipada, selecciona una fecha anterior al ${formatDate(originalCheckout)}.` });
+      return;
+    }
+    if (isActiveStay && checkout < todayLocal()) {
+      setDateAvailability({ status: 'invalid', message: 'La salida no puede quedar antes del día operativo actual.' });
+      return;
+    }
+    if (!reserva.habitacion_id) {
+      setDateAvailability({ status: 'available', message: 'El rango es válido. La habitación se validará al asignarla.' });
+      return;
+    }
+
+    let cancelled = false;
+    setDateAvailability({ status: 'checking', message: 'Comprobando disponibilidad de la habitación…' });
+    const timer = window.setTimeout(async () => {
+      try {
+        const available = await api.getHabitacionesDisponibles(checkin, checkout, undefined, reserva.id);
+        if (cancelled) return;
+        const roomIsAvailable = (available || []).some((room: any) => room.id === reserva.habitacion_id);
+        setDateAvailability(roomIsAvailable
+          ? { status: 'available', message: `Habitación #${reserva.habitacion_numero || ''} disponible para todo el nuevo rango.` }
+          : { status: 'unavailable', message: `La habitación #${reserva.habitacion_numero || ''} tiene un conflicto en esas fechas.` });
+      } catch (error: any) {
+        if (!cancelled) setDateAvailability({ status: 'unavailable', message: error.message || 'No se pudo validar la disponibilidad.' });
+      }
+    }, 300);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [selected?.id, payload.new_checkin, payload.new_checkout, reserva.fecha_checkin, reserva.fecha_checkout, reserva.habitacion_id, reserva.habitacion_numero, reserva.id, isActiveStay]);
+
+  useEffect(() => {
+    if (!selected || !ROOM_OPERATIONS.includes(selected.id)) {
+      setCheckingRooms(false);
+      setAvailableRooms([]);
+      setRoomAvailabilityError('');
+      return;
+    }
+    const checkin = isActiveStay ? todayLocal() : dateOnly(reserva.fecha_checkin);
+    const checkout = dateOnly(reserva.fecha_checkout);
+    if (!checkin || !checkout || checkout <= checkin) {
+      setCheckingRooms(false);
+      setAvailableRooms([]);
+      setRoomAvailabilityError('La estancia no tiene un rango de fechas válido para buscar habitaciones.');
+      return;
+    }
+    const requireReady = selected.id === 'early_checkin' || isActiveStay;
+    const excludeCurrentRoom = selected.id !== 'early_checkin';
+    let cancelled = false;
+    setCheckingRooms(true);
+    setRoomAvailabilityError('');
+    setRoomSearch('');
+    setRoomTypeFilter('all');
+    setRoomFloorFilter('all');
+    void api.getHabitacionesDisponibles(checkin, checkout, undefined, reserva.id)
+      .then((items) => {
+        if (cancelled) return;
+        const available = (items || []).filter((room: any) => {
+          if (excludeCurrentRoom && room.id === reserva.habitacion_id) return false;
+          const maintenanceReady = String(room.estado_mantenimiento || 'OK').toLowerCase() === 'ok';
+          if (!maintenanceReady) return false;
+          if (!requireReady) return true;
+          return room.estado_habitacion === 'Disponible' && String(room.estado_limpieza || 'Limpia').toLowerCase() === 'limpia';
+        });
+        setAvailableRooms(available);
+        setPayload((current) => available.some((room: any) => room.id === current.new_room_id) ? current : { ...current, new_room_id: '' });
+      })
+      .catch((error: any) => {
+        if (!cancelled) {
+          setAvailableRooms([]);
+          setRoomAvailabilityError(error.message || 'No se pudieron consultar habitaciones disponibles.');
+        }
+      })
+      .finally(() => { if (!cancelled) setCheckingRooms(false); });
+    return () => { cancelled = true; };
+  }, [selected?.id, reserva.id, reserva.habitacion_id, reserva.fecha_checkin, reserva.fecha_checkout, isActiveStay]);
 
   const openOperation = (op: Operation) => {
     setSelected(op); setReason('');
@@ -143,6 +272,14 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
 
   const submit = async () => {
     if (!selected) return;
+    if (DATE_OPERATIONS.includes(selected.id) && ['checking', 'unavailable', 'invalid'].includes(dateAvailability.status)) {
+      toast({ title: 'Revisa la disponibilidad', description: dateAvailability.message, variant: 'destructive' });
+      return;
+    }
+    if (ROOM_OPERATIONS.includes(selected.id) && !payload.new_room_id) {
+      toast({ title: 'Selecciona una habitación disponible', description: 'Usa la búsqueda y los filtros para elegir una opción.', variant: 'destructive' });
+      return;
+    }
     if (reason.trim().length < 3) {
       toast({ title: 'Escribe el motivo', description: 'La trazabilidad requiere una explicación breve.', variant: 'destructive' });
       return;
@@ -173,16 +310,93 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
     } finally { setProcessing(false); }
   };
 
-  const roomSelect = (label = 'Habitación destino') => (
-    <Field label={label}>
-      <Select value={payload.new_room_id || ''} onValueChange={(value) => set('new_room_id', value)}>
-        <SelectTrigger><SelectValue placeholder="Seleccionar habitación" /></SelectTrigger>
-        <SelectContent>{rooms.filter((room) => room.id !== reserva.habitacion_id).map((room) => (
-          <SelectItem key={room.id} value={room.id}>#{room.numero} · {room.estado_habitacion} · {room.estado_limpieza}</SelectItem>
-        ))}</SelectContent>
-      </Select>
-    </Field>
-  );
+  const roomSelect = (label = 'Habitación destino') => {
+    const checkin = isActiveStay ? todayLocal() : dateOnly(reserva.fecha_checkin);
+    const checkout = dateOnly(reserva.fecha_checkout);
+    const selectedRoom = availableRooms.find((room) => room.id === payload.new_room_id);
+    return <div className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <Label>{label}</Label>
+          <p className="mt-1 text-xs text-muted-foreground">Solo habitaciones libres del {formatDate(checkin)} al {formatDate(checkout)}.</p>
+        </div>
+        {!checkingRooms && !roomAvailabilityError && <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+          {availableRooms.length} disponible{availableRooms.length === 1 ? '' : 's'}
+        </Badge>}
+      </div>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={roomSearch}
+          onChange={(event) => setRoomSearch(event.target.value)}
+          placeholder="Buscar por número, tipo o piso…"
+          className="pl-9"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Select value={roomTypeFilter} onValueChange={setRoomTypeFilter}>
+          <SelectTrigger><SelectValue placeholder="Todas las categorías" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las categorías</SelectItem>
+            {roomTypes.map((type) => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={roomFloorFilter} onValueChange={setRoomFloorFilter}>
+          <SelectTrigger><SelectValue placeholder="Todos los pisos" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los pisos</SelectItem>
+            {roomFloors.map((floor) => <SelectItem key={floor} value={floor}>Piso {floor}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {checkingRooms ? <div className="flex min-h-28 items-center justify-center gap-2 rounded-xl border border-dashed text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Buscando habitaciones realmente disponibles…
+      </div> : roomAvailabilityError ? <div className="flex gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <XCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{roomAvailabilityError}</span>
+      </div> : filteredAvailableRooms.length === 0 ? <div className="rounded-xl border border-dashed p-5 text-center">
+        <BedDouble className="mx-auto h-6 w-6 text-muted-foreground" />
+        <p className="mt-2 text-sm font-medium text-[#10233F]">No hay habitaciones con estos filtros</p>
+        <p className="mt-1 text-xs text-muted-foreground">Cambia la búsqueda o los filtros. Nunca mostraremos una habitación con conflicto.</p>
+        {(roomSearch || roomTypeFilter !== 'all' || roomFloorFilter !== 'all') && <Button type="button" variant="link" size="sm" onClick={() => { setRoomSearch(''); setRoomTypeFilter('all'); setRoomFloorFilter('all'); }}>Limpiar filtros</Button>}
+      </div> : <div className="max-h-[38dvh] space-y-2 overflow-y-auto pr-1 sm:grid sm:grid-cols-2 sm:gap-2 sm:space-y-0">
+        {filteredAvailableRooms.map((room) => {
+          const typeName = room.tipos_habitacion?.nombre || room.tipo_nombre || room.tipo || 'Sin categoría';
+          const selectedRoomId = payload.new_room_id === room.id;
+          return <button
+            key={room.id}
+            type="button"
+            onClick={() => set('new_room_id', room.id)}
+            className={`flex min-h-20 w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors ${selectedRoomId ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#10233F]/15 bg-white hover:border-[#10233F]/45 hover:bg-[#10233F]/[0.03]'}`}
+          >
+            <span className="min-w-0">
+              <span className="block text-base font-bold">#{room.numero}</span>
+              <span className={`block truncate text-xs ${selectedRoomId ? 'text-white/75' : 'text-muted-foreground'}`}>{typeName}{room.piso ? ` · Piso ${room.piso}` : ''}</span>
+              <span className={`mt-1 block text-[11px] ${selectedRoomId ? 'text-emerald-200' : 'text-emerald-700'}`}>Limpia y sin conflictos</span>
+            </span>
+            {selectedRoomId ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <BedDouble className="h-5 w-5 shrink-0 text-[#10233F]/45" />}
+          </button>;
+        })}
+      </div>}
+
+      {selectedRoom && <div className="flex items-center gap-2 rounded-lg bg-[#10233F]/[0.06] px-3 py-2 text-sm text-[#10233F]">
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> Seleccionaste la habitación #{selectedRoom.numero}.
+      </div>}
+      <p className="text-[11px] text-muted-foreground">La disponibilidad se vuelve a comprobar al aplicar el cambio para evitar cruces de último momento.</p>
+    </div>;
+  };
+
+  const availabilityNotice = () => {
+    if (dateAvailability.status === 'idle') return null;
+    const available = dateAvailability.status === 'available';
+    const checking = dateAvailability.status === 'checking';
+    return <div className={`mt-2 flex gap-2 rounded-lg border px-3 py-2 text-xs ${available ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : checking ? 'border-[#10233F]/15 bg-[#10233F]/[0.03] text-[#10233F]' : 'border-red-200 bg-red-50 text-red-700'}`}>
+      {checking ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : available ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
+      <span>{dateAvailability.message}</span>
+    </div>;
+  };
 
   const reservationSelect = (key: string, label: string, sameGuest = false) => (
     <Field label={label}>
@@ -215,10 +429,12 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
   const renderFields = () => {
     if (!selected) return null;
     switch (selected.id) {
-      case 'extend_stay': case 'early_departure':
-        return <Field label="Nueva fecha de salida"><Input type="date" value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>;
+      case 'extend_stay':
+        return <div><Field label="Nueva fecha de salida"><Input type="date" min={shiftDate(reserva.fecha_checkout, 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{availabilityNotice()}</div>;
+      case 'early_departure':
+        return <div><Field label="Nueva fecha de salida"><Input type="date" min={isActiveStay ? todayLocal() : shiftDate(reserva.fecha_checkin, 1)} max={shiftDate(reserva.fecha_checkout, -1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{availabilityNotice()}</div>;
       case 'modify_dates':
-        return <div className="grid gap-3 sm:grid-cols-2"><Field label="Nueva entrada"><Input type="date" value={payload.new_checkin || ''} onChange={(e) => set('new_checkin', e.target.value)} /></Field><Field label="Nueva salida"><Input type="date" value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field></div>;
+        return <div><div className="grid gap-3 sm:grid-cols-2"><Field label="Nueva entrada"><Input type="date" max={shiftDate(payload.new_checkout, -1)} value={payload.new_checkin || ''} onChange={(e) => set('new_checkin', e.target.value)} /></Field><Field label="Nueva salida"><Input type="date" min={shiftDate(payload.new_checkin, 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field></div>{availabilityNotice()}</div>;
       case 'room_change': return roomSelect();
       case 'category_change': return <div className="space-y-3">{roomSelect('Nueva habitación / categoría')}<Field label="Tipo de cambio"><Select value={payload.change_type || 'Upgrade'} onValueChange={(v) => { set('change_type', v); if (v === 'Cortesia') set('new_rate', '0'); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Upgrade">Upgrade</SelectItem><SelectItem value="Downgrade">Downgrade</SelectItem><SelectItem value="Cortesia">Cortesía</SelectItem><SelectItem value="CambioConCosto">Cambio con costo</SelectItem></SelectContent></Select></Field><Field label="Nueva tarifa por noche (opcional)"><Input type="number" min="0" value={payload.new_rate || ''} onChange={(e) => set('new_rate', e.target.value)} /></Field></div>;
       case 'late_checkout': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Salida autorizada"><Input type="datetime-local" value={payload.late_until || ''} onChange={(e) => set('late_until', e.target.value)} /></Field><Field label="Cargo adicional"><Input type="number" min="0" value={payload.charge_amount || ''} onChange={(e) => set('charge_amount', e.target.value)} /></Field></div>;
@@ -243,6 +459,13 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
       default: return <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">Esta acción conservará todos los datos históricos y actualizará las vistas relacionadas.</p>;
     }
   };
+
+  const dateOperationBlocked = Boolean(selected && DATE_OPERATIONS.includes(selected.id) && ['checking', 'unavailable', 'invalid'].includes(dateAvailability.status));
+  const roomOperationBlocked = Boolean(selected && ROOM_OPERATIONS.includes(selected.id) && (checkingRooms || !payload.new_room_id));
+  const validatingAvailability = Boolean(selected && (
+    (DATE_OPERATIONS.includes(selected.id) && dateAvailability.status === 'checking') ||
+    (ROOM_OPERATIONS.includes(selected.id) && checkingRooms)
+  ));
 
   return <div className="space-y-4">
     <section className="rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5">
@@ -310,7 +533,7 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
       {movements.length === 0 ? <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay movimientos operativos.</p> : movements.map((move, index) => <div key={move.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-medium capitalize">{String(move.operacion).replaceAll('_',' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p><p className="mt-1 text-xs">{move.motivo}</p></div>{move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => setReverseMovement(move)}>Revertir</Button> : null}</div></div>)}
     </section>
 
-    <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[90dvh] sm:max-w-lg sm:rounded-xl"><DialogHeader><DialogTitle>{selected?.label}</DialogTitle><DialogDescription>{selected?.detail} La disponibilidad, cargos y saldos se validarán antes de guardar.</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}<Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button><Button onClick={submit} disabled={processing || reason.trim().length < 3} className="bg-[#10233F] hover:bg-[#10233F]/90">{processing ? 'Procesando…' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-xl"><DialogHeader><DialogTitle>{selected?.label}</DialogTitle><DialogDescription>{selected?.detail} La disponibilidad, cargos y saldos se validarán antes de guardar.</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}<Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button><Button onClick={submit} disabled={processing || reason.trim().length < 3 || dateOperationBlocked || roomOperationBlocked} className="bg-[#10233F] hover:bg-[#10233F]/90">{processing ? 'Procesando…' : validatingAvailability ? 'Validando disponibilidad…' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
 
     <Dialog open={Boolean(reverseMovement)} onOpenChange={(open) => !open && setReverseMovement(null)}><DialogContent><DialogHeader><DialogTitle>Revertir operación</DialogTitle><DialogDescription>Se validará nuevamente la disponibilidad y se restaurarán los valores anteriores.</DialogDescription></DialogHeader><Field label="Motivo de reversión"><Textarea value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => setReverseMovement(null)}>Cancelar</Button><Button variant="destructive" onClick={reverse} disabled={processing || reverseReason.trim().length < 3}>Revertir con control</Button></DialogFooter></DialogContent></Dialog>
   </div>;

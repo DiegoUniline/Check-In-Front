@@ -784,7 +784,7 @@ class ApiClient {
       .from('habitaciones')
       .select('*, tipos_habitacion(*)')
       .eq('hotel_id', this.hid())
-      .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio)');
+      .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio,Bloqueada)');
     if (tipoId) q = q.eq('tipo_habitacion_id', tipoId);
     const { data: habs, error: habError } = await q;
     if (habError) throw habError;
