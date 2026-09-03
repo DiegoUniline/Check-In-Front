@@ -579,7 +579,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       )}
 
       {/* ENCABEZADO COMPACTO */}
-      <header className="flex items-center justify-between gap-2 pb-2">
+      <header className="flex shrink-0 items-center justify-between gap-2 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
             <ArrowLeft className="h-4 w-4" />
