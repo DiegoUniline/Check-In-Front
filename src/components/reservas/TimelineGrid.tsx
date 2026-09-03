@@ -203,6 +203,12 @@ export function TimelineGrid({
 
                     if (reserva && position) {
                       const estadoCfg = getEstadoConfig(reserva.estado);
+                      // Cada noche sigue siendo una celda para conservar el cálculo y los clics,
+                      // pero la reserva debe percibirse como una sola barra continua.
+                      const solidStatusClasses = estadoCfg.block
+                        .split(' ')
+                        .filter((className) => !className.startsWith('hover:'))
+                        .join(' ');
                       const EstadoIcon = estadoCfg.icon;
                       const tienesSaldo = parseFloat(reserva.saldo_pendiente) > 0;
                       const previousReservation = dayIndex > 0 ? getReservationForCell(hab.id, dayIndex - 1) : null;
@@ -223,11 +229,12 @@ export function TimelineGrid({
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  "relative border-r border-b cursor-pointer transition-all flex-shrink-0",
+                                  "relative border-b cursor-pointer flex-shrink-0",
                                   cellWidth,
                                   cellHeight,
-                                  estadoCfg.block,
+                                  solidStatusClasses,
                                   isLabelCell ? 'z-[2]' : 'z-0',
+                                  (position === 'end' || position === 'single') && 'border-r',
                                   (position === 'start' || position === 'single') && 'rounded-l',
                                   (position === 'end' || position === 'single') && 'rounded-r',
                                   isToday && "ring-2 ring-primary ring-inset"
