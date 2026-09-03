@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0';
 import { cleanPhone, corsHeaders, evoFetch } from '../_shared/evolution.ts';
+import { getHeaderBannerUrl } from '../_shared/waBanner.ts';
+
 
 /**
  * Envía un mensaje de WhatsApp vía Evolution (WhatsApp vinculado por QR).
