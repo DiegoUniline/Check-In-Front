@@ -120,6 +120,48 @@ async function handlePreview(req: Request): Promise<Response> {
   })
 }
 
+// Resolve the recipient's hotel name so auth emails stay co-branded with the
+// hotel the user belongs to. Auth emails are load-bearing, so this never throws:
+// when the lookup fails we simply send the VULO-branded version.
+async function resolveHotelName(data: {
+  user?: { id?: string; user_metadata?: Record<string, unknown> }
+  user_id?: string
+}): Promise<string | undefined> {
+  try {
+    const meta = (data.user?.user_metadata ?? {}) as Record<string, unknown>
+    const fromMeta = (meta.hotel_name ?? meta.hotelName) as string | undefined
+    if (fromMeta) return fromMeta
+
+    const userId = data.user?.id ?? data.user_id
+    if (!userId) return undefined
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    )
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('hotel_id, hotel_activo_id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    const hotelId = profile?.hotel_activo_id || profile?.hotel_id
+    if (!hotelId) return undefined
+
+    const { data: hotel } = await supabase
+      .from('hotels')
+      .select('nombre')
+      .eq('id', hotelId)
+      .maybeSingle()
+
+    return (hotel?.nombre as string | undefined) || undefined
+  } catch (err) {
+    console.warn('Could not resolve hotel name for auth email', err)
+    return undefined
+  }
+}
+
 // The SDK handler owns verification, dispatch, and retry semantics; this file
 // owns only the email decisions: subjects, templates, and per-type props.
 const handler = createAuthEmailHandler({
@@ -129,58 +171,67 @@ const handler = createAuthEmailHandler({
   sendUrl: Deno.env.get('LOVABLE_SEND_URL'),
   emails: {
     signup: {
-      subject: 'Confirm your email',
-      render: (data) =>
+      subject: 'Confirma tu correo · VULO',
+      render: async (data) =>
         React.createElement(SignupEmail, {
           siteName: SITE_NAME,
           siteUrl: SITE_URL,
           recipient: data.email,
           confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
         }),
     },
     invite: {
-      subject: "You've been invited",
-      render: (data) =>
+      subject: 'Te invitaron a colaborar · VULO',
+      render: async (data) =>
         React.createElement(InviteEmail, {
           siteName: SITE_NAME,
           siteUrl: SITE_URL,
           confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
         }),
     },
     magiclink: {
-      subject: 'Your login link',
-      render: (data) =>
+      subject: 'Tu enlace de acceso · VULO',
+      render: async (data) =>
         React.createElement(MagicLinkEmail, {
           siteName: SITE_NAME,
           confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
         }),
     },
     recovery: {
-      subject: 'Reset your password',
-      render: (data) =>
+      subject: 'Restablece tu contraseña · VULO',
+      render: async (data) =>
         React.createElement(RecoveryEmail, {
           siteName: SITE_NAME,
           confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
         }),
     },
     email_change: {
-      subject: 'Confirm your new email',
-      render: (data) =>
+      subject: 'Confirma tu nuevo correo · VULO',
+      render: async (data) =>
         React.createElement(EmailChangeEmail, {
           siteName: SITE_NAME,
           oldEmail: data.old_email ?? '',
           email: data.email,
           newEmail: data.new_email ?? '',
           confirmationUrl: data.url,
+          hotelName: await resolveHotelName(data as never),
         }),
     },
     reauthentication: {
-      subject: 'Your verification code',
-      render: (data) =>
-        React.createElement(ReauthenticationEmail, { token: data.token ?? '' }),
+      subject: 'Tu código de verificación · VULO',
+      render: async (data) =>
+        React.createElement(ReauthenticationEmail, {
+          token: data.token ?? '',
+          hotelName: await resolveHotelName(data as never),
+        }),
     },
   },
 })
+
 
 Deno.serve(async (req) => {
   const url = new URL(req.url)
