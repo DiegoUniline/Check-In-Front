@@ -206,6 +206,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
   const [pagoMonto, setPagoMonto] = useState('');
   const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
+  const [mostrarSelectorHabitacion, setMostrarSelectorHabitacion] = useState(false);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const availabilityRequestRef = useRef(0);
 
@@ -215,9 +216,14 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       loadTemporadas().catch(() => {});
       setOrigen(preload?.origen || 'Reserva');
       setCrearNuevoCliente(false);
+      setMostrarSelectorHabitacion(!preload?.habitacion?.id);
       setFormData(createInitialFormData(preload));
     }
   }, [open, preload]);
+
+  useEffect(() => {
+    if (!formData.habitacionId) setMostrarSelectorHabitacion(true);
+  }, [formData.habitacionId]);
 
   useEffect(() => {
     if (!open) return;
@@ -696,65 +702,85 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             </div>
           </FormSection>
 
-          <FormSection icon={BedDouble} title="Habitación" hint={`${habitacionesDisponibles.length} libres en el rango seleccionado.`}>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, tipoHabitacion: '', habitacionId: '' })}
-                className={cn(
-                  'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                  !formData.tipoHabitacion ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
-                )}
-              >
-                Todas
-              </button>
-              {tiposHabitacion.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, tipoHabitacion: t.id, habitacionId: '' })}
-                  className={cn(
-                    'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                    formData.tipoHabitacion === t.id ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
-                  )}
-                >
-                  {t.nombre} · {formatCurrency(t.precio_base)}
-                </button>
-              ))}
-            </div>
-
-            {habitacionesDisponibles.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-[#CBD5E1] py-4 text-center text-[11px] text-muted-foreground">
-                Sin disponibilidad para este rango. Ajusta fechas o categoría.
-              </p>
+          <FormSection icon={BedDouble} title="Habitación" hint={mostrarSelectorHabitacion ? `${habitacionesDisponibles.length} libres en el rango seleccionado.` : 'Habitación asignada a esta reserva.'}>
+            {!mostrarSelectorHabitacion && selectedHabitacion ? (
+              <div className="flex items-center gap-3 rounded-lg border border-[#10233F]/10 bg-[#F8FAFC] p-2.5">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#10233F] text-white">
+                  <BedDouble className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[#10233F]">#{selectedHabitacion.numero}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {selectedHabitacion.tipo_nombre || tiposHabitacion.find((item) => item.id === (selectedHabitacion.tipo_habitacion_id || selectedHabitacion.tipo_id))?.nombre || 'Sin categoría'}
+                    {' · '}{fmt(rateOf(selectedHabitacion))}/noche
+                  </p>
+                </div>
+                <Button type="button" variant="outline" size="sm" className="h-8 shrink-0 px-2.5 text-xs" onClick={() => setMostrarSelectorHabitacion(true)}>
+                  Cambiar
+                </Button>
+              </div>
             ) : (
-              <div className="grid max-h-[280px] grid-cols-2 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-3 xl:grid-cols-4">
-                {habitacionesDisponibles.map((hab) => {
-                  const activo = formData.habitacionId === hab.id;
-                  const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
-                  return (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, tipoHabitacion: '', habitacionId: '' })}
+                    className={cn(
+                      'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                      !formData.tipoHabitacion ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
+                    )}
+                  >
+                    Todas
+                  </button>
+                  {tiposHabitacion.map((t) => (
                     <button
-                      key={hab.id}
+                      key={t.id}
                       type="button"
-                      onClick={() => handleSelectRoom(hab)}
+                      onClick={() => setFormData({ ...formData, tipoHabitacion: t.id, habitacionId: '' })}
                       className={cn(
-                        'rounded-lg border p-2 text-left transition-colors',
-                        activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] bg-white hover:border-[#10233F]/40',
+                        'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                        formData.tipoHabitacion === t.id ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
                       )}
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-sm font-semibold">#{hab.numero}</span>
-                        {activo && <Check className="h-3.5 w-3.5" />}
-                      </div>
-                      <p className={cn('truncate text-[10px]', activo ? 'text-white/75' : 'text-muted-foreground')}>
-                        {hab.tipo_nombre || tipo?.nombre || 'Sin categoría'}
-                      </p>
-                      <p className={cn('text-[11px] font-medium tabular-nums', activo ? 'text-white' : 'text-[#10233F]')}>
-                        {fmt(rateOf(hab))}/noche
-                      </p>
+                      {t.nombre} · {formatCurrency(t.precio_base)}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+
+                {habitacionesDisponibles.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-[#CBD5E1] py-4 text-center text-[11px] text-muted-foreground">
+                    Sin disponibilidad para este rango. Ajusta fechas o categoría.
+                  </p>
+                ) : (
+                  <div className="grid max-h-[280px] grid-cols-2 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-3 xl:grid-cols-4">
+                    {habitacionesDisponibles.map((hab) => {
+                      const activo = formData.habitacionId === hab.id;
+                      const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
+                      return (
+                        <button
+                          key={hab.id}
+                          type="button"
+                          onClick={() => { handleSelectRoom(hab); setMostrarSelectorHabitacion(false); }}
+                          className={cn(
+                            'rounded-lg border p-2 text-left transition-colors',
+                            activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] bg-white hover:border-[#10233F]/40',
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-sm font-semibold">#{hab.numero}</span>
+                            {activo && <Check className="h-3.5 w-3.5" />}
+                          </div>
+                          <p className={cn('truncate text-[10px]', activo ? 'text-white/75' : 'text-muted-foreground')}>
+                            {hab.tipo_nombre || tipo?.nombre || 'Sin categoría'}
+                          </p>
+                          <p className={cn('text-[11px] font-medium tabular-nums', activo ? 'text-white' : 'text-[#10233F]')}>
+                            {fmt(rateOf(hab))}/noche
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
             {selectedHabitacion && temporadaAplicable && (
