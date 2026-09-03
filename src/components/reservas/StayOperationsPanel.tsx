@@ -28,6 +28,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 type Props = { reserva: any; habitaciones?: any[]; onUpdate?: () => void | Promise<void>; children?: ReactNode };
 type Operation = { id: string; label: string; detail: string; icon: any; sensitive?: boolean };
