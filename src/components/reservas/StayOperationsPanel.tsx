@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ArrowLeftRight, BadgeDollarSign, BedDouble, CalendarClock, CalendarDays,
-  Clock, History, LogIn, LogOut, Plus, Receipt, RefreshCcw, ShieldAlert,
+  ChevronDown, Clock, History, LogIn, LogOut, Plus, Receipt, RefreshCcw, ShieldAlert,
   Split, UserMinus, UserPlus, Wrench,
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -20,8 +20,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-type Props = { reserva: any; habitaciones?: any[]; onUpdate?: () => void | Promise<void> };
+type Props = { reserva: any; habitaciones?: any[]; onUpdate?: () => void | Promise<void>; children?: ReactNode };
 type Operation = { id: string; label: string; detail: string; icon: any; sensitive?: boolean };
 
 const groups: { title: string; operations: Operation[] }[] = [
@@ -65,7 +69,7 @@ const groups: { title: string; operations: Operation[] }[] = [
 const dateOnly = (value: any) => String(value || '').slice(0, 10);
 const money = (value: any) => Number(value || 0);
 
-export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], onUpdate }: Props) {
+export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], onUpdate, children }: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selected, setSelected] = useState<Operation | null>(null);
@@ -99,6 +103,11 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
       return !['Cancelada', 'NoShow', 'CheckOut'].includes(state);
     return true;
   };
+
+  const quickOperationIds = ['extend_stay', 'room_change', 'add_charge', 'partial_payment'];
+  const quickOperations = quickOperationIds
+    .map((operationId) => groups.flatMap((group) => group.operations).find((operation) => operation.id === operationId))
+    .filter(Boolean) as Operation[];
 
   const load = async () => {
     setLoading(true);
@@ -235,26 +244,69 @@ export function StayOperationsPanel({ reserva, habitaciones: initialRooms = [], 
     }
   };
 
-  return <div className="space-y-6">
-    <div className="rounded-xl border border-[#10233F]/15 bg-[#10233F]/[0.03] p-4">
-      <h3 className="font-semibold text-[#10233F]">Centro operativo de la estancia</h3>
-      <p className="mt-1 text-sm text-muted-foreground">Resuelve cambios, cuenta y excepciones sin salir de esta reservación. Cada acción valida conflictos y registra quién la realizó.</p>
-    </div>
-
-    {groups.map((group) => <section key={group.title} className="space-y-2">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.title}</h4>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {group.operations.map((op) => { const Icon = op.icon; const allowed = canAccess(`reservas.operacion.${op.id}`, user?.rol); const applies = operationApplies(op.id); return <button key={op.id} type="button" onClick={() => openOperation(op)} className="flex min-h-20 items-start gap-3 rounded-xl border bg-background p-3 text-left transition hover:border-[#10233F]/35 hover:bg-[#10233F]/[0.03] disabled:cursor-not-allowed disabled:opacity-45" disabled={loading || !allowed || !applies} title={!allowed ? 'Tu rol no tiene permiso para esta acción' : !applies ? 'Esta acción no aplica al estado actual' : undefined}>
-          <span className="rounded-lg bg-[#10233F]/10 p-2 text-[#10233F]"><Icon className="h-4 w-4" /></span><span className="min-w-0"><span className="flex items-center gap-2 font-medium text-[#10233F]">{op.label}{op.sensitive && <Badge variant="outline" className="text-[9px]">GERENCIA</Badge>}</span><span className="mt-0.5 block text-xs text-muted-foreground">{op.detail}</span></span>
-        </button>; })}
+  return <div className="space-y-4">
+    <section className="rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-[#10233F]">Acciones de la reserva</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Los cambios validan conflictos y quedan registrados.</p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="shrink-0 border-[#10233F]/20 text-[#10233F]">
+              Más operaciones <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-[70vh] w-80 overflow-y-auto">
+            {groups.map((group, groupIndex) => <div key={group.title}>
+              {groupIndex > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">{group.title}</DropdownMenuLabel>
+              {group.operations.filter((operation) => !quickOperationIds.includes(operation.id)).map((operation) => {
+                const Icon = operation.icon;
+                const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
+                const applies = operationApplies(operation.id);
+                return <DropdownMenuItem
+                  key={operation.id}
+                  disabled={loading || !allowed || !applies}
+                  onSelect={() => openOperation(operation)}
+                  className="items-start gap-3 py-2.5"
+                >
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#10233F]" />
+                  <span className="min-w-0"><span className="flex items-center gap-2 font-medium">{operation.label}{operation.sensitive && <span className="text-[9px] text-muted-foreground">GERENCIA</span>}</span><span className="block text-xs text-muted-foreground">{operation.detail}</span></span>
+                </DropdownMenuItem>;
+              })}
+            </div>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-    </section>)}
 
-    {guests.length > 0 && <section className="space-y-2"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Huéspedes adicionales</h4>{guests.map((guest) => <Card key={guest.id} className={guest.activo ? '' : 'opacity-60'}><CardContent className="flex items-center justify-between p-3"><div><p className="text-sm font-medium">{guest.nombre} {guest.apellido_paterno}</p><p className="text-xs text-muted-foreground">{guest.tipo}{guest.genera_cargo ? ` · ${formatCurrency(guest.cargo_por_noche)} por noche` : ''}</p></div>{guest.activo && <Button size="sm" variant="outline" disabled={!operationApplies('remove_guest') || !canAccess('reservas.operacion.remove_guest', user?.rol)} onClick={() => { const op = { id:'remove_guest',label:'Retirar huésped',detail:'',icon:UserMinus,sensitive:true }; openOperation(op); setPayload({ guest_id: guest.id }); }}><UserMinus className="mr-1 h-4 w-4" />Retirar</Button>}</CardContent></Card>)}</section>}
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {quickOperations.map((operation) => {
+          const Icon = operation.icon;
+          const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
+          const applies = operationApplies(operation.id);
+          return <Button
+            key={operation.id}
+            variant="outline"
+            onClick={() => openOperation(operation)}
+            disabled={loading || !allowed || !applies}
+            className="h-auto min-h-16 justify-start gap-3 border-[#10233F]/15 px-3 py-3 text-left hover:border-[#10233F]/35 hover:bg-[#10233F]/[0.03]"
+            title={!allowed ? 'Tu rol no tiene permiso para esta acción' : !applies ? 'Esta acción no aplica al estado actual' : undefined}
+          >
+            <span className="rounded-lg bg-[#10233F]/10 p-2 text-[#10233F]"><Icon className="h-4 w-4" /></span>
+            <span className="min-w-0 whitespace-normal"><span className="block text-sm font-semibold text-[#10233F]">{operation.label}</span><span className="hidden text-xs font-normal text-muted-foreground sm:block">{operation.detail}</span></span>
+          </Button>;
+        })}
+      </div>
+    </section>
 
-    {accounts.length > 0 && <section className="space-y-2"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Subcuentas</h4><div className="flex flex-wrap gap-2">{accounts.map((account) => <Badge key={account.id} variant="outline">{account.nombre}{account.responsable ? ` · ${account.responsable}` : ''}</Badge>)}</div></section>}
+    {children}
 
-    <section className="space-y-2"><div className="flex items-center justify-between"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Historial de operaciones</h4><Button variant="ghost" size="sm" onClick={load}><RefreshCcw className="h-3.5 w-3.5" /></Button></div>
+    {guests.length > 0 && <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Huéspedes adicionales</h4>{guests.map((guest) => <Card key={guest.id} className={guest.activo ? '' : 'opacity-60'}><CardContent className="flex items-center justify-between p-3"><div><p className="text-sm font-medium">{guest.nombre} {guest.apellido_paterno}</p><p className="text-xs text-muted-foreground">{guest.tipo}{guest.genera_cargo ? ` · ${formatCurrency(guest.cargo_por_noche)} por noche` : ''}</p></div>{guest.activo && <Button size="sm" variant="outline" disabled={!operationApplies('remove_guest') || !canAccess('reservas.operacion.remove_guest', user?.rol)} onClick={() => { const op = { id:'remove_guest',label:'Retirar huésped',detail:'',icon:UserMinus,sensitive:true }; openOperation(op); setPayload({ guest_id: guest.id }); }}><UserMinus className="mr-1 h-4 w-4" />Retirar</Button>}</CardContent></Card>)}</section>}
+
+    {accounts.length > 0 && <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Subcuentas</h4><div className="flex flex-wrap gap-2">{accounts.map((account) => <Badge key={account.id} variant="outline">{account.nombre}{account.responsable ? ` · ${account.responsable}` : ''}</Badge>)}</div></section>}
+
+    <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Historial de operaciones</h4><Button variant="ghost" size="sm" onClick={load}><RefreshCcw className="h-3.5 w-3.5" /></Button></div>
       {movements.length === 0 ? <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay movimientos operativos.</p> : movements.map((move, index) => <div key={move.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-medium capitalize">{String(move.operacion).replaceAll('_',' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p><p className="mt-1 text-xs">{move.motivo}</p></div>{move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => setReverseMovement(move)}>Revertir</Button> : null}</div></div>)}
     </section>
 

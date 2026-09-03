@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BedDouble, CalendarDays, Clock, CreditCard, DoorOpen,
-  History, LogOut, Mail, MapPin, Phone, Receipt, RefreshCw, User,
+  LogOut, Mail, MapPin, Phone, Receipt, RefreshCw, User,
   Users, WalletCards,
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -13,13 +13,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StayOperationsPanel } from '@/components/reservas/StayOperationsPanel';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const statusStyles: Record<string, string> = {
   Pendiente: 'border-amber-200 bg-amber-50 text-amber-800',
@@ -40,7 +38,6 @@ export default function ReservaDetalle() {
   const [reserva, setReserva] = useState<any>(null);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('resumen');
 
   const load = async (silent = false) => {
     if (!id) return;
@@ -94,7 +91,7 @@ export default function ReservaDetalle() {
           </div>
           <div className="hidden items-center gap-2 sm:flex">
             <Button variant="outline" onClick={() => void load(true)}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button>
-            <Button variant="outline" onClick={() => setActiveTab('operaciones')}>Editar estancia</Button>
+            <Button variant="outline" onClick={() => document.getElementById('operaciones')?.scrollIntoView({ behavior: 'smooth' })}>Editar estancia</Button>
             {canCheckin && <Button onClick={() => navigate(`/checkin/${reserva.id}`)} className="bg-emerald-600 hover:bg-emerald-700"><DoorOpen className="mr-2 h-4 w-4" />Check-in</Button>}
             {activeStay && <Button onClick={() => navigate(`/checkout/${reserva.id}`)} className="bg-[#10233F] hover:bg-[#10233F]/90"><LogOut className="mr-2 h-4 w-4" />Check-out</Button>}
           </div>
@@ -109,56 +106,41 @@ export default function ReservaDetalle() {
           <Summary label={balance < -0.01 ? 'A favor' : 'Saldo pendiente'} value={formatCurrency(Math.abs(balance))} detail={`${formatCurrency(paid)} pagado de ${formatCurrency(total)}`} icon={WalletCards} danger={balance > 0.01} />
         </section>
 
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <Card className="min-w-0 overflow-hidden border-[#10233F]/10 shadow-sm">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <div className="overflow-x-auto border-b bg-white px-2 pt-2 sm:px-4">
-                <TabsList className="h-11 w-max justify-start bg-transparent p-0">
-                  <TabsTrigger value="resumen" className="h-11 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-[#10233F] data-[state=active]:bg-transparent data-[state=active]:text-[#10233F]">Resumen</TabsTrigger>
-                  <TabsTrigger value="operaciones" className="h-11 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-[#10233F] data-[state=active]:bg-transparent data-[state=active]:text-[#10233F]">Operaciones</TabsTrigger>
-                  <TabsTrigger value="cuenta" className="h-11 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-[#10233F] data-[state=active]:bg-transparent data-[state=active]:text-[#10233F]">Cuenta</TabsTrigger>
-                  <TabsTrigger value="huesped" className="h-11 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-[#10233F] data-[state=active]:bg-transparent data-[state=active]:text-[#10233F]">Huésped</TabsTrigger>
-                </TabsList>
-              </div>
+        <section id="operaciones" className="scroll-mt-24">
+          <StayOperationsPanel reserva={reserva} habitaciones={rooms} onUpdate={refreshAll}>
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="min-w-0 space-y-4">
+            <section className="grid gap-4 lg:grid-cols-2">
+              <DetailSection title="Estancia" icon={CalendarDays}>
+                <InfoGrid items={[
+                  ['Entrada', formatDate(reserva.fecha_checkin)], ['Hora prevista', reserva.hora_llegada || 'Sin definir'],
+                  ['Salida', formatDate(reserva.fecha_checkout)], ['Hora de salida', reserva.hora_checkout || reserva.hotel?.hora_checkout || 'Según política'],
+                  ['Noches', String(reserva.noches || 1)], ['Origen', reserva.origen || 'Recepción'],
+                ]} />
+                {(reserva.early_checkin_at || reserva.late_checkout_until) && <div className="mt-4 flex flex-wrap gap-2">{reserva.early_checkin_at && <Badge variant="outline">Early check-in · {formatDateTime(reserva.early_checkin_at)}</Badge>}{reserva.late_checkout_until && <Badge variant="outline">Late check-out · {formatDateTime(reserva.late_checkout_until)}</Badge>}</div>}
+              </DetailSection>
+              <DetailSection title="Habitación" icon={BedDouble}>
+                <div className="flex items-start justify-between gap-4"><div><p className="text-3xl font-bold text-[#10233F]">{reserva.habitacion_numero ? `#${reserva.habitacion_numero}` : '—'}</p><p className="mt-1 text-sm text-muted-foreground">{reserva.tipo_habitacion?.nombre || reserva.tipo_habitacion_nombre || 'Sin categoría'}</p></div><Badge variant="outline">{reserva.habitacion?.estado_habitacion || 'Sin estado'}</Badge></div>
+                <Separator className="my-4" />
+                <InfoGrid items={[["Tarifa por noche", formatCurrency(reserva.tarifa_noche)], ["Limpieza", reserva.habitacion?.estado_limpieza || '—'], ["Mantenimiento", reserva.habitacion?.estado_mantenimiento || '—'], ["Piso", String(reserva.habitacion?.piso || '—')]]} />
+              </DetailSection>
+            </section>
 
-              <TabsContent value="resumen" className="m-0 space-y-4 p-4 sm:p-6">
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <DetailSection title="Estancia" icon={CalendarDays}>
-                    <InfoGrid items={[
-                      ['Entrada', formatDate(reserva.fecha_checkin)], ['Hora prevista', reserva.hora_llegada || 'Sin definir'],
-                      ['Salida', formatDate(reserva.fecha_checkout)], ['Hora de salida', reserva.hora_checkout || reserva.hotel?.hora_checkout || 'Según política'],
-                      ['Noches', String(reserva.noches || 1)], ['Origen', reserva.origen || 'Recepción'],
-                    ]} />
-                    {(reserva.early_checkin_at || reserva.late_checkout_until) && <div className="mt-4 flex flex-wrap gap-2">{reserva.early_checkin_at && <Badge variant="outline">Early check-in · {formatDateTime(reserva.early_checkin_at)}</Badge>}{reserva.late_checkout_until && <Badge variant="outline">Late check-out · {formatDateTime(reserva.late_checkout_until)}</Badge>}</div>}
-                  </DetailSection>
-                  <DetailSection title="Habitación" icon={BedDouble}>
-                    <div className="flex items-start justify-between gap-4"><div><p className="text-3xl font-bold text-[#10233F]">{reserva.habitacion_numero ? `#${reserva.habitacion_numero}` : '—'}</p><p className="mt-1 text-sm text-muted-foreground">{reserva.tipo_habitacion?.nombre || reserva.tipo_habitacion_nombre || 'Sin categoría'}</p></div><Badge variant="outline">{reserva.habitacion?.estado_habitacion || 'Sin estado'}</Badge></div>
-                    <Separator className="my-4" />
-                    <InfoGrid items={[["Tarifa por noche", formatCurrency(reserva.tarifa_noche)], ["Limpieza", reserva.habitacion?.estado_limpieza || '—'], ["Mantenimiento", reserva.habitacion?.estado_mantenimiento || '—'], ["Piso", String(reserva.habitacion?.piso || '—')]]} />
-                  </DetailSection>
-                </div>
+            {(reserva.solicitudes_especiales || reserva.notas_internas) && <section className="grid gap-4 lg:grid-cols-2">{reserva.solicitudes_especiales && <Note title="Solicitudes especiales" text={reserva.solicitudes_especiales} />}{reserva.notas_internas && <Note title="Notas internas" text={reserva.notas_internas} />}</section>}
 
-                {(reserva.solicitudes_especiales || reserva.notas_internas) && <div className="grid gap-4 lg:grid-cols-2">{reserva.solicitudes_especiales && <Note title="Solicitudes especiales" text={reserva.solicitudes_especiales} />}{reserva.notas_internas && <Note title="Notas internas" text={reserva.notas_internas} />}</div>}
+            <DetailSection title="Huésped principal" icon={User}>
+              <div className="mb-6 flex items-center gap-4"><div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#10233F] text-lg font-bold text-white">{String(reserva.cliente_nombre || 'H').slice(0,1).toUpperCase()}</div><div><h2 className="text-xl font-semibold text-[#10233F]">{reserva.cliente_nombre || 'Huésped sin nombre'}</h2><div className="mt-1 flex gap-2">{reserva.es_vip && <Badge className="bg-[#F97316]">VIP</Badge>}{number(reserva.total_estancias)>0 && <Badge variant="outline">{reserva.total_estancias} estancias</Badge>}</div></div></div>
+              <div className="grid gap-3 sm:grid-cols-2"><Contact icon={Mail} value={reserva.cliente_email || reserva.cliente?.email || 'Sin correo'} /><Contact icon={Phone} value={reserva.cliente_telefono || reserva.cliente?.telefono || 'Sin teléfono'} /><Contact icon={MapPin} value={reserva.cliente?.direccion || 'Sin dirección registrada'} /><Contact icon={User} value={reserva.cliente?.documento || reserva.cliente?.numero_documento || reserva.cliente?.rfc || 'Sin documento registrado'} /></div>
+            </DetailSection>
 
-                <Alert className="border-[#10233F]/15 bg-[#10233F]/[0.03]"><History className="h-4 w-4 text-[#10233F]" /><AlertDescription className="text-sm">Para extender, reubicar, cambiar tarifa, corregir pagos o resolver cualquier excepción, entra a <button className="font-semibold text-[#10233F] underline underline-offset-2" onClick={() => setActiveTab('operaciones')}>Operaciones</button>. Cada cambio queda auditado.</AlertDescription></Alert>
-              </TabsContent>
-
-              <TabsContent value="operaciones" className="m-0 p-4 sm:p-6"><StayOperationsPanel reserva={reserva} habitaciones={rooms} onUpdate={refreshAll} /></TabsContent>
-
-              <TabsContent value="cuenta" className="m-0 space-y-6 p-4 sm:p-6">
+            <section id="cuenta" className="scroll-mt-24 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-5 flex items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 font-semibold text-[#10233F]"><WalletCards className="h-4 w-4" />Cuenta completa</h2><p className="mt-1 text-sm text-muted-foreground">Cargos y pagos visibles en el mismo expediente.</p></div><Button variant="outline" size="sm" onClick={() => document.getElementById('operaciones')?.scrollIntoView({ behavior: 'smooth' })}>Corregir cuenta</Button></div>
+              <div className="grid gap-6 lg:grid-cols-2">
                 <Ledger title="Cargos y consumos" icon={Receipt} empty="Sin cargos adicionales" items={reserva.cargos || []} render={(item) => <><div><p className="font-medium">{item.concepto || 'Cargo'}</p><p className="text-xs text-muted-foreground">{number(item.cantidad)} × {formatCurrency(item.precio_unitario)}{item.notas ? ` · ${item.notas}` : ''}</p></div><div className="text-right"><p className="font-semibold">{formatCurrency(item.total ?? item.subtotal)}</p>{item.estado === 'Cancelado' && <Badge variant="outline">Cancelado</Badge>}</div></>} />
                 <Ledger title="Pagos" icon={CreditCard} empty="Sin pagos registrados" items={reserva.pagos || []} render={(item) => <><div><p className="font-medium">{item.metodo_pago || 'Pago'}</p><p className="text-xs text-muted-foreground">{item.concepto || 'Abono'} · {item.created_at ? formatDateTime(item.created_at) : ''}</p></div><div className="text-right"><p className="font-semibold text-emerald-700">{formatCurrency(item.monto)}</p>{item.estado === 'Cancelado' && <Badge variant="outline">Cancelado</Badge>}</div></>} />
-                <Button onClick={() => setActiveTab('operaciones')} variant="outline">Agregar o corregir movimientos</Button>
-              </TabsContent>
-
-              <TabsContent value="huesped" className="m-0 p-4 sm:p-6">
-                <DetailSection title="Datos del huésped principal" icon={User}>
-                  <div className="mb-6 flex items-center gap-4"><div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#10233F] text-lg font-bold text-white">{String(reserva.cliente_nombre || 'H').slice(0,1).toUpperCase()}</div><div><h2 className="text-xl font-semibold text-[#10233F]">{reserva.cliente_nombre || 'Huésped sin nombre'}</h2><div className="mt-1 flex gap-2">{reserva.es_vip && <Badge className="bg-[#F97316]">VIP</Badge>}{number(reserva.total_estancias)>0 && <Badge variant="outline">{reserva.total_estancias} estancias</Badge>}</div></div></div>
-                  <div className="grid gap-3 sm:grid-cols-2"><Contact icon={Mail} value={reserva.cliente_email || reserva.cliente?.email || 'Sin correo'} /><Contact icon={Phone} value={reserva.cliente_telefono || reserva.cliente?.telefono || 'Sin teléfono'} /><Contact icon={MapPin} value={reserva.cliente?.direccion || 'Sin dirección registrada'} /><Contact icon={User} value={reserva.cliente?.documento || reserva.cliente?.rfc || 'Sin documento registrado'} /></div>
-                </DetailSection>
-              </TabsContent>
-            </Tabs>
-          </Card>
+              </div>
+            </section>
+          </div>
 
           <aside className="order-first space-y-4 xl:order-none xl:sticky xl:top-24">
             <Card className="overflow-hidden border-0 bg-[#10233F] text-white shadow-lg">
@@ -174,13 +156,15 @@ export default function ReservaDetalle() {
                 <div className={cn('rounded-xl p-4 text-center', balance > 0.01 ? 'bg-[#F97316]/25' : 'bg-emerald-500/20')}><p className="text-xs text-white/75">{balance < -0.01 ? 'Saldo a favor' : 'Saldo pendiente'}</p><p className="mt-1 text-2xl font-bold">{formatCurrency(Math.abs(balance))}</p></div>
               </CardContent>
             </Card>
-            <Card className="hidden xl:block"><CardContent className="space-y-2 p-4"><Button className="w-full bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => setActiveTab('operaciones')}>Ver todas las operaciones</Button>{canCheckin && <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}><DoorOpen className="mr-2 h-4 w-4" />Hacer check-in</Button>}{activeStay && <Button className="w-full" variant="outline" onClick={() => navigate(`/checkout/${reserva.id}`)}><LogOut className="mr-2 h-4 w-4" />Hacer check-out</Button>}</CardContent></Card>
+            <Card className="hidden xl:block"><CardContent className="space-y-2 p-4"><Button className="w-full bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => document.getElementById('operaciones')?.scrollIntoView({ behavior: 'smooth' })}>Ver operaciones</Button>{canCheckin && <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}><DoorOpen className="mr-2 h-4 w-4" />Hacer check-in</Button>}{activeStay && <Button className="w-full" variant="outline" onClick={() => navigate(`/checkout/${reserva.id}`)}><LogOut className="mr-2 h-4 w-4" />Hacer check-out</Button>}</CardContent></Card>
           </aside>
-        </div>
+          </div>
+          </StayOperationsPanel>
+        </section>
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-white p-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:hidden">
-        <div className="grid grid-cols-2 gap-2"><Button variant="outline" onClick={() => setActiveTab('operaciones')}>Operaciones</Button>{canCheckin ? <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>Check-in</Button> : activeStay ? <Button className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>Check-out</Button> : <Button onClick={() => setActiveTab('cuenta')}>Ver cuenta</Button>}</div>
+        <div className="grid grid-cols-2 gap-2"><Button variant="outline" onClick={() => document.getElementById('operaciones')?.scrollIntoView({ behavior: 'smooth' })}>Operaciones</Button>{canCheckin ? <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>Check-in</Button> : activeStay ? <Button className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>Check-out</Button> : <Button onClick={() => document.getElementById('cuenta')?.scrollIntoView({ behavior: 'smooth' })}>Ver cuenta</Button>}</div>
       </div>
     </div>
   </MainLayout>;
