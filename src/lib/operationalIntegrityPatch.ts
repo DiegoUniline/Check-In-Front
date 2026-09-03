@@ -40,84 +40,9 @@ if (!root[PATCH_KEY]) {
     if (error) throw error;
   };
 
-  client.createVenta = async (data: any) => {
-    const { detalle, detalles, ...header } = data || {};
-    const items = (detalles ?? detalle ?? []) as any[];
-    const hotelId = client.getHotelId?.();
-    if (!hotelId) throw new Error('Hotel no definido');
-    if (!Array.isArray(items) || items.length === 0) throw new Error('La venta no contiene productos');
-
-    const cantidades = new Map<string, number>();
-    for (const item of items) {
-      if (!item?.producto_id) continue;
-      const cantidad = Number(item.cantidad) || 0;
-      if (cantidad <= 0) throw new Error('La cantidad de un producto no es válida');
-      cantidades.set(item.producto_id, (cantidades.get(item.producto_id) || 0) + cantidad);
-    }
-
-    const ids = [...cantidades.keys()];
-    const { data: productos, error: productosError } = await db
-      .from('productos')
-      .select('id,nombre,stock_actual')
-      .eq('hotel_id', hotelId)
-      .in('id', ids);
-    if (productosError) throw productosError;
-
-    const stockAnterior = new Map<string, number>();
-    const nombres = new Map<string, string>();
-    for (const producto of productos || []) {
-      stockAnterior.set(producto.id, Number(producto.stock_actual) || 0);
-      nombres.set(producto.id, producto.nombre || 'Producto');
-    }
-
-    for (const [productoId, cantidad] of cantidades) {
-      if (!stockAnterior.has(productoId)) throw new Error('Uno de los productos ya no existe');
-      const disponible = stockAnterior.get(productoId) || 0;
-      if (cantidad > disponible) {
-        throw new Error(`${nombres.get(productoId) || 'Producto'}: stock insuficiente. Disponible ${disponible}, solicitado ${cantidad}.`);
-      }
-    }
-
-    const venta = await originalCreateVenta({ ...header, detalles: items });
-    const actualizados: string[] = [];
-
-    try {
-      for (const [productoId, cantidad] of cantidades) {
-        const anterior = stockAnterior.get(productoId) || 0;
-        const nuevo = anterior - cantidad;
-        const { error } = await db.from('productos').update({ stock_actual: nuevo }).eq('id', productoId).eq('hotel_id', hotelId);
-        if (error) throw error;
-        actualizados.push(productoId);
-      }
-
-      const movimientos = [...cantidades.entries()].map(([productoId, cantidad]) => {
-        const anterior = stockAnterior.get(productoId) || 0;
-        return {
-          producto_id: productoId,
-          tipo: 'Salida',
-          cantidad,
-          stock_anterior: anterior,
-          stock_nuevo: anterior - cantidad,
-          motivo: 'Venta POS',
-          referencia: venta?.folio || venta?.id || null,
-        };
-      });
-      if (movimientos.length) {
-        const { error } = await db.from('movimientos_inventario').insert(movimientos);
-        if (error) throw error;
-      }
-      return venta;
-    } catch (error) {
-      for (const productoId of actualizados.reverse()) {
-        await db.from('productos').update({ stock_actual: stockAnterior.get(productoId) || 0 }).eq('id', productoId).eq('hotel_id', hotelId);
-      }
-      if (venta?.id) {
-        await db.from('ventas_detalle').delete().eq('venta_id', venta.id);
-        await db.from('ventas').delete().eq('id', venta.id).eq('hotel_id', hotelId);
-      }
-      throw error;
-    }
-  };
+  // La API ya registra venta, detalle e inventario dentro de un único RPC.
+  // No se vuelve a tocar stock desde el navegador para evitar dobles salidas.
+  client.createVenta = (data: any) => originalCreateVenta(data);
 
   client.createPago = async (data: any) => {
     if (data?.reserva_id) {

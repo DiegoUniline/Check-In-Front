@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
-  ShoppingCart, Minus, Plus, Trash2, CreditCard,
-  Banknote, Building2, Search, RefreshCw, Loader2, PackageOpen
+  ShoppingCart, Minus, Plus, Trash2,
+  Building2, Search, RefreshCw, Loader2, PackageOpen
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { formatCurrency } from '@/lib/currency';
+import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 
 interface CartItem {
   producto: any;
@@ -35,6 +36,7 @@ export default function POS() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [processingMethod, setProcessingMethod] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState('');
 
   const [productos, setProductos] = useState<any[]>([]);
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
@@ -53,7 +55,7 @@ export default function POS() {
       ]);
 
       const reservasActivas = (Array.isArray(reservasData) ? reservasData : [])
-        .filter(r => r.estado === 'CheckIn');
+        .filter(r => ['CheckIn', 'Hospedado'].includes(r.estado) && !r.checkout_realizado);
 
       const habitacionesConReserva = (Array.isArray(habsData) ? habsData : [])
         .filter(h => h.estado_habitacion === 'Ocupada')
@@ -66,8 +68,8 @@ export default function POS() {
           };
         });
 
-      setProductos(Array.isArray(prodsData) ? prodsData : []);
-      setHabitaciones(habitacionesConReserva);
+      setProductos((Array.isArray(prodsData) ? prodsData : []).filter((producto) => producto.activo !== false));
+      setHabitaciones(habitacionesConReserva.filter((habitacion) => Boolean(habitacion.reserva_id)));
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
@@ -80,8 +82,8 @@ export default function POS() {
 
   const filteredProducts = productos.filter(p => {
     const query = searchQuery.trim().toLowerCase();
-    const nombre = String(p.nombre || '').toLowerCase();
-    const matchSearch = !query || nombre.includes(query);
+    const searchable = `${p.nombre || ''} ${p.codigo || ''} ${p.categoria_nombre || p.categoria || ''}`.toLowerCase();
+    const matchSearch = !query || searchable.includes(query);
     const matchCategory = activeCategory === 'all' || (p.categoria_nombre || p.categoria) === activeCategory;
     return matchSearch && matchCategory;
   });
@@ -90,12 +92,14 @@ export default function POS() {
     setCart(prev => {
       const existing = prev.find(item => item.producto.id === producto.id);
       if (existing) {
+        if (existing.cantidad >= safeNumber(producto.stock_actual)) return prev;
         return prev.map(item =>
           item.producto.id === producto.id
             ? { ...item, cantidad: item.cantidad + 1 }
             : item
         );
       }
+      if (safeNumber(producto.stock_actual) <= 0) return prev;
       return [...prev, { producto, cantidad: 1 }];
     });
   };
@@ -159,51 +163,20 @@ export default function POS() {
       const ventaImpuestos = safeNumber(impuestos, 0);
       const ventaTotal = safeNumber(total, 0);
       const habitacionSeleccionada = habitaciones.find(h => h.id === selectedRoom);
-      const reservaId = habitacionSeleccionada?.reserva_id || null;
-
-      const metodoPagoMap: Record<string, string> = {
-        Tarjeta: 'Tarjeta',
-        Efectivo: 'Efectivo',
-        'Cargo a habitación': 'Transferencia',
-      };
+      const isRoomCharge = method === 'Cargo a habitación';
+      const reservaId = isRoomCharge ? habitacionSeleccionada?.reserva_id || null : null;
 
       await api.createVenta({
         folio: `POS-${Date.now()}`,
-        detalle: ventaItems,
+        detalles: ventaItems,
         subtotal: ventaSubtotal,
         impuestos: ventaImpuestos,
         total: ventaTotal,
-        metodo_pago: metodoPagoMap[method] || 'Efectivo',
+        metodo_pago: method,
         reserva_id: reservaId,
+        habitacion_id: isRoomCharge ? selectedRoom : null,
+        motivo: isRoomCharge ? 'Consumo registrado desde Punto de Venta' : null,
       });
-
-      if (method === 'Cargo a habitación' && selectedRoom && selectedRoom !== 'direct') {
-        for (const item of cart) {
-          const precio = safeNumber(item.producto.precio_venta, 0);
-          const cantidad = safeNumber(item.cantidad, 1);
-          const itemSubtotal = Math.round(precio * cantidad * 100) / 100;
-          try {
-            await api.cargoHabitacion({
-              habitacion_id: selectedRoom,
-              reserva_id: reservaId,
-              producto_id: item.producto.id || null,
-              concepto: item.producto.nombre || 'Producto POS',
-              cantidad,
-              precio_unitario: precio,
-              subtotal: itemSubtotal,
-              impuesto: 0,
-              total: itemSubtotal,
-            });
-          } catch (cargoError: any) {
-            console.error('Error en cargo:', cargoError);
-            toast({
-              title: 'Venta registrada, cargo pendiente',
-              description: cargoError.message || 'No se pudo cargar uno de los productos a la habitación.',
-              variant: 'destructive',
-            });
-          }
-        }
-      }
 
       const habNumero = habitacionSeleccionada?.numero;
       toast({
@@ -212,6 +185,7 @@ export default function POS() {
       });
       setCart([]);
       setSelectedRoom('');
+      await cargarDatos();
     } catch (error: any) {
       console.error('Error general:', error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -241,7 +215,7 @@ export default function POS() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 autoFocus
-                placeholder="Buscar producto por nombre..."
+                placeholder="Buscar por producto, código o categoría..."
                 className="h-10 pl-9 pr-3"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -285,7 +259,8 @@ export default function POS() {
                     type="button"
                     key={producto.id}
                     onClick={() => addToCart(producto)}
-                    className="group relative min-h-[104px] rounded-xl border bg-card p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    disabled={stock <= 0 || inCart >= stock}
+                    className="group relative min-h-[104px] rounded-xl border bg-card p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {inCart > 0 && (
                       <Badge className="absolute right-2 top-2 h-5 min-w-5 justify-center px-1.5 text-[10px]">{inCart}</Badge>
@@ -325,7 +300,7 @@ export default function POS() {
                   <SelectItem value="direct">Venta directa</SelectItem>
                   {habitaciones.map(hab => (
                     <SelectItem key={hab.id} value={hab.id}>
-                      Hab. {hab.numero}{hab.cliente_nombre ? ` · ${hab.cliente_nombre}` : ''}{!hab.reserva_id ? ' · sin reserva' : ''}
+                      Hab. {hab.numero}{hab.cliente_nombre ? ` · ${hab.cliente_nombre}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -352,7 +327,7 @@ export default function POS() {
                           <Minus className="h-3 w-3" />
                         </Button>
                         <span className="w-7 text-center text-sm font-semibold tabular-nums">{item.cantidad}</span>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-l-none" onClick={() => updateQuantity(item.producto.id, 1)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-l-none" disabled={item.cantidad >= safeNumber(item.producto.stock_actual)} onClick={() => updateQuantity(item.producto.id, 1)}>
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
@@ -384,14 +359,11 @@ export default function POS() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <Button className="h-11" disabled={cart.length === 0 || Boolean(processingMethod)} onClick={() => handlePayment('Tarjeta')}>
-                  {processingMethod === 'Tarjeta' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
-                  Tarjeta
-                </Button>
-                <Button variant="outline" className="h-11" disabled={cart.length === 0 || Boolean(processingMethod)} onClick={() => handlePayment('Efectivo')}>
-                  {processingMethod === 'Efectivo' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Banknote className="mr-2 h-4 w-4" />}
-                  Efectivo
+              <div className="mt-4 space-y-2">
+                <MetodoPagoSelect value={paymentMethod} onChange={setPaymentMethod} placeholder="Forma de pago configurada" />
+                <Button className="h-11 w-full" disabled={cart.length === 0 || Boolean(processingMethod) || !paymentMethod} onClick={() => handlePayment(paymentMethod)}>
+                  {processingMethod && processingMethod !== 'Cargo a habitación' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
+                  Cobrar {formatCurrency(total)}
                 </Button>
               </div>
 

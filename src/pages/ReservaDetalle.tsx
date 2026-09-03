@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BedDouble, CalendarDays, Clock, CreditCard, DoorOpen,
-  LogOut, Mail, MapPin, Phone, Receipt, RefreshCw, User,
+  LogOut, Mail, Phone, Receipt, RefreshCw,
   Users, WalletCards,
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StayOperationsPanel } from '@/components/reservas/StayOperationsPanel';
+import { StayDeliverables } from '@/components/reservas/StayDeliverables';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -81,12 +82,16 @@ export default function ReservaDetalle() {
         <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Volver"><ArrowLeft className="h-5 w-5" /></Button>
-            <div className="min-w-0">
+            <div className="min-w-0 py-0.5">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="truncate text-lg font-bold text-[#10233F] sm:text-2xl">{reserva.cliente_nombre || 'Huésped sin nombre'}</h1>
                 <Badge variant="outline" className={cn('border', statusStyles[reserva.estado])}>{reserva.estado}</Badge>
               </div>
               <p className="truncate text-xs text-muted-foreground sm:text-sm">Habitación {reserva.habitacion_numero || 'sin asignar'} · {formatDate(reserva.fecha_checkin)} → {formatDate(reserva.fecha_checkout)}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                {reserva.cliente_telefono || reserva.cliente?.telefono ? <a className="flex items-center gap-1 text-[#10233F] hover:underline" href={`tel:${reserva.cliente_telefono || reserva.cliente?.telefono}`}><Phone className="h-3 w-3" />{reserva.cliente_telefono || reserva.cliente?.telefono}</a> : <span className="text-muted-foreground">Sin teléfono</span>}
+                {reserva.cliente_email || reserva.cliente?.email ? <a className="flex min-w-0 items-center gap-1 text-[#10233F] hover:underline" href={`mailto:${reserva.cliente_email || reserva.cliente?.email}`}><Mail className="h-3 w-3 shrink-0" /><span className="truncate">{reserva.cliente_email || reserva.cliente?.email}</span></a> : <span className="text-muted-foreground">Sin correo</span>}
+              </div>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-4">
@@ -134,11 +139,6 @@ export default function ReservaDetalle() {
 
             {(reserva.solicitudes_especiales || reserva.notas_internas) && <section className="grid gap-4 lg:grid-cols-2">{reserva.solicitudes_especiales && <Note title="Solicitudes especiales" text={reserva.solicitudes_especiales} />}{reserva.notas_internas && <Note title="Notas internas" text={reserva.notas_internas} />}</section>}
 
-            <DetailSection title="Huésped principal" icon={User}>
-              <div className="mb-6 flex items-center gap-4"><div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#10233F] text-lg font-bold text-white">{String(reserva.cliente_nombre || 'H').slice(0,1).toUpperCase()}</div><div><h2 className="text-xl font-semibold text-[#10233F]">{reserva.cliente_nombre || 'Huésped sin nombre'}</h2><div className="mt-1 flex gap-2">{reserva.es_vip && <Badge className="bg-[#F97316]">VIP</Badge>}{number(reserva.total_estancias)>0 && <Badge variant="outline">{reserva.total_estancias} estancias</Badge>}</div></div></div>
-              <div className="grid gap-3 sm:grid-cols-2"><Contact icon={Mail} value={reserva.cliente_email || reserva.cliente?.email || 'Sin correo'} /><Contact icon={Phone} value={reserva.cliente_telefono || reserva.cliente?.telefono || 'Sin teléfono'} /><Contact icon={MapPin} value={reserva.cliente?.direccion || 'Sin dirección registrada'} /><Contact icon={User} value={reserva.cliente?.documento || reserva.cliente?.numero_documento || reserva.cliente?.rfc || 'Sin documento registrado'} /></div>
-            </DetailSection>
-
             <section id="cuenta" className="scroll-mt-24 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-5 flex items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 font-semibold text-[#10233F]"><WalletCards className="h-4 w-4" />Cuenta completa</h2><p className="mt-1 text-sm text-muted-foreground">Cargos y pagos visibles en el mismo expediente.</p></div><Button variant="outline" size="sm" onClick={() => document.getElementById('operaciones')?.scrollIntoView({ behavior: 'smooth' })}>Corregir cuenta</Button></div>
               <div className="grid gap-6 lg:grid-cols-2">
@@ -146,6 +146,8 @@ export default function ReservaDetalle() {
                 <Ledger title="Pagos" icon={CreditCard} empty="Sin pagos registrados" items={reserva.pagos || []} render={(item) => <><div><p className="font-medium">{item.metodo_pago || 'Pago'}</p><p className="text-xs text-muted-foreground">{item.concepto || 'Abono'} · {item.created_at ? formatDateTime(item.created_at) : ''}</p></div><div className="text-right"><p className="font-semibold text-emerald-700">{formatCurrency(item.monto)}</p>{item.estado === 'Cancelado' && <Badge variant="outline">Cancelado</Badge>}</div></>} />
               </div>
             </section>
+
+            <StayDeliverables reservaId={reserva.id} active={activeStay || canCheckin} />
           </div>
 
           <aside className="order-first space-y-4 xl:order-none xl:sticky xl:top-24">
@@ -181,5 +183,4 @@ function DetailSection({ title, icon: Icon, children }: any) { return <section c
 function InfoGrid({ items }: { items: string[][] }) { return <div className="grid grid-cols-2 gap-x-5 gap-y-4">{items.map(([label,value])=><div key={label}><p className="text-xs text-muted-foreground">{label}</p><p className="mt-0.5 text-sm font-medium">{value}</p></div>)}</div>; }
 function Note({ title, text }: { title: string; text: string }) { return <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4"><h3 className="font-medium text-amber-900">{title}</h3><p className="mt-1 whitespace-pre-wrap text-sm text-amber-900/75">{text}</p></section>; }
 function Ledger({ title, icon: Icon, empty, items, render }: any) { return <section><h2 className="mb-3 flex items-center gap-2 font-semibold text-[#10233F]"><Icon className="h-4 w-4" />{title}</h2>{items.length===0?<p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">{empty}</p>:<div className="divide-y rounded-xl border">{items.map((item:any)=><div key={item.id} className={cn('flex items-center justify-between gap-4 p-3 sm:p-4',item.estado==='Cancelado'&&'opacity-50')}>{render(item)}</div>)}</div>}</section>; }
-function Contact({ icon: Icon, value }: any) { return <div className="flex items-center gap-3 rounded-lg border p-3"><Icon className="h-4 w-4 shrink-0 text-[#10233F]" /><span className="min-w-0 break-words text-sm">{value}</span></div>; }
 function AccountLine({ label, value, accent }: { label: string; value: string; accent?: boolean }) { return <div className="flex justify-between gap-3 text-sm"><span className="text-white/70">{label}</span><span className={accent?'text-emerald-300':''}>{value}</span></div>; }

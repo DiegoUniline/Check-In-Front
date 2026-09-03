@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
+import { StayConsumptionPicker, type StayConsumptionItem } from '@/components/reservas/StayConsumptionPicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -68,7 +70,7 @@ const groups: { title: string; operations: Operation[] }[] = [
 ];
 
 const DATE_OPERATIONS = ['extend_stay', 'early_departure', 'modify_dates'];
-const ROOM_OPERATIONS = ['room_change', 'category_change', 'early_checkin', 'room_out_of_service'];
+const ROOM_OPERATIONS = ['room_change', 'category_change', 'early_checkin', 'room_out_of_service', 'reopen_checkout'];
 
 const dateOnly = (value: any) => String(value || '').slice(0, 10);
 const money = (value: any) => Number(value || 0);
@@ -115,6 +117,7 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
     if (id === 'restore_payment') return cancelledPayments.length > 0;
     if (id === 'move_to_account') return accounts.some((account) => account.estado === 'Abierta');
     if (['no_show', 'cancel_reservation'].includes(id)) return ['Pendiente', 'Confirmada'].includes(state);
+    if (['add_charge', 'partial_payment', 'split_account'].includes(id)) return !['Cancelada', 'NoShow', 'CheckOut'].includes(state);
     if (['extend_stay', 'early_departure', 'modify_dates', 'room_change', 'category_change'].includes(id))
       return !['Cancelada', 'NoShow', 'CheckOut'].includes(state);
     return true;
@@ -217,16 +220,17 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
       setRoomAvailabilityError('');
       return;
     }
-    const checkin = isActiveStay ? todayLocal() : dateOnly(reserva.fecha_checkin);
-    const checkout = dateOnly(reserva.fecha_checkout);
+    const reopening = selected.id === 'reopen_checkout';
+    const checkin = reopening || isActiveStay ? todayLocal() : dateOnly(reserva.fecha_checkin);
+    const checkout = reopening ? dateOnly(payload.new_checkout) : dateOnly(reserva.fecha_checkout);
     if (!checkin || !checkout || checkout <= checkin) {
       setCheckingRooms(false);
       setAvailableRooms([]);
       setRoomAvailabilityError('La estancia no tiene un rango de fechas válido para buscar habitaciones.');
       return;
     }
-    const requireReady = selected.id === 'early_checkin' || isActiveStay;
-    const excludeCurrentRoom = selected.id !== 'early_checkin';
+    const requireReady = selected.id === 'early_checkin' || (isActiveStay && !reopening);
+    const excludeCurrentRoom = !['early_checkin', 'reopen_checkout'].includes(selected.id);
     let cancelled = false;
     setCheckingRooms(true);
     setRoomAvailabilityError('');
@@ -254,17 +258,18 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
       })
       .finally(() => { if (!cancelled) setCheckingRooms(false); });
     return () => { cancelled = true; };
-  }, [selected?.id, reserva.id, reserva.habitacion_id, reserva.fecha_checkin, reserva.fecha_checkout, isActiveStay]);
+  }, [selected?.id, payload.new_checkout, reserva.id, reserva.habitacion_id, reserva.fecha_checkin, reserva.fecha_checkout, isActiveStay]);
 
   const openOperation = (op: Operation) => {
     setSelected(op); setReason('');
     setPayload({
       new_checkin: dateOnly(reserva.fecha_checkin), new_checkout: dateOnly(reserva.fecha_checkout),
       new_room_id: '', new_rate: String(money(reserva.tarifa_noche)), charge_amount: '',
-      late_until: `${dateOnly(reserva.fecha_checkout)}T13:00`, payment_method: 'Efectivo',
+      late_until: `${dateOnly(reserva.fecha_checkout)}T13:00`, payment_method: '',
       quantity: '1', amount: '', tax: '0', discount_type: 'Porcentaje', discount_value: '',
       guest_type: 'Adulto', generates_charge: false, charge_per_night: '0',
       priority: 'Alta', blocked_until: '', charge_ids: [], payment_ids: [],
+      items: [],
     });
   };
 
@@ -278,6 +283,10 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
     }
     if (ROOM_OPERATIONS.includes(selected.id) && !payload.new_room_id) {
       toast({ title: 'Selecciona una habitación disponible', description: 'Usa la búsqueda y los filtros para elegir una opción.', variant: 'destructive' });
+      return;
+    }
+    if (selected.id === 'add_charge' && (!Array.isArray(payload.items) || payload.items.length === 0)) {
+      toast({ title: 'Selecciona el consumo', description: 'Agrega por lo menos un producto o servicio del catálogo.', variant: 'destructive' });
       return;
     }
     if (reason.trim().length < 3) {
@@ -311,8 +320,9 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
   };
 
   const roomSelect = (label = 'Habitación destino') => {
-    const checkin = isActiveStay ? todayLocal() : dateOnly(reserva.fecha_checkin);
-    const checkout = dateOnly(reserva.fecha_checkout);
+    const reopening = selected?.id === 'reopen_checkout';
+    const checkin = reopening || isActiveStay ? todayLocal() : dateOnly(reserva.fecha_checkin);
+    const checkout = reopening ? dateOnly(payload.new_checkout) : dateOnly(reserva.fecha_checkout);
     const selectedRoom = availableRooms.find((room) => room.id === payload.new_room_id);
     return <div className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
@@ -368,7 +378,15 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
           return <button
             key={room.id}
             type="button"
-            onClick={() => set('new_room_id', room.id)}
+            onClick={() => {
+              setPayload((current) => {
+                const next = { ...current, new_room_id: room.id };
+                if (selected?.id === 'category_change' && current.change_type !== 'Cortesia') {
+                  next.new_rate = String(money(room.precio_base ?? room.tipos_habitacion?.precio_base));
+                }
+                return next;
+              });
+            }}
             className={`flex min-h-20 w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors ${selectedRoomId ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#10233F]/15 bg-white hover:border-[#10233F]/45 hover:bg-[#10233F]/[0.03]'}`}
           >
             <span className="min-w-0">
@@ -426,6 +444,12 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
     </Select>
   </Field>;
 
+  const accountSelect = () => accounts.length > 0 ? <Field label="Aplicar a la cuenta">
+    <Select value={payload.account_id || 'main'} onValueChange={(value) => set('account_id', value === 'main' ? '' : value)}>
+      <SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="main">Cuenta principal</SelectItem>{accounts.filter((account) => account.estado === 'Abierta').map((account) => <SelectItem key={account.id} value={account.id}>{account.nombre}</SelectItem>)}</SelectContent>
+    </Select>
+  </Field> : null;
+
   const renderFields = () => {
     if (!selected) return null;
     switch (selected.id) {
@@ -436,32 +460,33 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
       case 'modify_dates':
         return <div><div className="grid gap-3 sm:grid-cols-2"><Field label="Nueva entrada"><Input type="date" max={shiftDate(payload.new_checkout, -1)} value={payload.new_checkin || ''} onChange={(e) => set('new_checkin', e.target.value)} /></Field><Field label="Nueva salida"><Input type="date" min={shiftDate(payload.new_checkin, 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field></div>{availabilityNotice()}</div>;
       case 'room_change': return roomSelect();
-      case 'category_change': return <div className="space-y-3">{roomSelect('Nueva habitación / categoría')}<Field label="Tipo de cambio"><Select value={payload.change_type || 'Upgrade'} onValueChange={(v) => { set('change_type', v); if (v === 'Cortesia') set('new_rate', '0'); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Upgrade">Upgrade</SelectItem><SelectItem value="Downgrade">Downgrade</SelectItem><SelectItem value="Cortesia">Cortesía</SelectItem><SelectItem value="CambioConCosto">Cambio con costo</SelectItem></SelectContent></Select></Field><Field label="Nueva tarifa por noche (opcional)"><Input type="number" min="0" value={payload.new_rate || ''} onChange={(e) => set('new_rate', e.target.value)} /></Field></div>;
+      case 'category_change': return <div className="space-y-3">{roomSelect('Nueva habitación / categoría')}<Field label="Tipo de cambio"><Select value={payload.change_type || 'Upgrade'} onValueChange={(v) => { setPayload((current) => { const room = availableRooms.find((item) => item.id === current.new_room_id); return { ...current, change_type: v, new_rate: v === 'Cortesia' ? '0' : String(money(room?.precio_base ?? room?.tipos_habitacion?.precio_base ?? reserva.tarifa_noche)) }; }); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Upgrade">Upgrade</SelectItem><SelectItem value="Downgrade">Downgrade</SelectItem><SelectItem value="Cortesia">Cortesía</SelectItem><SelectItem value="CambioConCosto">Cambio con costo</SelectItem></SelectContent></Select></Field><Field label="Tarifa resultante por noche"><Input type="number" min="0" value={payload.new_rate || ''} onChange={(e) => set('new_rate', e.target.value)} /><p className="mt-1 text-xs text-muted-foreground">Se propone automáticamente la tarifa base de la categoría. Sólo gerencia puede modificarla.</p></Field></div>;
       case 'late_checkout': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Salida autorizada"><Input type="datetime-local" value={payload.late_until || ''} onChange={(e) => set('late_until', e.target.value)} /></Field><Field label="Cargo adicional"><Input type="number" min="0" value={payload.charge_amount || ''} onChange={(e) => set('charge_amount', e.target.value)} /></Field></div>;
       case 'early_checkin': return <div className="space-y-3">{roomSelect('Habitación limpia y lista')}<Field label="Cargo adicional"><Input type="number" min="0" value={payload.charge_amount || ''} onChange={(e) => set('charge_amount', e.target.value)} /></Field></div>;
       case 'add_guest': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Nombre"><Input value={payload.name || ''} onChange={(e) => set('name', e.target.value)} /></Field><Field label="Apellido"><Input value={payload.last_name || ''} onChange={(e) => set('last_name', e.target.value)} /></Field><Field label="Tipo"><Select value={payload.guest_type} onValueChange={(v) => set('guest_type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Adulto">Adulto</SelectItem><SelectItem value="Menor">Menor</SelectItem></SelectContent></Select></Field><Field label="Documento"><Input value={payload.document || ''} onChange={(e) => set('document', e.target.value)} /></Field><label className="flex items-center gap-2 text-sm"><Checkbox checked={payload.generates_charge} onCheckedChange={(v) => set('generates_charge', v === true)} />Genera cargo por noche</label>{payload.generates_charge && <Field label="Cargo por noche"><Input type="number" min="0" value={payload.charge_per_night || ''} onChange={(e) => set('charge_per_night', e.target.value)} /></Field>}</div>;
       case 'room_out_of_service': return <div className="space-y-3">{['Pendiente','Confirmada','CheckIn','Hospedado'].includes(reserva.estado) && roomSelect('Reasignar reservación a')}<Field label="Bloqueada hasta (opcional)"><Input type="datetime-local" value={payload.blocked_until || ''} onChange={(e) => set('blocked_until', e.target.value)} /></Field></div>;
       case 'rate_change': return <Field label="Nueva tarifa por noche"><Input type="number" min="0" value={payload.new_rate || ''} onChange={(e) => set('new_rate', e.target.value)} /></Field>;
       case 'discount_change': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Tipo"><Select value={payload.discount_type} onValueChange={(v) => set('discount_type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Porcentaje">Porcentaje</SelectItem><SelectItem value="Monto">Monto fijo</SelectItem><SelectItem value="Cortesia">Cortesía 100%</SelectItem><SelectItem value="none">Retirar descuento</SelectItem></SelectContent></Select></Field>{!['Cortesia','none'].includes(payload.discount_type) && <Field label="Valor"><Input type="number" min="0" value={payload.discount_value || ''} onChange={(e) => set('discount_value', e.target.value)} /></Field>}</div>;
-      case 'add_charge': return <ChargeFields payload={payload} set={set} />;
+      case 'add_charge': return <div className="space-y-3"><StayConsumptionPicker value={(payload.items || []) as StayConsumptionItem[]} onChange={(items) => set('items', items)} />{accountSelect()}<Field label="Notas del consumo (opcional)"><Input value={payload.notes || ''} onChange={(e) => set('notes', e.target.value)} placeholder="Ej. Entregar en la habitación" /></Field></div>;
       case 'update_charge': return <div className="space-y-3">{chargeSelect()}<ChargeFields payload={payload} set={set} /></div>;
       case 'cancel_charge': return chargeSelect();
       case 'restore_charge': return chargeSelect(cancelledCharges);
       case 'transfer_charge': return <div className="space-y-3">{chargeSelect()}{reservationSelect('target_reservation_id','Folio destino')}</div>;
-      case 'partial_payment': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Importe"><Input type="number" min="0.01" value={payload.amount || ''} onChange={(e) => set('amount', e.target.value)} /></Field><PaymentMethod payload={payload} set={set} /><Field label="Referencia"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field></div>;
+      case 'partial_payment': return <div className="grid gap-3 sm:grid-cols-2"><Field label="Importe"><Input type="number" min="0.01" value={payload.amount || ''} onChange={(e) => set('amount', e.target.value)} /></Field><PaymentMethod payload={payload} set={set} /><Field label="Referencia"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field>{accountSelect()}</div>;
       case 'payment_method_change': return <div className="space-y-3">{paymentSelect()}<PaymentMethod payload={payload} set={set} /><Field label="Nueva referencia (opcional)"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field></div>;
       case 'cancel_payment': return paymentSelect();
       case 'restore_payment': return paymentSelect(cancelledPayments);
       case 'split_account': return <div className="space-y-3"><Field label="Nombre de subcuenta"><Input placeholder="Empresa, acompañante…" value={payload.name || ''} onChange={(e) => set('name', e.target.value)} /></Field><Field label="Responsable"><Input value={payload.responsible || ''} onChange={(e) => set('responsible', e.target.value)} /></Field><MovementChecks title="Cargos a separar" items={activeCharges} selected={payload.charge_ids || []} onChange={(ids) => set('charge_ids', ids)} label={(item) => `${item.concepto} · ${formatCurrency(item.total ?? item.subtotal)}`} /><MovementChecks title="Pagos a separar" items={activePayments} selected={payload.payment_ids || []} onChange={(ids) => set('payment_ids', ids)} label={(item) => `${item.metodo_pago} · ${formatCurrency(item.monto)}`} /></div>;
       case 'move_to_account': return <div className="space-y-3"><Field label="Subcuenta destino"><Select value={payload.account_id || 'main'} onValueChange={(v) => set('account_id', v === 'main' ? '' : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="main">Cuenta principal</SelectItem>{accounts.filter((account) => account.estado === 'Abierta').map((account) => <SelectItem key={account.id} value={account.id}>{account.nombre}</SelectItem>)}</SelectContent></Select></Field><MovementChecks title="Cargos a mover" items={activeCharges} selected={payload.charge_ids || []} onChange={(ids) => set('charge_ids', ids)} label={(item) => `${item.concepto} · ${formatCurrency(item.total ?? item.subtotal)}`} /><MovementChecks title="Pagos a mover" items={activePayments} selected={payload.payment_ids || []} onChange={(ids) => set('payment_ids', ids)} label={(item) => `${item.metodo_pago} · ${formatCurrency(item.monto)}`} /></div>;
       case 'consecutive_reservation': return reservationSelect('next_reservation_id','Siguiente reservación',true);
-      case 'reopen_checkout': return <Field label="Nueva fecha de salida"><Input type="date" value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>;
+      case 'reopen_checkout': return <div className="space-y-3"><Field label="Nueva fecha de salida"><Input type="date" min={shiftDate(todayLocal(), 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{roomSelect('Habitación para reabrir la estancia')}</div>;
       default: return <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">Esta acción conservará todos los datos históricos y actualizará las vistas relacionadas.</p>;
     }
   };
 
   const dateOperationBlocked = Boolean(selected && DATE_OPERATIONS.includes(selected.id) && ['checking', 'unavailable', 'invalid'].includes(dateAvailability.status));
   const roomOperationBlocked = Boolean(selected && ROOM_OPERATIONS.includes(selected.id) && (checkingRooms || !payload.new_room_id));
+  const consumptionBlocked = Boolean(selected?.id === 'add_charge' && (!Array.isArray(payload.items) || payload.items.length === 0));
   const validatingAvailability = Boolean(selected && (
     (DATE_OPERATIONS.includes(selected.id) && dateAvailability.status === 'checking') ||
     (ROOM_OPERATIONS.includes(selected.id) && checkingRooms)
@@ -527,13 +552,13 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
 
     {guests.length > 0 && <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Huéspedes adicionales</h4>{guests.map((guest) => <Card key={guest.id} className={guest.activo ? '' : 'opacity-60'}><CardContent className="flex items-center justify-between p-3"><div><p className="text-sm font-medium">{guest.nombre} {guest.apellido_paterno}</p><p className="text-xs text-muted-foreground">{guest.tipo}{guest.genera_cargo ? ` · ${formatCurrency(guest.cargo_por_noche)} por noche` : ''}</p></div>{guest.activo && <Button size="sm" variant="outline" disabled={!operationApplies('remove_guest') || !canAccess('reservas.operacion.remove_guest', user?.rol)} onClick={() => { const op = { id:'remove_guest',label:'Retirar huésped',detail:'',icon:UserMinus,sensitive:true }; openOperation(op); setPayload({ guest_id: guest.id }); }}><UserMinus className="mr-1 h-4 w-4" />Retirar</Button>}</CardContent></Card>)}</section>}
 
-    {accounts.length > 0 && <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Subcuentas</h4><div className="flex flex-wrap gap-2">{accounts.map((account) => <Badge key={account.id} variant="outline">{account.nombre}{account.responsable ? ` · ${account.responsable}` : ''}</Badge>)}</div></section>}
+    {accounts.length > 0 && <AccountBreakdown accounts={accounts} charges={reserva.cargos || []} payments={reserva.pagos || []} />}
 
     <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Historial de operaciones</h4><Button variant="ghost" size="sm" onClick={load}><RefreshCcw className="h-3.5 w-3.5" /></Button></div>
       {movements.length === 0 ? <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay movimientos operativos.</p> : movements.map((move, index) => <div key={move.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-medium capitalize">{String(move.operacion).replaceAll('_',' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p><p className="mt-1 text-xs">{move.motivo}</p></div>{move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => setReverseMovement(move)}>Revertir</Button> : null}</div></div>)}
     </section>
 
-    <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-xl"><DialogHeader><DialogTitle>{selected?.label}</DialogTitle><DialogDescription>{selected?.detail} La disponibilidad, cargos y saldos se validarán antes de guardar.</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}<Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button><Button onClick={submit} disabled={processing || reason.trim().length < 3 || dateOperationBlocked || roomOperationBlocked} className="bg-[#10233F] hover:bg-[#10233F]/90">{processing ? 'Procesando…' : validatingAvailability ? 'Validando disponibilidad…' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-xl"><DialogHeader><DialogTitle>{selected?.label}</DialogTitle><DialogDescription>{selected?.detail} La disponibilidad, cargos y saldos se validarán antes de guardar.</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}<Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button><Button onClick={submit} disabled={processing || reason.trim().length < 3 || dateOperationBlocked || roomOperationBlocked || consumptionBlocked} className="bg-[#10233F] hover:bg-[#10233F]/90">{processing ? 'Procesando…' : validatingAvailability ? 'Validando disponibilidad…' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
 
     <Dialog open={Boolean(reverseMovement)} onOpenChange={(open) => !open && setReverseMovement(null)}><DialogContent><DialogHeader><DialogTitle>Revertir operación</DialogTitle><DialogDescription>Se validará nuevamente la disponibilidad y se restaurarán los valores anteriores.</DialogDescription></DialogHeader><Field label="Motivo de reversión"><Textarea value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => setReverseMovement(null)}>Cancelar</Button><Button variant="destructive" onClick={reverse} disabled={processing || reverseReason.trim().length < 3}>Revertir con control</Button></DialogFooter></DialogContent></Dialog>
   </div>;
@@ -541,5 +566,22 @@ export function StayOperationsPanel({ reserva, onUpdate, children }: Props) {
 
 function Field({ label, children }: { label: string; children: ReactNode }) { return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>; }
 function ChargeFields({ payload, set }: { payload: any; set: (key: string, value: any) => void }) { return <div className="grid gap-3 sm:grid-cols-2"><Field label="Concepto"><Input value={payload.concept || ''} onChange={(e) => set('concept', e.target.value)} /></Field><Field label="Cantidad"><Input type="number" min="0.01" value={payload.quantity || ''} onChange={(e) => set('quantity', e.target.value)} /></Field><Field label="Precio unitario"><Input type="number" min="0" value={payload.amount || ''} onChange={(e) => set('amount', e.target.value)} /></Field><Field label="Impuesto"><Input type="number" min="0" value={payload.tax || ''} onChange={(e) => set('tax', e.target.value)} /></Field><div className="sm:col-span-2"><Field label="Notas"><Input value={payload.notes || ''} onChange={(e) => set('notes', e.target.value)} /></Field></div></div>; }
-function PaymentMethod({ payload, set }: { payload: any; set: (key: string, value: any) => void }) { return <Field label="Forma de pago"><Select value={payload.payment_method || 'Efectivo'} onValueChange={(v) => set('payment_method', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['Efectivo','Tarjeta','Transferencia','Depósito','Otro'].map((method) => <SelectItem key={method} value={method}>{method}</SelectItem>)}</SelectContent></Select></Field>; }
+function PaymentMethod({ payload, set }: { payload: any; set: (key: string, value: any) => void }) { return <Field label="Forma de pago"><MetodoPagoSelect value={payload.payment_method || ''} onChange={(value) => set('payment_method', value)} /></Field>; }
 function MovementChecks({ title, items, selected, onChange, label }: { title: string; items: any[]; selected: string[]; onChange: (ids: string[]) => void; label: (item: any) => string }) { return <div className="space-y-2"><Label>{title}</Label><div className="max-h-32 space-y-2 overflow-y-auto rounded-lg border p-2">{items.length === 0 ? <p className="text-xs text-muted-foreground">Sin movimientos disponibles</p> : items.map((item) => <label key={item.id} className="flex items-center gap-2 text-sm"><Checkbox checked={selected.includes(item.id)} onCheckedChange={(checked) => onChange(checked ? [...selected,item.id] : selected.filter((id) => id !== item.id))}/><span>{label(item)}</span></label>)}</div></div>; }
+
+function AccountBreakdown({ accounts, charges, payments }: { accounts: any[]; charges: any[]; payments: any[] }) {
+  const rows = [{ id: '', nombre: 'Cuenta principal', responsable: '' }, ...accounts];
+  return <section className="space-y-3 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5">
+    <div><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">División de cuenta</h4><p className="mt-1 text-sm text-muted-foreground">Totales, pagos y saldo de cada responsable.</p></div>
+    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{rows.map((account) => {
+      const accountCharges = charges.filter((item) => item.estado !== 'Cancelado' && (item.cuenta_estancia_id || '') === account.id);
+      const accountPayments = payments.filter((item) => item.estado !== 'Cancelado' && (item.cuenta_estancia_id || '') === account.id);
+      const charged = accountCharges.reduce((sum, item) => sum + money(item.total ?? item.subtotal), 0);
+      const paid = accountPayments.reduce((sum, item) => sum + money(item.monto), 0);
+      return <div key={account.id || 'main'} className="rounded-xl border border-[#10233F]/10 p-3">
+        <div className="flex items-start justify-between gap-2"><div><p className="font-semibold text-[#10233F]">{account.nombre}</p><p className="text-xs text-muted-foreground">{account.responsable || (account.id ? 'Sin responsable' : 'Titular de la reserva')}</p></div>{account.estado && <Badge variant="outline">{account.estado}</Badge>}</div>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-xs"><div><p className="text-muted-foreground">Cargos</p><p className="font-semibold">{formatCurrency(charged)}</p></div><div><p className="text-muted-foreground">Pagado</p><p className="font-semibold text-emerald-700">{formatCurrency(paid)}</p></div><div><p className="text-muted-foreground">Saldo</p><p className="font-semibold">{formatCurrency(charged - paid)}</p></div></div>
+      </div>;
+    })}</div>
+  </section>;
+}

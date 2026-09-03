@@ -1066,6 +1066,45 @@ class ApiClient {
     if (error) throw error; return r;
   };
   applyStayOperation = async (id: string, operation: string, payload: Record<string, any> = {}, reason = ''): Promise<any> => {
+    if (operation === 'add_charge' && Array.isArray(payload.items)) {
+      const { data, error } = await operationalDb.rpc('vulo_register_sale', {
+        p_items: payload.items.map((item: any) => ({
+          product_id: item.product_id || null,
+          concept_id: item.concept_id || null,
+          quantity: Number(item.quantity || 0),
+        })),
+        p_metodo_pago: 'Cargo a habitación',
+        p_reserva_id: id,
+        p_habitacion_id: null,
+        p_notas: payload.notes || null,
+        p_motivo: reason,
+        p_cuenta_estancia_id: payload.account_id || null,
+      });
+      if (error) throw error;
+      return data;
+    }
+    if (['update_charge', 'cancel_charge', 'restore_charge'].includes(operation)) {
+      const action = operation.replace('_charge', '');
+      const { data, error } = await operationalDb.rpc('vulo_adjust_stay_charge', {
+        p_reserva_id: id,
+        p_charge_id: payload.charge_id,
+        p_action: action,
+        p_payload: payload,
+        p_motivo: reason,
+      });
+      if (error) throw error;
+      return data;
+    }
+    if (operation === 'reopen_checkout') {
+      const { data, error } = await operationalDb.rpc('vulo_reopen_checkout', {
+        p_reserva_id: id,
+        p_new_checkout: payload.new_checkout,
+        p_new_room_id: payload.new_room_id,
+        p_motivo: reason,
+      });
+      if (error) throw error;
+      return data;
+    }
     const { data, error } = await operationalDb.rpc('vulo_apply_stay_operation', {
       p_reserva_id: id,
       p_operacion: operation,
@@ -1265,9 +1304,24 @@ class ApiClient {
   createEntregable = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('entregables').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
   updateEntregable = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('entregables').update(data).eq('id', id).select().single(); if (error) throw error; return r; };
   deleteEntregable = async (id: string): Promise<any> => { const { error } = await supabase.from('entregables').delete().eq('id', id); if (error) throw error; return { ok: true }; };
-  getEntregablesReserva = async (reservaId: string): Promise<any> => { const { data } = await supabase.from('entregables_reserva').select('*, entregables(*)').eq('reserva_id', reservaId); return (data || []).map((e: any) => ({ ...e, nombre: e.entregables?.nombre, costo_reposicion: e.entregables?.costo_reposicion })); };
-  asignarEntregable = async (reservaId: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('entregables_reserva').insert({ ...data, reserva_id: reservaId }).select().single(); if (error) throw error; return r; };
-  devolverEntregable = async (id: string, data?: any): Promise<any> => { const { data: r, error } = await supabase.from('entregables_reserva').update({ devuelto: true, fecha_devolucion: new Date().toISOString(), ...(data || {}) }).eq('id', id).select().single(); if (error) throw error; return r; };
+  getEntregablesReserva = async (reservaId: string): Promise<any> => { const { data } = await supabase.from('entregables_reserva').select('*, entregables(*)').eq('reserva_id', reservaId); return (data || []).map((e: any) => ({ ...e, nombre: e.entregables?.nombre, costo_reposicion: e.entregables?.costo_reposicion, requiere_devolucion: Boolean(e.entregables?.requiere_devolucion) })); };
+  asignarEntregable = async (reservaId: string, data: any): Promise<any> => {
+    const { data: r, error } = await operationalDb.rpc('vulo_assign_deliverable', {
+      p_reserva_id: reservaId,
+      p_entregable_id: data.entregable_id,
+      p_cantidad: Number(data.cantidad || 1),
+    });
+    if (error) throw error;
+    return r;
+  };
+  devolverEntregable = async (id: string, data?: any): Promise<any> => {
+    const { data: r, error } = await operationalDb.rpc('vulo_return_deliverable', {
+      p_assignment_id: id,
+      p_cantidad_devuelta: Number(data?.cantidad_devuelta ?? 0),
+    });
+    if (error) throw error;
+    return r;
+  };
 
   // ------- Limpieza -------
   getTareasLimpieza = async (params?: Record<string, string>): Promise<any> => {
@@ -1646,13 +1700,23 @@ class ApiClient {
   getVentas = async (_params?: any): Promise<any> => { const { data } = await supabase.from('ventas').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false }); return data || []; };
   getVenta = async (id: string): Promise<any> => { const { data } = await supabase.from('ventas').select('*, ventas_detalle(*)').eq('id', id).maybeSingle(); return data; };
   createVenta = async (data: any): Promise<any> => {
-    const { detalles, ...header } = data;
-    const { data: r, error } = await supabase.from('ventas').insert({ ...header, hotel_id: this.hid() }).select().single();
+    const { detalles, detalle, ...header } = data || {};
+    const items = detalles ?? detalle ?? [];
+    const { data: result, error } = await operationalDb.rpc('vulo_register_sale', {
+      p_items: (items as any[]).map((item) => ({
+        product_id: item.product_id || null,
+        concept_id: item.concept_id || null,
+        quantity: Number(item.cantidad ?? item.quantity ?? 0),
+      })),
+      p_metodo_pago: header.metodo_pago || 'Efectivo',
+      p_reserva_id: header.reserva_id || null,
+      p_habitacion_id: header.habitacion_id || null,
+      p_notas: header.notas || null,
+      p_motivo: header.motivo || null,
+      p_cuenta_estancia_id: header.cuenta_estancia_id || null,
+    });
     if (error) throw error;
-    if (Array.isArray(detalles) && detalles.length) {
-      await supabase.from('ventas_detalle').insert(detalles.map((d: any) => ({ ...d, venta_id: r.id })));
-    }
-    return r;
+    return result?.sale || result;
   };
 
   // ------- Transacciones -------
