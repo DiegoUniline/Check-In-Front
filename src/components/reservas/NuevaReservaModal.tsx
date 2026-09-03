@@ -610,7 +610,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </h2>
               <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
                 {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona el rango de fechas'}
+                {selectedHabitacion ? ` · Hab. #${selectedHabitacion.numero}` : ''}
+                {total > 0 ? ` · ${fmt(total)}` : ''}
               </p>
+
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-1">
@@ -633,15 +636,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
       </header>
 
-      {/* RESUMEN RÁPIDO */}
-      <section className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <MiniSummary icon={CalendarDays} label="Estancia" value={`${noches || 0} noche${noches === 1 ? '' : 's'}`} detail={`${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}`} />
-        <MiniSummary icon={BedDouble} label="Habitación" value={selectedHabitacion ? `#${selectedHabitacion.numero}` : 'Por elegir'} detail={selectedTipo?.nombre || 'Sin categoría'} />
-        <MiniSummary icon={UserPlus} label="Huésped" value={nombreHuesped || 'Por elegir'} detail={formData.clienteData?.telefono || formData.nuevoCliente.telefono || 'Sin teléfono'} />
-        <MiniSummary icon={CreditCard} label="Total" value={fmt(total)} detail={`${fmt(totalPagado)} pagado · ${fmt(saldoPendiente)} pendiente`} danger={saldoPendiente > 0.01} />
-      </section>
-
       <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+
         <div className="min-w-0 space-y-3">
           {/* 1. ESTANCIA + HABITACIÓN */}
           <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo se listan habitaciones libres en todo el rango.">
@@ -1065,21 +1061,35 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   );
 }
 
-function FormSection({ icon: Icon, title, hint, children }: { icon: typeof CalendarDays; title: string; hint?: string; children: ReactNode }) {
-  return <section className="space-y-3 rounded-[14px] border border-[#10233F]/10 bg-white p-4 shadow-sm">
-    <div className="flex items-start gap-2.5">
-      <span className="rounded-[10px] bg-[#10233F]/[0.07] p-2 text-[#10233F]"><Icon className="h-4 w-4" /></span>
+function FormSection({ icon: Icon, title, hint, collapsible, children }: { icon: typeof CalendarDays; title: string; hint?: string; collapsible?: boolean; children: ReactNode }) {
+  const head = (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="rounded-[10px] bg-[#10233F]/[0.07] p-1.5 text-[#10233F]"><Icon className="h-4 w-4" /></span>
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-[#10233F]">{title}</h3>
-        {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+        <h3 className="truncate text-sm font-semibold text-[#10233F]">{title}</h3>
+        {hint && <p className="truncate text-[11px] text-muted-foreground">{hint}</p>}
       </div>
     </div>
+  );
+
+  if (collapsible) {
+    return <details className="group rounded-[14px] border border-[#10233F]/10 bg-white px-3 py-2.5 shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+        {head}
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="mt-3 space-y-2.5">{children}</div>
+    </details>;
+  }
+
+  return <section className="space-y-2.5 rounded-[14px] border border-[#10233F]/10 bg-white px-3 py-3 shadow-sm">
+    {head}
     {children}
   </section>;
 }
 
 function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: ReactNode }) {
-  return <div className="min-w-0 space-y-1.5">
+  return <div className="min-w-0 space-y-1">
     <Label className="text-xs font-medium text-[#475569]">{label}{required && <span className="ml-0.5 text-[#F97316]">*</span>}</Label>
     {children}
     {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
@@ -1093,24 +1103,3 @@ function Line({ label, value, accent, small }: { label: string; value: string; a
   </div>;
 }
 
-
-function MiniSummary({
-  icon: Icon,
-  label,
-  value,
-  detail,
-  danger = false,
-}: {
-  icon: typeof CalendarDays;
-  label: string;
-  value: string;
-  detail: string;
-  danger?: boolean;
-}) {
-  return <Card className="border-[#10233F]/10 shadow-none">
-    <CardContent className="flex min-h-[76px] items-start gap-2.5 p-3">
-      <span className={cn('rounded-lg p-1.5', danger ? 'bg-orange-50 text-orange-600' : 'bg-[#10233F]/[0.07] text-[#10233F]')}><Icon className="h-4 w-4" /></span>
-      <div className="min-w-0"><p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p><p className="truncate text-base font-bold text-[#10233F]">{value}</p><p className="mt-0.5 truncate text-[10px] text-muted-foreground">{detail}</p></div>
-    </CardContent>
-  </Card>;
-}
