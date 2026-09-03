@@ -1,12 +1,15 @@
 import { Helmet } from "react-helmet-async";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { LEGAL } from "@/marketing/lib/legal";
 
 const NAV = [
   { to: "/legal/privacidad", label: "Aviso de Privacidad" },
   { to: "/legal/terminos", label: "Términos y Condiciones" },
   { to: "/legal/seguridad", label: "Seguridad" },
+  { to: "/ayuda", label: "Soporte y ayuda" },
 ];
+
 
 export default function LegalLayout({
   title,
