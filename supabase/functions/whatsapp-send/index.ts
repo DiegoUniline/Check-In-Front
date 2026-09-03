@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       reserva_id: reserva_id ?? null,
       template_key: template_key ?? 'manual',
       phone: number,
-      mensaje: message,
+      mensaje: texto,
       status: ok ? 'sent' : 'error',
       error: ok ? null : respText.slice(0, 500),
     });
