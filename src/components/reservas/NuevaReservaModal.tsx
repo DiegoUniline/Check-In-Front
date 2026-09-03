@@ -217,6 +217,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const [pagoMonto, setPagoMonto] = useState('');
   const [pagoMetodo, setPagoMetodo] = useState('Efectivo');
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const availabilityRequestRef = useRef(0);
 
   useEffect(() => {
     if (open) {
@@ -233,16 +234,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   useEffect(() => {
     if (!pageMode || !open) return;
     const timer = window.setTimeout(() => {
-      const selectors: Record<Step, string> = {
-        1: '[data-step-focus="dates"]',
-        2: '[data-room-option]',
-        3: '[data-client-search], [data-new-client-name]',
-        4: '[data-confirm-reservation]',
-      };
-      surfaceRef.current?.querySelector<HTMLElement>(selectors[step])?.focus();
+      surfaceRef.current?.querySelector<HTMLElement>('[data-step-focus="dates"]')?.focus();
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [crearNuevoCliente, open, pageMode, step]);
+  }, [open, pageMode]);
 
   useEffect(() => {
     // Relacionado con `check-in-back/src/routes/tiposHabitacion.js` (GET `/tipos-habitacion`):
@@ -281,7 +276,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         tasa: Number(d.tasa) || 0,
       })),
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, formData.tipoHabitacion, formData.habitacionId]);
 
   const cargarDatos = async () => {
@@ -304,15 +298,26 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   };
 
   const buscarHabitaciones = async () => {
+    const requestId = ++availabilityRequestRef.current;
+    const applyAvailability = (rooms: any[]) => {
+      if (requestId !== availabilityRequestRef.current) return;
+      const availableRooms = Array.isArray(rooms) ? rooms : [];
+      setHabitacionesDisponibles(availableRooms);
+      setFormData((prev) => (
+        prev.habitacionId && !availableRooms.some((room) => room.id === prev.habitacionId)
+          ? { ...prev, habitacionId: '' }
+          : prev
+      ));
+    };
     try {
       const checkin = format(formData.fechaCheckin, 'yyyy-MM-dd');
       const checkout = format(formData.fechaCheckout, 'yyyy-MM-dd');
       const data = await api.getHabitacionesDisponibles(checkin, checkout, formData.tipoHabitacion || undefined);
-      setHabitacionesDisponibles(data);
+      applyAvailability(data);
     } catch (error) {
       try {
         const data = await api.getHabitaciones({ estado_habitacion: 'Disponible' });
-        setHabitacionesDisponibles(data.filter((h: any) => 
+        applyAvailability(data.filter((h: any) =>
           !formData.tipoHabitacion || (h.tipo_habitacion_id || h.tipo_id) === formData.tipoHabitacion
         ));
       } catch (e) {
@@ -321,11 +326,21 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     }
   };
 
+  useEffect(() => {
+    if (!open || !pageMode || differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin) < 1) return;
+    const timer = window.setTimeout(() => {
+      void buscarHabitaciones();
+    }, 180);
+    return () => window.clearTimeout(timer);
+    // En la captura completa la disponibilidad se actualiza al cambiar rango o categoría.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pageMode, formData.fechaCheckin, formData.fechaCheckout, formData.tipoHabitacion]);
+
   // Filtrado local de clientes: trabaja sobre la lista completa cargada en `cargarDatos`.
-  // Si no hay búsqueda, mostramos los primeros 8 para no saturar la UI.
+  // Si no hay búsqueda, mostramos sólo algunos clientes recientes para no saturar la UI.
   const clientesFiltrados = (() => {
     const q = searchCliente.trim().toLowerCase();
-    if (!q) return clientes.slice(0, 8);
+    if (!q) return clientes.slice(0, pageMode ? 4 : 8);
     return clientes
       .filter((c: any) => {
         const nombre = `${c.nombre || ''} ${c.apellido_paterno || ''} ${c.apellido_materno || ''}`.toLowerCase();
@@ -342,7 +357,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const handleSelectCliente = (cliente: any) => {
     setFormData({ ...formData, clienteId: cliente.id, clienteData: cliente });
     setSearchCliente('');
-    if (pageMode) window.setTimeout(() => setStep(4), 60);
   };
 
   const handleSelectRoom = (habitacion: any) => {
@@ -351,7 +365,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       habitacionId: habitacion.id,
       tipoHabitacion: habitacion.tipo_habitacion_id || habitacion.tipo_id || formData.tipoHabitacion,
     });
-    if (pageMode) window.setTimeout(() => setStep(3), 60);
   };
 
   const handleClearCliente = () => {
@@ -499,6 +512,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const handleConfirm = async () => {
     setLoading(true);
     try {
+      if (!formData.habitacionId) {
+        toast({ title: 'Falta la habitación', description: 'Selecciona una habitación disponible para continuar.', variant: 'destructive' });
+        return;
+      }
       if (!formData.clienteId && !nuevoClienteValido) {
         toast({
           title: 'Datos incompletos',
@@ -615,15 +632,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const progressValue = (currentStepLabel / totalSteps) * 100;
   const handleSurfaceKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!pageMode || event.defaultPrevented || event.nativeEvent.isComposing) return;
-    const target = event.target as HTMLElement;
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && step === 4) {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      if (!loading && noches > 0 && (formData.clienteId || nuevoClienteValido)) void handleConfirm();
-      return;
-    }
-    if (event.key === 'Enter' && target.dataset.enterNext === 'true') {
-      event.preventDefault();
-      void handleNext();
+      if (!loading && noches > 0 && formData.habitacionId && (formData.clienteId || nuevoClienteValido)) void handleConfirm();
     }
   };
 
@@ -636,7 +647,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 <Button type="button" variant="ghost" size="icon" onClick={() => onOpenChange(false)} aria-label="Volver a reservaciones"><ArrowLeft className="h-5 w-5" /></Button>
                 <div className="min-w-0"><h1 className="truncate text-xl font-bold text-[#10233F] sm:text-2xl">{origen === 'Recepcion' ? 'Nueva entrada' : 'Nueva reserva'}</h1><p className="text-xs text-muted-foreground sm:text-sm">Captura rápida · usa Tab para avanzar y Enter para seleccionar</p></div>
               </div>
-              <Badge variant="outline" className="shrink-0 border-[#10233F]/15 text-[#10233F]">Paso {currentStepLabel} de {totalSteps}</Badge>
+              <Badge variant="outline" className="shrink-0 border-[#10233F]/15 text-[#10233F]">Todo en una sola vista</Badge>
             </div>
           </header>
         ) : (
@@ -650,7 +661,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </DialogHeader>
         )}
 
-        <div className={cn('space-y-3', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-3 shadow-sm sm:p-4')}>
+        {!pageMode && <div className="space-y-3">
           <div className="flex items-center gap-2 overflow-x-auto">
             {([
               [1, 'Fechas'],
@@ -665,7 +676,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             })}
           </div>
           <Progress value={progressValue} className="h-1.5" />
-        </div>
+        </div>}
 
         {pageMode && (
           <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -676,9 +687,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </section>
         )}
 
+        <div className={cn(pageMode && 'grid items-start gap-4 xl:grid-cols-3')}>
         {/* STEP 1 - FECHAS */}
-        {step === 1 && (
-          <div className={cn('space-y-5', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-6')}>
+        {(pageMode || step === 1) && (
+          <div className={cn('space-y-5', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm xl:col-span-2')}>
+            {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">1. Estancia</h2><p className="text-xs text-muted-foreground">Fechas, ocupación y tipo de operación.</p></div>}
             <div className="flex gap-2 p-1 bg-muted rounded-lg">
               <Button data-step-focus="dates" type="button" variant={origen === 'Reserva' ? 'default' : 'ghost'} className="flex-1" onClick={() => handleOrigenChange('Reserva')}>
                 <CalendarPlus className="h-4 w-4 mr-2" /> Reserva
@@ -793,10 +806,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         )}
 
         {/* STEP 2 - HABITACIÓN */}
-        {step === 2 && (
-          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-6')}>
+        {(pageMode || step === 2) && (
+          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm')}>
+            {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">2. Habitación</h2><p className="text-xs text-muted-foreground">Sólo aparecen opciones libres para toda la estancia.</p></div>}
             <p className="text-sm text-muted-foreground">{habitacionesDisponibles.length} disponibles para {formatDate(formData.fechaCheckin)} - {formatDate(formData.fechaCheckout)}</p>
-            <div className={cn('grid gap-3 overflow-y-auto', pageMode ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'max-h-[400px]')}>
+            <div className={cn('grid gap-3 overflow-y-auto', pageMode ? 'max-h-[390px] grid-cols-1 pr-1' : 'max-h-[400px]')}>
               {habitacionesDisponibles.map(hab => (
                 <button key={hab.id} type="button" data-room-option className="rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[#10233F] focus-visible:ring-offset-2" onClick={() => handleSelectRoom(hab)}>
                 <Card className={cn("h-full cursor-pointer hover:border-primary transition-colors", formData.habitacionId === hab.id && "border-primary bg-primary/5")}>
@@ -828,8 +842,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         )}
 
         {/* STEP 3 - HUÉSPED */}
-        {step === 3 && (
-          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-6')}>
+        {(pageMode || step === 3) && (
+          <div className={cn('space-y-4', pageMode && 'rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm xl:col-span-3')}>
+            {pageMode && <div><h2 className="text-base font-bold text-[#10233F]">3. Huésped</h2><p className="text-xs text-muted-foreground">Busca un cliente existente o captura uno nuevo aquí mismo.</p></div>}
             {formData.clienteData ? (
               <Card className="border-primary bg-primary/5">
                 <CardContent className="p-4">
@@ -872,7 +887,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   </div>
                 </div>
                 {clientesFiltrados.length > 0 && (
-                  <div className="space-y-2 max-h-[260px] overflow-y-auto">
+                  <div className={cn('max-h-[260px] overflow-y-auto', pageMode ? 'grid gap-2 md:grid-cols-2' : 'space-y-2')}>
                     {clientesFiltrados.map(cliente => (
                       <button key={cliente.id} type="button" className="w-full rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-[#10233F] focus-visible:ring-offset-2" onClick={() => handleSelectCliente(cliente)}>
                       <Card className="cursor-pointer hover:border-primary transition-colors">
@@ -918,7 +933,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Teléfono *</Label>
-                    <Input data-enter-next="true" value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
+                    <Input value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Email</Label>
@@ -948,11 +963,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         )}
 
         {/* STEP 4 - CONFIRMACIÓN */}
-        {step === 4 && (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {(pageMode || step === 4) && (
+          <div className={cn('grid grid-cols-1 gap-4 lg:grid-cols-5', pageMode && 'xl:col-span-3')}>
             <div className="lg:col-span-3 space-y-4">
+              {pageMode && <div className="rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm"><h2 className="text-base font-bold text-[#10233F]">4. Detalles de la reserva</h2><p className="text-xs text-muted-foreground">Solicitudes, cargos e impuestos opcionales. Si no necesitas agregarlos, puedes crear la reserva directamente.</p></div>}
               {/* Resumen de reserva */}
-              <Card>
+              {!pageMode && <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -984,7 +1000,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </Card>}
 
               {/* Notas */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1165,7 +1181,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
             {/* COLUMNA DERECHA - TOTALES Y PAGOS */}
             <div className="lg:col-span-2">
-              <Card className="bg-primary text-primary-foreground sticky top-0">
+              <Card className={cn('sticky bg-primary text-primary-foreground', pageMode ? 'top-20' : 'top-0')}>
                 <CardContent className="p-4 space-y-4">
                   <p className="font-bold text-lg">Resumen de Cuenta</p>
                   
@@ -1337,17 +1353,22 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             </div>
           </div>
         )}
+        </div>
 
         {/* FOOTER */}
         <div className={cn(
           'sticky bottom-0 z-20 -mx-3 flex gap-2 border-t bg-background/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
           pageMode ? 'sm:-mx-6 sm:justify-between sm:px-6 lg:-mx-8 lg:px-8' : 'sm:static sm:mx-0 sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none',
         )}>
-          <Button className="h-11 flex-1 sm:flex-none" variant="outline" onClick={step === 1 ? () => onOpenChange(false) : handleBack}>
-            {step === 1 ? 'Cancelar' : <><ChevronLeft className="mr-1 h-4 w-4" /> Anterior</>}
+          <Button className="h-11 flex-1 sm:flex-none" variant="outline" onClick={pageMode || step === 1 ? () => onOpenChange(false) : handleBack}>
+            {pageMode || step === 1 ? 'Cancelar' : <><ChevronLeft className="mr-1 h-4 w-4" /> Anterior</>}
           </Button>
-          {pageMode && <span className="hidden self-center text-xs text-muted-foreground md:block"><kbd className="rounded border bg-white px-1.5 py-0.5">Tab</kbd> cambia de campo · <kbd className="rounded border bg-white px-1.5 py-0.5">Enter</kbd> selecciona y continúa</span>}
-          {step < 4 ? (
+          {pageMode && <span className="hidden self-center text-xs text-muted-foreground md:block"><kbd className="rounded border bg-white px-1.5 py-0.5">Tab</kbd> cambia de campo · <kbd className="rounded border bg-white px-1.5 py-0.5">Enter</kbd> selecciona · <kbd className="rounded border bg-white px-1.5 py-0.5">⌘ Enter</kbd> guarda</span>}
+          {pageMode ? (
+            <Button data-confirm-reservation onClick={handleConfirm} disabled={loading || noches < 1 || !formData.habitacionId || (!formData.clienteId && !nuevoClienteValido)} size="lg" className={cn('h-11 flex-1 sm:min-w-52 sm:flex-none', origen === 'Recepcion' && 'bg-green-600 hover:bg-green-700')}>
+              {loading ? 'Procesando...' : <><Check className="mr-2 h-4 w-4" /> {origen === 'Recepcion' ? 'Completar Check-in' : 'Crear reserva'}</>}
+            </Button>
+          ) : step < 4 ? (
             <Button className="h-11 flex-1 sm:flex-none" onClick={handleNext} disabled={(step === 1 && noches < 1) || (step === 2 && !formData.habitacionId) || (step === 3 && !formData.clienteId && !nuevoClienteValido)}>
               Siguiente <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
