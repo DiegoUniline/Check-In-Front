@@ -841,9 +841,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </FormSection>
 
 
-          {/* 4. CARGOS E IMPUESTOS */}
-          <FormSection icon={Receipt} title="Cargos e impuestos" hint="Consumos anticipados e impuestos aplicables.">
-            <div className="grid grid-cols-[minmax(0,1fr)_68px_104px_44px] gap-2">
+          {/* 3. CARGOS E IMPUESTOS */}
+          <FormSection icon={Receipt} title="Cargos e impuestos" hint="Consumos anticipados e impuestos.">
+            <div className="grid grid-cols-[minmax(0,1fr)_56px_88px_36px] gap-1.5">
               <ComboboxCreatable
                 options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
                 value={cargoConcepto}
@@ -856,20 +856,20 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 placeholder="Concepto…"
                 searchPlaceholder="Buscar o crear concepto…"
                 createLabel="Crear"
-                className="h-11 justify-start text-left font-normal"
+                className="h-9 justify-start px-2.5 text-left text-xs font-normal"
               />
-              <Input className="h-11 px-2 text-center" type="number" inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
-              <Input className="h-11 px-2 text-right" type="number" inputMode="decimal" placeholder="$0.00" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
-              <Button type="button" className="h-11 w-11 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-4 w-4" /></Button>
+              <Input className="h-9 px-1.5 text-center text-xs" type="number" inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+              <Input className="h-9 px-1.5 text-right text-xs" type="number" inputMode="decimal" placeholder="$0" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
+              <Button type="button" className="h-9 w-9 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-4 w-4" /></Button>
             </div>
             {formData.cargos.length > 0 && (
-              <div className="divide-y rounded-[10px] border">
+              <div className="divide-y rounded-lg border">
                 {formData.cargos.map(c => (
-                  <div key={c.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <div key={c.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
                     <span className="min-w-0 truncate">{c.concepto_nombre} <span className="text-muted-foreground">×{c.cantidad}</span></span>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <span className="font-medium tabular-nums">{formatCurrency(c.total)}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFormData(p => ({ ...p, cargos: p.cargos.filter(x => x.id !== c.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFormData(p => ({ ...p, cargos: p.cargos.filter(x => x.id !== c.id) }))}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                     </div>
                   </div>
                 ))}
@@ -878,13 +878,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
             <Separator />
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-xs font-medium text-[#475569]"><Percent className="h-3.5 w-3.5" />Impuestos</Label>
-              {formData.impuestos.length === 0 && <p className="text-xs text-muted-foreground">Sin impuestos. Agrega uno con un toque.</p>}
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5 text-[11px] font-medium text-[#475569]"><Percent className="h-3 w-3" />Impuestos</Label>
+              {formData.impuestos.length === 0 && <p className="text-[11px] text-muted-foreground">Sin impuestos. Agrega uno.</p>}
               {formData.impuestos.map((imp) => (
-                <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_86px_96px_40px] items-center gap-2">
+                <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_72px_84px_36px] items-center gap-1.5">
                   <Input
-                    className="h-10 w-full min-w-0"
+                    className="h-8 w-full min-w-0 text-xs"
                     placeholder="Nombre del impuesto"
                     value={imp.nombre}
                     onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))}
@@ -892,26 +892,26 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   <div className="relative">
                     <Input
                       type="number" min="0" step="0.01"
-                      className="h-10 pr-7 text-right"
+                      className="h-8 pr-6 text-right text-xs"
                       value={imp.tasa}
                       onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))}
                     />
-                    <Percent className="absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Percent className="absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
                   </div>
-                  <span className="text-right text-xs tabular-nums text-muted-foreground">{fmt(subtotal * (imp.tasa / 100))}</span>
-                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <span className="text-right text-[11px] tabular-nums text-muted-foreground">{fmt(subtotal * (imp.tasa / 100))}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                 </div>
               ))}
-              <div className="flex flex-wrap gap-1.5 pt-1">
+              <div className="flex flex-wrap gap-1 pt-0.5">
                 {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
                   <button key={sug.nombre} type="button" title={sug.descripcion}
-                    className="rounded-full border border-dashed border-[#CBD5E1] px-2.5 py-1 text-xs text-[#475569] transition-colors hover:border-[#10233F]/40 hover:text-[#10233F]"
+                    className="rounded-full border border-dashed border-[#CBD5E1] px-2 py-0.5 text-[11px] text-[#475569] transition-colors hover:border-[#10233F]/40 hover:text-[#10233F]"
                     onClick={() => setFormData((p) => ({ ...p, impuestos: [...p.impuestos, { id: `imp-${Date.now()}`, nombre: sug.nombre, tasa: sug.tasa }] }))}>
                     + {sug.nombre}
                   </button>
                 ))}
                 <button type="button"
-                  className="rounded-full border border-dashed border-[#F97316]/50 px-2.5 py-1 text-xs text-[#C2410C] transition-colors hover:bg-[#FFF7ED]"
+                  className="rounded-full border border-dashed border-[#F97316]/50 px-2 py-0.5 text-[11px] text-[#C2410C] transition-colors hover:bg-[#FFF7ED]"
                   onClick={() => setFormData((p) => ({ ...p, impuestos: [...p.impuestos, { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 }] }))}>
                   + Personalizado
                 </button>
