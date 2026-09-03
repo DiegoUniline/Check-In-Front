@@ -9,8 +9,6 @@ project_id = "kuxfavfvfilfgwtzpymx"
     verify_jwt = true
   [functions.evolution-webhook]
     verify_jwt = false
-  [functions.process-email-queue]
-    verify_jwt = true
   [functions.update-user]
     verify_jwt = true
   [functions.wa-ai-agent]
