@@ -2,10 +2,10 @@
 // fondo BLANCO + logo del hotel contratante arriba + franja VULO abajo.
 // El resultado se cachea en Storage (bucket público) para no recomponerlo en cada envío.
 import { Image } from 'https://deno.land/x/imagescript@1.2.17/mod.ts';
+import { VULO_FOOTER_JPEG_B64 } from './waFooter.ts';
 
 const W = 1080;
 const H = 620;
-const FOOTER_URL = 'https://vulo.mx/wa-footer.png';
 
 async function fetchImage(url: string): Promise<Image | null> {
   try {
@@ -19,10 +19,20 @@ async function fetchImage(url: string): Promise<Image | null> {
   }
 }
 
+async function footerImage(): Promise<Image | null> {
+  try {
+    const bin = Uint8Array.from(atob(VULO_FOOTER_JPEG_B64), (c) => c.charCodeAt(0));
+    return (await Image.decode(bin)) as Image;
+  } catch {
+    return null;
+  }
+}
+
 /** Compone el banner (JPEG) o null si no se pudo. */
 export async function composeHeaderBanner(logoUrl: string): Promise<Uint8Array | null> {
-  const [logo, footer] = await Promise.all([fetchImage(logoUrl), fetchImage(FOOTER_URL)]);
+  const [logo, footer] = await Promise.all([fetchImage(logoUrl), footerImage()]);
   if (!logo) return null;
+
 
   const canvas = new Image(W, H);
   canvas.fill(0xffffffff); // blanco opaco
