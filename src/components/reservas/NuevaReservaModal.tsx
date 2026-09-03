@@ -673,7 +673,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   onClick={() => setFormData({ ...formData, fechaCheckout: addDays(formData.fechaCheckin, n) })}
                   className={cn(
                     'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                    noches === n ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
+                    noches === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
                   )}
                 >
                   {n} noche{n === 1 ? '' : 's'}
@@ -727,7 +727,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     onClick={() => setFormData({ ...formData, tipoHabitacion: '', habitacionId: '' })}
                     className={cn(
                       'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                      !formData.tipoHabitacion ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
+                      !formData.tipoHabitacion ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
                     )}
                   >
                     Todas
@@ -739,7 +739,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       onClick={() => setFormData({ ...formData, tipoHabitacion: t.id, habitacionId: '' })}
                       className={cn(
                         'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                        formData.tipoHabitacion === t.id ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
+                        formData.tipoHabitacion === t.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
                       )}
                     >
                       {t.nombre} · {formatCurrency(t.precio_base)}
@@ -763,7 +763,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                           onClick={() => { handleSelectRoom(hab); setMostrarSelectorHabitacion(false); }}
                           className={cn(
                             'rounded-lg border p-2 text-left transition-colors',
-                            activo ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border bg-card hover:border-primary/40',
+                            activo ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:border-primary/40',
                           )}
                         >
                           <div className="flex items-center justify-between gap-1">
@@ -962,7 +962,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   {entregables.map(ent => {
                     const activo = formData.entregablesSeleccionados.includes(ent.id);
                     return (
-                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors', activo ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40')}>
+                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors', activo ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40')}>
                         {activo && <Check className="h-3 w-3" />}{ent.nombre}
                       </button>
                     );
@@ -1095,7 +1095,7 @@ function Stepper({ value, onChange, min = 0, max = 99 }: { value: number; onChan
         aria-label="Restar"
         onClick={() => onChange(clamp(value - 1))}
         disabled={value <= min}
-        className="grid h-full w-8 shrink-0 place-items-center text-[#475569] transition-colors hover:bg-[#F1F5F9] disabled:opacity-40"
+        className="grid h-full w-8 shrink-0 place-items-center text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
       >
         <Minus className="h-3.5 w-3.5" />
       </button>
