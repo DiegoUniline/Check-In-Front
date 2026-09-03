@@ -72,7 +72,7 @@ function ReservationSurface({
 }) {
   if (pageMode) {
     return <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC] pb-8">
-      <div ref={surfaceRef} onKeyDown={onKeyDown} className="mx-auto max-w-[1680px] space-y-4 px-3 py-4 sm:px-6 lg:px-8">
+      <div ref={surfaceRef} onKeyDown={onKeyDown} className="mx-auto max-w-[1440px] space-y-3 px-3 py-3 sm:px-5 lg:px-6">
         {children}
       </div>
     </div>;
@@ -597,7 +597,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       <header className={cn(
         'sticky top-0 z-30 border-b border-[#10233F]/10 bg-white/95 backdrop-blur',
         pageMode
-          ? '-mx-3 -mt-4 px-3 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'
+          ? '-mx-3 -mt-3 px-3 py-2 sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6'
           : '-mx-3 -mt-3 px-3 py-2 sm:-mx-5 sm:-mt-5 sm:px-5 sm:rounded-t-xl',
       )}>
         <div className="flex items-center justify-between gap-2">
@@ -636,7 +636,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
       </header>
 
-      <div className="mt-2 grid items-start gap-2 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-2 grid items-start gap-2 xl:grid-cols-[minmax(0,980px)_320px] xl:justify-center">
         <div className="min-w-0 space-y-2">
           {/* 1. ESTANCIA + HABITACIÓN */}
           <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo habitaciones libres en el rango.">
@@ -646,7 +646,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </div>
             )}
 
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-6 xl:grid-cols-12">
+              <div className="col-span-2 sm:col-span-3 xl:col-span-3">
               <Field label="Check-in">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -660,6 +661,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   </PopoverContent>
                 </Popover>
               </Field>
+              </div>
+              <div className="col-span-2 sm:col-span-3 xl:col-span-3">
               <Field label="Check-out">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -673,42 +676,51 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   </PopoverContent>
                 </Popover>
               </Field>
+              </div>
+              <div className="col-span-2 sm:col-span-2 xl:col-span-2">
               <Field label="Hora">
                 <div className="relative">
                   <Clock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input type="time" className="h-9 pl-8 text-xs" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
                 </div>
               </Field>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              </div>
+              <div className="sm:col-span-1 xl:col-span-1">
               <Field label="Adultos">
                 <Select value={formData.adultos.toString()} onValueChange={(v) => setFormData({ ...formData, adultos: parseInt(v) })}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[1, 2, 3, 4, 5, 6].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
+              </div>
+              <div className="sm:col-span-1 xl:col-span-1">
               <Field label="Niños">
                 <Select value={formData.ninos.toString()} onValueChange={(v) => setFormData({ ...formData, ninos: parseInt(v) })}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[0, 1, 2, 3, 4].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
+              </div>
+              <div className="sm:col-span-1 xl:col-span-1">
               <Field label="Extras">
                 <Select value={formData.personasExtra.toString()} onValueChange={(v) => setFormData({ ...formData, personasExtra: parseInt(v) })}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[0, 1, 2, 3].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Field label="Cargo extra" hint={formData.personasExtra === 0 ? 'Sin extras' : 'Por noche'}>
+              </div>
+              <div className="sm:col-span-1 xl:col-span-1">
+              <Field label="Cargo" hint={formData.personasExtra === 0 ? undefined : 'Por noche'}>
                 <div className="relative">
                   <DollarSign className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input type="number" inputMode="decimal" className="h-9 pl-8 text-xs" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
                 </div>
               </Field>
+              </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-12">
+              <div className="sm:col-span-5">
               <Field label="Categoría">
                 <ComboboxCreatable
                   options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} · ${formatCurrency(t.precio_base)}/noche` }))}
@@ -725,7 +737,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   className="h-9 justify-start px-2.5 text-left text-xs font-normal"
                 />
               </Field>
-              <Field label="Habitación" hint={`${habitacionesDisponibles.length} disponibles`}>
+              </div>
+              <div className="sm:col-span-7">
+              <Field label="Habitación" hint={selectedHabitacion ? `${habitacionesDisponibles.length} disponibles · Hab. ${selectedHabitacion.numero} libre a ${fmt(tarifaEfectiva)}/noche` : `${habitacionesDisponibles.length} disponibles`}>
                 <ComboboxCreatable
                   options={habitacionesDisponibles.map((hab) => {
                     const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
@@ -745,21 +759,15 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   className="h-9 justify-start px-2.5 text-left text-xs font-normal"
                 />
               </Field>
-            </div>
-
-            {selectedHabitacion && (
-              <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#475569]">
-                <Check className="h-3 w-3 text-emerald-600" />
-                Hab. {selectedHabitacion.numero} disponible · {fmt(tarifaEfectiva)}/noche
-                {temporadaAplicable && <Badge variant="outline" className="h-4 px-1 text-[10px]">{temporadaAplicable.nombre}</Badge>}
               </div>
-            )}
+            </div>
+            {selectedHabitacion && temporadaAplicable && <Badge variant="outline" className="h-5 w-fit px-1.5 text-[10px]">Tarifa: {temporadaAplicable.nombre}</Badge>}
           </FormSection>
 
           {/* 2. HUÉSPED */}
           <FormSection icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
             {!crearNuevoCliente ? (
-              <div className="space-y-2">
+              <div className="max-w-4xl space-y-2">
                 <div className="flex gap-2">
                   <ComboboxCreatable
                     options={clientes.map((cliente) => ({
@@ -843,7 +851,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
           {/* 3. CARGOS */}
           <FormSection icon={Receipt} title="Cargos adicionales" hint="Consumos o servicios anticipados.">
-            <div className="grid grid-cols-[minmax(0,1fr)_56px_88px_36px] gap-1.5">
+            <div className="grid max-w-3xl grid-cols-[minmax(180px,1fr)_56px_96px_36px] gap-1.5">
               <ComboboxCreatable
                 options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
                 value={cargoConcepto}
@@ -882,10 +890,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           <FormSection icon={Package} title="Notas e impuestos" hint="Todo lo opcional, compacto y visible en una sola fila.">
             <div className="grid items-start gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(260px,0.9fr)]">
               <Field label="Solicitudes del huésped">
-                <Textarea rows={2} className="min-h-[68px] resize-none text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
+                <Textarea rows={2} className="h-12 min-h-12 resize-none text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
               </Field>
               <Field label="Notas internas">
-                <Textarea rows={2} className="min-h-[68px] resize-none text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
+                <Textarea rows={2} className="h-12 min-h-12 resize-none text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
               </Field>
               <div className="min-w-0 space-y-1.5 rounded-lg border border-[#10233F]/10 bg-[#F8FAFC] p-2">
                 <div className="flex items-center justify-between gap-2">
