@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type R
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  CalendarDays, BedDouble, Check, ChevronLeft,
+  CalendarDays, BedDouble, Check, ChevronLeft, ChevronDown,
   CalendarPlus, UserPlus, Clock, Percent, DollarSign, Package, Plus, Trash2, 
   Receipt, Phone, Mail, CreditCard, X, ArrowLeft
+
 } from 'lucide-react';
 import {
   Dialog,
