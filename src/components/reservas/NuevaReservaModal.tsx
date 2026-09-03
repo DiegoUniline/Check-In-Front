@@ -30,7 +30,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/currency';
-import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import api, { todayLocal } from '@/lib/api';
@@ -574,7 +573,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   };
 
   const handleSurfaceKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!pageMode || event.defaultPrevented || event.nativeEvent.isComposing) return;
+    if (event.defaultPrevented || event.nativeEvent.isComposing) return;
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       if (!loading && noches > 0 && formData.habitacionId && (formData.clienteId || nuevoClienteValido)) void handleConfirm();
