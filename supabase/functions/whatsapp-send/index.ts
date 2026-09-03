@@ -28,10 +28,11 @@ Deno.serve(async (req) => {
 
     const { data: hotel, error: hErr } = await supabase
       .from('hotels')
-      .select('id, nombre')
+      .select('id, nombre, logo_url')
       .eq('id', hotel_id)
       .single();
     if (hErr || !hotel) throw new Error('Hotel no encontrado');
+
 
     const { data: inst } = await supabase
       .from('wa_instancias')
