@@ -556,13 +556,17 @@ class ApiClient {
     let [pagosR, gastosR, ventasR, comprasR] = await Promise.all([
       getLinked('pagos'), getLinked('gastos'), getLinked('ventas'), getLinked('pagos_compras'),
     ]);
-    const linkedToShift = ![pagosR, gastosR, ventasR, comprasR].some((result) => result.error);
+    const purchasesModuleMissing = this.isMissingOperationalTable(comprasR.error);
+    if (purchasesModuleMissing) comprasR = { data: [], error: null };
+    const linkedToShift = ![pagosR, gastosR, ventasR].some((result) => result.error);
     if (!linkedToShift) {
       [pagosR, gastosR, ventasR, comprasR] = await Promise.all([
         supabase.from('pagos').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
         supabase.from('gastos').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
         supabase.from('ventas').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
-        (supabase as any).from('pagos_compras').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
+        purchasesModuleMissing
+          ? Promise.resolve({ data: [], error: null })
+          : (supabase as any).from('pagos_compras').select('*').eq('hotel_id', hotelId).gte('created_at', abiertoAt),
       ] as any);
     }
     const summary = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, egresosEfectivo: 0, movimientos: [] as any[], linkedToShift };

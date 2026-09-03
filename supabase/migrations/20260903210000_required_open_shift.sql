@@ -6,9 +6,17 @@ ALTER TABLE public.cargos ADD COLUMN IF NOT EXISTS turno_id uuid, ADD COLUMN IF 
 ALTER TABLE public.ventas ADD COLUMN IF NOT EXISTS turno_id uuid;
 ALTER TABLE public.gastos ADD COLUMN IF NOT EXISTS turno_id uuid;
 ALTER TABLE public.compras ADD COLUMN IF NOT EXISTS turno_id uuid;
-ALTER TABLE public.pagos_compras ADD COLUMN IF NOT EXISTS turno_id uuid;
 ALTER TABLE public.estancia_movimientos ADD COLUMN IF NOT EXISTS turno_id uuid;
 ALTER TABLE public.movimientos_inventario ADD COLUMN IF NOT EXISTS turno_id uuid;
+
+-- Pagos a proveedores pertenece a un módulo opcional que no está instalado en
+-- todas las bases. La operación de turnos no debe depender de ese módulo.
+DO $$
+BEGIN
+  IF to_regclass('public.pagos_compras') IS NOT NULL THEN
+    ALTER TABLE public.pagos_compras ADD COLUMN IF NOT EXISTS turno_id uuid;
+  END IF;
+END $$;
 
 DO $$
 DECLARE
@@ -17,6 +25,9 @@ DECLARE
 BEGIN
   FOREACH v_table IN ARRAY ARRAY['pagos','cargos','ventas','gastos','compras','pagos_compras','estancia_movimientos','movimientos_inventario']
   LOOP
+    IF to_regclass('public.' || quote_ident(v_table)) IS NULL THEN
+      CONTINUE;
+    END IF;
     v_constraint := v_table || '_turno_id_fkey';
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = v_constraint) THEN
       EXECUTE format('ALTER TABLE public.%I ADD CONSTRAINT %I FOREIGN KEY (turno_id) REFERENCES public.turnos_operativos(id) ON DELETE SET NULL', v_table, v_constraint);
@@ -151,6 +162,9 @@ DECLARE v_table text;
 BEGIN
   FOREACH v_table IN ARRAY ARRAY['reservas','pagos','cargos','ventas','gastos','compras','pagos_compras','productos','habitaciones','estancia_movimientos']
   LOOP
+    IF to_regclass('public.' || quote_ident(v_table)) IS NULL THEN
+      CONTINUE;
+    END IF;
     EXECUTE format('DROP TRIGGER IF EXISTS require_open_shift ON public.%I', v_table);
     EXECUTE format('CREATE TRIGGER require_open_shift BEFORE INSERT OR UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.vulo_require_open_shift_trigger()', v_table);
   END LOOP;
@@ -161,6 +175,9 @@ DECLARE v_table text;
 BEGIN
   FOREACH v_table IN ARRAY ARRAY['pagos','cargos','ventas','gastos','compras','pagos_compras']
   LOOP
+    IF to_regclass('public.' || quote_ident(v_table)) IS NULL THEN
+      CONTINUE;
+    END IF;
     EXECUTE format('DROP TRIGGER IF EXISTS attach_open_shift ON public.%I', v_table);
     EXECUTE format('CREATE TRIGGER attach_open_shift BEFORE INSERT ON public.%I FOR EACH ROW EXECUTE FUNCTION public.vulo_attach_open_shift_trigger()', v_table);
   END LOOP;
@@ -199,6 +216,9 @@ DECLARE v_table text;
 BEGIN
   FOREACH v_table IN ARRAY ARRAY['pagos','cargos','ventas','gastos','compras','pagos_compras']
   LOOP
+    IF to_regclass('public.' || quote_ident(v_table)) IS NULL THEN
+      CONTINUE;
+    END IF;
     EXECUTE format($sql$
       UPDATE public.%I movement
       SET turno_id = (
@@ -244,6 +264,7 @@ DECLARE
   v_transfer numeric := 0;
   v_other numeric := 0;
   v_expenses numeric := 0;
+  v_provider_expenses numeric := 0;
   v_expected numeric;
   v_difference numeric;
 BEGIN
@@ -278,11 +299,18 @@ BEGIN
     FROM public.ventas WHERE turno_id=p_turno_id AND reserva_id IS NULL AND COALESCE(estado,'Activa')='Activa'
   ) income;
 
-  SELECT COALESCE(SUM(amount),0) INTO v_expenses FROM (
-    SELECT monto AS amount FROM public.gastos WHERE turno_id=p_turno_id AND lower(COALESCE(metodo_pago,'')) LIKE '%efectivo%'
-    UNION ALL
-    SELECT monto AS amount FROM public.pagos_compras WHERE turno_id=p_turno_id AND lower(COALESCE(metodo_pago,'')) LIKE '%efectivo%'
-  ) expense;
+  SELECT COALESCE(SUM(monto),0) INTO v_expenses
+  FROM public.gastos
+  WHERE turno_id=p_turno_id AND lower(COALESCE(metodo_pago,'')) LIKE '%efectivo%';
+
+  IF to_regclass('public.pagos_compras') IS NOT NULL THEN
+    EXECUTE $sql$
+      SELECT COALESCE(SUM(monto),0)
+      FROM public.pagos_compras
+      WHERE turno_id=$1 AND lower(COALESCE(metodo_pago,'')) LIKE '%efectivo%'
+    $sql$ INTO v_provider_expenses USING p_turno_id;
+    v_expenses := v_expenses + v_provider_expenses;
+  END IF;
 
   v_expected := ROUND(COALESCE(v_shift.fondo_inicial,0)+v_cash-v_expenses,2);
   v_difference := ROUND(p_efectivo_contado-v_expected,2);
