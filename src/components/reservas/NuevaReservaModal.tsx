@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type R
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  CalendarDays, BedDouble, Check, ChevronRight, ChevronLeft,
+  CalendarDays, BedDouble, Check, ChevronLeft,
   CalendarPlus, UserPlus, Clock, Percent, DollarSign, Package, Plus, Trash2, 
   Receipt, Phone, Mail, CreditCard, X, ArrowLeft
 } from 'lucide-react';
@@ -28,7 +28,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/currency';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -85,8 +84,6 @@ function ReservationSurface({
     </DialogContent>
   </Dialog>;
 }
-
-type Step = 1 | 2 | 3 | 4;
 
 interface CargoTemp {
   id: string;
@@ -196,7 +193,6 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => {
 };
 
 export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, pageMode = false }: NuevaReservaModalProps) {
-  const [step, setStep] = useState<Step>(1);
   const [formData, setFormData] = useState<FormData>(createInitialFormData());
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -222,7 +218,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     if (open) {
       cargarDatos();
       loadTemporadas().catch(() => {});
-      setStep(1);
       setOrigen(preload?.origen || 'Reserva');
       setCrearNuevoCliente(false);
       setFormData(createInitialFormData(preload));
@@ -230,12 +225,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   }, [open, preload]);
 
   useEffect(() => {
-    if (!pageMode || !open) return;
+    if (!open) return;
     const timer = window.setTimeout(() => {
       surfaceRef.current?.querySelector<HTMLElement>('[data-step-focus="dates"]')?.focus();
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [open, pageMode]);
+  }, [open]);
 
   useEffect(() => {
     // Relacionado con `check-in-back/src/routes/tiposHabitacion.js` (GET `/tipos-habitacion`):
@@ -325,14 +320,14 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   };
 
   useEffect(() => {
-    if (!open || !pageMode || differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin) < 1) return;
+    if (!open || differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin) < 1) return;
     const timer = window.setTimeout(() => {
       void buscarHabitaciones();
     }, 180);
     return () => window.clearTimeout(timer);
     // En la captura completa la disponibilidad se actualiza al cambiar rango o categoría.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, pageMode, formData.fechaCheckin, formData.fechaCheckout, formData.tipoHabitacion]);
+  }, [open, formData.fechaCheckin, formData.fechaCheckout, formData.tipoHabitacion]);
 
   const handleSelectCliente = (cliente: any) => {
     setFormData({ ...formData, clienteId: cliente.id, clienteData: cliente });
@@ -404,32 +399,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       // Si el checkout es menor o igual a hoy, ajustarlo a mañana
       const nuevoCheckout = checkoutActual <= hoy ? addDays(hoy, 1) : checkoutActual;
       setFormData({ ...formData, fechaCheckin: hoy, fechaCheckout: nuevoCheckout });
-    }
-  };
-
-  const handleNext = async () => {
-    if (step === 1 && noches < 1) return;
-    if (step === 2 && !formData.habitacionId) return;
-    if (step === 3 && !formData.clienteId && !nuevoClienteValido) return;
-    if (step === 1) {
-      // Si ya hay habitación preseleccionada (vino del timeline), saltar paso 2
-      if (preload?.habitacion?.id) {
-        setStep(3);
-        return;
-      }
-      await buscarHabitaciones();
-    }
-    if (step < 4) setStep((step + 1) as Step);
-  };
-
-  const handleBack = () => {
-    if (step > 1) {
-      // Si volvemos desde paso 3 y había habitación preseleccionada, regresar a paso 1
-      if (step === 3 && preload?.habitacion?.id) {
-        setStep(1);
-        return;
-      }
-      setStep((step - 1) as Step);
     }
   };
 
@@ -604,11 +573,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     }));
   };
 
-  const totalSteps = preload?.habitacion?.id ? 3 : 4;
-  const currentStepLabel = preload?.habitacion?.id
-    ? (step === 1 ? 1 : step === 3 ? 2 : step === 4 ? 3 : step)
-    : step;
-  const progressValue = (currentStepLabel / totalSteps) * 100;
   const handleSurfaceKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!pageMode || event.defaultPrevented || event.nativeEvent.isComposing) return;
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
