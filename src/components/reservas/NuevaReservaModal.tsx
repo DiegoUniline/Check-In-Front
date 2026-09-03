@@ -597,27 +597,26 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       <header className={cn(
         'sticky top-0 z-30 border-b border-[#10233F]/10 bg-white/95 backdrop-blur',
         pageMode
-          ? '-mx-3 -mt-4 px-3 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'
-          : '-mx-3 -mt-3 px-3 py-3 sm:-mx-5 sm:-mt-5 sm:px-5 sm:rounded-t-xl',
+          ? '-mx-3 -mt-4 px-3 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'
+          : '-mx-3 -mt-3 px-3 py-2 sm:-mx-5 sm:-mt-5 sm:px-5 sm:rounded-t-xl',
       )}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
-              <ArrowLeft className="h-5 w-5" />
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => onOpenChange(false)} aria-label="Cerrar">
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold text-[#10233F] sm:text-xl">
+              <h2 className="truncate text-sm font-semibold text-[#10233F]">
                 {origen === 'Recepcion' ? 'Nueva entrada · Check-in' : 'Nueva reserva'}
               </h2>
-              <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
-                {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona el rango de fechas'}
+              <p className="truncate text-[11px] text-muted-foreground">
+                {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona fechas'}
                 {selectedHabitacion ? ` · Hab. #${selectedHabitacion.numero}` : ''}
                 {total > 0 ? ` · ${fmt(total)}` : ''}
               </p>
-
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-1">
+          <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F1F5F9] p-0.5">
             {([['Reserva', CalendarPlus], ['Recepcion', UserPlus]] as const).map(([value, Icon]) => (
               <button
                 key={value}
@@ -625,11 +624,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 data-step-focus={value === 'Reserva' ? 'dates' : undefined}
                 onClick={() => handleOrigenChange(value)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  'flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
                   origen === value ? 'bg-[#10233F] text-white shadow-sm' : 'text-[#475569] hover:text-[#10233F]',
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3 w-3" />
                 <span className="hidden sm:inline">{value === 'Reserva' ? 'Reserva' : 'Recepción'}</span>
               </button>
             ))}
@@ -637,23 +636,22 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
       </header>
 
-      <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
-
-        <div className="min-w-0 space-y-3">
+      <div className="mt-2 grid items-start gap-2 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-2">
           {/* 1. ESTANCIA + HABITACIÓN */}
-          <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo se listan habitaciones libres en todo el rango.">
+          <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo habitaciones libres en el rango.">
             {origen === 'Recepcion' && (
-              <div className="rounded-[10px] border border-[#FDBA74] bg-[#FFF7ED] px-3 py-2 text-xs text-[#9A3412]">
-                Check-in automático al confirmar: la habitación queda ocupada hoy.
+              <div className="rounded-lg border border-[#FDBA74] bg-[#FFF7ED] px-2.5 py-1.5 text-[11px] text-[#9A3412]">
+                Check-in automático: la habitación queda ocupada hoy.
               </div>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-3">
               <Field label="Check-in">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-11 w-full justify-start font-normal" disabled={origen === 'Recepcion'}>
-                      <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <Button variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal" disabled={origen === 'Recepcion'}>
+                      <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                       {formatDate(formData.fechaCheckin)}
                     </Button>
                   </PopoverTrigger>
@@ -665,8 +663,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <Field label="Check-out">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-11 w-full justify-start font-normal">
-                      <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <Button variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal">
+                      <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                       {formatDate(formData.fechaCheckout)}
                     </Button>
                   </PopoverTrigger>
@@ -675,42 +673,42 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   </PopoverContent>
                 </Popover>
               </Field>
-              <Field label="Hora de llegada">
+              <Field label="Hora">
                 <div className="relative">
-                  <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input type="time" className="h-11 pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
+                  <Clock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input type="time" className="h-9 pl-8 text-xs" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
                 </div>
               </Field>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Field label="Adultos">
                 <Select value={formData.adultos.toString()} onValueChange={(v) => setFormData({ ...formData, adultos: parseInt(v) })}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[1, 2, 3, 4, 5, 6].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
               <Field label="Niños">
                 <Select value={formData.ninos.toString()} onValueChange={(v) => setFormData({ ...formData, ninos: parseInt(v) })}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[0, 1, 2, 3, 4].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Field label="Personas extra">
+              <Field label="Extras">
                 <Select value={formData.personasExtra.toString()} onValueChange={(v) => setFormData({ ...formData, personasExtra: parseInt(v) })}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[0, 1, 2, 3].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Field label="Cargo por extra" hint={formData.personasExtra === 0 ? 'Sin extras' : 'Por noche'}>
+              <Field label="Cargo extra" hint={formData.personasExtra === 0 ? 'Sin extras' : 'Por noche'}>
                 <div className="relative">
-                  <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input type="number" inputMode="decimal" className="h-11 pl-9" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
+                  <DollarSign className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input type="number" inputMode="decimal" className="h-9 pl-8 text-xs" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
                 </div>
               </Field>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <Field label="Categoría">
                 <ComboboxCreatable
                   options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} · ${formatCurrency(t.precio_base)}/noche` }))}
@@ -724,10 +722,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   placeholder="Todas las categorías"
                   searchPlaceholder="Buscar categoría…"
                   createLabel="Crear"
-                  className="h-11 justify-start text-left font-normal"
+                  className="h-9 justify-start px-2.5 text-left text-xs font-normal"
                 />
               </Field>
-              <Field label="Habitación" hint={`${habitacionesDisponibles.length} disponibles en el rango`}>
+              <Field label="Habitación" hint={`${habitacionesDisponibles.length} disponibles`}>
                 <ComboboxCreatable
                   options={habitacionesDisponibles.map((hab) => {
                     const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
@@ -744,22 +742,22 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   searchPlaceholder="Número, categoría o precio…"
                   emptyMessage="No hay coincidencias disponibles."
                   disabled={habitacionesDisponibles.length === 0}
-                  className="h-11 justify-start text-left font-normal"
+                  className="h-9 justify-start px-2.5 text-left text-xs font-normal"
                 />
               </Field>
             </div>
 
             {selectedHabitacion && (
-              <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-[#F8FAFC] px-3 py-2 text-xs text-[#475569]">
-                <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#475569]">
+                <Check className="h-3 w-3 text-emerald-600" />
                 Hab. {selectedHabitacion.numero} disponible · {fmt(tarifaEfectiva)}/noche
-                {temporadaAplicable && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{temporadaAplicable.nombre}</Badge>}
+                {temporadaAplicable && <Badge variant="outline" className="h-4 px-1 text-[10px]">{temporadaAplicable.nombre}</Badge>}
               </div>
             )}
           </FormSection>
 
           {/* 2. HUÉSPED */}
-          <FormSection icon={UserPlus} title="Huésped" hint="Busca uno existente o captúralo aquí mismo.">
+          <FormSection icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
             {!crearNuevoCliente ? (
               <div className="space-y-2">
                 <div className="flex gap-2">
@@ -773,60 +771,60 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       const client = clientes.find((item) => item.id === value);
                       if (client) handleSelectCliente(client);
                     }}
-                    placeholder="Buscar huésped por nombre o teléfono…"
+                    placeholder="Buscar huésped…"
                     searchPlaceholder="Nombre, teléfono, correo o documento…"
                     emptyMessage="No se encontró ningún huésped."
-                    className="h-11 min-w-0 flex-1 justify-start overflow-hidden text-left font-normal"
+                    className="h-9 min-w-0 flex-1 justify-start overflow-hidden px-2.5 text-left text-xs font-normal"
                   />
                   {formData.clienteData ? (
-                    <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
                   ) : (
-                    <Button type="button" variant="outline" className="h-11 shrink-0" onClick={() => setCrearNuevoCliente(true)}><UserPlus className="mr-1.5 h-4 w-4" />Nuevo</Button>
+                    <Button type="button" variant="outline" className="h-9 shrink-0 px-2.5 text-xs" onClick={() => setCrearNuevoCliente(true)}><UserPlus className="mr-1 h-3.5 w-3.5" />Nuevo</Button>
                   )}
                 </div>
                 {formData.clienteData && (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[10px] bg-[#F8FAFC] px-3 py-2 text-xs text-[#475569]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#475569]">
                     <span className="font-medium text-[#10233F]">{formData.clienteData.nombre} {formData.clienteData.apellido_paterno || ''}</span>
-                    {formData.clienteData.telefono && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{formData.clienteData.telefono}</span>}
-                    {formData.clienteData.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{formData.clienteData.email}</span>}
-                    {formData.clienteData.es_vip && <Badge className="h-5 px-1.5 text-[10px]">VIP</Badge>}
+                    {formData.clienteData.telefono && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{formData.clienteData.telefono}</span>}
+                    {formData.clienteData.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{formData.clienteData.email}</span>}
+                    {formData.clienteData.es_vip && <Badge className="h-4 px-1 text-[10px]">VIP</Badge>}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
-                <Button variant="ghost" size="sm" className="-ml-2 h-8" onClick={() => setCrearNuevoCliente(false)}>
-                  <ChevronLeft className="mr-1 h-4 w-4" /> Buscar existente
+              <div className="space-y-2">
+                <Button variant="ghost" size="sm" className="-ml-2 h-7 text-xs" onClick={() => setCrearNuevoCliente(false)}>
+                  <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Buscar existente
                 </Button>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-3">
                   <Field label="Nombre" required>
-                    <Input data-new-client-name className="h-11" value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
+                    <Input data-new-client-name className="h-9 text-xs" value={formData.nuevoCliente.nombre} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, nombre: e.target.value } })} />
                   </Field>
                   <Field label="Apellido paterno" required>
-                    <Input className="h-11" value={formData.nuevoCliente.apellido_paterno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_paterno: e.target.value } })} />
+                    <Input className="h-9 text-xs" value={formData.nuevoCliente.apellido_paterno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_paterno: e.target.value } })} />
                   </Field>
                   <Field label="Apellido materno">
-                    <Input className="h-11" value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
+                    <Input className="h-9 text-xs" value={formData.nuevoCliente.apellido_materno} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, apellido_materno: e.target.value } })} />
                   </Field>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   <Field label="Teléfono" required>
                     <div className="relative">
-                      <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input className="h-11 pl-9" inputMode="tel" value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
+                      <Phone className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <Input className="h-9 pl-8 text-xs" inputMode="tel" value={formData.nuevoCliente.telefono} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, telefono: e.target.value } })} />
                     </div>
                   </Field>
                   <Field label="Correo">
                     <div className="relative">
-                      <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input type="email" className="h-11 pl-9" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
+                      <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <Input type="email" className="h-9 pl-8 text-xs" value={formData.nuevoCliente.email} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, email: e.target.value } })} />
                     </div>
                   </Field>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Tipo de documento">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Field label="Documento">
                     <Select value={formData.nuevoCliente.tipo_documento} onValueChange={(v) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, tipo_documento: v } })}>
-                      <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="INE">INE</SelectItem>
                         <SelectItem value="Pasaporte">Pasaporte</SelectItem>
@@ -834,8 +832,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Field label="Número de documento">
-                    <Input className="h-11" value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
+                  <Field label="Número">
+                    <Input className="h-9 text-xs" value={formData.nuevoCliente.numero_documento} onChange={(e) => setFormData({ ...formData, nuevoCliente: { ...formData.nuevoCliente, numero_documento: e.target.value } })} />
                   </Field>
                 </div>
               </div>
@@ -843,9 +841,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </FormSection>
 
 
-          {/* 4. CARGOS E IMPUESTOS */}
-          <FormSection icon={Receipt} title="Cargos e impuestos" hint="Consumos anticipados e impuestos aplicables.">
-            <div className="grid grid-cols-[minmax(0,1fr)_68px_104px_44px] gap-2">
+          {/* 3. CARGOS E IMPUESTOS */}
+          <FormSection icon={Receipt} title="Cargos e impuestos" hint="Consumos anticipados e impuestos.">
+            <div className="grid grid-cols-[minmax(0,1fr)_56px_88px_36px] gap-1.5">
               <ComboboxCreatable
                 options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
                 value={cargoConcepto}
@@ -858,20 +856,20 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 placeholder="Concepto…"
                 searchPlaceholder="Buscar o crear concepto…"
                 createLabel="Crear"
-                className="h-11 justify-start text-left font-normal"
+                className="h-9 justify-start px-2.5 text-left text-xs font-normal"
               />
-              <Input className="h-11 px-2 text-center" type="number" inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
-              <Input className="h-11 px-2 text-right" type="number" inputMode="decimal" placeholder="$0.00" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
-              <Button type="button" className="h-11 w-11 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-4 w-4" /></Button>
+              <Input className="h-9 px-1.5 text-center text-xs" type="number" inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+              <Input className="h-9 px-1.5 text-right text-xs" type="number" inputMode="decimal" placeholder="$0" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
+              <Button type="button" className="h-9 w-9 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-4 w-4" /></Button>
             </div>
             {formData.cargos.length > 0 && (
-              <div className="divide-y rounded-[10px] border">
+              <div className="divide-y rounded-lg border">
                 {formData.cargos.map(c => (
-                  <div key={c.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <div key={c.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
                     <span className="min-w-0 truncate">{c.concepto_nombre} <span className="text-muted-foreground">×{c.cantidad}</span></span>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <span className="font-medium tabular-nums">{formatCurrency(c.total)}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFormData(p => ({ ...p, cargos: p.cargos.filter(x => x.id !== c.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFormData(p => ({ ...p, cargos: p.cargos.filter(x => x.id !== c.id) }))}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                     </div>
                   </div>
                 ))}
@@ -880,13 +878,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
             <Separator />
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-xs font-medium text-[#475569]"><Percent className="h-3.5 w-3.5" />Impuestos</Label>
-              {formData.impuestos.length === 0 && <p className="text-xs text-muted-foreground">Sin impuestos. Agrega uno con un toque.</p>}
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5 text-[11px] font-medium text-[#475569]"><Percent className="h-3 w-3" />Impuestos</Label>
+              {formData.impuestos.length === 0 && <p className="text-[11px] text-muted-foreground">Sin impuestos. Agrega uno.</p>}
               {formData.impuestos.map((imp) => (
-                <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_86px_96px_40px] items-center gap-2">
+                <div key={imp.id} className="grid grid-cols-[minmax(0,1fr)_72px_84px_36px] items-center gap-1.5">
                   <Input
-                    className="h-10 w-full min-w-0"
+                    className="h-8 w-full min-w-0 text-xs"
                     placeholder="Nombre del impuesto"
                     value={imp.nombre}
                     onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, nombre: e.target.value } : x) }))}
@@ -894,26 +892,26 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   <div className="relative">
                     <Input
                       type="number" min="0" step="0.01"
-                      className="h-10 pr-7 text-right"
+                      className="h-8 pr-6 text-right text-xs"
                       value={imp.tasa}
                       onChange={(e) => setFormData((p) => ({ ...p, impuestos: p.impuestos.map((x) => x.id === imp.id ? { ...x, tasa: parseFloat(e.target.value) || 0 } : x) }))}
                     />
-                    <Percent className="absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Percent className="absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
                   </div>
-                  <span className="text-right text-xs tabular-nums text-muted-foreground">{fmt(subtotal * (imp.tasa / 100))}</span>
-                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <span className="text-right text-[11px] tabular-nums text-muted-foreground">{fmt(subtotal * (imp.tasa / 100))}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFormData((p) => ({ ...p, impuestos: p.impuestos.filter((x) => x.id !== imp.id) }))}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                 </div>
               ))}
-              <div className="flex flex-wrap gap-1.5 pt-1">
+              <div className="flex flex-wrap gap-1 pt-0.5">
                 {IMPUESTOS_MEXICO_SUGERIDOS.filter((s) => !formData.impuestos.some((i) => i.nombre === s.nombre)).map((sug) => (
                   <button key={sug.nombre} type="button" title={sug.descripcion}
-                    className="rounded-full border border-dashed border-[#CBD5E1] px-2.5 py-1 text-xs text-[#475569] transition-colors hover:border-[#10233F]/40 hover:text-[#10233F]"
+                    className="rounded-full border border-dashed border-[#CBD5E1] px-2 py-0.5 text-[11px] text-[#475569] transition-colors hover:border-[#10233F]/40 hover:text-[#10233F]"
                     onClick={() => setFormData((p) => ({ ...p, impuestos: [...p.impuestos, { id: `imp-${Date.now()}`, nombre: sug.nombre, tasa: sug.tasa }] }))}>
                     + {sug.nombre}
                   </button>
                 ))}
                 <button type="button"
-                  className="rounded-full border border-dashed border-[#F97316]/50 px-2.5 py-1 text-xs text-[#C2410C] transition-colors hover:bg-[#FFF7ED]"
+                  className="rounded-full border border-dashed border-[#F97316]/50 px-2 py-0.5 text-[11px] text-[#C2410C] transition-colors hover:bg-[#FFF7ED]"
                   onClick={() => setFormData((p) => ({ ...p, impuestos: [...p.impuestos, { id: `imp-${Date.now()}`, nombre: 'Impuesto', tasa: 0 }] }))}>
                   + Personalizado
                 </button>
@@ -923,23 +921,23 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
           {/* 4. NOTAS Y ENTREGABLES (opcional, plegable) */}
           <FormSection collapsible icon={Package} title="Notas y entregables" hint="Opcional · solicitudes, notas internas y entregables.">
-            <div className="grid gap-2.5 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <Field label="Solicitudes del huésped">
-                <Textarea rows={2} value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
+                <Textarea rows={2} className="min-h-[60px] text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
               </Field>
               <Field label="Notas internas">
-                <Textarea rows={2} value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
+                <Textarea rows={2} className="min-h-[60px] text-xs" value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
               </Field>
             </div>
             {origen === 'Recepcion' && entregables.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-[#475569]">Entregables al huésped</Label>
-                <div className="flex flex-wrap gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-medium text-[#475569]">Entregables al huésped</Label>
+                <div className="flex flex-wrap gap-1.5">
                   {entregables.map(ent => {
                     const activo = formData.entregablesSeleccionados.includes(ent.id);
                     return (
-                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors', activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40')}>
-                        {activo && <Check className="h-3.5 w-3.5" />}{ent.nombre}
+                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors', activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40')}>
+                        {activo && <Check className="h-3 w-3" />}{ent.nombre}
                       </button>
                     );
                   })}
@@ -951,12 +949,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
 
         {/* RESUMEN DE CUENTA */}
-        <aside className="min-w-0 xl:sticky xl:top-24">
+        <aside className="min-w-0 xl:sticky xl:top-20">
           <Card className="overflow-hidden border-0 bg-[#10233F] text-white shadow-lg">
-            <CardContent className="space-y-3 p-4">
-              <p className="text-sm font-semibold">Resumen de cuenta</p>
+            <CardContent className="space-y-2 p-3">
+              <p className="text-xs font-semibold">Resumen de cuenta</p>
 
-              <div className="space-y-1.5 text-sm">
+              <div className="space-y-1 text-xs">
                 <Line label={`Hospedaje · ${noches || 0} noche${noches === 1 ? '' : 's'}`} value={fmt(subtotalHospedaje)} />
                 {temporadaAplicable && <Line small label={`Temporada ${temporadaAplicable.nombre} (${describirAjuste(temporadaAplicable)})`} value={`${fmt(tarifaEfectiva)}/noche`} />}
                 {totalPersonaExtra > 0 && <Line label={`Personas extra (${formData.personasExtra})`} value={fmt(totalPersonaExtra)} />}
@@ -967,62 +965,62 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
               <Separator className="bg-white/20" />
 
-              <div className="space-y-2 rounded-[10px] bg-white/10 p-3">
-                <Label className="flex items-center gap-2 text-xs text-white/80"><Percent className="h-3.5 w-3.5" />Descuento sobre el total</Label>
-                <div className="flex gap-2">
+              <div className="space-y-1.5 rounded-lg bg-white/10 p-2.5">
+                <Label className="flex items-center gap-1.5 text-[11px] text-white/80"><Percent className="h-3 w-3" />Descuento</Label>
+                <div className="flex gap-1.5">
                   <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}>
-                    <SelectTrigger className="h-10 w-32 border-input bg-background text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 w-28 border-input bg-background text-xs text-foreground"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Ninguno</SelectItem>
                       <SelectItem value="Monto">Monto</SelectItem>
-                      <SelectItem value="Porcentaje">Porcentaje</SelectItem>
+                      <SelectItem value="Porcentaje">%</SelectItem>
                     </SelectContent>
                   </Select>
                   {formData.descuentoTipo !== 'none' && (
                     <div className="relative flex-1">
                       {formData.descuentoTipo === 'Porcentaje'
-                        ? <Percent className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        : <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />}
-                      <Input type="number" className="h-10 border-input bg-background pl-9 text-foreground" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
+                        ? <Percent className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        : <DollarSign className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />}
+                      <Input type="number" className="h-9 border-input bg-background pl-8 text-xs text-foreground" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="flex items-end justify-between">
-                <span className="text-sm font-medium">Total</span>
-                <span className="text-2xl font-bold tabular-nums">{fmt(total)}</span>
+                <span className="text-xs font-medium">Total</span>
+                <span className="text-xl font-bold tabular-nums">{fmt(total)}</span>
               </div>
 
               <Separator className="bg-white/20" />
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-xs text-white/80"><CreditCard className="h-3.5 w-3.5" />Registrar pago</Label>
-                <div className="flex gap-2">
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5 text-[11px] text-white/80"><CreditCard className="h-3 w-3" />Registrar pago</Label>
+                <div className="flex gap-1.5">
                   <Input
                     type="number"
                     placeholder={saldoPendiente > 0 ? fmt(saldoPendiente) : 'Monto'}
-                    className="h-10 flex-1 border-input bg-background text-foreground"
+                    className="h-9 flex-1 border-input bg-background text-xs text-foreground"
                     value={pagoMonto}
                     onFocus={() => { if (!pagoMonto && saldoPendiente > 0) setPagoMonto(saldoPendiente.toFixed(2)); }}
                     onChange={(e) => setPagoMonto(e.target.value)}
                   />
                   <Select value={pagoMetodo} onValueChange={setPagoMetodo}>
-                    <SelectTrigger className="h-10 w-28 border-input bg-background text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 w-24 border-input bg-background text-xs text-foreground"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Efectivo">Efectivo</SelectItem>
                       <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                      <SelectItem value="Transferencia">Transfer.</SelectItem>
+                      <SelectItem value="Transferencia">Transf.</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="secondary" className="h-10 w-10 px-0" onClick={handleAgregarPago} aria-label="Agregar pago"><Plus className="h-4 w-4" /></Button>
+                  <Button type="button" variant="secondary" className="h-9 w-9 px-0" onClick={handleAgregarPago} aria-label="Agregar pago"><Plus className="h-4 w-4" /></Button>
                 </div>
                 {formData.pagos.length > 0 && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {formData.pagos.map(p => (
-                      <div key={p.id} className="flex items-center justify-between rounded-[10px] bg-white/10 px-3 py-2 text-sm">
+                      <div key={p.id} className="flex items-center justify-between rounded-lg bg-white/10 px-2.5 py-1.5 text-xs">
                         <span>{p.metodo_pago}</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="font-medium tabular-nums">{formatCurrency(p.monto)}</span>
                           <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => handleEliminarPago(p.id)}><X className="h-3 w-3" /></Button>
                         </div>
@@ -1030,10 +1028,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     ))}
                   </div>
                 )}
-                <div className={cn('rounded-[10px] p-3 text-center', saldoPendiente > 0.01 ? 'bg-[#F97316]/25' : 'bg-emerald-500/20')}>
-                  <p className="text-[11px] text-white/75">{saldoPendiente < -0.01 ? 'Saldo a favor' : 'Saldo pendiente'}</p>
-                  <p className="mt-0.5 text-xl font-bold tabular-nums">{fmt(Math.abs(saldoPendiente))}</p>
-                  <p className="mt-0.5 text-[11px] text-white/70">{fmt(totalPagado)} pagado</p>
+                <div className={cn('rounded-lg p-2 text-center', saldoPendiente > 0.01 ? 'bg-[#F97316]/25' : 'bg-emerald-500/20')}>
+                  <p className="text-[10px] text-white/75">{saldoPendiente < -0.01 ? 'Saldo a favor' : 'Saldo pendiente'}</p>
+                  <p className="text-lg font-bold tabular-nums">{fmt(Math.abs(saldoPendiente))}</p>
+                  <p className="text-[10px] text-white/70">{fmt(totalPagado)} pagado</p>
                 </div>
               </div>
             </CardContent>
@@ -1043,21 +1041,21 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
       {/* ACCIONES */}
       <div className={cn(
-        'sticky bottom-0 z-20 -mx-3 mt-3 flex items-center gap-2 border-t bg-background/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
+        'sticky bottom-0 z-20 -mx-3 mt-2 flex items-center gap-2 border-t bg-background/95 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
         pageMode ? 'sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8' : 'sm:-mx-5 sm:px-5',
       )}>
-        <Button type="button" className="h-11 flex-1 sm:flex-none" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-        <span className="hidden flex-1 text-center text-xs text-muted-foreground md:block">
-          {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter para guardar' : 'Completa fechas, habitación y huésped'}
+        <Button type="button" className="h-9 flex-1 text-xs sm:flex-none" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+        <span className="hidden flex-1 text-center text-[11px] text-muted-foreground md:block">
+          {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter' : 'Completa fechas, habitación y huésped'}
         </span>
         <Button
           data-confirm-reservation
           type="button"
           onClick={handleConfirm}
           disabled={!puedeGuardar}
-          className={cn('h-11 flex-1 sm:min-w-52 sm:flex-none', origen === 'Recepcion' && 'bg-emerald-600 hover:bg-emerald-700')}
+          className={cn('h-9 flex-1 text-xs sm:min-w-44 sm:flex-none', origen === 'Recepcion' && 'bg-emerald-600 hover:bg-emerald-700')}
         >
-          {loading ? 'Procesando…' : <><Check className="mr-2 h-4 w-4" />{origen === 'Recepcion' ? 'Completar check-in' : 'Crear reserva'}</>}
+          {loading ? 'Procesando…' : <><Check className="mr-1.5 h-3.5 w-3.5" />{origen === 'Recepcion' ? 'Completar check-in' : 'Crear reserva'}</>}
         </Button>
       </div>
     </ReservationSurface>
@@ -1066,41 +1064,41 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
 function FormSection({ icon: Icon, title, hint, collapsible, children }: { icon: typeof CalendarDays; title: string; hint?: string; collapsible?: boolean; children: ReactNode }) {
   const head = (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <span className="rounded-[10px] bg-[#10233F]/[0.07] p-1.5 text-[#10233F]"><Icon className="h-4 w-4" /></span>
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="rounded-lg bg-[#10233F]/[0.07] p-1 text-[#10233F]"><Icon className="h-3.5 w-3.5" /></span>
       <div className="min-w-0">
-        <h3 className="truncate text-sm font-semibold text-[#10233F]">{title}</h3>
-        {hint && <p className="truncate text-[11px] text-muted-foreground">{hint}</p>}
+        <h3 className="truncate text-xs font-semibold text-[#10233F]">{title}</h3>
+        {hint && <p className="truncate text-[10px] text-muted-foreground">{hint}</p>}
       </div>
     </div>
   );
 
   if (collapsible) {
-    return <details className="group rounded-[14px] border border-[#10233F]/10 bg-white px-3 py-2.5 shadow-sm">
+    return <details className="group rounded-xl border border-[#10233F]/10 bg-white px-2.5 py-2 shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
         {head}
-        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
       </summary>
-      <div className="mt-3 space-y-2.5">{children}</div>
+      <div className="mt-2 space-y-2">{children}</div>
     </details>;
   }
 
-  return <section className="space-y-2.5 rounded-[14px] border border-[#10233F]/10 bg-white px-3 py-3 shadow-sm">
+  return <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white px-2.5 py-2.5 shadow-sm">
     {head}
     {children}
   </section>;
 }
 
 function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: ReactNode }) {
-  return <div className="min-w-0 space-y-1">
-    <Label className="text-xs font-medium text-[#475569]">{label}{required && <span className="ml-0.5 text-[#F97316]">*</span>}</Label>
+  return <div className="min-w-0 space-y-0.5">
+    <Label className="text-[11px] font-medium text-[#475569]">{label}{required && <span className="ml-0.5 text-[#F97316]">*</span>}</Label>
     {children}
     {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
   </div>;
 }
 
 function Line({ label, value, accent, small }: { label: string; value: string; accent?: boolean; small?: boolean }) {
-  return <div className={cn('flex justify-between gap-3', small && 'text-xs')}>
+  return <div className={cn('flex justify-between gap-3', small && 'text-[11px]')}>
     <span className={cn('min-w-0 truncate', accent ? 'text-emerald-300' : 'text-white/70')}>{label}</span>
     <span className={cn('shrink-0 tabular-nums', accent && 'text-emerald-300')}>{value}</span>
   </div>;
