@@ -136,6 +136,7 @@ export function TimelineGrid({
   const today = startOfDay(new Date());
   const isCompact = daysToShow > 14;
   const cellWidth = isCompact ? 'w-10' : daysToShow > 7 ? 'w-16' : 'w-20';
+  const cellWidthPx = isCompact ? 40 : daysToShow > 7 ? 64 : 80;
   const cellHeight = isCompact ? 'h-7' : 'h-9';
 
   return (
@@ -204,28 +205,45 @@ export function TimelineGrid({
                       const estadoCfg = getEstadoConfig(reserva.estado);
                       const EstadoIcon = estadoCfg.icon;
                       const tienesSaldo = parseFloat(reserva.saldo_pendiente) > 0;
+                      const previousReservation = dayIndex > 0 ? getReservationForCell(hab.id, dayIndex - 1) : null;
+                      const isLabelCell = !previousReservation || previousReservation.id !== reserva.id;
+                      let visibleSpan = 1;
+                      while (
+                        dayIndex + visibleSpan < days.length
+                        && getReservationForCell(hab.id, dayIndex + visibleSpan)?.id === reserva.id
+                      ) visibleSpan += 1;
+                      const guestFullName = [
+                        reserva.clientes?.nombre,
+                        reserva.clientes?.apellido_paterno,
+                        reserva.clientes?.apellido_materno,
+                      ].filter(Boolean).join(' ') || reserva.cliente_nombre || 'Sin nombre';
                       return (
                         <TooltipProvider key={dayIndex}>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  "border-r border-b cursor-pointer transition-all flex-shrink-0",
+                                  "relative border-r border-b cursor-pointer transition-all flex-shrink-0",
                                   cellWidth,
                                   cellHeight,
                                   estadoCfg.block,
+                                  isLabelCell ? 'z-[2]' : 'z-0',
                                   (position === 'start' || position === 'single') && 'rounded-l',
                                   (position === 'end' || position === 'single') && 'rounded-r',
                                   isToday && "ring-2 ring-primary ring-inset"
                                 )}
                                 onClick={() => onReservationClick(reserva)}
-                                aria-label={`Reserva ${reserva.cliente_nombre || ''} — ${estadoCfg.label}`}
+                                aria-label={`Reserva ${guestFullName} — ${estadoCfg.label}`}
                               >
-                                {(position === 'start' || position === 'single') && (
-                                  <div className="h-full flex items-center gap-1 px-1 overflow-hidden">
+                                {isLabelCell && (
+                                  <div
+                                    className="pointer-events-none relative z-10 flex h-full items-center gap-1 overflow-hidden px-1.5"
+                                    style={{ width: `${visibleSpan * cellWidthPx}px` }}
+                                    title={guestFullName}
+                                  >
                                     <EstadoIcon className={cn('flex-shrink-0', isCompact ? 'h-2.5 w-2.5' : 'h-3 w-3')} aria-hidden="true" />
-                                    <span className={cn("font-medium truncate flex-1", isCompact ? "text-[8px]" : "text-[10px]")}>
-                                      {reserva.cliente_nombre} {reserva.apellido_paterno?.charAt(0)}.
+                                    <span className={cn("min-w-0 flex-1 truncate font-semibold", isCompact ? "text-[8px]" : "text-[10px]")}>
+                                      {guestFullName}
                                     </span>
                                     {tienesSaldo && !isCompact && (
                                       <CircleDollarSign className="h-3 w-3 flex-shrink-0" aria-label="Saldo pendiente" />
@@ -234,10 +252,10 @@ export function TimelineGrid({
                                 )}
                               </div>
                             </TooltipTrigger>
-                            {(position === 'start' || position === 'single') && (
+                            {isLabelCell && (
                               <TooltipContent side="top" className="max-w-xs">
                                 <div className="space-y-1">
-                                  <p className="font-semibold text-sm">{reserva.cliente_nombre} {reserva.apellido_paterno}</p>
+                                  <p className="font-semibold text-sm">{guestFullName}</p>
                                   <p className="text-xs">
                                     {formatDate(reserva.fecha_checkin)} → {formatDate(reserva.fecha_checkout)}
                                   </p>
