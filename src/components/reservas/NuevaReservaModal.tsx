@@ -842,32 +842,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             )}
           </FormSection>
 
-          {/* 3. NOTAS Y ENTREGABLES */}
-          <FormSection icon={Package} title="Notas y entregables" hint="Opcional. Todo lo que recepción necesita saber.">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Solicitudes del huésped">
-                <Textarea rows={2} value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
-              </Field>
-              <Field label="Notas internas">
-                <Textarea rows={2} value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
-              </Field>
-            </div>
-            {origen === 'Recepcion' && entregables.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-[#475569]">Entregables al huésped</Label>
-                <div className="flex flex-wrap gap-2">
-                  {entregables.map(ent => {
-                    const activo = formData.entregablesSeleccionados.includes(ent.id);
-                    return (
-                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors', activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40')}>
-                        {activo && <Check className="h-3.5 w-3.5" />}{ent.nombre}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </FormSection>
 
           {/* 4. CARGOS E IMPUESTOS */}
           <FormSection icon={Receipt} title="Cargos e impuestos" hint="Consumos anticipados e impuestos aplicables.">
@@ -946,6 +920,34 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </div>
             </div>
           </FormSection>
+
+          {/* 4. NOTAS Y ENTREGABLES (opcional, plegable) */}
+          <FormSection collapsible icon={Package} title="Notas y entregables" hint="Opcional · solicitudes, notas internas y entregables.">
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <Field label="Solicitudes del huésped">
+                <Textarea rows={2} value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
+              </Field>
+              <Field label="Notas internas">
+                <Textarea rows={2} value={formData.notasInternas} onChange={(e) => setFormData({ ...formData, notasInternas: e.target.value })} placeholder="Solo visible para el equipo…" />
+              </Field>
+            </div>
+            {origen === 'Recepcion' && entregables.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-[#475569]">Entregables al huésped</Label>
+                <div className="flex flex-wrap gap-2">
+                  {entregables.map(ent => {
+                    const activo = formData.entregablesSeleccionados.includes(ent.id);
+                    return (
+                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors', activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40')}>
+                        {activo && <Check className="h-3.5 w-3.5" />}{ent.nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </FormSection>
+
         </div>
 
         {/* RESUMEN DE CUENTA */}
