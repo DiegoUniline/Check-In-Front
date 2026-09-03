@@ -16,6 +16,7 @@ interface TimelineGridProps {
   daysToShow: number;
   onReservationClick: (reserva: any) => void;
   onCreateReservation: (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => void;
+  canCreate?: boolean;
 }
 
 export function TimelineGrid({
@@ -25,6 +26,7 @@ export function TimelineGrid({
   daysToShow,
   onReservationClick,
   onCreateReservation,
+  canCreate = true,
 }: TimelineGridProps) {
   const [dragStart, setDragStart] = useState<{ roomId: string; dayIndex: number } | null>(null);
   const [dragEnd, setDragEnd] = useState<number | null>(null);
@@ -76,6 +78,7 @@ export function TimelineGrid({
   const getStatusClasses = (reserva: any) => getEstadoConfig(reserva.estado).block;
 
   const handleMouseDown = (habitacionId: string, dayIndex: number) => {
+    if (!canCreate) return;
     if (getReservationForCell(habitacionId, dayIndex)) return;
     setDragStart({ roomId: habitacionId, dayIndex });
     setDragEnd(dayIndex);
@@ -83,12 +86,14 @@ export function TimelineGrid({
   };
 
   const handleMouseEnter = (habitacionId: string, dayIndex: number) => {
+    if (!canCreate) return;
     if (!isDragging || !dragStart || dragStart.roomId !== habitacionId) return;
     if (getReservationForCell(habitacionId, dayIndex)) return;
     setDragEnd(dayIndex);
   };
 
   const handleMouseUp = () => {
+    if (!canCreate) return;
     if (!isDragging || !dragStart || dragEnd === null) {
       setIsDragging(false);
       setDragStart(null);
@@ -267,15 +272,16 @@ export function TimelineGrid({
                       <div
                         key={dayIndex}
                         className={cn(
-                          "border-r border-b cursor-crosshair hover:bg-accent/50 transition-colors flex-shrink-0",
+                          "border-r border-b transition-colors flex-shrink-0",
+                          canCreate ? "cursor-crosshair hover:bg-accent/50" : "cursor-default bg-muted/10",
                           cellWidth,
                           cellHeight,
                           isSelecting && "bg-primary/20",
                           isToday && "bg-blue-50 dark:bg-blue-950/20"
                         )}
-                        onMouseDown={() => handleMouseDown(hab.id, dayIndex)}
-                        onMouseEnter={() => handleMouseEnter(hab.id, dayIndex)}
-                        onMouseUp={handleMouseUp}
+                        onMouseDown={canCreate ? () => handleMouseDown(hab.id, dayIndex) : undefined}
+                        onMouseEnter={canCreate ? () => handleMouseEnter(hab.id, dayIndex) : undefined}
+                        onMouseUp={canCreate ? handleMouseUp : undefined}
                       />
                     );
                   })}
@@ -292,7 +298,7 @@ export function TimelineGrid({
           <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500"></div> Pendiente</span>
           <span className="flex items-center gap-1"><CircleDollarSign className="h-3 w-3" /> Saldo</span>
         </div>
-        <span className="hidden sm:inline">Arrastra para crear reserva</span>
+        <span className="hidden sm:inline">{canCreate ? 'Arrastra para crear reserva' : 'Modo sólo consulta'}</span>
       </div>
     </div>
   );

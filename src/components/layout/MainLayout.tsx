@@ -34,6 +34,62 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
 
   useEffect(() => {
     if (!readOnlyActive) return;
+    const canRemainInteractive = (action: HTMLElement) => {
+      if (action.closest('[data-shift-readonly-allow="true"], a[href]')) return true;
+      const label = `${action.getAttribute('aria-label') || ''} ${action.textContent || ''}`.trim();
+      if (/^Reserva\s.+/i.test(action.getAttribute('aria-label') || '')) return true;
+      if (action.querySelector('.lucide-refresh-cw')) return true;
+      const insideDialog = Boolean(action.closest('[role="dialog"]'));
+      const allowed = insideDialog
+        ? /^(cancelar|cerrar|volver|regresar|ver|consultar|descargar|exportar|imprimir)\b/i
+        : /^(ver|consultar|detalle|historial|reporte|buscar|filtrar|filtros|limpiar filtros|anterior|siguiente|hoy|semana|mes|calendario|card|tabla|lista|cerrar|volver|regresar|expandir|mostrar|ocultar|descargar|exportar|imprimir|todas|todos|piso\s|día|dia)\b/i;
+      return allowed.test(label);
+    };
+
+    const lockAction = (action: HTMLElement) => {
+      if (canRemainInteractive(action)) return;
+      if (action.dataset.shiftDisabledByMode === 'true') {
+        if (action instanceof HTMLButtonElement && action.dataset.shiftEnabledBeforeMode === 'true' && !action.disabled) action.disabled = true;
+        return;
+      }
+      action.dataset.shiftDisabledByMode = 'true';
+      action.setAttribute('aria-disabled', 'true');
+      action.setAttribute('title', 'Abre un turno para realizar esta acción');
+      if (action instanceof HTMLButtonElement) {
+        if (!action.disabled) {
+          action.dataset.shiftEnabledBeforeMode = 'true';
+          action.disabled = true;
+        }
+      } else {
+        action.dataset.shiftPreviousPointerEvents = action.style.pointerEvents;
+        action.style.pointerEvents = 'none';
+        action.classList.add('opacity-50');
+      }
+    };
+
+    const lockAllActions = () => {
+      const roots = [
+        document.querySelector<HTMLElement>('main[data-shift-read-only="true"]'),
+        ...Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], [role="menu"]')),
+      ].filter((root): root is HTMLElement => Boolean(root));
+      roots.forEach((root) => {
+        if (root.matches('button, [role="button"], [role="menuitem"]')) lockAction(root);
+        root.querySelectorAll<HTMLElement>('button, [role="button"], [role="menuitem"]').forEach(lockAction);
+      });
+    };
+
+    let frame = 0;
+    const scheduleLock = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        lockAllActions();
+      });
+    };
+    lockAllActions();
+    const observer = new MutationObserver(scheduleLock);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
+
     const onClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target || target.closest('a[href]')) return;
@@ -54,6 +110,20 @@ export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
     document.addEventListener('click', onClick, true);
     document.addEventListener('submit', onSubmit, true);
     return () => {
+      observer.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+      document.querySelectorAll<HTMLElement>('[data-shift-disabled-by-mode="true"]').forEach((action) => {
+        if (action instanceof HTMLButtonElement && action.dataset.shiftEnabledBeforeMode === 'true') action.disabled = false;
+        if (!(action instanceof HTMLButtonElement)) {
+          action.style.pointerEvents = action.dataset.shiftPreviousPointerEvents || '';
+          action.classList.remove('opacity-50');
+        }
+        delete action.dataset.shiftDisabledByMode;
+        delete action.dataset.shiftEnabledBeforeMode;
+        delete action.dataset.shiftPreviousPointerEvents;
+        action.removeAttribute('aria-disabled');
+        if (action.getAttribute('title') === 'Abre un turno para realizar esta acción') action.removeAttribute('title');
+      });
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('submit', onSubmit, true);
     };

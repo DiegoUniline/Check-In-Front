@@ -51,6 +51,7 @@ import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { addMonths } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useShift } from '@/contexts/useShift';
 
 const RESERVAS_VIEW_KEY = 'vulo:reservas:view-state';
 const readReservasViewState = (): Record<string, any> => {
@@ -149,6 +150,7 @@ export default function Reservas() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { viewOnlyMode } = useShift();
   const savedView = useRef(readReservasViewState()).current;
   const mobileViewInitialized = useRef(Boolean(savedView.reservasSubView));
   const { vista } = useParams<{ vista?: string }>();
@@ -290,6 +292,10 @@ export default function Reservas() {
   )].sort((a: any, b: any) => Number(a) - Number(b));
 
   const handleCreateReservation = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
+    if (viewOnlyMode) {
+      toast({ title: 'Modo sólo consulta', description: 'Abre un turno para crear reservaciones.' });
+      return;
+    }
     setPreloadReserva({ habitacion, fechaCheckin, fechaCheckout });
     setModalNuevaReserva(true);
   };
@@ -299,6 +305,10 @@ export default function Reservas() {
   };
 
   const handleRecepcionLibreClick = (habitacion: any) => {
+    if (viewOnlyMode) {
+      toast({ title: 'Modo sólo consulta', description: 'Abre un turno para registrar una entrada.' });
+      return;
+    }
     const hoy = parseISO(todayLocal());
     setPreloadReserva({
       habitacion,
@@ -327,6 +337,8 @@ export default function Reservas() {
         <div className="grid grid-cols-2 gap-2 sm:hidden">
           <Button
             className="col-span-2 h-12 justify-center text-sm font-semibold shadow-sm"
+            disabled={viewOnlyMode}
+            title={viewOnlyMode ? 'Abre un turno para crear reservaciones' : undefined}
             onClick={() => {
               setPreloadReserva(undefined);
               setModalNuevaReserva(true);
@@ -604,6 +616,7 @@ export default function Reservas() {
               daysToShow={daysToShow}
               onReservationClick={handleReservationClick}
               onCreateReservation={handleCreateReservation}
+              canCreate={!viewOnlyMode}
             />
           )}
         </div>
@@ -1043,7 +1056,7 @@ export default function Reservas() {
 
       {/* Modales */}
       <NuevaReservaModal
-        open={modalNuevaReserva}
+        open={modalNuevaReserva && !viewOnlyMode}
         onOpenChange={setModalNuevaReserva}
         preload={preloadReserva}
         onSuccess={cargarDatos}
