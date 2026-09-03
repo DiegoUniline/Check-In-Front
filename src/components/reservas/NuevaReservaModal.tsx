@@ -639,19 +639,19 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       <div className="mt-2 grid items-start gap-2 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-2">
           {/* 1. ESTANCIA + HABITACIÓN */}
-          <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo se listan habitaciones libres en todo el rango.">
+          <FormSection icon={CalendarDays} title="Estancia y habitación" hint="Solo habitaciones libres en el rango.">
             {origen === 'Recepcion' && (
-              <div className="rounded-[10px] border border-[#FDBA74] bg-[#FFF7ED] px-3 py-2 text-xs text-[#9A3412]">
-                Check-in automático al confirmar: la habitación queda ocupada hoy.
+              <div className="rounded-lg border border-[#FDBA74] bg-[#FFF7ED] px-2.5 py-1.5 text-[11px] text-[#9A3412]">
+                Check-in automático: la habitación queda ocupada hoy.
               </div>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-3">
               <Field label="Check-in">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-11 w-full justify-start font-normal" disabled={origen === 'Recepcion'}>
-                      <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <Button variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal" disabled={origen === 'Recepcion'}>
+                      <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                       {formatDate(formData.fechaCheckin)}
                     </Button>
                   </PopoverTrigger>
@@ -663,8 +663,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <Field label="Check-out">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-11 w-full justify-start font-normal">
-                      <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <Button variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal">
+                      <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                       {formatDate(formData.fechaCheckout)}
                     </Button>
                   </PopoverTrigger>
@@ -673,42 +673,42 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   </PopoverContent>
                 </Popover>
               </Field>
-              <Field label="Hora de llegada">
+              <Field label="Hora">
                 <div className="relative">
-                  <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input type="time" className="h-11 pl-9" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
+                  <Clock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input type="time" className="h-9 pl-8 text-xs" value={formData.horaLlegada} onChange={(e) => setFormData({ ...formData, horaLlegada: e.target.value })} />
                 </div>
               </Field>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Field label="Adultos">
                 <Select value={formData.adultos.toString()} onValueChange={(v) => setFormData({ ...formData, adultos: parseInt(v) })}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[1, 2, 3, 4, 5, 6].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
               <Field label="Niños">
                 <Select value={formData.ninos.toString()} onValueChange={(v) => setFormData({ ...formData, ninos: parseInt(v) })}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[0, 1, 2, 3, 4].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Field label="Personas extra">
+              <Field label="Extras">
                 <Select value={formData.personasExtra.toString()} onValueChange={(v) => setFormData({ ...formData, personasExtra: parseInt(v) })}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{[0, 1, 2, 3].map(n => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
-              <Field label="Cargo por extra" hint={formData.personasExtra === 0 ? 'Sin extras' : 'Por noche'}>
+              <Field label="Cargo extra" hint={formData.personasExtra === 0 ? 'Sin extras' : 'Por noche'}>
                 <div className="relative">
-                  <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input type="number" inputMode="decimal" className="h-11 pl-9" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
+                  <DollarSign className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input type="number" inputMode="decimal" className="h-9 pl-8 text-xs" value={formData.cargoPersonaExtra} onChange={(e) => setFormData({ ...formData, cargoPersonaExtra: parseFloat(e.target.value) || 0 })} disabled={formData.personasExtra === 0} />
                 </div>
               </Field>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <Field label="Categoría">
                 <ComboboxCreatable
                   options={tiposHabitacion.map(t => ({ value: t.id, label: `${t.nombre} · ${formatCurrency(t.precio_base)}/noche` }))}
@@ -722,10 +722,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   placeholder="Todas las categorías"
                   searchPlaceholder="Buscar categoría…"
                   createLabel="Crear"
-                  className="h-11 justify-start text-left font-normal"
+                  className="h-9 justify-start px-2.5 text-left text-xs font-normal"
                 />
               </Field>
-              <Field label="Habitación" hint={`${habitacionesDisponibles.length} disponibles en el rango`}>
+              <Field label="Habitación" hint={`${habitacionesDisponibles.length} disponibles`}>
                 <ComboboxCreatable
                   options={habitacionesDisponibles.map((hab) => {
                     const tipo = tiposHabitacion.find((item) => item.id === (hab.tipo_habitacion_id || hab.tipo_id));
@@ -742,16 +742,16 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   searchPlaceholder="Número, categoría o precio…"
                   emptyMessage="No hay coincidencias disponibles."
                   disabled={habitacionesDisponibles.length === 0}
-                  className="h-11 justify-start text-left font-normal"
+                  className="h-9 justify-start px-2.5 text-left text-xs font-normal"
                 />
               </Field>
             </div>
 
             {selectedHabitacion && (
-              <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-[#F8FAFC] px-3 py-2 text-xs text-[#475569]">
-                <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#475569]">
+                <Check className="h-3 w-3 text-emerald-600" />
                 Hab. {selectedHabitacion.numero} disponible · {fmt(tarifaEfectiva)}/noche
-                {temporadaAplicable && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{temporadaAplicable.nombre}</Badge>}
+                {temporadaAplicable && <Badge variant="outline" className="h-4 px-1 text-[10px]">{temporadaAplicable.nombre}</Badge>}
               </div>
             )}
           </FormSection>
