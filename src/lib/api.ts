@@ -603,6 +603,35 @@ class ApiClient {
     return summary;
   };
 
+  getShiftCloseReport = async (turnoId: string, abiertoAt: string): Promise<any> => {
+    const { data, error } = await (operationalDb as any).rpc('vulo_build_shift_report', { p_turno_id: turnoId });
+    if (!error) return data;
+    const missingReportFunction = error.code === '42883' || error.code === 'PGRST202' || /vulo_build_shift_report|schema cache/i.test(error.message || '');
+    if (!missingReportFunction) throw error;
+
+    // Vista compatible mientras se aplica la migración del reporte automático.
+    const financial = await this.getShiftFinancialSummary(turnoId, abiertoAt);
+    return {
+      version: 0,
+      generado_at: new Date().toISOString(),
+      periodo: { inicio: abiertoAt, fin: new Date().toISOString() },
+      recepcion: { reservas_creadas: 0, checkins: 0, checkouts: 0, cancelaciones: 0, no_shows: 0, operaciones: 0, eventos: [], detalle_operaciones: [] },
+      estado_hotel: {},
+      pagos: {
+        total: financial.efectivo + financial.tarjeta + financial.transferencia + financial.otros,
+        cantidad: financial.movimientos.filter((item: any) => item.tipo === 'Ingreso').length,
+        por_metodo: [],
+        detalle: financial.movimientos.filter((item: any) => item.tipo === 'Ingreso'),
+      },
+      gastos: {
+        total: financial.egresosEfectivo,
+        cantidad: financial.movimientos.filter((item: any) => item.tipo === 'Egreso').length,
+        detalle: financial.movimientos.filter((item: any) => item.tipo === 'Egreso'),
+      },
+      ventas: { total: 0, cantidad: 0, productos: [] },
+    };
+  };
+
   closeShift = async (id: string, payload: Record<string, unknown>): Promise<any> => {
     const { data: closedByServer, error: closeError } = await (operationalDb as any).rpc('vulo_close_shift', {
       p_turno_id: id,

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle,
   ArrowDownCircle,
   ArrowRightLeft,
   ArrowUpCircle,
@@ -9,9 +8,14 @@ import {
   Calculator,
   CheckCircle2,
   Clock3,
+  CreditCard,
+  FileText,
+  LogIn,
+  LogOut,
   Lock,
   Receipt,
   RefreshCw,
+  ShoppingBag,
   Unlock,
   User,
 } from 'lucide-react';
@@ -24,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BitacoraPanel } from '@/components/turnos/BitacoraPanel';
 import { ExportButton } from '@/components/ExportButton';
@@ -47,6 +52,72 @@ type ShiftSummary = {
 
 const emptySummary: ShiftSummary = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, egresosEfectivo: 0, movimientos: [] };
 
+const reportArray = (value: unknown): any[] => Array.isArray(value) ? value : [];
+const normalizeMoneyInput = (value: string) => {
+  const cleaned = value.replace(/[^\d.]/g, '');
+  const [integer = '', ...decimals] = cleaned.split('.');
+  return decimals.length ? `${integer}.${decimals.join('').slice(0, 2)}` : integer;
+};
+
+function ShiftReport({ report }: { report: any }) {
+  const reception = report?.recepcion || {};
+  const hotel = report?.estado_hotel || {};
+  const payments = report?.pagos || {};
+  const expenses = report?.gastos || {};
+  const sales = report?.ventas || {};
+  const cash = report?.caja || {};
+  const period = report?.periodo || {};
+  const sections = [
+    { label: 'Reservas creadas', value: reception.reservas_creadas || 0, icon: Receipt },
+    { label: 'Check-ins', value: reception.checkins || 0, icon: LogIn },
+    { label: 'Check-outs', value: reception.checkouts || 0, icon: LogOut },
+    { label: 'Operaciones', value: reception.operaciones || 0, icon: RefreshCw },
+  ];
+
+  return <div className="space-y-6">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#10233F]/5 px-4 py-3 text-sm">
+      <span className="font-semibold text-[#10233F]">Reporte automático del turno</span>
+      <span className="text-muted-foreground">{period.inicio ? formatDateTime(period.inicio) : '—'} → {period.fin ? formatDateTime(period.fin) : 'Ahora'}</span>
+    </div>
+
+    <section>
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recepción</h3>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {sections.map((item) => <div key={item.label} className="rounded-xl border bg-white p-3"><item.icon className="mb-2 h-4 w-4 text-[#10233F]" /><p className="text-xl font-bold text-[#10233F]">{item.value}</p><p className="text-xs text-muted-foreground">{item.label}</p></div>)}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border bg-slate-50 p-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+        {[
+          ['Ocupadas',hotel.ocupadas],['Disponibles',hotel.disponibles],['Sucias',hotel.sucias],
+          ['Mantenimiento',hotel.mantenimiento],['Llegadas pendientes',hotel.llegadas_pendientes],['Salidas pendientes',hotel.salidas_pendientes],
+        ].map(([label,value]) => <div key={String(label)}><p className="font-bold text-[#10233F]">{value ?? 0}</p><p className="text-xs text-muted-foreground">{label}</p></div>)}
+      </div>
+    </section>
+
+    <section>
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resumen financiero</h3>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl bg-emerald-50 p-3"><CreditCard className="mb-2 h-4 w-4 text-emerald-700" /><p className="font-bold text-emerald-800">{formatCurrency(payments.total || 0)}</p><p className="text-xs text-emerald-700">Pagos recibidos · {payments.cantidad || 0}</p></div>
+        <div className="rounded-xl bg-red-50 p-3"><ArrowUpCircle className="mb-2 h-4 w-4 text-red-700" /><p className="font-bold text-red-800">{formatCurrency(expenses.total || 0)}</p><p className="text-xs text-red-700">Gastos realizados · {expenses.cantidad || 0}</p></div>
+        <div className="rounded-xl bg-blue-50 p-3"><ShoppingBag className="mb-2 h-4 w-4 text-blue-700" /><p className="font-bold text-blue-800">{formatCurrency(sales.total || 0)}</p><p className="text-xs text-blue-700">Ventas y consumos · {sales.cantidad || 0}</p></div>
+        <div className="rounded-xl bg-[#10233F] p-3 text-white"><Banknote className="mb-2 h-4 w-4 text-white/70" /><p className="font-bold">{formatCurrency(cash.efectivo_contado ?? cash.efectivo_esperado ?? 0)}</p><p className="text-xs text-white/65">Efectivo al cierre</p></div>
+      </div>
+    </section>
+
+    {[
+      { title: 'Pagos recibidos', rows: reportArray(payments.detalle), columns: ['fecha','reserva','huesped','metodo','monto'] },
+      { title: 'Gastos realizados', rows: reportArray(expenses.detalle), columns: ['fecha','categoria','concepto','metodo','monto'] },
+      { title: 'Ventas por producto', rows: reportArray(sales.productos), columns: ['producto','cantidad','total'] },
+    ].map((section) => <section key={section.title}>
+      <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-semibold text-[#10233F]">{section.title}</h3><Badge variant="secondary">{section.rows.length}</Badge></div>
+      <div className="overflow-x-auto rounded-xl border">
+        <Table><TableHeader><TableRow>{section.columns.map((column) => <TableHead key={column} className="capitalize">{column}</TableHead>)}</TableRow></TableHeader>
+          <TableBody>{section.rows.length ? section.rows.map((row:any,index:number) => <TableRow key={row.id || `${section.title}-${index}`}>{section.columns.map((column) => <TableCell key={column} className={column==='monto'||column==='total' ? 'font-semibold' : ''}>{column==='fecha' && row[column] ? formatDateTime(row[column]) : column==='monto'||column==='total' ? formatCurrency(row[column] || 0) : row[column] ?? '—'}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={section.columns.length} className="py-6 text-center text-sm text-muted-foreground">Sin movimientos en este turno.</TableCell></TableRow>}</TableBody>
+        </Table>
+      </div>
+    </section>)}
+  </div>;
+}
+
 export default function Turnos() {
   const { user } = useAuth();
   const { refreshShift } = useShift();
@@ -56,6 +127,7 @@ export default function Turnos() {
   const currency = useCurrency();
   const [turno, setTurno] = useState<any | null>(null);
   const [historial, setHistorial] = useState<any[]>([]);
+  const [usuarios, setUsuarios] = useState<any[]>([]);
   const [summary, setSummary] = useState<ShiftSummary>(emptySummary);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,19 +136,23 @@ export default function Turnos() {
   const [fondoInicial, setFondoInicial] = useState('');
   const [fondoContado, setFondoContado] = useState('');
   const [entregaA, setEntregaA] = useState('');
-  const [resumenEntrega, setResumenEntrega] = useState('');
   const [pendientesEntrega, setPendientesEntrega] = useState('');
   const [motivoDiferencia, setMotivoDiferencia] = useState('');
-  const [checks, setChecks] = useState({ caja: false, pendientes: false, llegadas: false, incidentes: false });
+  const [cashConfirmed, setCashConfirmed] = useState(false);
+  const [closeReport, setCloseReport] = useState<any | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportDialog, setReportDialog] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const shiftPromptShown = useRef(false);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const [current, history] = await Promise.all([api.getOpenShift(user.id), api.getShiftHistory()]);
+      const [current, history, staff] = await Promise.all([api.getOpenShift(user.id), api.getShiftHistory(), api.getUsuarios().catch(() => [])]);
       setTurno(current);
       setHistorial(history);
+      setUsuarios((Array.isArray(staff) ? staff : []).filter((member:any) => member.activo !== false && member.id !== user.id));
       setSummary(current ? await api.getShiftFinancialSummary(current.id, current.abierto_at) : emptySummary);
     } catch (error: any) {
       toast({ title: 'No se pudieron cargar los turnos', description: error?.message, variant: 'destructive' });
@@ -100,15 +176,13 @@ export default function Turnos() {
   );
   const contado = Number(fondoContado || 0);
   const diferencia = contado - efectivoEsperado;
-  const allChecked = Object.values(checks).every(Boolean);
+  const hasCashCount = fondoContado.trim() !== '' && Number.isFinite(contado) && contado >= 0;
   const openingAmount = Number(fondoInicial || 0);
   const validOpeningAmount = Number.isFinite(openingAmount) && openingAmount >= 0;
   const operatorName = `${user?.nombre || ''} ${user?.apellidoPaterno || ''}`.trim() || user?.email || 'Usuario';
 
   const updateOpeningAmount = (value: string) => {
-    const cleaned = value.replace(/[^\d.]/g, '');
-    const [integer = '', ...decimals] = cleaned.split('.');
-    setFondoInicial(decimals.length ? `${integer}.${decimals.join('').slice(0, 2)}` : integer);
+    setFondoInicial(normalizeMoneyInput(value));
   };
 
   const abrirTurno = async () => {
@@ -133,17 +207,27 @@ export default function Turnos() {
     }
   };
 
+  const abrirCierre = async () => {
+    if (!turno) return;
+    setCloseDialog(true);
+    setReportLoading(true);
+    try {
+      setCloseReport(await api.getShiftCloseReport(turno.id, turno.abierto_at));
+    } catch (error:any) {
+      toast({ title: 'No se pudo preparar el reporte', description: error?.message, variant: 'destructive' });
+      setCloseReport(null);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const cerrarTurno = async () => {
-    if (!turno || !fondoContado || !Number.isFinite(contado)) {
+    if (!turno || !hasCashCount) {
       toast({ title: 'Cuenta y registra el efectivo en caja', variant: 'destructive' });
       return;
     }
-    if (!resumenEntrega.trim() || !pendientesEntrega.trim()) {
-      toast({ title: 'La entrega debe incluir resumen y pendientes', variant: 'destructive' });
-      return;
-    }
-    if (!allChecked) {
-      toast({ title: 'Confirma los cuatro puntos del cierre', variant: 'destructive' });
+    if (!cashConfirmed) {
+      toast({ title: 'Confirma que contaste físicamente la caja', variant: 'destructive' });
       return;
     }
     if (Math.abs(diferencia) > 0.009 && !motivoDiferencia.trim()) {
@@ -152,7 +236,8 @@ export default function Turnos() {
     }
     setSaving(true);
     try {
-      await api.closeShift(turno.id, {
+      const deliveryUser = usuarios.find((member) => member.id === entregaA);
+      const closedShift = await api.closeShift(turno.id, {
         efectivo_esperado: efectivoEsperado,
         efectivo_contado: contado,
         diferencia,
@@ -161,30 +246,40 @@ export default function Turnos() {
         ingresos_transferencia: summary.transferencia,
         otros_ingresos: summary.otros,
         egresos_efectivo: summary.egresosEfectivo,
-        entrega_a: entregaA.trim() || null,
-        resumen_entrega: resumenEntrega.trim(),
-        pendientes_entrega: pendientesEntrega.trim(),
+        entrega_a: deliveryUser ? `${deliveryUser.nombre || ''} ${deliveryUser.apellido_paterno || ''}`.trim() : null,
+        resumen_entrega: 'Reporte automático de turno',
+        pendientes_entrega: pendientesEntrega.trim() || '__VULO_SIN_PENDIENTES__',
         motivo_diferencia: motivoDiferencia.trim() || null,
-        checklist_cierre: checks,
+        checklist_cierre: { caja: true, pendientes: true, llegadas: true, incidentes: true, entrega_usuario_id: entregaA || null },
       });
-      await api.createBitacoraOperativa({
-        turno_id: turno.id,
-        categoria: 'Entrega de turno',
-        prioridad: Math.abs(diferencia) > 0.009 ? 'Alta' : 'Normal',
-        titulo: `Entrega de turno${entregaA.trim() ? ` a ${entregaA.trim()}` : ''}`,
-        detalle: `${resumenEntrega.trim()}\n\nPendientes: ${pendientesEntrega.trim()}\nCaja: ${formatCurrency(contado)} · Diferencia: ${formatCurrency(diferencia)}`,
-        estado: 'Abierto',
-        autor_id: user?.id,
-        autor_nombre: user?.nombre || user?.email || 'Usuario',
-      }).catch(() => null);
+      if (pendientesEntrega.trim()) await api.createBitacoraOperativa({
+          turno_id: turno.id,
+          categoria: 'Entrega de turno',
+          prioridad: Math.abs(diferencia) > 0.009 ? 'Alta' : 'Normal',
+          titulo: `Pendientes entregados${deliveryUser ? ` a ${deliveryUser.nombre}` : ''}`,
+          detalle: `${pendientesEntrega.trim()}\n\nCaja: ${formatCurrency(contado)} · Diferencia: ${formatCurrency(diferencia)}`,
+          estado: 'Abierto',
+          autor_id: user?.id,
+          autor_nombre: user?.nombre || user?.email || 'Usuario',
+        }).catch(() => null);
       toast({ title: 'Turno cerrado y entregado', description: Math.abs(diferencia) < 0.01 ? 'Caja conciliada correctamente.' : `Diferencia registrada: ${formatCurrency(diferencia)}` });
       setCloseDialog(false);
+      const finalReport = closedShift?.reporte_cierre && Object.keys(closedShift.reporte_cierre).length
+        ? closedShift.reporte_cierre
+        : closeReport ? { ...closeReport, caja: {
+          fondo_inicial: Number(turno.fondo_inicial || 0), efectivo_ingresado: summary.efectivo,
+          tarjeta: summary.tarjeta, transferencia: summary.transferencia, otros_ingresos: summary.otros,
+          egresos_efectivo: summary.egresosEfectivo, efectivo_esperado: efectivoEsperado,
+          efectivo_contado: contado, diferencia,
+        } } : null;
+      setSelectedReport(finalReport);
+      setReportDialog(Boolean(finalReport));
       setFondoContado('');
       setEntregaA('');
-      setResumenEntrega('');
       setPendientesEntrega('');
       setMotivoDiferencia('');
-      setChecks({ caja: false, pendientes: false, llegadas: false, incidentes: false });
+      setCashConfirmed(false);
+      setCloseReport(null);
       await Promise.all([load(), refreshShift()]);
     } catch (error: any) {
       toast({ title: 'No se pudo cerrar el turno', description: error?.message, variant: 'destructive' });
@@ -218,7 +313,7 @@ export default function Turnos() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button>
-                {turno ? <Button variant="destructive" onClick={() => setCloseDialog(true)}><ArrowRightLeft className="mr-2 h-4 w-4" />Entregar y cerrar</Button> : <Button onClick={() => setOpenDialog(true)}><Unlock className="mr-2 h-4 w-4" />Abrir turno</Button>}
+                {turno ? <Button variant="destructive" onClick={() => void abrirCierre()}><ArrowRightLeft className="mr-2 h-4 w-4" />Entregar y cerrar</Button> : <Button onClick={() => setOpenDialog(true)}><Unlock className="mr-2 h-4 w-4" />Abrir turno</Button>}
               </div>
             </div>
           </CardContent>
@@ -253,8 +348,8 @@ export default function Turnos() {
 
         <Card>
           <CardHeader className="flex-row items-center justify-between"><CardTitle className="flex items-center gap-2 text-base"><Clock3 className="h-5 w-5" />Historial de turnos</CardTitle><ExportButton rows={() => historial} filename="turnos_vulo" sheetName="Turnos" /></CardHeader>
-          <CardContent className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Apertura</TableHead><TableHead>Usuario</TableHead><TableHead>Fondo</TableHead><TableHead>Contado</TableHead><TableHead>Diferencia</TableHead><TableHead>Entrega</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader><TableBody>
-            {historial.length === 0 ? <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">El primer turno aparecerá aquí.</TableCell></TableRow> : historial.map((t) => <TableRow key={t.id}><TableCell>{formatDateTime(t.abierto_at)}</TableCell><TableCell>{t.usuario_nombre}</TableCell><TableCell>{formatCurrency(t.fondo_inicial)}</TableCell><TableCell>{t.efectivo_contado == null ? '—' : formatCurrency(t.efectivo_contado)}</TableCell><TableCell className={cn('font-semibold', Number(t.diferencia) ? 'text-red-700' : 'text-emerald-700')}>{t.diferencia == null ? '—' : formatCurrency(t.diferencia)}</TableCell><TableCell className="max-w-56 truncate">{t.resumen_entrega || '—'}</TableCell><TableCell><Badge variant={t.estado === 'Abierto' ? 'default' : 'secondary'}>{t.estado}</Badge></TableCell></TableRow>)}
+          <CardContent className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Apertura</TableHead><TableHead>Usuario</TableHead><TableHead>Fondo</TableHead><TableHead>Contado</TableHead><TableHead>Diferencia</TableHead><TableHead>Entregado a</TableHead><TableHead>Reporte</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader><TableBody>
+            {historial.length === 0 ? <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">El primer turno aparecerá aquí.</TableCell></TableRow> : historial.map((t) => <TableRow key={t.id}><TableCell>{formatDateTime(t.abierto_at)}</TableCell><TableCell>{t.usuario_nombre}</TableCell><TableCell>{formatCurrency(t.fondo_inicial)}</TableCell><TableCell>{t.efectivo_contado == null ? '—' : formatCurrency(t.efectivo_contado)}</TableCell><TableCell className={cn('font-semibold', Number(t.diferencia) ? 'text-red-700' : 'text-emerald-700')}>{t.diferencia == null ? '—' : formatCurrency(t.diferencia)}</TableCell><TableCell>{t.entrega_a || 'Cierre final'}</TableCell><TableCell>{t.reporte_cierre && Object.keys(t.reporte_cierre).length ? <Button variant="outline" size="sm" onClick={() => { setSelectedReport(t.reporte_cierre); setReportDialog(true); }}><FileText className="mr-1.5 h-3.5 w-3.5" />Ver reporte</Button> : <span className="text-muted-foreground">—</span>}</TableCell><TableCell><Badge variant={t.estado === 'Abierto' ? 'default' : 'secondary'}>{t.estado}</Badge></TableCell></TableRow>)}
           </TableBody></Table></CardContent>
         </Card>
       </div>
@@ -345,20 +440,52 @@ export default function Turnos() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={closeDialog} onOpenChange={setCloseDialog}><DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" />Arqueo, entrega y cierre</DialogTitle></DialogHeader><div className="space-y-5 py-2">
-        <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-950 p-4 text-white sm:grid-cols-4"><div><p className="text-xs text-slate-400">Fondo</p><p className="font-semibold">{formatCurrency(turno?.fondo_inicial)}</p></div><div><p className="text-xs text-slate-400">Efectivo ingresado</p><p className="font-semibold text-emerald-400">{formatCurrency(summary.efectivo)}</p></div><div><p className="text-xs text-slate-400">Egresos</p><p className="font-semibold text-red-400">{formatCurrency(summary.egresosEfectivo)}</p></div><div><p className="text-xs text-slate-400">Esperado</p><p className="text-lg font-bold">{formatCurrency(efectivoEsperado)}</p></div></div>
-        <div><Label htmlFor="contado">Efectivo contado *</Label><Input id="contado" type="number" min="0" step="0.01" className="mt-2 text-lg" value={fondoContado} onChange={(e) => setFondoContado(e.target.value)} placeholder="0.00" />{fondoContado && <div className={cn('mt-2 flex items-center justify-between rounded-xl border p-3', Math.abs(diferencia) < 0.01 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50')}><span className="text-sm font-medium">Diferencia de caja</span><strong className={Math.abs(diferencia) < 0.01 ? 'text-emerald-700' : 'text-red-700'}>{formatCurrency(diferencia)}</strong></div>}</div>
-        {Math.abs(diferencia) > 0.009 && <div><Label htmlFor="motivo">Motivo de la diferencia *</Label><Textarea id="motivo" className="mt-2" value={motivoDiferencia} onChange={(e) => setMotivoDiferencia(e.target.value)} placeholder="Explica qué ocurrió; quedará auditado." /></div>}
-        <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor="entrega-a">Entregar a</Label><Input id="entrega-a" className="mt-2" value={entregaA} onChange={(e) => setEntregaA(e.target.value)} placeholder="Siguiente responsable" /></div><div><Label htmlFor="resumen">Resumen de la operación *</Label><Input id="resumen" className="mt-2" value={resumenEntrega} onChange={(e) => setResumenEntrega(e.target.value)} placeholder="Cómo queda el hotel" /></div></div>
-        <div><Label htmlFor="pendientes">Pendientes para el siguiente turno *</Label><Textarea id="pendientes" className="mt-2" rows={3} value={pendientesEntrega} onChange={(e) => setPendientesEntrega(e.target.value)} placeholder="Pagos, llegadas, solicitudes, habitaciones o incidentes. Si no hay, escribe “Sin pendientes”." /></div>
-        <div className="rounded-2xl border p-4"><p className="mb-3 text-sm font-semibold">Confirmación obligatoria</p><div className="space-y-3">{[
-          ['caja', 'Conté físicamente el efectivo y revisé los movimientos.'],
-          ['pendientes', 'Documenté todos los pendientes para el siguiente turno.'],
-          ['llegadas', 'Revisé llegadas, salidas y huéspedes con saldo.'],
-          ['incidentes', 'Registré incidentes, promesas y observaciones relevantes.'],
-        ].map(([key, label]) => <label key={key} className="flex cursor-pointer items-start gap-3 text-sm"><Checkbox checked={checks[key as keyof typeof checks]} onCheckedChange={(v) => setChecks((current) => ({ ...current, [key]: v === true }))} /><span>{label}</span></label>)}</div></div>
-        {!allChecked && <div className="flex gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0" />El turno no podrá cerrarse hasta completar la entrega.</div>}
-      </div><DialogFooter><Button variant="outline" onClick={() => setCloseDialog(false)}>Cancelar</Button><Button variant="destructive" onClick={cerrarTurno} disabled={saving || !allChecked}><CheckCircle2 className="mr-2 h-4 w-4" />{saving ? 'Cerrando…' : 'Cerrar y entregar'}</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={closeDialog} onOpenChange={setCloseDialog}>
+        <DialogContent className="max-h-[94vh] overflow-hidden border-0 p-0 shadow-2xl sm:max-w-5xl">
+          <DialogHeader className="border-b border-[#10233F]/10 px-5 pb-4 pt-5 text-left sm:px-6">
+            <DialogTitle className="flex items-center gap-2 text-xl text-[#10233F]"><Calculator className="h-5 w-5" />Cierre de turno</DialogTitle>
+            <DialogDescription>VULO prepara el reporte; tú sólo cuentas la caja y entregas los pendientes.</DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[calc(94vh-145px)] space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+            <div className="rounded-2xl border border-[#10233F]/10 bg-slate-50 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3"><div><p className="font-semibold text-[#10233F]">Actividad registrada en este turno</p><p className="text-xs text-muted-foreground">Este resumen se guardará automáticamente al cerrar.</p></div><Badge className="bg-emerald-600">En tiempo real</Badge></div>
+              {reportLoading ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{Array.from({length:6}).map((_,index)=><div key={index} className="h-16 animate-pulse rounded-xl bg-slate-200" />)}</div> : <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{[
+                ['Reservas',closeReport?.recepcion?.reservas_creadas,Receipt],['Check-ins',closeReport?.recepcion?.checkins,LogIn],['Check-outs',closeReport?.recepcion?.checkouts,LogOut],
+                ['Pagos',closeReport?.pagos?.cantidad,CreditCard],['Gastos',closeReport?.gastos?.cantidad,ArrowUpCircle],['Productos',reportArray(closeReport?.ventas?.productos).length,ShoppingBag],
+              ].map(([label,value,Icon]:any)=><div key={label} className="rounded-xl border bg-white p-2.5"><Icon className="mb-1.5 h-4 w-4 text-[#10233F]" /><p className="text-lg font-bold text-[#10233F]">{value ?? 0}</p><p className="text-[11px] text-muted-foreground">{label}</p></div>)}</div>}
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-[1.08fr_.92fr]">
+              <section className="rounded-2xl border border-[#10233F]/10 p-4 sm:p-5">
+                <div className="mb-4 flex items-center gap-2"><Banknote className="h-5 w-5 text-[#10233F]" /><h3 className="font-semibold text-[#10233F]">Arqueo de caja</h3></div>
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#071225] p-3 text-white sm:grid-cols-4">
+                  <div><p className="text-[11px] text-slate-400">Fondo</p><p className="font-semibold">{formatCurrency(turno?.fondo_inicial)}</p></div>
+                  <div><p className="text-[11px] text-slate-400">Ingresos</p><p className="font-semibold text-emerald-400">{formatCurrency(summary.efectivo)}</p></div>
+                  <div><p className="text-[11px] text-slate-400">Egresos</p><p className="font-semibold text-red-400">{formatCurrency(summary.egresosEfectivo)}</p></div>
+                  <div><p className="text-[11px] text-slate-400">Esperado</p><p className="font-bold">{formatCurrency(efectivoEsperado)}</p></div>
+                </div>
+                <div className="mt-4"><div className="mb-2 flex items-end justify-between"><Label htmlFor="contado" className="font-semibold">Efectivo contado</Label><span className="text-xs text-muted-foreground">{currency.codigo}</span></div><div className="relative"><span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-lg font-semibold text-[#10233F]">{currency.simbolo}</span><Input id="contado" type="text" inputMode="decimal" className="h-14 rounded-xl pl-10 text-2xl font-bold tabular-nums" value={fondoContado} onChange={(event) => setFondoContado(normalizeMoneyInput(event.target.value))} placeholder="0.00" /></div></div>
+                {hasCashCount && <div className={cn('mt-3 flex items-center justify-between rounded-xl border p-3',Math.abs(diferencia)<0.01?'border-emerald-200 bg-emerald-50':'border-red-200 bg-red-50')}><span className="text-sm font-medium">Diferencia de caja</span><strong className={Math.abs(diferencia)<0.01?'text-emerald-700':'text-red-700'}>{formatCurrency(diferencia)}</strong></div>}
+                {hasCashCount && Math.abs(diferencia)>0.009 && <div className="mt-4"><Label htmlFor="motivo">Motivo de la diferencia</Label><Textarea id="motivo" className="mt-2" rows={2} value={motivoDiferencia} onChange={(event)=>setMotivoDiferencia(event.target.value)} placeholder="Explica qué ocurrió; quedará auditado." /></div>}
+              </section>
+
+              <section className="rounded-2xl border border-[#10233F]/10 p-4 sm:p-5">
+                <div className="mb-4 flex items-center gap-2"><ArrowRightLeft className="h-5 w-5 text-[#10233F]" /><h3 className="font-semibold text-[#10233F]">Entrega</h3></div>
+                <div><Label>Entregar a <span className="font-normal text-muted-foreground">(opcional)</span></Label><Select value={entregaA || '__none__'} onValueChange={(value)=>setEntregaA(value==='__none__'?'':value)}><SelectTrigger className="mt-2 h-11"><SelectValue placeholder="Selecciona un usuario" /></SelectTrigger><SelectContent><SelectItem value="__none__">Cierre final · Sin entrega</SelectItem>{usuarios.map((member)=><SelectItem key={member.id} value={member.id}>{`${member.nombre || ''} ${member.apellido_paterno || ''}`.trim() || member.email} · {member.rol}</SelectItem>)}</SelectContent></Select></div>
+                <div className="mt-4"><Label htmlFor="pendientes">Pendientes para el siguiente turno <span className="font-normal text-muted-foreground">(opcional)</span></Label><Textarea id="pendientes" className="mt-2 min-h-28" value={pendientesEntrega} onChange={(event)=>setPendientesEntrega(event.target.value)} placeholder="Solicitudes, pagos por cobrar, habitaciones o incidentes que deban continuar." /></div>
+                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-[#10233F]/5 p-3 text-sm"><Checkbox className="mt-0.5" checked={cashConfirmed} onCheckedChange={(value)=>setCashConfirmed(value===true)} /><span><strong className="block text-[#10233F]">Confirmo el conteo de caja</strong><span className="text-muted-foreground">Revisé el efectivo físico contra el importe esperado.</span></span></label>
+              </section>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row border-t border-[#10233F]/10 bg-slate-50 px-5 py-4 sm:px-6"><Button variant="ghost" className="flex-1 sm:flex-none" onClick={()=>setCloseDialog(false)}>Cancelar</Button><Button variant={hasCashCount&&Math.abs(diferencia)>0.009?'destructive':'default'} className={cn('flex-1 sm:min-w-60',(!hasCashCount||!cashConfirmed)&&'opacity-60')} onClick={cerrarTurno} disabled={saving||!hasCashCount||!cashConfirmed||reportLoading}><CheckCircle2 className="mr-2 h-4 w-4" />{saving?'Cerrando…':hasCashCount&&Math.abs(diferencia)>0.009?`Cerrar con diferencia de ${formatCurrency(diferencia)}`:'Cerrar caja conciliada'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reportDialog} onOpenChange={setReportDialog}>
+        <DialogContent className="max-h-[94vh] overflow-hidden p-0 sm:max-w-5xl"><DialogHeader className="border-b px-5 pb-4 pt-5 text-left sm:px-6"><DialogTitle className="flex items-center gap-2 text-xl text-[#10233F]"><FileText className="h-5 w-5" />Reporte de cierre</DialogTitle><DialogDescription>Resumen completo y permanente de la operación registrada durante el turno.</DialogDescription></DialogHeader><div className="max-h-[calc(94vh-130px)] overflow-y-auto px-5 py-5 sm:px-6">{selectedReport ? <ShiftReport report={selectedReport} /> : <p className="py-12 text-center text-muted-foreground">Este turno no tiene un reporte guardado.</p>}</div><DialogFooter className="border-t bg-slate-50 px-5 py-3 sm:px-6"><Button onClick={()=>setReportDialog(false)}>Cerrar reporte</Button></DialogFooter></DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
