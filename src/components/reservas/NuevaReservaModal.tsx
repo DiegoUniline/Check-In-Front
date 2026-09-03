@@ -69,12 +69,13 @@ function ReservationSurface({
   children: ReactNode;
 }) {
   if (pageMode) {
-    return <div className="min-h-[calc(100dvh-4rem)] bg-white">
-      <div ref={surfaceRef} onKeyDown={onKeyDown} className="w-full px-3 pb-3 pt-2 sm:px-4 lg:px-5">
+    return <div className="h-[calc(100dvh-4rem)] overflow-hidden bg-white">
+      <div ref={surfaceRef} onKeyDown={onKeyDown} className="flex h-full min-h-0 w-full flex-col px-3 pb-3 pt-2 sm:px-4 lg:px-5">
         {children}
       </div>
     </div>;
   }
+
 
   return <Dialog open={open} onOpenChange={onClose}>
     <DialogContent ref={surfaceRef} onKeyDown={onKeyDown} className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-[94vh] sm:w-[calc(100vw-2rem)] sm:max-w-none sm:rounded-xl sm:border sm:p-4">
