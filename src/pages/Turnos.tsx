@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BitacoraPanel } from '@/components/turnos/BitacoraPanel';
 import { ExportButton } from '@/components/ExportButton';
@@ -31,7 +31,7 @@ import { useAuth } from '@/contexts/useAuth';
 import { useShift } from '@/contexts/useShift';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { formatCurrency } from '@/lib/currency';
+import { formatCurrency, useCurrency } from '@/lib/currency';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +53,7 @@ export default function Turnos() {
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const currency = useCurrency();
   const [turno, setTurno] = useState<any | null>(null);
   const [historial, setHistorial] = useState<any[]>([]);
   const [summary, setSummary] = useState<ShiftSummary>(emptySummary);
@@ -100,6 +101,15 @@ export default function Turnos() {
   const contado = Number(fondoContado || 0);
   const diferencia = contado - efectivoEsperado;
   const allChecked = Object.values(checks).every(Boolean);
+  const openingAmount = Number(fondoInicial || 0);
+  const validOpeningAmount = Number.isFinite(openingAmount) && openingAmount >= 0;
+  const operatorName = `${user?.nombre || ''} ${user?.apellidoPaterno || ''}`.trim() || user?.email || 'Usuario';
+
+  const updateOpeningAmount = (value: string) => {
+    const cleaned = value.replace(/[^\d.]/g, '');
+    const [integer = '', ...decimals] = cleaned.split('.');
+    setFondoInicial(decimals.length ? `${integer}.${decimals.join('').slice(0, 2)}` : integer);
+  };
 
   const abrirTurno = async () => {
     const fondo = Number(fondoInicial);
@@ -249,7 +259,91 @@ export default function Turnos() {
         </Card>
       </div>
 
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}><DialogContent className="max-w-md"><DialogHeader><DialogTitle>Abrir turno operativo</DialogTitle></DialogHeader><div className="space-y-4 py-2"><div className="flex items-center gap-3 rounded-xl bg-muted p-4"><User className="h-8 w-8 text-muted-foreground" /><div><p className="font-semibold">{user?.nombre || user?.email}</p><p className="text-sm text-muted-foreground">{user?.rol}</p></div></div><div><Label htmlFor="fondo-inicial">Efectivo contado al abrir *</Label><Input id="fondo-inicial" type="number" min="0" step="0.01" className="mt-2 text-lg" value={fondoInicial} onChange={(e) => setFondoInicial(e.target.value)} placeholder="0.00" /></div></div><DialogFooter><Button variant="outline" onClick={() => setOpenDialog(false)}>Cancelar</Button><Button onClick={abrirTurno} disabled={saving}>{saving ? 'Abriendo…' : 'Abrir turno'}</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="overflow-hidden border-0 p-0 shadow-2xl sm:max-w-[560px]">
+          <DialogHeader className="border-b border-[#10233F]/10 px-5 pb-5 pt-6 text-left sm:px-6">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#10233F] text-white shadow-sm">
+                <Unlock className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 pt-0.5">
+                <DialogTitle className="text-xl text-[#10233F]">Abrir turno</DialogTitle>
+                <DialogDescription className="mt-1 text-sm leading-relaxed">
+                  Registra el efectivo con el que recibes la caja.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-5 px-5 py-5 sm:px-6">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-[#10233F]/10 bg-slate-50 px-4 py-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#10233F] shadow-sm ring-1 ring-[#10233F]/10">
+                  <User className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[#10233F]">{operatorName}</p>
+                  <p className="text-xs text-muted-foreground">Responsable del turno</p>
+                </div>
+              </div>
+              <Badge variant="outline" className="shrink-0 border-[#10233F]/15 bg-white text-[#10233F]">{user?.rol || 'Usuario'}</Badge>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-end justify-between gap-3">
+                <Label htmlFor="fondo-inicial" className="text-sm font-semibold text-[#10233F]">Fondo inicial en caja</Label>
+                <span className="text-xs text-muted-foreground">{currency.codigo}</span>
+              </div>
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xl font-semibold text-[#10233F]">{currency.simbolo}</span>
+                <Input
+                  id="fondo-inicial"
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  className="h-16 rounded-2xl border-[#10233F]/20 bg-white pl-10 pr-4 text-3xl font-bold tabular-nums text-[#10233F] shadow-sm focus-visible:ring-[#10233F]/20"
+                  value={fondoInicial}
+                  onChange={(event) => updateOpeningAmount(event.target.value)}
+                  onBlur={() => validOpeningAmount && fondoInicial && setFondoInicial(openingAmount.toFixed(2))}
+                  onKeyDown={(event) => { if (event.key === 'Enter' && validOpeningAmount && !saving) void abrirTurno(); }}
+                  placeholder="0.00"
+                  autoFocus
+                />
+              </div>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {[0, 500, 1000, 2000].map((amount) => (
+                  <Button
+                    key={amount}
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'h-10 rounded-xl px-1 text-xs font-semibold sm:text-sm',
+                      validOpeningAmount && openingAmount === amount && fondoInicial !== ''
+                        ? 'border-[#10233F] bg-[#10233F]/5 text-[#10233F]'
+                        : 'border-[#10233F]/10 text-slate-600 hover:border-[#10233F]/30 hover:bg-[#10233F]/5',
+                    )}
+                    onClick={() => setFondoInicial(amount.toFixed(2))}
+                  >
+                    {amount === 0 ? 'Sin fondo' : formatCurrency(amount, { decimals: 0 })}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 rounded-xl bg-[#10233F]/5 px-4 py-3 text-sm text-[#10233F]">
+              <Calculator className="mt-0.5 h-4 w-4 shrink-0" />
+              <p className="leading-relaxed">Al cerrar se conciliará este fondo más los ingresos en efectivo, menos los egresos del turno.</p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row border-t border-[#10233F]/10 bg-slate-50/80 px-5 py-4 sm:justify-between sm:px-6">
+            <Button variant="ghost" className="flex-1 sm:flex-none" onClick={() => setOpenDialog(false)}>Cancelar</Button>
+            <Button className="flex-1 bg-[#10233F] hover:bg-[#10233F]/90 sm:min-w-60" onClick={abrirTurno} disabled={saving || !validOpeningAmount}>
+              {saving ? 'Abriendo turno…' : openingAmount > 0 ? `Abrir con ${formatCurrency(openingAmount)}` : 'Abrir sin fondo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={closeDialog} onOpenChange={setCloseDialog}><DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" />Arqueo, entrega y cierre</DialogTitle></DialogHeader><div className="space-y-5 py-2">
         <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-950 p-4 text-white sm:grid-cols-4"><div><p className="text-xs text-slate-400">Fondo</p><p className="font-semibold">{formatCurrency(turno?.fondo_inicial)}</p></div><div><p className="text-xs text-slate-400">Efectivo ingresado</p><p className="font-semibold text-emerald-400">{formatCurrency(summary.efectivo)}</p></div><div><p className="text-xs text-slate-400">Egresos</p><p className="font-semibold text-red-400">{formatCurrency(summary.egresosEfectivo)}</p></div><div><p className="text-xs text-slate-400">Esperado</p><p className="text-lg font-bold">{formatCurrency(efectivoEsperado)}</p></div></div>
