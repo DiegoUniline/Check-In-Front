@@ -621,11 +621,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
       </header>
 
-      {/* LAYOUT A TODO EL ANCHO: 3 columnas en pantallas grandes */}
-      <div className="mt-2 grid items-start gap-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(300px,340px)]">
+      {/* LAYOUT A TODO EL ANCHO: una sola tarjeta blanca + resumen */}
+      <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
+
+        <div className="grid min-w-0 gap-x-8 gap-y-5 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm lg:grid-cols-2 lg:p-5">
 
         {/* COLUMNA 1 — Estancia, ocupación y habitación */}
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0 space-y-5">
           <FormSection icon={CalendarDays} title="Estancia" hint="Fechas y hora de llegada.">
             {origen === 'Recepcion' && (
               <div className="rounded-lg border border-[#FDBA74] bg-[#FFF7ED] px-2.5 py-1.5 text-[11px] text-[#9A3412]">
