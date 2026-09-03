@@ -78,7 +78,7 @@ function ReservationSurface({
 
 
   return <Dialog open={open} onOpenChange={onClose}>
-    <DialogContent ref={surfaceRef} onKeyDown={onKeyDown} className="h-[100dvh] w-screen max-w-none max-h-none overflow-y-auto rounded-none border-0 p-3 sm:h-[94vh] sm:w-[calc(100vw-2rem)] sm:max-w-none sm:rounded-xl sm:border sm:p-4">
+    <DialogContent ref={surfaceRef} onKeyDown={onKeyDown} className="flex h-[100dvh] w-screen max-w-none max-h-none flex-col overflow-hidden rounded-none border-0 p-3 sm:h-[94vh] sm:w-[calc(100vw-2rem)] sm:max-w-none sm:rounded-xl sm:border sm:p-4">
       {children}
     </DialogContent>
   </Dialog>;
