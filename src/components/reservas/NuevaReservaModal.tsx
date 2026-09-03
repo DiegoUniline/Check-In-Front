@@ -949,12 +949,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
 
         {/* RESUMEN DE CUENTA */}
-        <aside className="min-w-0 xl:sticky xl:top-24">
+        <aside className="min-w-0 xl:sticky xl:top-20">
           <Card className="overflow-hidden border-0 bg-[#10233F] text-white shadow-lg">
-            <CardContent className="space-y-3 p-4">
-              <p className="text-sm font-semibold">Resumen de cuenta</p>
+            <CardContent className="space-y-2 p-3">
+              <p className="text-xs font-semibold">Resumen de cuenta</p>
 
-              <div className="space-y-1.5 text-sm">
+              <div className="space-y-1 text-xs">
                 <Line label={`Hospedaje · ${noches || 0} noche${noches === 1 ? '' : 's'}`} value={fmt(subtotalHospedaje)} />
                 {temporadaAplicable && <Line small label={`Temporada ${temporadaAplicable.nombre} (${describirAjuste(temporadaAplicable)})`} value={`${fmt(tarifaEfectiva)}/noche`} />}
                 {totalPersonaExtra > 0 && <Line label={`Personas extra (${formData.personasExtra})`} value={fmt(totalPersonaExtra)} />}
@@ -965,62 +965,62 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
               <Separator className="bg-white/20" />
 
-              <div className="space-y-2 rounded-[10px] bg-white/10 p-3">
-                <Label className="flex items-center gap-2 text-xs text-white/80"><Percent className="h-3.5 w-3.5" />Descuento sobre el total</Label>
-                <div className="flex gap-2">
+              <div className="space-y-1.5 rounded-lg bg-white/10 p-2.5">
+                <Label className="flex items-center gap-1.5 text-[11px] text-white/80"><Percent className="h-3 w-3" />Descuento</Label>
+                <div className="flex gap-1.5">
                   <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}>
-                    <SelectTrigger className="h-10 w-32 border-input bg-background text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 w-28 border-input bg-background text-xs text-foreground"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Ninguno</SelectItem>
                       <SelectItem value="Monto">Monto</SelectItem>
-                      <SelectItem value="Porcentaje">Porcentaje</SelectItem>
+                      <SelectItem value="Porcentaje">%</SelectItem>
                     </SelectContent>
                   </Select>
                   {formData.descuentoTipo !== 'none' && (
                     <div className="relative flex-1">
                       {formData.descuentoTipo === 'Porcentaje'
-                        ? <Percent className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        : <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />}
-                      <Input type="number" className="h-10 border-input bg-background pl-9 text-foreground" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
+                        ? <Percent className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        : <DollarSign className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />}
+                      <Input type="number" className="h-9 border-input bg-background pl-8 text-xs text-foreground" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="flex items-end justify-between">
-                <span className="text-sm font-medium">Total</span>
-                <span className="text-2xl font-bold tabular-nums">{fmt(total)}</span>
+                <span className="text-xs font-medium">Total</span>
+                <span className="text-xl font-bold tabular-nums">{fmt(total)}</span>
               </div>
 
               <Separator className="bg-white/20" />
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-xs text-white/80"><CreditCard className="h-3.5 w-3.5" />Registrar pago</Label>
-                <div className="flex gap-2">
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5 text-[11px] text-white/80"><CreditCard className="h-3 w-3" />Registrar pago</Label>
+                <div className="flex gap-1.5">
                   <Input
                     type="number"
                     placeholder={saldoPendiente > 0 ? fmt(saldoPendiente) : 'Monto'}
-                    className="h-10 flex-1 border-input bg-background text-foreground"
+                    className="h-9 flex-1 border-input bg-background text-xs text-foreground"
                     value={pagoMonto}
                     onFocus={() => { if (!pagoMonto && saldoPendiente > 0) setPagoMonto(saldoPendiente.toFixed(2)); }}
                     onChange={(e) => setPagoMonto(e.target.value)}
                   />
                   <Select value={pagoMetodo} onValueChange={setPagoMetodo}>
-                    <SelectTrigger className="h-10 w-28 border-input bg-background text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 w-24 border-input bg-background text-xs text-foreground"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Efectivo">Efectivo</SelectItem>
                       <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                      <SelectItem value="Transferencia">Transfer.</SelectItem>
+                      <SelectItem value="Transferencia">Transf.</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="secondary" className="h-10 w-10 px-0" onClick={handleAgregarPago} aria-label="Agregar pago"><Plus className="h-4 w-4" /></Button>
+                  <Button type="button" variant="secondary" className="h-9 w-9 px-0" onClick={handleAgregarPago} aria-label="Agregar pago"><Plus className="h-4 w-4" /></Button>
                 </div>
                 {formData.pagos.length > 0 && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {formData.pagos.map(p => (
-                      <div key={p.id} className="flex items-center justify-between rounded-[10px] bg-white/10 px-3 py-2 text-sm">
+                      <div key={p.id} className="flex items-center justify-between rounded-lg bg-white/10 px-2.5 py-1.5 text-xs">
                         <span>{p.metodo_pago}</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="font-medium tabular-nums">{formatCurrency(p.monto)}</span>
                           <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => handleEliminarPago(p.id)}><X className="h-3 w-3" /></Button>
                         </div>
@@ -1028,10 +1028,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     ))}
                   </div>
                 )}
-                <div className={cn('rounded-[10px] p-3 text-center', saldoPendiente > 0.01 ? 'bg-[#F97316]/25' : 'bg-emerald-500/20')}>
-                  <p className="text-[11px] text-white/75">{saldoPendiente < -0.01 ? 'Saldo a favor' : 'Saldo pendiente'}</p>
-                  <p className="mt-0.5 text-xl font-bold tabular-nums">{fmt(Math.abs(saldoPendiente))}</p>
-                  <p className="mt-0.5 text-[11px] text-white/70">{fmt(totalPagado)} pagado</p>
+                <div className={cn('rounded-lg p-2 text-center', saldoPendiente > 0.01 ? 'bg-[#F97316]/25' : 'bg-emerald-500/20')}>
+                  <p className="text-[10px] text-white/75">{saldoPendiente < -0.01 ? 'Saldo a favor' : 'Saldo pendiente'}</p>
+                  <p className="text-lg font-bold tabular-nums">{fmt(Math.abs(saldoPendiente))}</p>
+                  <p className="text-[10px] text-white/70">{fmt(totalPagado)} pagado</p>
                 </div>
               </div>
             </CardContent>
@@ -1041,21 +1041,21 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
       {/* ACCIONES */}
       <div className={cn(
-        'sticky bottom-0 z-20 -mx-3 mt-3 flex items-center gap-2 border-t bg-background/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
+        'sticky bottom-0 z-20 -mx-3 mt-2 flex items-center gap-2 border-t bg-background/95 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur',
         pageMode ? 'sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8' : 'sm:-mx-5 sm:px-5',
       )}>
-        <Button type="button" className="h-11 flex-1 sm:flex-none" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-        <span className="hidden flex-1 text-center text-xs text-muted-foreground md:block">
-          {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter para guardar' : 'Completa fechas, habitación y huésped'}
+        <Button type="button" className="h-9 flex-1 text-xs sm:flex-none" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+        <span className="hidden flex-1 text-center text-[11px] text-muted-foreground md:block">
+          {puedeGuardar ? 'Todo listo · ⌘/Ctrl + Enter' : 'Completa fechas, habitación y huésped'}
         </span>
         <Button
           data-confirm-reservation
           type="button"
           onClick={handleConfirm}
           disabled={!puedeGuardar}
-          className={cn('h-11 flex-1 sm:min-w-52 sm:flex-none', origen === 'Recepcion' && 'bg-emerald-600 hover:bg-emerald-700')}
+          className={cn('h-9 flex-1 text-xs sm:min-w-44 sm:flex-none', origen === 'Recepcion' && 'bg-emerald-600 hover:bg-emerald-700')}
         >
-          {loading ? 'Procesando…' : <><Check className="mr-2 h-4 w-4" />{origen === 'Recepcion' ? 'Completar check-in' : 'Crear reserva'}</>}
+          {loading ? 'Procesando…' : <><Check className="mr-1.5 h-3.5 w-3.5" />{origen === 'Recepcion' ? 'Completar check-in' : 'Crear reserva'}</>}
         </Button>
       </div>
     </ReservationSurface>
