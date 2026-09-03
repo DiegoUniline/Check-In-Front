@@ -69,7 +69,7 @@ function ReservationSurface({
   children: ReactNode;
 }) {
   if (pageMode) {
-    return <div className="h-full min-h-0 overflow-y-auto bg-white xl:overflow-hidden">
+    return <div className="h-full min-h-0 overflow-y-auto bg-background xl:overflow-hidden">
       <div ref={surfaceRef} onKeyDown={onKeyDown} className="flex w-full flex-col px-3 pb-3 pt-2 sm:px-4 lg:px-5 xl:h-full xl:min-h-0">
         {children}
       </div>
@@ -606,7 +606,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               onClick={() => handleOrigenChange(value)}
               className={cn(
                 'flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
-                origen === value ? 'bg-[#10233F] text-white shadow-sm' : 'text-[#475569] hover:text-[#10233F]',
+                origen === value ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
               )}
             >
               <Icon className="h-3 w-3" />
@@ -619,7 +619,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       {/* LAYOUT A TODO EL ANCHO */}
       <div className="grid items-stretch gap-3 xl:min-h-0 xl:flex-1 xl:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
 
-        <div className="grid min-w-0 content-start gap-x-8 gap-y-5 rounded-xl xl:min-h-0 xl:overflow-y-auto border border-[#10233F]/10 bg-white p-4 shadow-sm lg:grid-cols-2 lg:p-5">
+        <div className="grid min-w-0 content-start gap-x-8 gap-y-5 rounded-xl xl:min-h-0 xl:overflow-y-auto border border-border bg-card p-4 shadow-sm lg:grid-cols-2 lg:p-5">
 
 
 
@@ -673,7 +673,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   onClick={() => setFormData({ ...formData, fechaCheckout: addDays(formData.fechaCheckin, n) })}
                   className={cn(
                     'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                    noches === n ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
+                    noches === n ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
                   )}
                 >
                   {n} noche{n === 1 ? '' : 's'}
@@ -704,12 +704,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
           <FormSection icon={BedDouble} title="Habitación" hint={mostrarSelectorHabitacion ? `${habitacionesDisponibles.length} libres en el rango seleccionado.` : 'Habitación asignada a esta reserva.'}>
             {!mostrarSelectorHabitacion && selectedHabitacion ? (
-              <div className="flex items-center gap-3 rounded-lg border border-[#10233F]/10 bg-[#F8FAFC] p-2.5">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#10233F] text-white">
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-2.5">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
                   <BedDouble className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[#10233F]">#{selectedHabitacion.numero}</p>
+                  <p className="text-sm font-semibold text-foreground">#{selectedHabitacion.numero}</p>
                   <p className="truncate text-[11px] text-muted-foreground">
                     {selectedHabitacion.tipo_nombre || tiposHabitacion.find((item) => item.id === (selectedHabitacion.tipo_habitacion_id || selectedHabitacion.tipo_id))?.nombre || 'Sin categoría'}
                     {' · '}{fmt(rateOf(selectedHabitacion))}/noche
@@ -727,7 +727,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     onClick={() => setFormData({ ...formData, tipoHabitacion: '', habitacionId: '' })}
                     className={cn(
                       'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                      !formData.tipoHabitacion ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
+                      !formData.tipoHabitacion ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
                     )}
                   >
                     Todas
@@ -739,7 +739,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       onClick={() => setFormData({ ...formData, tipoHabitacion: t.id, habitacionId: '' })}
                       className={cn(
                         'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                        formData.tipoHabitacion === t.id ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40',
+                        formData.tipoHabitacion === t.id ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
                       )}
                     >
                       {t.nombre} · {formatCurrency(t.precio_base)}
@@ -748,7 +748,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 </div>
 
                 {habitacionesDisponibles.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-[#CBD5E1] py-4 text-center text-[11px] text-muted-foreground">
+                  <p className="rounded-lg border border-dashed border-border py-4 text-center text-[11px] text-muted-foreground">
                     Sin disponibilidad para este rango. Ajusta fechas o categoría.
                   </p>
                 ) : (
@@ -763,7 +763,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                           onClick={() => { handleSelectRoom(hab); setMostrarSelectorHabitacion(false); }}
                           className={cn(
                             'rounded-lg border p-2 text-left transition-colors',
-                            activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] bg-white hover:border-[#10233F]/40',
+                            activo ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border bg-card hover:border-primary/40',
                           )}
                         >
                           <div className="flex items-center justify-between gap-1">
@@ -773,7 +773,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                           <p className={cn('truncate text-[10px]', activo ? 'text-white/75' : 'text-muted-foreground')}>
                             {hab.tipo_nombre || tipo?.nombre || 'Sin categoría'}
                           </p>
-                          <p className={cn('text-[11px] font-medium tabular-nums', activo ? 'text-white' : 'text-[#10233F]')}>
+                          <p className={cn('text-[11px] font-medium tabular-nums', activo ? 'text-primary-foreground' : 'text-foreground')}>
                             {fmt(rateOf(hab))}/noche
                           </p>
                         </button>
@@ -790,7 +790,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
 
         {/* COLUMNA 2 — Huésped, cargos, notas e impuestos */}
-        <div className="min-w-0 space-y-5 border-t border-[#10233F]/10 pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+        <div className="min-w-0 space-y-5 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
           <FormSection icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
             {!crearNuevoCliente ? (
               <div className="space-y-2">
@@ -817,8 +817,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   )}
                 </div>
                 {formData.clienteData && (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#475569]">
-                    <span className="font-medium text-[#10233F]">{formData.clienteData.nombre} {formData.clienteData.apellido_paterno || ''}</span>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-muted px-2.5 py-1.5 text-[11px] text-muted-foreground">
+                    <span className="font-medium text-foreground">{formData.clienteData.nombre} {formData.clienteData.apellido_paterno || ''}</span>
                     {formData.clienteData.telefono && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{formData.clienteData.telefono}</span>}
                     {formData.clienteData.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{formData.clienteData.email}</span>}
                     {formData.clienteData.es_vip && <Badge className="h-4 px-1 text-[10px]">VIP</Badge>}
@@ -926,7 +926,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   <SelectItem value="__custom">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-[#10233F]">{fmt(totalImpuestos)}</span>
+              <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground">{fmt(totalImpuestos)}</span>
             </div>
             {formData.impuestos.length === 0 ? (
               <p className="text-[10px] text-muted-foreground">Sin impuestos aplicados.</p>
@@ -957,12 +957,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             </div>
             {origen === 'Recepcion' && entregables.length > 0 && (
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-medium text-[#475569]">Entregables al huésped</Label>
+                <Label className="text-[11px] font-medium text-muted-foreground">Entregables al huésped</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {entregables.map(ent => {
                     const activo = formData.entregablesSeleccionados.includes(ent.id);
                     return (
-                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors', activo ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#CBD5E1] text-[#475569] hover:border-[#10233F]/40')}>
+                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors', activo ? 'border-[#10233F] bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40')}>
                         {activo && <Check className="h-3 w-3" />}{ent.nombre}
                       </button>
                     );
@@ -1110,14 +1110,14 @@ function Stepper({ value, onChange, min = 0, max = 99 }: { value: number; onChan
           if (raw === '') { onChange(min); return; }
           onChange(clamp(parseInt(raw, 10) || min));
         }}
-        className="h-full w-full min-w-0 border-0 bg-transparent text-center text-xs font-medium tabular-nums text-[#10233F] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="h-full w-full min-w-0 border-0 bg-transparent text-center text-xs font-medium tabular-nums text-foreground outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       <button
         type="button"
         aria-label="Sumar"
         onClick={() => onChange(clamp(value + 1))}
         disabled={value >= max}
-        className="grid h-full w-8 shrink-0 place-items-center text-[#475569] transition-colors hover:bg-[#F1F5F9] disabled:opacity-40"
+        className="grid h-full w-8 shrink-0 place-items-center text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>
@@ -1126,11 +1126,11 @@ function Stepper({ value, onChange, min = 0, max = 99 }: { value: number; onChan
 }
 
 function FormSection({ icon: Icon, title, hint, children }: { icon: typeof CalendarDays; title: string; hint?: string; children: ReactNode }) {
-  return <section className="space-y-2 bg-white">
-    <div className="flex min-w-0 items-center gap-2 border-b border-[#10233F]/10 pb-1.5">
+  return <section className="space-y-2 bg-card">
+    <div className="flex min-w-0 items-center gap-2 border-b border-border pb-1.5">
       <Icon className="h-4 w-4 shrink-0 text-[#F97316]" />
       <div className="min-w-0">
-        <h3 className="truncate text-[13px] font-semibold text-[#10233F]">{title}</h3>
+        <h3 className="truncate text-[13px] font-semibold text-foreground">{title}</h3>
         {hint && <p className="truncate text-[10px] text-muted-foreground">{hint}</p>}
       </div>
     </div>
@@ -1140,7 +1140,7 @@ function FormSection({ icon: Icon, title, hint, children }: { icon: typeof Calen
 
 function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: ReactNode }) {
   return <div className="min-w-0 space-y-0.5">
-    <Label className="text-[11px] font-medium text-[#475569]">{label}{required && <span className="ml-0.5 text-[#F97316]">*</span>}</Label>
+    <Label className="text-[11px] font-medium text-muted-foreground">{label}{required && <span className="ml-0.5 text-[#F97316]">*</span>}</Label>
     {children}
     {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
   </div>;
