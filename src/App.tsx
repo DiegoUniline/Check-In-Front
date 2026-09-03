@@ -15,6 +15,7 @@ import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Reservas from "./pages/Reservas";
+import ReservaDetalle from "./pages/ReservaDetalle";
 import Habitaciones from "./pages/Habitaciones";
 import Clientes from "./pages/Clientes";
 import Limpieza from "./pages/Limpieza";
@@ -131,6 +132,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="reservas">
           <Reservas />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/reservas/detalle/:id"
+      element={
+        <ProtectedRoute viewKey="reservas">
+          <ReservaDetalle />
         </ProtectedRoute>
       }
     />

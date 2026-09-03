@@ -34,7 +34,6 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid } from '@/components/reservas/TimelineGrid';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NuevaReservaModal, ReservationPreload } from '@/components/reservas/NuevaReservaModal';
-import { ReservaDetalleModal } from '@/components/reservas/ReservaDetalleModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
@@ -52,6 +51,12 @@ import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { addMonths } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+const RESERVAS_VIEW_KEY = 'vulo:reservas:view-state';
+const readReservasViewState = (): Record<string, any> => {
+  try { return JSON.parse(sessionStorage.getItem(RESERVAS_VIEW_KEY) || '{}'); }
+  catch { return {}; }
+};
 
 // Chips reutilizables para filtro de tipo de habitación
 const TipoChips = ({
@@ -144,7 +149,8 @@ export default function Reservas() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const mobileViewInitialized = useRef(false);
+  const savedView = useRef(readReservasViewState()).current;
+  const mobileViewInitialized = useRef(Boolean(savedView.reservasSubView));
   const { vista } = useParams<{ vista?: string }>();
   const [loading, setLoading] = useState(true);
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
@@ -175,16 +181,14 @@ export default function Reservas() {
     }
   };
 
-  const [startDate, setStartDate] = useState(() => parseISO(todayLocal()));
-  const [viewMode, setViewMode] = useState<ViewMode>('Semana');
-  const [filtroTipo, setFiltroTipo] = useState<string>('all');
-  const [filtroPiso, setFiltroPiso] = useState<string>('all');
-  const [busqueda, setBusqueda] = useState('');
+  const [startDate, setStartDate] = useState(() => parseISO(savedView.startDate || todayLocal()));
+  const [viewMode, setViewMode] = useState<ViewMode>(savedView.viewMode || 'Semana');
+  const [filtroTipo, setFiltroTipo] = useState<string>(savedView.filtroTipo || 'all');
+  const [filtroPiso, setFiltroPiso] = useState<string>(savedView.filtroPiso || 'all');
+  const [busqueda, setBusqueda] = useState(savedView.busqueda || '');
 
   const [modalNuevaReserva, setModalNuevaReserva] = useState(false);
   const [preloadReserva, setPreloadReserva] = useState<ReservationPreload | undefined>();
-  const [modalDetalle, setModalDetalle] = useState(false);
-  const [reservaSeleccionada, setReservaSeleccionada] = useState<any>(null);
   const validViews = ['recepcion', 'checkin', 'checkout', 'timeline', 'historico'] as const;
   type Vista = typeof validViews[number];
   const tabActiva: Vista = (validViews as readonly string[]).includes(vista || '')
@@ -192,7 +196,7 @@ export default function Reservas() {
     : 'timeline';
   // Sub-vista dentro de "Reservas": timeline (default) | card | tabla
   type ReservasSubView = 'timeline' | 'card' | 'tabla';
-  const [reservasSubView, setReservasSubView] = useState<ReservasSubView>('timeline');
+  const [reservasSubView, setReservasSubView] = useState<ReservasSubView>(savedView.reservasSubView || 'timeline');
   const navigationParams = new URLSearchParams(location.search);
   const navigationFocus = navigationParams.get('focus');
   const navigationFrom = navigationParams.get('from');
@@ -208,7 +212,7 @@ export default function Reservas() {
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
   const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
   const [filtrosOpen, setFiltrosOpen] = useState(false);
-  const [filtros, setFiltros] = useState<ReservasFilters>(defaultFilters);
+  const [filtros, setFiltros] = useState<ReservasFilters>(savedView.filtros || defaultFilters);
   const activeFilterCount = countActiveFilters(filtros);
 
   const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
@@ -216,6 +220,13 @@ export default function Reservas() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem(RESERVAS_VIEW_KEY, JSON.stringify({
+      startDate: format(startDate, 'yyyy-MM-dd'), viewMode, filtroTipo, filtroPiso,
+      busqueda, reservasSubView, filtros,
+    }));
+  }, [startDate, viewMode, filtroTipo, filtroPiso, busqueda, reservasSubView, filtros]);
 
   // En teléfono la lista de habitaciones es la vista operativa más clara.
   // El calendario continúa disponible, pero ya no obliga a desplazarse al entrar.
@@ -284,8 +295,7 @@ export default function Reservas() {
   };
 
   const handleReservationClick = (reserva: any) => {
-    setReservaSeleccionada(reserva);
-    setModalDetalle(true);
+    navigate(`/reservas/detalle/${reserva.id}`);
   };
 
   const handleRecepcionLibreClick = (habitacion: any) => {
@@ -1038,13 +1048,6 @@ export default function Reservas() {
         preload={preloadReserva}
         onSuccess={cargarDatos}
       />
-      <ReservaDetalleModal
-        open={modalDetalle}
-        onOpenChange={setModalDetalle}
-        reserva={reservaSeleccionada}
-        onUpdate={cargarDatos}
-      />
-
       {/* Modal: Llegadas de hoy */}
       <Dialog open={modalLlegadas} onOpenChange={setModalLlegadas}>
         <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[calc(100dvh-1rem)] sm:max-h-[80dvh] overflow-y-auto">
