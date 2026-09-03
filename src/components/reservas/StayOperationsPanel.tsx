@@ -549,7 +549,7 @@ export function StayOperationsPanel({
             type="button"
             onClick={() => {
               setPayload((current) => {
-                const next = { ...current, new_room_id: room.id };
+                const next: any = { ...current, new_room_id: room.id };
                 if (selected?.id === 'category_change' && current.change_type !== 'Cortesia') {
                   next.new_rate = String(money(room.precio_base ?? room.tipos_habitacion?.precio_base));
                 }
