@@ -6,6 +6,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import api, { todayLocal } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { canAccess } from '@/lib/permissions';
 import { useAuth } from '@/contexts/useAuth';
 import { useToast } from '@/hooks/use-toast';
