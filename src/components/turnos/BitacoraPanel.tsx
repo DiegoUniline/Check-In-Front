@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  BookOpen, Plus, CheckCircle2, Circle, Trash2, ArrowRightLeft, AlertTriangle,
+  BookOpen, Plus, CheckCircle2, Circle, Trash2, AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,14 +37,12 @@ const catColor: Record<BitacoraCategoria, string> = {
 
 interface Props {
   turnoId?: string;
-  siguienteUsuario?: string;
 }
 
-export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
+export function BitacoraPanel({ turnoId }: Props) {
   const { entradas, agregar, togglePendiente, eliminar } = useBitacora();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [handoverOpen, setHandoverOpen] = useState(false);
   const [filtro, setFiltro] = useState<'todos' | 'pendientes' | 'turno'>('todos');
   const [form, setForm] = useState<{ categoria: BitacoraCategoria; prioridad: 'Baja' | 'Normal' | 'Alta' | 'Crítica'; responsable: string; titulo: string; detalle: string }>({
     categoria: 'General',
@@ -53,7 +51,6 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
     titulo: '',
     detalle: '',
   });
-  const [handover, setHandover] = useState({ destinatario: '', resumen: '', pendientes: '', caja: '' });
 
   const filtradas = useMemo(() => {
     if (filtro === 'pendientes') return entradas.filter((e) => CATEGORIAS_CON_SEGUIMIENTO.includes(e.categoria) && !e.resuelto);
@@ -74,24 +71,11 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
     setOpen(false);
   };
 
-  const handleHandover = () => {
-    const titulo = `Entrega de turno${handover.destinatario ? ` → ${handover.destinatario}` : ''}`;
-    const detalle = [
-      handover.resumen && `Resumen: ${handover.resumen}`,
-      handover.pendientes && `Pendientes: ${handover.pendientes}`,
-      handover.caja && `Caja: ${handover.caja}`,
-    ].filter(Boolean).join('\n\n');
-    agregar({ categoria: 'Entrega de turno', prioridad: 'Normal', titulo, detalle, turnoId, resuelto: false });
-    toast({ title: 'Entrega de turno registrada' });
-    setHandover({ destinatario: '', resumen: '', pendientes: '', caja: '' });
-    setHandoverOpen(false);
-  };
-
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
-        <CardTitle className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5" />
+    <Card className="overflow-hidden border-[#10233F]/10 shadow-sm">
+      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 border-b bg-slate-50/70 px-4 py-3 sm:px-5">
+        <div><CardTitle className="flex items-center gap-2 text-base text-[#10233F]">
+          <BookOpen className="h-4 w-4" />
           Bitácora de turno
           {pendientes > 0 && (
             <Badge className="bg-amber-500 text-white ml-2">
@@ -99,7 +83,7 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
               {pendientes} pendiente{pendientes > 1 ? 's' : ''}
             </Badge>
           )}
-        </CardTitle>
+        </CardTitle><p className="mt-0.5 text-xs text-muted-foreground">Notas e incidencias que necesitan continuidad.</p></div>
         <div className="flex gap-2 flex-wrap">
           <ExportButton
             rows={() => entradas.map((e) => ({
@@ -114,59 +98,6 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
             sheetName="Bitácora"
             label="Exportar"
           />
-          <Dialog open={handoverOpen} onOpenChange={setHandoverOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <ArrowRightLeft className="h-4 w-4 mr-2" />
-                Entregar turno
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Entrega de turno</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3 py-2">
-                <div>
-                  <Label>Entregar a</Label>
-                  <Input
-                    placeholder={siguienteUsuario || 'Nombre del siguiente recepcionista'}
-                    value={handover.destinatario}
-                    onChange={(e) => setHandover({ ...handover, destinatario: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Resumen general</Label>
-                  <Textarea
-                    rows={2}
-                    placeholder="Ocupación, situación general…"
-                    value={handover.resumen}
-                    onChange={(e) => setHandover({ ...handover, resumen: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Pendientes / observaciones</Label>
-                  <Textarea
-                    rows={3}
-                    placeholder="Check-outs, pagos, quejas, mantenimiento…"
-                    value={handover.pendientes}
-                    onChange={(e) => setHandover({ ...handover, pendientes: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Caja / fondo entregado</Label>
-                  <Input
-                    placeholder="Ej. $2,500 en efectivo + comprobantes"
-                    value={handover.caja}
-                    onChange={(e) => setHandover({ ...handover, caja: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setHandoverOpen(false)}>Cancelar</Button>
-                <Button onClick={handleHandover}>Registrar entrega</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -230,7 +161,7 @@ export function BitacoraPanel({ turnoId, siguienteUsuario }: Props) {
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 sm:p-5">
         <div className="flex gap-2 mb-4 flex-wrap">
           {[
             { k: 'todos', l: `Todas (${entradas.length})` },

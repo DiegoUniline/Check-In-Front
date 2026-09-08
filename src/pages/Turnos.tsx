@@ -7,18 +7,23 @@ import {
   Banknote,
   Calculator,
   CheckCircle2,
+  ChevronLeft,
   Clock3,
   CreditCard,
   FileText,
   Eye,
+  HandCoins,
   LogIn,
   LogOut,
   Lock,
   Receipt,
   RefreshCw,
+  ShieldCheck,
   ShoppingBag,
   Unlock,
   User,
+  UsersRound,
+  WalletCards,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -181,6 +186,11 @@ export default function Turnos() {
   const openingAmount = Number(fondoInicial || 0);
   const validOpeningAmount = Number.isFinite(openingAmount) && openingAmount >= 0;
   const operatorName = `${user?.nombre || ''} ${user?.apellidoPaterno || ''}`.trim() || user?.email || 'Usuario';
+  const totalIngresos = summary.efectivo + summary.tarjeta + summary.transferencia + summary.otros;
+  const cajaConciliada = hasCashCount && Math.abs(diferencia) < 0.01;
+  const motivoDiferenciaCompleto = Math.abs(diferencia) < 0.01 || Boolean(motivoDiferencia.trim());
+  const cierreListo = hasCashCount && cashConfirmed && motivoDiferenciaCompleto && !reportLoading && Boolean(closeReport);
+  const deliveryUser = usuarios.find((member) => member.id === entregaA);
 
   const updateOpeningAmount = (value: string) => {
     setFondoInicial(normalizeMoneyInput(value));
@@ -221,6 +231,7 @@ export default function Turnos() {
 
   const abrirCierre = async () => {
     if (!turno) return;
+    setCloseReport(null);
     setCloseDialog(true);
     setReportLoading(true);
     try {
@@ -248,7 +259,6 @@ export default function Turnos() {
     }
     setSaving(true);
     try {
-      const deliveryUser = usuarios.find((member) => member.id === entregaA);
       const closedShift = await api.closeShift(turno.id, {
         efectivo_esperado: efectivoEsperado,
         efectivo_contado: contado,
@@ -304,51 +314,173 @@ export default function Turnos() {
     return <MainLayout title="Turnos" subtitle="Caja, pendientes y entrega"><div className="h-80 animate-pulse rounded-2xl bg-muted" /></MainLayout>;
   }
 
+  if (reportDialog && selectedReport) {
+    return (
+      <MainLayout title="Reporte de turno" subtitle="Registro permanente de la operación" fullWidth>
+        <div className="mx-auto max-w-[1480px] space-y-4 p-3 sm:p-5 lg:p-6">
+          <div className="flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setReportDialog(false)} aria-label="Volver a turnos"><ChevronLeft className="h-5 w-5" /></Button>
+              <div><p className="font-semibold text-[#10233F]">Reporte de cierre</p><p className="text-xs text-muted-foreground">Todo lo registrado durante el turno, en una sola vista.</p></div>
+            </div>
+            <Badge variant="outline" className="w-fit border-emerald-200 bg-emerald-50 text-emerald-800"><ShieldCheck className="mr-1.5 h-3.5 w-3.5" />Turno cerrado y auditado</Badge>
+          </div>
+          <Card className="border-[#10233F]/10 shadow-sm"><CardContent className="p-4 sm:p-6"><ShiftReport report={selectedReport} /></CardContent></Card>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (closeDialog && turno) {
+    const reception = closeReport?.recepcion || {};
+    const payments = closeReport?.pagos || {};
+    const expenses = closeReport?.gastos || {};
+    const sales = closeReport?.ventas || {};
+    const hotel = closeReport?.estado_hotel || {};
+    return (
+      <MainLayout title="Cerrar turno" subtitle="Conciliación y entrega" fullWidth>
+        <div className="mx-auto max-w-[1540px] space-y-4 p-3 pb-10 sm:p-5 lg:p-6">
+          <div className="flex flex-col gap-4 rounded-2xl bg-[#10233F] p-4 text-white shadow-lg sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white" onClick={() => setCloseDialog(false)} aria-label="Volver al turno"><ChevronLeft className="h-5 w-5" /></Button>
+              <div><div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-bold sm:text-2xl">Cierre y entrega de turno</h1><Badge className="border-0 bg-emerald-400/15 text-emerald-200">Turno activo</Badge></div><p className="mt-1 text-sm text-white/65">{operatorName} · Abierto {formatDateTime(turno.abierto_at)}</p></div>
+            </div>
+            <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/[0.07] p-1 text-center text-[10px] sm:min-w-[390px] sm:text-xs">
+              <div className="rounded-lg bg-white px-3 py-2 font-semibold text-[#10233F]">1. Revisar</div>
+              <div className={cn('rounded-lg px-3 py-2 font-semibold', hasCashCount ? 'bg-white text-[#10233F]' : 'text-white/65')}>2. Contar</div>
+              <div className={cn('rounded-lg px-3 py-2 font-semibold', cierreListo ? 'bg-emerald-400 text-emerald-950' : 'text-white/65')}>3. Entregar</div>
+            </div>
+          </div>
+
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_430px]">
+            <div className="space-y-4">
+              <Card className="overflow-hidden border-[#10233F]/10 shadow-sm">
+                <CardHeader className="border-b bg-slate-50/80 px-4 py-3 sm:px-5"><div className="flex flex-wrap items-center justify-between gap-2"><div><CardTitle className="flex items-center gap-2 text-base text-[#10233F]"><WalletCards className="h-4 w-4" />Lo registrado por VULO</CardTitle><p className="mt-0.5 text-xs text-muted-foreground">Importes calculados desde la apertura de este turno.</p></div><Badge className="bg-emerald-600">Actualizado</Badge></div></CardHeader>
+                <CardContent className="p-0">
+                  <div className="grid grid-cols-2 border-b sm:grid-cols-4">
+                    {[
+                      ['Fondo inicial', Number(turno.fondo_inicial || 0), 'text-[#10233F]'],
+                      ['Efectivo recibido', summary.efectivo, 'text-emerald-700'],
+                      ['Egresos en efectivo', summary.egresosEfectivo, 'text-red-700'],
+                      ['Efectivo esperado', efectivoEsperado, 'text-[#10233F]'],
+                    ].map(([label,value,tone], index) => <div key={String(label)} className={cn('p-4 sm:p-5', index < 3 && 'border-r', index < 2 && 'max-sm:border-b')}><p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p><p className={cn('mt-1 text-xl font-bold tabular-nums sm:text-2xl', tone)}>{formatCurrency(Number(value))}</p></div>)}
+                  </div>
+                  <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+                    {[
+                      ['Tarjeta', summary.tarjeta, CreditCard],
+                      ['Transferencia', summary.transferencia, ArrowRightLeft],
+                      ['Otros ingresos', summary.otros, HandCoins],
+                      ['Total recibido', totalIngresos, Banknote],
+                    ].map(([label,value,Icon]: any) => <div key={label} className="bg-white p-3.5"><Icon className="mb-2 h-4 w-4 text-slate-500" /><p className="font-semibold tabular-nums text-[#10233F]">{formatCurrency(value)}</p><p className="text-[11px] text-muted-foreground">{label}</p></div>)}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-[#10233F]/10 shadow-sm">
+                <CardHeader className="border-b px-4 py-3 sm:px-5"><div><CardTitle className="flex items-center gap-2 text-base text-[#10233F]"><Receipt className="h-4 w-4" />Reporte operativo del turno</CardTitle><p className="mt-0.5 text-xs text-muted-foreground">Este resumen quedará guardado automáticamente.</p></div></CardHeader>
+                <CardContent className="space-y-4 p-4 sm:p-5">
+                  {reportLoading ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-20 animate-pulse rounded-xl bg-slate-100" />)}</div> : !closeReport ? <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-8 text-center"><RefreshCw className="h-6 w-6 text-muted-foreground" /><p className="mt-2 text-sm font-semibold text-[#10233F]">No se pudo preparar el reporte</p><p className="mt-1 text-xs text-muted-foreground">Vuelve a intentarlo antes de cerrar el turno.</p><Button variant="outline" size="sm" className="mt-3" onClick={() => void abrirCierre()}>Reintentar</Button></div> : <>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                      {[
+                        ['Reservas', reception.reservas_creadas, Receipt], ['Check-ins', reception.checkins, LogIn], ['Check-outs', reception.checkouts, LogOut],
+                        ['Pagos', payments.cantidad, CreditCard], ['Gastos', expenses.cantidad, ArrowUpCircle], ['Productos', reportArray(sales.productos).length, ShoppingBag],
+                      ].map(([label,value,Icon]: any) => <div key={label} className="rounded-xl border bg-slate-50/60 p-3"><Icon className="mb-2 h-4 w-4 text-[#10233F]" /><p className="text-xl font-bold text-[#10233F]">{value ?? 0}</p><p className="text-[11px] text-muted-foreground">{label}</p></div>)}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className="rounded-xl bg-emerald-50 p-3"><p className="text-[11px] text-emerald-700">Pagos recibidos</p><p className="mt-1 font-bold text-emerald-800">{formatCurrency(payments.total || 0)}</p></div>
+                      <div className="rounded-xl bg-red-50 p-3"><p className="text-[11px] text-red-700">Gastos realizados</p><p className="mt-1 font-bold text-red-800">{formatCurrency(expenses.total || 0)}</p></div>
+                      <div className="rounded-xl bg-blue-50 p-3"><p className="text-[11px] text-blue-700">Ventas y consumos</p><p className="mt-1 font-bold text-blue-800">{formatCurrency(sales.total || 0)}</p></div>
+                      <div className="rounded-xl bg-amber-50 p-3"><p className="text-[11px] text-amber-700">Pendientes operativos</p><p className="mt-1 font-bold text-amber-800">{Number(hotel.llegadas_pendientes || 0) + Number(hotel.salidas_pendientes || 0)}</p></div>
+                    </div>
+                  </>}
+                </CardContent>
+              </Card>
+
+              {closeReport && <details className="group overflow-hidden rounded-2xl border border-[#10233F]/10 bg-white shadow-sm"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 font-semibold text-[#10233F] sm:px-5"><span className="flex items-center gap-2"><FileText className="h-4 w-4" />Ver todo el detalle que quedará guardado</span><span className="text-xs font-normal text-muted-foreground group-open:hidden">Pagos, gastos y productos</span><span className="hidden text-xs font-normal text-muted-foreground group-open:inline">Ocultar detalle</span></summary><div className="border-t px-4 py-5 sm:px-5"><ShiftReport report={closeReport} /></div></details>}
+            </div>
+
+            <Card className="border-[#10233F]/15 shadow-xl xl:sticky xl:top-4">
+              <CardHeader className="border-b px-4 py-4 sm:px-5"><CardTitle className="flex items-center gap-2 text-lg text-[#10233F]"><Calculator className="h-5 w-5" />Cuenta y entrega</CardTitle><p className="text-xs text-muted-foreground">Sólo captura lo que tienes físicamente. VULO hace el contraste.</p></CardHeader>
+              <CardContent className="space-y-4 p-4 sm:p-5">
+                <div>
+                  <div className="mb-2 flex items-end justify-between gap-2"><Label htmlFor="contado" className="font-semibold text-[#10233F]">Efectivo contado en caja</Label><span className="text-xs text-muted-foreground">{currency.codigo}</span></div>
+                  <div className="relative"><span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xl font-semibold text-[#10233F]">{currency.simbolo}</span><Input id="contado" type="text" inputMode="decimal" autoComplete="off" autoFocus className="h-16 rounded-2xl border-[#10233F]/20 pl-10 pr-4 text-3xl font-bold tabular-nums text-[#10233F]" value={fondoContado} onChange={(event) => setFondoContado(normalizeMoneyInput(event.target.value))} onBlur={() => hasCashCount && setFondoContado(contado.toFixed(2))} placeholder="0.00" /></div>
+                </div>
+
+                <div className={cn('rounded-2xl border p-4 transition-colors', !hasCashCount ? 'border-dashed bg-slate-50' : cajaConciliada ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50')}>
+                  <div className="flex items-center justify-between gap-3"><span className="text-sm font-medium text-slate-700">Diferencia</span><strong className={cn('text-xl tabular-nums', !hasCashCount ? 'text-slate-400' : cajaConciliada ? 'text-emerald-700' : 'text-red-700')}>{hasCashCount ? formatCurrency(diferencia) : '—'}</strong></div>
+                  <p className={cn('mt-1 text-xs', cajaConciliada ? 'text-emerald-700' : 'text-muted-foreground')}>{!hasCashCount ? `VULO espera ${formatCurrency(efectivoEsperado)}` : cajaConciliada ? 'La caja cuadra correctamente.' : diferencia > 0 ? 'Hay efectivo sobrante.' : 'Hay efectivo faltante.'}</p>
+                </div>
+
+                {hasCashCount && !cajaConciliada && <div><Label htmlFor="motivo" className="text-sm font-semibold text-red-800">Explica la diferencia</Label><Textarea id="motivo" className="mt-2 min-h-20 border-red-200" value={motivoDiferencia} onChange={(event) => setMotivoDiferencia(event.target.value)} placeholder="Motivo obligatorio para auditoría…" /></div>}
+
+                <div className="border-t pt-4"><Label className="flex items-center gap-2 font-semibold text-[#10233F]"><UsersRound className="h-4 w-4" />Entregar a <span className="font-normal text-muted-foreground">(opcional)</span></Label><Select value={entregaA || '__none__'} onValueChange={(value) => setEntregaA(value === '__none__' ? '' : value)}><SelectTrigger className="mt-2 h-11"><SelectValue placeholder="Selecciona un usuario" /></SelectTrigger><SelectContent><SelectItem value="__none__">Cierre final · Sin entrega</SelectItem>{usuarios.map((member) => <SelectItem key={member.id} value={member.id}>{`${member.nombre || ''} ${member.apellido_paterno || ''}`.trim() || member.email} · {member.rol}</SelectItem>)}</SelectContent></Select>{deliveryUser && <p className="mt-2 text-xs text-muted-foreground">El reporte y los pendientes quedarán entregados a {deliveryUser.nombre || deliveryUser.email}.</p>}</div>
+
+                <div><div className="flex items-center justify-between gap-2"><Label htmlFor="pendientes" className="font-semibold text-[#10233F]">Pendientes del siguiente turno</Label><span className="text-xs text-muted-foreground">Opcional</span></div><Textarea id="pendientes" className="mt-2 min-h-24" value={pendientesEntrega} onChange={(event) => setPendientesEntrega(event.target.value)} placeholder="Llegadas, cobros, habitaciones o incidentes por continuar…" /></div>
+
+                <label className={cn('flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors', cashConfirmed ? 'border-emerald-200 bg-emerald-50' : 'border-[#10233F]/10 bg-[#10233F]/[0.03]')}><Checkbox className="mt-0.5" checked={cashConfirmed} onCheckedChange={(value) => setCashConfirmed(value === true)} /><span><strong className="block text-[#10233F]">Confirmo el conteo físico</strong><span className="text-xs text-muted-foreground">Revisé el efectivo y los movimientos de este turno.</span></span></label>
+
+                <Button variant={!cajaConciliada && hasCashCount ? 'destructive' : 'default'} className="h-12 w-full text-sm font-semibold" onClick={cerrarTurno} disabled={saving || !cierreListo}>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />{saving ? 'Cerrando turno…' : reportLoading ? 'Preparando reporte…' : !closeReport ? 'Reporte pendiente' : !hasCashCount ? 'Cuenta el efectivo para continuar' : !motivoDiferenciaCompleto ? 'Explica la diferencia' : !cashConfirmed ? 'Confirma el conteo' : cajaConciliada ? 'Cerrar turno conciliado' : `Cerrar con diferencia de ${formatCurrency(diferencia)}`}
+                </Button>
+                <p className="text-center text-[11px] leading-4 text-muted-foreground">Al cerrar se guardarán el reporte, la conciliación, el responsable y la entrega.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout title="Turnos" subtitle="Nadie entrega el hotel de memoria">
-      <div className="space-y-5">
+      <div className="mx-auto max-w-[1480px] space-y-4 pb-10">
         {!turno && (location.state as { shiftRequired?: boolean } | null)?.shiftRequired && <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
           <Lock className="mt-0.5 h-5 w-5 shrink-0" />
           <div><p className="font-semibold">Abre tu turno para comenzar</p><p className="mt-1 text-sm text-amber-900/75">Reservas, caja, ventas y operaciones quedan protegidas hasta registrar el efectivo inicial de tu turno.</p></div>
         </div>}
-        <Card className={cn('overflow-hidden border-2', turno ? 'border-emerald-200' : 'border-amber-200')}>
-          <CardContent className={cn('p-5', turno ? 'bg-emerald-50/60' : 'bg-amber-50/60')}>
+        <Card className="overflow-hidden border-[#10233F]/10 shadow-sm">
+          <CardContent className={cn('p-0', turno ? 'bg-[#10233F] text-white' : 'bg-white')}>
+            <div className="p-4 sm:p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
-                <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl', turno ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')}>
+                <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl', turno ? 'bg-white/10 text-emerald-300' : 'bg-amber-100 text-amber-700')}>
                   {turno ? <Unlock className="h-6 w-6" /> : <Lock className="h-6 w-6" />}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">{turno ? 'Turno abierto' : 'No hay turno abierto'}</h2>{turno && <Badge className="bg-emerald-600">Activo</Badge>}{turno?._local_only && <Badge variant="outline">Este dispositivo</Badge>}</div>
-                  <p className="text-sm text-muted-foreground">{turno ? `${turno.usuario_nombre} · ${formatDateTime(turno.abierto_at)}` : 'Abre caja para iniciar el control de tu operación.'}</p>
+                  <div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold">{turno ? `Turno de ${turno.usuario_nombre || operatorName}` : 'No hay turno abierto'}</h2>{turno && <Badge className="border-0 bg-emerald-400/15 text-emerald-200">Activo</Badge>}{turno?._local_only && <Badge variant="outline" className="border-white/20 text-white">Este dispositivo</Badge>}</div>
+                  <p className={cn('text-sm', turno ? 'text-white/60' : 'text-muted-foreground')}>{turno ? `Abierto ${formatDateTime(turno.abierto_at)} · Fondo ${formatCurrency(turno.fondo_inicial || 0)}` : 'Abre caja para iniciar el control de tu operación.'}</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button>
-                {turno ? <Button variant="destructive" onClick={() => void abrirCierre()}><ArrowRightLeft className="mr-2 h-4 w-4" />Entregar y cerrar</Button> : <Button onClick={() => setOpenDialog(true)}><Unlock className="mr-2 h-4 w-4" />Abrir turno</Button>}
+                <Button variant="outline" className={cn(turno && 'border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white')} onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button>
+                {turno ? <Button className="bg-white text-[#10233F] hover:bg-slate-100" onClick={() => void abrirCierre()}><Calculator className="mr-2 h-4 w-4" />Revisar y cerrar turno</Button> : <Button onClick={() => setOpenDialog(true)}><Unlock className="mr-2 h-4 w-4" />Abrir turno</Button>}
               </div>
+            </div>
             </div>
           </CardContent>
         </Card>
 
         {turno && (
           <>
-            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <Card className="overflow-hidden border-[#10233F]/10 shadow-sm">
+              <CardContent className="grid grid-cols-2 p-0 lg:grid-cols-4">
               {[
-                { label: 'Efectivo esperado', value: efectivoEsperado, icon: Banknote, tone: 'text-slate-900 bg-slate-100' },
-                { label: 'Ingresos del turno', value: summary.efectivo + summary.tarjeta + summary.transferencia + summary.otros, icon: ArrowDownCircle, tone: 'text-emerald-700 bg-emerald-100' },
+                { label: 'Efectivo esperado', value: efectivoEsperado, icon: Banknote, tone: 'text-[#10233F] bg-slate-100' },
+                { label: 'Ingresos del turno', value: totalIngresos, icon: ArrowDownCircle, tone: 'text-emerald-700 bg-emerald-100' },
                 { label: 'Egresos en efectivo', value: summary.egresosEfectivo, icon: ArrowUpCircle, tone: 'text-red-700 bg-red-100' },
-                { label: 'Movimientos', value: summary.movimientos.length, icon: Receipt, tone: 'text-blue-700 bg-blue-100', count: true },
+                { label: 'Movimientos registrados', value: summary.movimientos.length, icon: Receipt, tone: 'text-blue-700 bg-blue-100', count: true },
               ].map((item) => (
-                <Card key={item.label}><CardContent className="p-4"><div className="flex items-center gap-3"><span className={cn('flex h-10 w-10 items-center justify-center rounded-xl', item.tone)}><item.icon className="h-5 w-5" /></span><div><p className="text-lg font-bold sm:text-xl">{item.count ? item.value : formatCurrency(item.value)}</p><p className="text-xs text-muted-foreground">{item.label}</p></div></div></CardContent></Card>
+                <div key={item.label} className="flex items-center gap-3 border-b border-r p-4 last:border-r-0 lg:border-b-0"><span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', item.tone)}><item.icon className="h-5 w-5" /></span><div className="min-w-0"><p className="text-lg font-bold tabular-nums text-[#10233F] sm:text-xl">{item.count ? item.value : formatCurrency(item.value)}</p><p className="truncate text-xs text-muted-foreground">{item.label}</p></div></div>
               ))}
-            </div>
+              </CardContent>
+            </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Receipt className="h-5 w-5" />Movimientos reales desde la apertura</CardTitle></CardHeader>
-              <CardContent className="overflow-x-auto">
+            <Card className="overflow-hidden border-[#10233F]/10 shadow-sm">
+              <CardHeader className="flex-row items-center justify-between border-b bg-slate-50/70 px-4 py-3 sm:px-5"><div><CardTitle className="flex items-center gap-2 text-base text-[#10233F]"><Receipt className="h-4 w-4" />Actividad de caja</CardTitle><p className="mt-0.5 text-xs text-muted-foreground">Pagos, ventas y egresos desde la apertura.</p></div><Badge variant="secondary">{summary.movimientos.length} movimientos</Badge></CardHeader>
+              <CardContent className="overflow-x-auto p-0">
                 {summary.linkedToShift === false && <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">La migración de turnos aún no está aplicada; estos totales usan el horario de apertura como respaldo. Al aplicarla, cada movimiento quedará ligado a esta caja.</div>}
-                <Table><TableHeader><TableRow><TableHead>Hora</TableHead><TableHead>Tipo</TableHead><TableHead>Concepto</TableHead><TableHead>Método</TableHead><TableHead className="text-right">Monto</TableHead></TableRow></TableHeader>
+                <Table><TableHeader className="bg-white"><TableRow><TableHead className="pl-5">Hora</TableHead><TableHead>Tipo</TableHead><TableHead>Concepto</TableHead><TableHead>Método</TableHead><TableHead className="pr-5 text-right">Monto</TableHead></TableRow></TableHeader>
                   <TableBody>{summary.movimientos.length === 0 ? <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Todavía no hay movimientos en este turno.</TableCell></TableRow> : summary.movimientos.map((m) => <TableRow key={`${m.tipo}-${m.id}`}><TableCell>{m.fecha ? formatDateTime(m.fecha) : '—'}</TableCell><TableCell><Badge variant={m.tipo === 'Ingreso' ? 'secondary' : 'destructive'}>{m.tipo}</Badge></TableCell><TableCell>{m.concepto}</TableCell><TableCell>{m.metodo}</TableCell><TableCell className={cn('text-right font-semibold', m.tipo === 'Ingreso' ? 'text-emerald-700' : 'text-red-700')}>{m.tipo === 'Ingreso' ? '+' : '-'}{formatCurrency(m.monto)}</TableCell></TableRow>)}</TableBody>
                 </Table>
               </CardContent>
@@ -358,9 +490,9 @@ export default function Turnos() {
 
         <BitacoraPanel turnoId={turno?.id} />
 
-        <Card>
-          <CardHeader className="flex-row items-center justify-between"><CardTitle className="flex items-center gap-2 text-base"><Clock3 className="h-5 w-5" />Historial de turnos</CardTitle><ExportButton rows={() => historial} filename="turnos_vulo" sheetName="Turnos" /></CardHeader>
-          <CardContent className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Apertura</TableHead><TableHead>Usuario</TableHead><TableHead>Fondo</TableHead><TableHead>Contado</TableHead><TableHead>Diferencia</TableHead><TableHead>Entregado a</TableHead><TableHead>Reporte</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader><TableBody>
+        <Card className="overflow-hidden border-[#10233F]/10 shadow-sm">
+          <CardHeader className="flex-row items-center justify-between border-b bg-slate-50/70 px-4 py-3 sm:px-5"><div><CardTitle className="flex items-center gap-2 text-base text-[#10233F]"><Clock3 className="h-4 w-4" />Turnos anteriores</CardTitle><p className="mt-0.5 text-xs text-muted-foreground">Consulta la conciliación y el reporte guardado de cada entrega.</p></div><ExportButton rows={() => historial} filename="turnos_vulo" sheetName="Turnos" /></CardHeader>
+          <CardContent className="overflow-x-auto p-0"><Table><TableHeader><TableRow><TableHead className="pl-5">Apertura</TableHead><TableHead>Usuario</TableHead><TableHead>Fondo</TableHead><TableHead>Contado</TableHead><TableHead>Diferencia</TableHead><TableHead>Entregado a</TableHead><TableHead>Reporte</TableHead><TableHead className="pr-5">Estado</TableHead></TableRow></TableHeader><TableBody>
             {historial.length === 0 ? <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">El primer turno aparecerá aquí.</TableCell></TableRow> : historial.map((t) => <TableRow key={t.id}><TableCell>{formatDateTime(t.abierto_at)}</TableCell><TableCell>{t.usuario_nombre}</TableCell><TableCell>{formatCurrency(t.fondo_inicial)}</TableCell><TableCell>{t.efectivo_contado == null ? '—' : formatCurrency(t.efectivo_contado)}</TableCell><TableCell className={cn('font-semibold', Number(t.diferencia) ? 'text-red-700' : 'text-emerald-700')}>{t.diferencia == null ? '—' : formatCurrency(t.diferencia)}</TableCell><TableCell>{t.entrega_a || 'Cierre final'}</TableCell><TableCell>{t.reporte_cierre && Object.keys(t.reporte_cierre).length ? <Button variant="outline" size="sm" onClick={() => { setSelectedReport(t.reporte_cierre); setReportDialog(true); }}><FileText className="mr-1.5 h-3.5 w-3.5" />Ver reporte</Button> : <span className="text-muted-foreground">—</span>}</TableCell><TableCell><Badge variant={t.estado === 'Abierto' ? 'default' : 'secondary'}>{t.estado}</Badge></TableCell></TableRow>)}
           </TableBody></Table></CardContent>
         </Card>
@@ -454,52 +586,6 @@ export default function Turnos() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={closeDialog} onOpenChange={setCloseDialog}>
-        <DialogContent className="max-h-[94vh] overflow-hidden border-0 p-0 shadow-2xl sm:max-w-5xl">
-          <DialogHeader className="border-b border-[#10233F]/10 px-5 pb-4 pt-5 text-left sm:px-6">
-            <DialogTitle className="flex items-center gap-2 text-xl text-[#10233F]"><Calculator className="h-5 w-5" />Cierre de turno</DialogTitle>
-            <DialogDescription>VULO prepara el reporte; tú sólo cuentas la caja y entregas los pendientes.</DialogDescription>
-          </DialogHeader>
-
-          <div className="max-h-[calc(94vh-145px)] space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
-            <div className="rounded-2xl border border-[#10233F]/10 bg-slate-50 p-4">
-              <div className="mb-3 flex items-center justify-between gap-3"><div><p className="font-semibold text-[#10233F]">Actividad registrada en este turno</p><p className="text-xs text-muted-foreground">Este resumen se guardará automáticamente al cerrar.</p></div><Badge className="bg-emerald-600">En tiempo real</Badge></div>
-              {reportLoading ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{Array.from({length:6}).map((_,index)=><div key={index} className="h-16 animate-pulse rounded-xl bg-slate-200" />)}</div> : <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{[
-                ['Reservas',closeReport?.recepcion?.reservas_creadas,Receipt],['Check-ins',closeReport?.recepcion?.checkins,LogIn],['Check-outs',closeReport?.recepcion?.checkouts,LogOut],
-                ['Pagos',closeReport?.pagos?.cantidad,CreditCard],['Gastos',closeReport?.gastos?.cantidad,ArrowUpCircle],['Productos',reportArray(closeReport?.ventas?.productos).length,ShoppingBag],
-              ].map(([label,value,Icon]:any)=><div key={label} className="rounded-xl border bg-white p-2.5"><Icon className="mb-1.5 h-4 w-4 text-[#10233F]" /><p className="text-lg font-bold text-[#10233F]">{value ?? 0}</p><p className="text-[11px] text-muted-foreground">{label}</p></div>)}</div>}
-            </div>
-
-            <div className="grid gap-5 lg:grid-cols-[1.08fr_.92fr]">
-              <section className="rounded-2xl border border-[#10233F]/10 p-4 sm:p-5">
-                <div className="mb-4 flex items-center gap-2"><Banknote className="h-5 w-5 text-[#10233F]" /><h3 className="font-semibold text-[#10233F]">Arqueo de caja</h3></div>
-                <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#071225] p-3 text-white sm:grid-cols-4">
-                  <div><p className="text-[11px] text-slate-400">Fondo</p><p className="font-semibold">{formatCurrency(turno?.fondo_inicial)}</p></div>
-                  <div><p className="text-[11px] text-slate-400">Ingresos</p><p className="font-semibold text-emerald-400">{formatCurrency(summary.efectivo)}</p></div>
-                  <div><p className="text-[11px] text-slate-400">Egresos</p><p className="font-semibold text-red-400">{formatCurrency(summary.egresosEfectivo)}</p></div>
-                  <div><p className="text-[11px] text-slate-400">Esperado</p><p className="font-bold">{formatCurrency(efectivoEsperado)}</p></div>
-                </div>
-                <div className="mt-4"><div className="mb-2 flex items-end justify-between"><Label htmlFor="contado" className="font-semibold">Efectivo contado</Label><span className="text-xs text-muted-foreground">{currency.codigo}</span></div><div className="relative"><span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-lg font-semibold text-[#10233F]">{currency.simbolo}</span><Input id="contado" type="text" inputMode="decimal" className="h-14 rounded-xl pl-10 text-2xl font-bold tabular-nums" value={fondoContado} onChange={(event) => setFondoContado(normalizeMoneyInput(event.target.value))} placeholder="0.00" /></div></div>
-                {hasCashCount && <div className={cn('mt-3 flex items-center justify-between rounded-xl border p-3',Math.abs(diferencia)<0.01?'border-emerald-200 bg-emerald-50':'border-red-200 bg-red-50')}><span className="text-sm font-medium">Diferencia de caja</span><strong className={Math.abs(diferencia)<0.01?'text-emerald-700':'text-red-700'}>{formatCurrency(diferencia)}</strong></div>}
-                {hasCashCount && Math.abs(diferencia)>0.009 && <div className="mt-4"><Label htmlFor="motivo">Motivo de la diferencia</Label><Textarea id="motivo" className="mt-2" rows={2} value={motivoDiferencia} onChange={(event)=>setMotivoDiferencia(event.target.value)} placeholder="Explica qué ocurrió; quedará auditado." /></div>}
-              </section>
-
-              <section className="rounded-2xl border border-[#10233F]/10 p-4 sm:p-5">
-                <div className="mb-4 flex items-center gap-2"><ArrowRightLeft className="h-5 w-5 text-[#10233F]" /><h3 className="font-semibold text-[#10233F]">Entrega</h3></div>
-                <div><Label>Entregar a <span className="font-normal text-muted-foreground">(opcional)</span></Label><Select value={entregaA || '__none__'} onValueChange={(value)=>setEntregaA(value==='__none__'?'':value)}><SelectTrigger className="mt-2 h-11"><SelectValue placeholder="Selecciona un usuario" /></SelectTrigger><SelectContent><SelectItem value="__none__">Cierre final · Sin entrega</SelectItem>{usuarios.map((member)=><SelectItem key={member.id} value={member.id}>{`${member.nombre || ''} ${member.apellido_paterno || ''}`.trim() || member.email} · {member.rol}</SelectItem>)}</SelectContent></Select></div>
-                <div className="mt-4"><Label htmlFor="pendientes">Pendientes para el siguiente turno <span className="font-normal text-muted-foreground">(opcional)</span></Label><Textarea id="pendientes" className="mt-2 min-h-28" value={pendientesEntrega} onChange={(event)=>setPendientesEntrega(event.target.value)} placeholder="Solicitudes, pagos por cobrar, habitaciones o incidentes que deban continuar." /></div>
-                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-[#10233F]/5 p-3 text-sm"><Checkbox className="mt-0.5" checked={cashConfirmed} onCheckedChange={(value)=>setCashConfirmed(value===true)} /><span><strong className="block text-[#10233F]">Confirmo el conteo de caja</strong><span className="text-muted-foreground">Revisé el efectivo físico contra el importe esperado.</span></span></label>
-              </section>
-            </div>
-          </div>
-
-          <DialogFooter className="flex-row border-t border-[#10233F]/10 bg-slate-50 px-5 py-4 sm:px-6"><Button variant="ghost" className="flex-1 sm:flex-none" onClick={()=>setCloseDialog(false)}>Cancelar</Button><Button variant={hasCashCount&&Math.abs(diferencia)>0.009?'destructive':'default'} className={cn('flex-1 sm:min-w-60',(!hasCashCount||!cashConfirmed)&&'opacity-60')} onClick={cerrarTurno} disabled={saving||!hasCashCount||!cashConfirmed||reportLoading}><CheckCircle2 className="mr-2 h-4 w-4" />{saving?'Cerrando…':hasCashCount&&Math.abs(diferencia)>0.009?`Cerrar con diferencia de ${formatCurrency(diferencia)}`:'Cerrar caja conciliada'}</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={reportDialog} onOpenChange={setReportDialog}>
-        <DialogContent className="max-h-[94vh] overflow-hidden p-0 sm:max-w-5xl"><DialogHeader className="border-b px-5 pb-4 pt-5 text-left sm:px-6"><DialogTitle className="flex items-center gap-2 text-xl text-[#10233F]"><FileText className="h-5 w-5" />Reporte de cierre</DialogTitle><DialogDescription>Resumen completo y permanente de la operación registrada durante el turno.</DialogDescription></DialogHeader><div className="max-h-[calc(94vh-130px)] overflow-y-auto px-5 py-5 sm:px-6">{selectedReport ? <ShiftReport report={selectedReport} /> : <p className="py-12 text-center text-muted-foreground">Este turno no tiene un reporte guardado.</p>}</div><DialogFooter className="border-t bg-slate-50 px-5 py-3 sm:px-6"><Button onClick={()=>setReportDialog(false)}>Cerrar reporte</Button></DialogFooter></DialogContent>
-      </Dialog>
     </MainLayout>
   );
 }
