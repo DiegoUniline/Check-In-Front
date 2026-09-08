@@ -18,9 +18,10 @@ interface MainLayoutProps {
   title?: string;
   subtitle?: string;
   fitViewport?: boolean;
+  fullWidth?: boolean;
 }
 
-export function MainLayout({ children, title, subtitle, fitViewport = false }: MainLayoutProps) {
+export function MainLayout({ children, title, subtitle, fitViewport = false, fullWidth = false }: MainLayoutProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const { openShift, shiftRequired, viewOnlyMode } = useShift();
   const location = useLocation();
@@ -185,7 +186,9 @@ export function MainLayout({ children, title, subtitle, fitViewport = false }: M
               : 'flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5 lg:px-7 lg:py-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-7'}
             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
           >
-            <div className={fitViewport ? 'mx-auto flex h-full w-full max-w-[1600px] flex-col overflow-hidden' : 'mx-auto w-full max-w-[1600px]'}>
+            <div className={fitViewport
+              ? `mx-auto flex h-full w-full flex-col overflow-hidden ${fullWidth ? 'max-w-none' : 'max-w-[1600px]'}`
+              : 'mx-auto w-full max-w-[1600px]'}>
               {children}
             </div>
           </main>

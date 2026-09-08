@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Plus, Search, 
   CalendarDays, BedDouble, Users, RefreshCw, Calendar,
   LogIn, LogOut, Clock, ArrowRight, X, Eye, History, SlidersHorizontal,
-  CheckCircle, XCircle, AlertCircle, Wrench, DollarSign
+  CheckCircle, XCircle, AlertCircle, Wrench, DollarSign, Maximize2, Minimize2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -192,6 +192,8 @@ export default function Reservas() {
   const [operationalFilter, setOperationalFilter] = useState<OperationalFilter>(savedView.operationalFilter || 'all');
   const [focusReservationId, setFocusReservationId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [calendarFiltersOpen, setCalendarFiltersOpen] = useState(false);
+  const [calendarFocusMode, setCalendarFocusMode] = useState(false);
 
   const validViews = ['recepcion', 'checkin', 'checkout', 'timeline', 'historico'] as const;
   type Vista = typeof validViews[number];
@@ -218,6 +220,7 @@ export default function Reservas() {
   const [filtrosOpen, setFiltrosOpen] = useState(false);
   const [filtros, setFiltros] = useState<ReservasFilters>(savedView.filtros || defaultFilters);
   const activeFilterCount = countActiveFilters(filtros);
+  const isCalendarWorkspace = tabActiva === 'timeline' && reservasSubView === 'timeline';
 
   const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
 
@@ -231,6 +234,25 @@ export default function Reservas() {
       busqueda, reservasSubView, filtros, operationalFilter,
     }));
   }, [startDate, viewMode, filtroTipo, filtroPiso, busqueda, reservasSubView, filtros, operationalFilter]);
+
+  useEffect(() => {
+    if (isCalendarWorkspace) return;
+    setCalendarFocusMode(false);
+  }, [isCalendarWorkspace]);
+
+  useEffect(() => {
+    if (!calendarFocusMode) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCalendarFocusMode(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [calendarFocusMode]);
 
   // En teléfono la lista de habitaciones es la vista operativa más clara.
   // El calendario continúa disponible, pero ya no obliga a desplazarse al entrar.
@@ -420,14 +442,39 @@ export default function Reservas() {
   // Las "salidas" se obtienen desde backend (más confiable y permite listarlas).
   // Relacionado con `check-in-back/src/routes/reservas.js` (GET `/reservas/checkouts-hoy`).
   const salidasHoy = salidasHoyData.length;
+  const occupancyPercent = totalHabitaciones > 0
+    ? Math.round((habitacionesOcupadas / totalHabitaciones) * 100)
+    : 0;
+  const calendarFilterCount = Number(filtroTipo !== 'all')
+    + Number(filtroPiso !== 'all')
+    + Number(operationalFilter !== 'all');
+  const operationalFilterLabel: Record<OperationalFilter, string> = {
+    all: 'Todas',
+    available: 'Disponibles hoy',
+    occupied: 'Ocupadas hoy',
+    arrivals: 'Llegadas hoy',
+    departures: 'Salidas hoy',
+    balance: 'Con saldo',
+    pending: 'Pendientes',
+    maintenance: 'Mantenimiento',
+  };
+  const clearCalendarFilters = () => {
+    setFiltroTipo('all');
+    setFiltroPiso('all');
+    setOperationalFilter('all');
+  };
 
   return (
-    <MainLayout title="Recepción" subtitle="Gestión de reservas">
+    <MainLayout title="Recepción" subtitle="Gestión de reservas" fitViewport={isCalendarWorkspace} fullWidth={isCalendarWorkspace}>
       <div
-        className="space-y-3"
-        style={{ paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4rem))' }}
+        className={cn(
+          isCalendarWorkspace
+            ? 'flex h-full min-h-0 flex-col gap-2 p-2 sm:p-3'
+            : 'space-y-3',
+        )}
+        style={isCalendarWorkspace ? undefined : { paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4rem))' }}
       >
-        <div className="grid grid-cols-2 gap-2 sm:hidden">
+        <div className={cn('grid grid-cols-2 gap-2 sm:hidden', isCalendarWorkspace && 'hidden')}>
           <Button
             className="col-span-2 h-12 justify-center text-sm font-semibold shadow-sm"
             disabled={viewOnlyMode}
@@ -450,7 +497,7 @@ export default function Reservas() {
         </div>
 
         {/* KPI compactos, mobile-first */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {!isCalendarWorkspace && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Card className="p-3">
             <div className="flex items-center gap-2 min-w-0">
               <div className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
@@ -507,16 +554,16 @@ export default function Reservas() {
               </div>
               <div className="min-w-0">
                 <p className="text-base font-bold tabular-nums leading-tight text-sky-600 dark:text-sky-400">
-                  {totalHabitaciones > 0 ? Math.round((habitacionesOcupadas / totalHabitaciones) * 100) : 0}%
+                  {occupancyPercent}%
                 </p>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ocupación</p>
               </div>
             </div>
           </Card>
-        </div>
+        </div>}
 
         {/* Vistas seleccionables desde el sidebar */}
-        <Tabs value={tabActiva}>
+        <Tabs value={tabActiva} className={cn(isCalendarWorkspace && 'flex min-h-0 flex-1 flex-col')}>
 
           {/* TAB RECEPCIÓN: Cards por habitación */}
           <TabsContent value="recepcion" className="space-y-3 mt-3">
@@ -598,9 +645,9 @@ export default function Reservas() {
           </TabsContent>
 
           {/* TAB RESERVAS: Timeline existente */}
-          <TabsContent value="timeline" className="space-y-3 mt-3">
-            {/* Selector Timeline / Card / Tabla */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
+          <TabsContent value="timeline" className={cn(isCalendarWorkspace ? 'mt-0 flex min-h-0 flex-1 flex-col' : 'space-y-3 mt-3')}>
+            {/* En Card y Tabla el selector conserva su lugar; en Calendario forma parte de la barra operativa. */}
+            <div className={cn('flex items-center justify-between gap-2 flex-wrap', isCalendarWorkspace && 'hidden')}>
               <div className="grid w-full grid-cols-3 rounded-xl bg-muted p-1 sm:inline-flex sm:w-auto">
                 {([
                   { key: 'timeline', label: 'Calendario' },
@@ -621,146 +668,241 @@ export default function Reservas() {
             </div>
 
             {reservasSubView === 'timeline' && (
-            <>
-            <Card>
-          <CardContent className="p-3 space-y-2">
-            {/* Fila 1: navegación de fecha + vista */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('prev')}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-medium" onClick={() => navegarFecha('today')}>
-                  Hoy
-                </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('next')}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-medium ml-1 gap-1.5">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      {format(startDate, "d MMM yyyy", { locale: es })}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                    <CalendarPicker
-                      mode="single"
-                      selected={startDate}
-                      onSelect={(d) => d && setStartDate(d)}
-                      locale={es}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="inline-flex items-center gap-1 bg-muted p-1 rounded-xl">
-                {(['Dia', 'Semana', 'Mes'] as ViewMode[]).map(mode => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setViewMode(mode)}
-                    className={cn(
-                      'h-8 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors',
-                      viewMode === mode
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {mode}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Fila 2: filtros de tipo + búsqueda */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
-                <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
-                <PisoChips value={filtroPiso} onChange={setFiltroPiso} pisos={pisosDisponibles} />
-              </div>
-              <div className="relative w-full sm:w-auto">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Huésped, folio, teléfono o habitación…"
-                  className="h-10 w-full pl-8 pr-8 text-sm sm:h-9 sm:w-[320px] sm:text-xs"
-                  value={busqueda}
-                  onFocus={() => setSearchOpen(true)}
-                  onBlur={() => window.setTimeout(() => setSearchOpen(false), 120)}
-                  onChange={(e) => { setBusqueda(e.target.value); setSearchOpen(true); setFocusReservationId(null); }}
-                />
-                {busqueda && <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted" onMouseDown={(event) => event.preventDefault()} onClick={() => { setBusqueda(''); setFocusReservationId(null); }} aria-label="Limpiar búsqueda"><X className="h-3.5 w-3.5" /></button>}
-                {searchOpen && matchingReservations.length > 0 && (
-                  <div className="absolute right-0 top-full z-50 mt-1 w-full min-w-[320px] overflow-hidden rounded-xl border bg-white shadow-xl">
-                    <p className="border-b px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Reservas encontradas</p>
-                    {matchingReservations.map((reservation) => {
-                      const name = reservation.cliente_nombre || [reservation.clientes?.nombre, reservation.clientes?.apellido_paterno, reservation.clientes?.apellido_materno].filter(Boolean).join(' ') || 'Sin nombre';
-                      return <button key={reservation.id} type="button" className="flex w-full items-center justify-between gap-3 border-b px-3 py-2.5 text-left last:border-0 hover:bg-muted/50" onMouseDown={(event) => event.preventDefault()} onClick={() => focusReservation(reservation)}>
-                        <span className="min-w-0"><span className="block truncate text-sm font-semibold text-[#10233F]">{name}</span><span className="block truncate text-xs text-muted-foreground">Hab. {reservation.habitacion_numero || reservation.habitaciones?.numero || '—'} · {reservation.numero_reserva || 'Sin folio'}</span></span>
-                        <span className="shrink-0 text-[10px] text-muted-foreground">{formatDate(reservation.fecha_checkin)}</span>
-                      </button>;
-                    })}
+              <div className={cn(
+                'flex min-h-0 flex-1 flex-col gap-2',
+                calendarFocusMode && 'fixed inset-0 z-[60] bg-background p-2 sm:p-3',
+              )}>
+                {!calendarFocusMode && (
+                  <div className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto rounded-xl border bg-card px-2 shadow-sm">
+                    <div className="flex shrink-0 items-center gap-1.5 px-2 text-xs">
+                      <BedDouble className="h-3.5 w-3.5 text-[#10233F]" />
+                      <strong className="tabular-nums">{habitacionesOcupadas}/{totalHabitaciones}</strong>
+                      <span className="text-muted-foreground">ocupadas</span>
+                    </div>
+                    <span className="h-4 w-px shrink-0 bg-border" />
+                    <button type="button" className="flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-emerald-50" onClick={() => setModalLlegadas(true)}>
+                      <LogIn className="h-3.5 w-3.5 text-emerald-600" /><strong className="tabular-nums text-emerald-700">{llegadasHoy}</strong><span className="text-muted-foreground">llegadas</span>
+                    </button>
+                    <button type="button" className="flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-orange-50" onClick={() => setModalSalidas(true)}>
+                      <LogOut className="h-3.5 w-3.5 text-orange-600" /><strong className="tabular-nums text-orange-700">{salidasHoy}</strong><span className="text-muted-foreground">salidas</span>
+                    </button>
+                    <span className="h-4 w-px shrink-0 bg-border" />
+                    <div className="flex shrink-0 items-center gap-1.5 px-2 text-xs">
+                      <Calendar className="h-3.5 w-3.5 text-sky-600" /><strong className="tabular-nums text-sky-700">{occupancyPercent}%</strong><span className="text-muted-foreground">ocupación</span>
+                    </div>
+                    <span className="ml-auto hidden text-[11px] text-muted-foreground lg:inline">{habitacionesFiltradas.length} habitaciones visibles</span>
                   </div>
                 )}
-              </div>
-            </div>
 
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-              {([
-                ['all', 'Todas', CalendarDays],
-                ['available', 'Disponibles hoy', CheckCircle],
-                ['occupied', 'Ocupadas hoy', BedDouble],
-                ['arrivals', 'Llegadas hoy', LogIn],
-                ['departures', 'Salidas hoy', LogOut],
-                ['balance', 'Con saldo', DollarSign],
-                ['pending', 'Pendientes', Clock],
-                ['maintenance', 'Mantenimiento', Wrench],
-              ] as [OperationalFilter, string, typeof CalendarDays][]).map(([value, label, Icon]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setOperationalFilter(value)}
-                  className={cn(
-                    'flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors',
-                    operationalFilter === value
-                      ? 'border-[#10233F] bg-[#10233F] text-white'
-                      : 'border-[#10233F]/10 bg-white text-[#10233F] hover:border-[#10233F]/30 hover:bg-[#10233F]/[0.03]',
+                <Card className="shrink-0 overflow-visible shadow-sm">
+                  <CardContent className="p-2">
+                    <div className="flex flex-wrap items-center gap-1.5 xl:flex-nowrap">
+                      <div className="inline-flex h-8 shrink-0 items-center rounded-lg bg-muted p-0.5">
+                        {([
+                          { key: 'timeline', label: 'Calendario' },
+                          { key: 'card', label: 'Card' },
+                          { key: 'tabla', label: 'Tabla' },
+                        ] as { key: ReservasSubView; label: string }[]).map((option) => (
+                          <button
+                            key={option.key}
+                            type="button"
+                            onClick={() => setReservasSubView(option.key)}
+                            className={cn(
+                              'h-7 rounded-md px-2.5 text-[11px] font-medium transition-colors',
+                              reservasSubView === option.key ? 'bg-[#10233F] text-white shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                            )}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <span className="mx-0.5 hidden h-6 w-px shrink-0 bg-border sm:block" />
+
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('prev')} aria-label="Periodo anterior">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs font-medium" onClick={() => navegarFecha('today')}>
+                          Hoy
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('next')} aria-label="Periodo siguiente">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5 text-xs font-medium">
+                              <CalendarDays className="h-3.5 w-3.5" />
+                              {format(startDate, "d MMM yyyy", { locale: es })}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="z-[90] w-auto p-0 pointer-events-auto" align="start">
+                            <CalendarPicker
+                              mode="single"
+                              selected={startDate}
+                              onSelect={(date) => date && setStartDate(date)}
+                              locale={es}
+                              initialFocus
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="inline-flex h-8 shrink-0 items-center rounded-lg bg-muted p-0.5">
+                        {(['Dia', 'Semana', 'Mes'] as ViewMode[]).map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setViewMode(mode)}
+                            className={cn(
+                              'h-7 rounded-md px-2.5 text-[11px] font-medium transition-colors',
+                              viewMode === mode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                            )}
+                          >
+                            {mode === 'Dia' ? 'Día' : mode}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="relative min-w-[210px] flex-1 xl:max-w-[360px]">
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Huésped, folio o habitación…"
+                          className="h-8 w-full pl-8 pr-8 text-xs"
+                          value={busqueda}
+                          onFocus={() => setSearchOpen(true)}
+                          onBlur={() => window.setTimeout(() => setSearchOpen(false), 120)}
+                          onChange={(event) => { setBusqueda(event.target.value); setSearchOpen(true); setFocusReservationId(null); }}
+                        />
+                        {busqueda && <button type="button" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted" onMouseDown={(event) => event.preventDefault()} onClick={() => { setBusqueda(''); setFocusReservationId(null); }} aria-label="Limpiar búsqueda"><X className="h-3.5 w-3.5" /></button>}
+                        {searchOpen && matchingReservations.length > 0 && (
+                          <div className="absolute right-0 top-full z-[70] mt-1 w-full min-w-[320px] overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-xl">
+                            <p className="border-b px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Reservas encontradas</p>
+                            {matchingReservations.map((reservation) => {
+                              const name = reservation.cliente_nombre || [reservation.clientes?.nombre, reservation.clientes?.apellido_paterno, reservation.clientes?.apellido_materno].filter(Boolean).join(' ') || 'Sin nombre';
+                              return <button key={reservation.id} type="button" className="flex w-full items-center justify-between gap-3 border-b px-3 py-2.5 text-left last:border-0 hover:bg-muted/50" onMouseDown={(event) => event.preventDefault()} onClick={() => focusReservation(reservation)}>
+                                <span className="min-w-0"><span className="block truncate text-sm font-semibold">{name}</span><span className="block truncate text-xs text-muted-foreground">Hab. {reservation.habitacion_numero || reservation.habitaciones?.numero || '—'} · {reservation.numero_reserva || 'Sin folio'}</span></span>
+                                <span className="shrink-0 text-[10px] text-muted-foreground">{formatDate(reservation.fecha_checkin)}</span>
+                              </button>;
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <Popover open={calendarFiltersOpen} onOpenChange={setCalendarFiltersOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className={cn('h-8 shrink-0 gap-1.5 px-2.5 text-xs', calendarFilterCount > 0 && 'border-[#10233F]/30 bg-[#10233F]/[0.04] text-[#10233F]')}>
+                            <SlidersHorizontal className="h-3.5 w-3.5" />Filtros
+                            {calendarFilterCount > 0 && <Badge className="h-4 min-w-4 rounded-full bg-[#10233F] px-1 text-[9px] text-white">{calendarFilterCount}</Badge>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="z-[90] w-[min(420px,calc(100vw-1rem))] space-y-3 p-3" align="end">
+                          <div className="flex items-center justify-between gap-3">
+                            <div><p className="text-sm font-semibold">Filtrar calendario</p><p className="text-[11px] text-muted-foreground">La selección se conserva al volver.</p></div>
+                            {calendarFilterCount > 0 && <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={clearCalendarFilters}>Limpiar</Button>}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-medium text-muted-foreground">Categoría</label>
+                              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Todas" /></SelectTrigger>
+                                <SelectContent className="z-[100]">
+                                  <SelectItem value="all">Todas las categorías</SelectItem>
+                                  {tiposHabitacion.map((tipo) => <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-medium text-muted-foreground">Piso</label>
+                              <Select value={filtroPiso} onValueChange={setFiltroPiso}>
+                                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+                                <SelectContent className="z-[100]">
+                                  <SelectItem value="all">Todos los pisos</SelectItem>
+                                  {pisosDisponibles.map((piso) => <SelectItem key={String(piso)} value={String(piso)}>Piso {piso}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <p className="text-[11px] font-medium text-muted-foreground">Operación de hoy</p>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {([
+                                ['all', 'Todas', CalendarDays],
+                                ['available', 'Disponibles', CheckCircle],
+                                ['occupied', 'Ocupadas', BedDouble],
+                                ['arrivals', 'Llegadas', LogIn],
+                                ['departures', 'Salidas', LogOut],
+                                ['balance', 'Con saldo', DollarSign],
+                                ['pending', 'Pendientes', Clock],
+                                ['maintenance', 'Mantenimiento', Wrench],
+                              ] as [OperationalFilter, string, typeof CalendarDays][]).map(([value, label, Icon]) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  onClick={() => setOperationalFilter(value)}
+                                  className={cn(
+                                    'flex h-9 items-center gap-2 rounded-lg border px-2.5 text-left text-xs font-medium transition-colors',
+                                    operationalFilter === value ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-border hover:bg-muted/60',
+                                  )}
+                                >
+                                  <Icon className="h-3.5 w-3.5 shrink-0" />{label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => setCalendarFocusMode((current) => !current)}
+                        aria-label={calendarFocusMode ? 'Salir de pantalla completa' : 'Expandir calendario'}
+                        title={calendarFocusMode ? 'Salir de pantalla completa (Esc)' : 'Expandir calendario'}
+                      >
+                        {calendarFocusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                      </Button>
+                    </div>
+
+                    {calendarFilterCount > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 overflow-x-auto border-t pt-2">
+                        <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Activos</span>
+                        {filtroTipo !== 'all' && <Badge variant="secondary" className="h-6 shrink-0 gap-1 pr-1 text-[10px]">{tiposHabitacion.find((tipo) => tipo.id === filtroTipo)?.nombre || 'Categoría'}<button type="button" className="rounded p-0.5 hover:bg-background" onClick={() => setFiltroTipo('all')} aria-label="Quitar filtro de categoría"><X className="h-3 w-3" /></button></Badge>}
+                        {filtroPiso !== 'all' && <Badge variant="secondary" className="h-6 shrink-0 gap-1 pr-1 text-[10px]">Piso {filtroPiso}<button type="button" className="rounded p-0.5 hover:bg-background" onClick={() => setFiltroPiso('all')} aria-label="Quitar filtro de piso"><X className="h-3 w-3" /></button></Badge>}
+                        {operationalFilter !== 'all' && <Badge variant="secondary" className="h-6 shrink-0 gap-1 pr-1 text-[10px]">{operationalFilterLabel[operationalFilter]}<button type="button" className="rounded p-0.5 hover:bg-background" onClick={() => setOperationalFilter('all')} aria-label="Quitar filtro operativo"><X className="h-3 w-3" /></button></Badge>}
+                        <Button variant="ghost" size="sm" className="h-6 shrink-0 px-2 text-[10px]" onClick={clearCalendarFilters}>Limpiar todo</Button>
+                        <span className="ml-auto hidden shrink-0 text-[10px] text-muted-foreground sm:inline">{habitacionesFiltradas.length} habitaciones visibles</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <div className="relative min-h-[300px] flex-1">
+                  {loading ? (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg border bg-card">
+                      <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : habitacionesFiltradas.length === 0 ? (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg border bg-card p-6 text-center">
+                      <div><Search className="mx-auto h-8 w-8 text-muted-foreground/40" /><p className="mt-3 font-semibold text-[#10233F] dark:text-foreground">No hay habitaciones con estos filtros</p><p className="mt-1 text-sm text-muted-foreground">Prueba otra búsqueda o vuelve a mostrar toda la operación.</p><Button variant="outline" size="sm" className="mt-3" onClick={() => { setBusqueda(''); clearCalendarFilters(); }}>Limpiar filtros</Button></div>
+                    </div>
+                  ) : (
+                    <TimelineGrid
+                      habitaciones={habitacionesFiltradas}
+                      reservas={reservas}
+                      startDate={startDate}
+                      daysToShow={daysToShow}
+                      onReservationClick={handleReservationClick}
+                      onReservationAction={handleTimelineAction}
+                      onCreateReservation={handleCreateReservation}
+                      focusReservationId={focusReservationId}
+                      canCreate={!viewOnlyMode}
+                    />
                   )}
-                >
-                  <Icon className="h-3.5 w-3.5" />{label}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Timeline Container - CLAVE: position relative con altura fija */}
-        <div className="relative" style={{ height: 'calc(100vh - 320px)', minHeight: '300px' }}>
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center border rounded-lg bg-card">
-              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : habitacionesFiltradas.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center rounded-lg border bg-card p-6 text-center">
-              <div><Search className="mx-auto h-8 w-8 text-muted-foreground/40" /><p className="mt-3 font-semibold text-[#10233F]">No hay habitaciones con estos filtros</p><p className="mt-1 text-sm text-muted-foreground">Prueba otra búsqueda o vuelve a mostrar toda la operación.</p><Button variant="outline" size="sm" className="mt-3" onClick={() => { setBusqueda(''); setFiltroTipo('all'); setFiltroPiso('all'); setOperationalFilter('all'); }}>Limpiar filtros</Button></div>
-            </div>
-          ) : (
-            <TimelineGrid
-              habitaciones={habitacionesFiltradas}
-              reservas={reservas}
-              startDate={startDate}
-              daysToShow={daysToShow}
-              onReservationClick={handleReservationClick}
-              onReservationAction={handleTimelineAction}
-              onCreateReservation={handleCreateReservation}
-              focusReservationId={focusReservationId}
-              canCreate={!viewOnlyMode}
-            />
-          )}
-        </div>
-            </>
+                </div>
+              </div>
             )}
 
             {reservasSubView === 'card' && (
