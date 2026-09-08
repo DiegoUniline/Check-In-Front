@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import {
   ArrowLeftRight, BedDouble, CalendarPlus, CircleDollarSign, Clock3,
-  CreditCard, DoorOpen, Eye, LogOut, Receipt, UserPlus, Wrench,
+  ChevronDown, ChevronRight, CreditCard, DoorOpen, Eye, Layers3, LogOut, Receipt, UserPlus, Wrench,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { getEstadoConfig } from './estadoConfig';
@@ -24,6 +24,30 @@ export type TimelineReservationAction =
   | 'add_charge'
   | 'partial_payment';
 
+export type TimelineRoomGrouping = 'smart' | 'none' | 'floor' | 'category' | 'building' | 'cleaning';
+
+const COLLAPSED_GROUPS_KEY = 'vulo:timeline:collapsed-groups';
+
+const roomGroupDescriptor = (room: any, groupBy: TimelineRoomGrouping) => {
+  if (groupBy === 'floor') {
+    const floor = room.piso ?? 'Sin piso';
+    return { key: `floor:${floor}`, label: floor === 'Sin piso' ? floor : `Piso ${floor}` };
+  }
+  if (groupBy === 'category') {
+    const category = room.tipo_nombre || room.tipos_habitacion?.nombre || 'Sin categoría';
+    return { key: `category:${room.tipo_habitacion_id || category}`, label: category };
+  }
+  if (groupBy === 'building') {
+    const building = room.edificio || room.torre || room.bloque || 'Edificio principal';
+    return { key: `building:${building}`, label: building };
+  }
+  if (groupBy === 'cleaning') {
+    const cleaning = room.estado_limpieza || 'Sin estado de limpieza';
+    return { key: `cleaning:${cleaning}`, label: cleaning };
+  }
+  return { key: 'all', label: 'Todas las habitaciones' };
+};
+
 interface TimelineGridProps {
   habitaciones: any[];
   reservas: any[];
@@ -34,6 +58,7 @@ interface TimelineGridProps {
   onReservationAction?: (reserva: any, action: TimelineReservationAction, params?: Record<string, string>) => void;
   focusReservationId?: string | null;
   canCreate?: boolean;
+  groupBy?: TimelineRoomGrouping;
 }
 
 export function TimelineGrid({
@@ -46,6 +71,7 @@ export function TimelineGrid({
   onReservationAction,
   focusReservationId,
   canCreate = true,
+  groupBy = 'none',
 }: TimelineGridProps) {
   const [dragStart, setDragStart] = useState<{ roomId: string; dayIndex: number } | null>(null);
   const [dragEnd, setDragEnd] = useState<number | null>(null);
@@ -60,10 +86,64 @@ export function TimelineGrid({
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<{ reserva: any; startX: number; originalCheckout: Date } | null>(null);
+  const [collapsedGroupKeys, setCollapsedGroupKeys] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      return new Set(JSON.parse(sessionStorage.getItem(COLLAPSED_GROUPS_KEY) || '[]'));
+    } catch {
+      return new Set();
+    }
+  });
 
   const days = useMemo(() => {
     return Array.from({ length: daysToShow }, (_, i) => addDays(startDate, i));
   }, [startDate, daysToShow]);
+
+  const roomGroups = useMemo(() => {
+    if (groupBy === 'none') return [{ key: 'all', label: '', rooms: habitaciones }];
+    const buildingCount = new Set(habitaciones.map((room) => room.edificio || room.torre || room.bloque).filter(Boolean)).size;
+    const floorCount = new Set(habitaciones.map((room) => room.piso).filter((floor) => floor != null && floor !== '')).size;
+    const effectiveGrouping: Exclude<TimelineRoomGrouping, 'smart'> = groupBy === 'smart'
+      ? buildingCount > 1 ? 'building' : floorCount > 1 ? 'floor' : 'category'
+      : groupBy;
+    const groups = new Map<string, { key: string; label: string; rooms: any[] }>();
+    habitaciones.forEach((room) => {
+      const descriptor = roomGroupDescriptor(room, effectiveGrouping);
+      const current = groups.get(descriptor.key);
+      if (current) current.rooms.push(room);
+      else groups.set(descriptor.key, { ...descriptor, rooms: [room] });
+    });
+    return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label, 'es', { numeric: true }));
+  }, [groupBy, habitaciones]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify(Array.from(collapsedGroupKeys)));
+    } catch {
+      // El calendario sigue siendo operable aunque el navegador bloquee sessionStorage.
+    }
+  }, [collapsedGroupKeys]);
+
+  useEffect(() => {
+    if (!focusReservationId || groupBy === 'none') return;
+    const reservation = reservas.find((item) => item.id === focusReservationId);
+    const group = roomGroups.find((item) => item.rooms.some((room) => room.id === reservation?.habitacion_id));
+    if (!group || !collapsedGroupKeys.has(group.key)) return;
+    setCollapsedGroupKeys((current) => {
+      const next = new Set(current);
+      next.delete(group.key);
+      return next;
+    });
+  }, [collapsedGroupKeys, focusReservationId, groupBy, reservas, roomGroups]);
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroupKeys((current) => {
+      const next = new Set(current);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  };
 
   const getReservasForRoom = (habitacionId: string) => {
     return reservas.filter(r => 
@@ -290,8 +370,47 @@ export function TimelineGrid({
             ))}
           </div>
 
-          {/* Filas por habitación */}
-          {habitaciones.map((hab) => {
+          {/* Grupos y filas por habitación */}
+          {roomGroups.map((group) => {
+            const collapsed = groupBy !== 'none' && collapsedGroupKeys.has(group.key);
+            const todayKey = format(today, 'yyyy-MM-dd');
+            const occupiedToday = group.rooms.filter((room) => reservas.some((reservation) => (
+              reservation.habitacion_id === room.id
+              && !['CheckOut', 'Cancelada', 'NoShow'].includes(String(reservation.estado || ''))
+              && String(reservation.fecha_checkin || '').slice(0, 10) <= todayKey
+              && String(reservation.fecha_checkout || '').slice(0, 10) > todayKey
+            ))).length;
+            return (
+              <div key={group.key}>
+                {groupBy !== 'none' && (
+                  <div className="flex h-8 border-b border-[#10233F]/10 bg-[#10233F]/[0.045]">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.key)}
+                      className={cn(
+                        'sticky left-0 z-[15] flex shrink-0 items-center gap-1.5 border-r border-[#10233F]/10 bg-[#F5F7FA] px-2 text-left text-[#10233F] transition-colors hover:bg-[#EAF0F7] dark:bg-card dark:text-foreground dark:hover:bg-muted',
+                        isCompact ? 'w-28' : 'w-40',
+                      )}
+                      aria-expanded={!collapsed}
+                      aria-label={`${collapsed ? 'Expandir' : 'Contraer'} ${group.label}`}
+                    >
+                      {collapsed ? <ChevronRight className="h-3.5 w-3.5 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0" />}
+                      <Layers3 className="h-3.5 w-3.5 shrink-0 text-[#F97316]" />
+                      <span className="min-w-0 truncate text-[11px] font-semibold" title={group.label}>{group.label}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.key)}
+                      className="flex shrink-0 items-center justify-between gap-3 bg-[#10233F]/[0.025] px-3 text-left text-[10px] text-muted-foreground transition-colors hover:bg-[#10233F]/[0.06] dark:hover:bg-muted"
+                      style={{ width: `${days.length * cellWidthPx}px` }}
+                      tabIndex={-1}
+                    >
+                      <span>{group.rooms.length} habitación{group.rooms.length === 1 ? '' : 'es'}</span>
+                      <span>{occupiedToday} ocupada{occupiedToday === 1 ? '' : 's'} hoy</span>
+                    </button>
+                  </div>
+                )}
+                {!collapsed && group.rooms.map((hab) => {
             const status = roomStatus(hab);
             const dropActive = dropTarget?.roomId === hab.id;
             return (
@@ -484,8 +603,12 @@ export function TimelineGrid({
                       />
                     );
                   })}
-            </div>
-          );})}
+                </div>
+              );
+            })}
+              </div>
+            );
+          })}
         </div>
       </div>
 

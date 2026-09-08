@@ -6,7 +6,8 @@ import {
   ChevronLeft, ChevronRight, Plus, Search, 
   CalendarDays, BedDouble, Users, RefreshCw, Calendar,
   LogIn, LogOut, Clock, ArrowRight, X, Eye, History, SlidersHorizontal,
-  CheckCircle, XCircle, AlertCircle, Wrench, DollarSign, Maximize2, Minimize2
+  CheckCircle, XCircle, AlertCircle, Wrench, DollarSign, Maximize2, Minimize2,
+  Layers3, Wifi
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,8 +32,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import api, { todayLocal } from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { TimelineGrid, type TimelineReservationAction } from '@/components/reservas/TimelineGrid';
-import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { TimelineGrid, type TimelineReservationAction, type TimelineRoomGrouping } from '@/components/reservas/TimelineGrid';
+import { useRealtimeSync, type RealtimeSyncEvent } from '@/hooks/useRealtimeSync';
 import type { ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -52,6 +53,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { addMonths } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useShift } from '@/contexts/useShift';
+import { useAuth } from '@/contexts/useAuth';
 
 const RESERVAS_VIEW_KEY = 'vulo:reservas:view-state';
 const readReservasViewState = (): Record<string, any> => {
@@ -146,11 +148,18 @@ const PisoChips = ({
 
 type ViewMode = 'Dia' | 'Semana' | 'Mes';
 type OperationalFilter = 'all' | 'available' | 'occupied' | 'arrivals' | 'departures' | 'balance' | 'pending' | 'maintenance';
+type RealtimeNotice = {
+  id: string;
+  title: string;
+  detail: string;
+  receivedAt: string;
+};
 
 export default function Reservas() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const { viewOnlyMode } = useShift();
   const savedView = useRef(readReservasViewState()).current;
   const mobileViewInitialized = useRef(Boolean(savedView.reservasSubView));
@@ -194,6 +203,9 @@ export default function Reservas() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [calendarFiltersOpen, setCalendarFiltersOpen] = useState(false);
   const [calendarFocusMode, setCalendarFocusMode] = useState(false);
+  const [roomGrouping, setRoomGrouping] = useState<TimelineRoomGrouping>(savedView.roomGrouping || 'smart');
+  const [realtimeNotice, setRealtimeNotice] = useState<RealtimeNotice | null>(null);
+  const realtimeNoticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const validViews = ['recepcion', 'checkin', 'checkout', 'timeline', 'historico'] as const;
   type Vista = typeof validViews[number];
@@ -231,9 +243,9 @@ export default function Reservas() {
   useEffect(() => {
     sessionStorage.setItem(RESERVAS_VIEW_KEY, JSON.stringify({
       startDate: format(startDate, 'yyyy-MM-dd'), viewMode, filtroTipo, filtroPiso,
-      busqueda, reservasSubView, filtros, operationalFilter,
+      busqueda, reservasSubView, filtros, operationalFilter, roomGrouping,
     }));
-  }, [startDate, viewMode, filtroTipo, filtroPiso, busqueda, reservasSubView, filtros, operationalFilter]);
+  }, [startDate, viewMode, filtroTipo, filtroPiso, busqueda, reservasSubView, filtros, operationalFilter, roomGrouping]);
 
   useEffect(() => {
     if (isCalendarWorkspace) return;
@@ -263,12 +275,8 @@ export default function Reservas() {
     }
   }, [isMobile]);
 
-  // Realtime: refresca cuando cambian reservas o estados de habitación
-  useRealtimeSync('reservas', () => cargarDatos());
-  useRealtimeSync('habitaciones', () => cargarDatos());
-
-  const cargarDatos = async () => {
-    setLoading(true);
+  const cargarDatos = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [habData, resData, tiposData, llegadasData, salidasData] = await Promise.all([
         api.getHabitaciones(),
@@ -288,9 +296,49 @@ export default function Reservas() {
       console.error('Error cargando datos:', error);
       toast({ title: 'Error', description: 'No se pudieron cargar los datos', variant: 'destructive' });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  const handleRealtimeChange = async (event: RealtimeSyncEvent) => {
+    await cargarDatos(true);
+    const changedRecord = Object.keys(event.newRecord).length > 0 ? event.newRecord : event.oldRecord;
+    const recordId = typeof changedRecord.id === 'string' ? changedRecord.id : null;
+    let actor = await api.getRealtimeChangeActor(event.table, recordId);
+    if (!actor) {
+      await new Promise((resolve) => window.setTimeout(resolve, 260));
+      actor = await api.getRealtimeChangeActor(event.table, recordId);
+    }
+    if (actor?.id && actor.id === user?.id) return;
+
+    const roomNumber = changedRecord.numero ? `Habitación ${changedRecord.numero}` : 'Una habitación';
+    const reservationNumber = changedRecord.numero_reserva ? `Reserva ${changedRecord.numero_reserva}` : 'Una reserva';
+    const subject = event.table === 'habitaciones' ? roomNumber : reservationNumber;
+    const action = event.eventType === 'INSERT'
+      ? 'agregó'
+      : event.eventType === 'DELETE'
+        ? 'eliminó'
+        : 'actualizó';
+    setRealtimeNotice({
+      id: `${event.table}:${recordId || event.receivedAt}`,
+      title: 'Calendario actualizado',
+      detail: actor?.name
+        ? `${actor.name} ${action} ${subject.toLowerCase()}.`
+        : `Cambio externo: se ${action} ${subject.toLowerCase()}.`,
+      receivedAt: event.receivedAt,
+    });
+    if (realtimeNoticeTimer.current) window.clearTimeout(realtimeNoticeTimer.current);
+    realtimeNoticeTimer.current = window.setTimeout(() => setRealtimeNotice(null), 5600);
+  };
+
+  // Realtime mantiene la vista al día sin bloquear el calendario con un spinner.
+  const reservationRealtimeStatus = useRealtimeSync('reservas', (event) => { void handleRealtimeChange(event); });
+  const roomRealtimeStatus = useRealtimeSync('habitaciones', (event) => { void handleRealtimeChange(event); });
+  const realtimeConnected = reservationRealtimeStatus === 'connected' && roomRealtimeStatus === 'connected';
+
+  useEffect(() => () => {
+    if (realtimeNoticeTimer.current) window.clearTimeout(realtimeNoticeTimer.current);
+  }, []);
 
   const navegarFecha = (direccion: 'prev' | 'next' | 'today') => {
     if (direccion === 'today') {
@@ -355,6 +403,11 @@ export default function Reservas() {
   const pisosDisponibles = [...new Set(
     habitaciones.map(h => h.piso).filter(p => p != null && p !== '')
   )].sort((a: any, b: any) => Number(a) - Number(b));
+  const hasBuildingData = habitaciones.some((room) => Boolean(room.edificio || room.torre || room.bloque));
+
+  useEffect(() => {
+    if (!loading && roomGrouping === 'building' && !hasBuildingData) setRoomGrouping('none');
+  }, [hasBuildingData, loading, roomGrouping]);
 
   const openNewReservation = (preload?: ReservationPreload) => {
     if (viewOnlyMode) {
@@ -669,9 +722,30 @@ export default function Reservas() {
 
             {reservasSubView === 'timeline' && (
               <div className={cn(
-                'flex min-h-0 flex-1 flex-col gap-2',
+                'relative flex min-h-0 flex-1 flex-col gap-2',
                 calendarFocusMode && 'fixed inset-0 z-[60] bg-background p-2 sm:p-3',
               )}>
+                {realtimeNotice && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className={cn(
+                      'absolute right-3 z-[55] flex w-[min(360px,calc(100vw-1.5rem))] items-start gap-3 rounded-xl border border-emerald-200 bg-white p-3 shadow-xl animate-in slide-in-from-top-2 dark:border-emerald-900 dark:bg-card',
+                      calendarFocusMode ? 'top-12' : 'top-11',
+                    )}
+                  >
+                    <span className="relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      <Wifi className="h-4 w-4" />
+                      <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-card" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-[#10233F] dark:text-foreground">{realtimeNotice.title}</p>
+                      <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{realtimeNotice.detail}</p>
+                      <p className="mt-1 text-[9px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Ahora · sincronizado automáticamente</p>
+                    </div>
+                    <button type="button" className="rounded p-1 text-muted-foreground hover:bg-muted" onClick={() => setRealtimeNotice(null)} aria-label="Cerrar actualización"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                )}
                 {!calendarFocusMode && (
                   <div className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto rounded-xl border bg-card px-2 shadow-sm">
                     <div className="flex shrink-0 items-center gap-1.5 px-2 text-xs">
@@ -690,7 +764,7 @@ export default function Reservas() {
                     <div className="flex shrink-0 items-center gap-1.5 px-2 text-xs">
                       <Calendar className="h-3.5 w-3.5 text-sky-600" /><strong className="tabular-nums text-sky-700">{occupancyPercent}%</strong><span className="text-muted-foreground">ocupación</span>
                     </div>
-                    <span className="ml-auto hidden text-[11px] text-muted-foreground lg:inline">{habitacionesFiltradas.length} habitaciones visibles</span>
+                    <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-muted-foreground lg:flex"><span className={cn('h-2 w-2 rounded-full', realtimeConnected ? 'animate-pulse bg-emerald-500' : 'bg-amber-400')} />{realtimeConnected ? 'En tiempo real' : 'Conectando…'} · {habitacionesFiltradas.length} habitaciones</span>
                   </div>
                 )}
 
@@ -764,6 +838,21 @@ export default function Reservas() {
                           </button>
                         ))}
                       </div>
+
+                      <Select value={roomGrouping} onValueChange={(value) => setRoomGrouping(value as TimelineRoomGrouping)}>
+                        <SelectTrigger className="h-8 w-[148px] shrink-0 gap-1.5 px-2.5 text-[11px]" aria-label="Agrupar habitaciones">
+                          <Layers3 className="h-3.5 w-3.5 shrink-0 text-[#10233F]" />
+                          <SelectValue placeholder="Sin agrupar" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[100]">
+                          <SelectItem value="smart">Agrupación inteligente</SelectItem>
+                          <SelectItem value="none">Sin agrupar</SelectItem>
+                          <SelectItem value="floor">Agrupar por piso</SelectItem>
+                          <SelectItem value="category">Por categoría</SelectItem>
+                          <SelectItem value="cleaning">Por limpieza</SelectItem>
+                          {hasBuildingData && <SelectItem value="building">Por edificio</SelectItem>}
+                        </SelectContent>
+                      </Select>
 
                       <div className="relative min-w-[210px] flex-1 xl:max-w-[360px]">
                         <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -899,6 +988,7 @@ export default function Reservas() {
                       onCreateReservation={handleCreateReservation}
                       focusReservationId={focusReservationId}
                       canCreate={!viewOnlyMode}
+                      groupBy={roomGrouping}
                     />
                   )}
                 </div>

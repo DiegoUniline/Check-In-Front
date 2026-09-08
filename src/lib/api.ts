@@ -10,6 +10,13 @@ const operationalDb = supabase as any;
 
 export type OperationalPriority = 'critical' | 'warning' | 'info';
 
+export type RealtimeChangeActor = {
+  id: string | null;
+  name: string;
+  email: string | null;
+  occurredAt: string | null;
+};
+
 export type OperationalAlert = {
   id: string;
   priority: OperationalPriority;
@@ -996,6 +1003,78 @@ class ApiClient {
   deleteCliente = async (id: string): Promise<any> => {
     const { error } = await supabase.from('clientes').delete().eq('id', id);
     if (error) throw error; return { ok: true };
+  };
+
+  getRealtimeChangeActor = async (table: string, recordId?: string | null): Promise<RealtimeChangeActor | null> => {
+    if (!recordId || !this.getHotelId()) return null;
+    const recentCutoff = new Date(Date.now() - 20_000).toISOString();
+
+    let actor: { id: string | null; name?: string | null; email?: string | null; occurredAt?: string | null } | null = null;
+
+    // Los movimientos de estancia conservan el nombre exacto mostrado al usuario y son
+    // la fuente más precisa para cambios operativos sobre una reserva.
+    if (table === 'reservas') {
+      const { data } = await operationalDb
+        .from('estancia_movimientos')
+        .select('usuario_id,usuario_nombre,usuario_email,created_at')
+        .eq('hotel_id', this.hid())
+        .eq('reserva_id', recordId)
+        .gte('created_at', recentCutoff)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        actor = {
+          id: data.usuario_id || null,
+          name: data.usuario_nombre || null,
+          email: data.usuario_email || null,
+          occurredAt: data.created_at || null,
+        };
+      }
+    }
+
+    if (!actor) {
+      const entities = table === 'reservas'
+        ? ['reserva', 'reservas']
+        : table === 'habitaciones'
+          ? ['habitacion', 'habitaciones']
+          : [table];
+      const { data } = await operationalDb
+        .from('auditoria')
+        .select('user_id,user_email,created_at')
+        .eq('hotel_id', this.hid())
+        .eq('entidad_id', recordId)
+        .in('entidad', entities)
+        .gte('created_at', recentCutoff)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        actor = {
+          id: data.user_id || null,
+          email: data.user_email || null,
+          occurredAt: data.created_at || null,
+        };
+      }
+    }
+
+    if (!actor) return null;
+    if (actor.id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('nombre,email')
+        .eq('id', actor.id)
+        .maybeSingle();
+      actor.name = profile?.nombre || actor.name;
+      actor.email = profile?.email || actor.email;
+    }
+
+    return {
+      id: actor.id,
+      name: actor.name || actor.email?.split('@')[0] || 'Otro usuario',
+      email: actor.email || null,
+      occurredAt: actor.occurredAt || null,
+    };
   };
 
   // ------- Reservas -------
