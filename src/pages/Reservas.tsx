@@ -723,7 +723,9 @@ export default function Reservas() {
             {reservasSubView === 'timeline' && (
               <div className={cn(
                 'relative flex min-h-0 flex-1 flex-col gap-2',
-                calendarFocusMode && 'fixed inset-0 z-[60] bg-background p-2 sm:p-3',
+                // Debajo de los portales Radix (z-50+): filtros, selectores y calendario
+                // deben seguir siendo visibles y recibir clics en modo pantalla completa.
+                calendarFocusMode && 'fixed inset-0 z-40 bg-background p-2 sm:p-3',
               )}>
                 {realtimeNotice && (
                   <div
