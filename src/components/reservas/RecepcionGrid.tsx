@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { differenceInCalendarDays, parseISO } from 'date-fns';
+import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   BedDouble, User, Clock, AlertCircle, LayoutGrid, List,
@@ -27,6 +27,10 @@ interface RecepcionGridProps {
 }
 
 type EstadoCard = 'libre' | 'reservada' | 'ocupada' | 'mantenimiento';
+
+const effectiveCheckoutDate = (checkin: string, checkout: string) => (
+  checkout <= checkin ? format(addDays(parseISO(checkin), 1), 'yyyy-MM-dd') : checkout
+);
 
 interface HabitacionStatus {
   habitacion: any;
@@ -124,7 +128,9 @@ export function RecepcionGrid({
         if (r.habitacion_id !== hab.id) return false;
         if (!['CheckIn', 'Hospedado'].includes(r.estado)) return false;
         if (!r.fecha_checkin || !r.fecha_checkout) return false;
-        return todayStr >= r.fecha_checkin.substring(0, 10) && todayStr < r.fecha_checkout.substring(0, 10);
+        const checkin = r.fecha_checkin.substring(0, 10);
+        const checkout = effectiveCheckoutDate(checkin, r.fecha_checkout.substring(0, 10));
+        return todayStr >= checkin && todayStr < checkout;
       });
       if (ocupada) return { habitacion: hab, estado: 'ocupada', reservaActiva: ocupada };
 

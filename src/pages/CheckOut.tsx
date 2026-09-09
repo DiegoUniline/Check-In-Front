@@ -108,12 +108,14 @@ export default function CheckOut() {
     );
   }
 
-  const noches =
-    reserva.noches ||
-    differenceInCalendarDays(
+  const sameDayStay = String(reserva.fecha_checkout).slice(0, 10) === String(reserva.fecha_checkin).slice(0, 10);
+  const noches = Math.max(
+    1,
+    Number(reserva.noches) || differenceInCalendarDays(
       parseISO(String(reserva.fecha_checkout).slice(0, 10)),
       parseISO(String(reserva.fecha_checkin).slice(0, 10)),
-    );
+    ),
+  );
   const total = reserva.total || reserva.monto_total || 0;
   const impuestos = Number(reserva.impuestos ?? reserva.total_impuestos ?? 0) || 0;
   const subtotal = Number(reserva.subtotal ?? reserva.subtotal_hospedaje ?? total - impuestos) || 0;
@@ -227,7 +229,7 @@ export default function CheckOut() {
                     <div className="min-w-0">
                       <p className="truncate text-base font-semibold">{huesped || 'Huésped'}</p>
                       <p className="text-sm text-muted-foreground">
-                        {noches} {noches === 1 ? 'noche' : 'noches'} · Hab. {habitacion}
+                        {sameDayStay ? 'Estancia del día' : `${noches} ${noches === 1 ? 'noche' : 'noches'}`} · Hab. {habitacion}
                       </p>
                     </div>
                   </div>
@@ -269,7 +271,7 @@ export default function CheckOut() {
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <BedDouble className="h-4 w-4 text-muted-foreground" />
-                            Hospedaje ({noches} {noches === 1 ? 'noche' : 'noches'})
+                            Hospedaje ({sameDayStay ? 'estancia del día' : `${noches} ${noches === 1 ? 'noche' : 'noches'}`})
                           </div>
                         </TableCell>
                         <TableCell className="text-center">1</TableCell>
@@ -314,7 +316,7 @@ export default function CheckOut() {
                   <div className="flex items-center justify-between rounded-xl border p-3">
                     <div>
                       <p className="text-sm font-medium">Hospedaje</p>
-                      <p className="text-xs text-muted-foreground">{noches} {noches === 1 ? 'noche' : 'noches'}</p>
+                      <p className="text-xs text-muted-foreground">{sameDayStay ? 'Estancia del día' : `${noches} ${noches === 1 ? 'noche' : 'noches'}`}</p>
                     </div>
                     <span className="font-semibold">{formatCurrency(subtotal)}</span>
                   </div>

@@ -866,6 +866,7 @@ class ApiClient {
     return data;
   };
   getHabitacionesDisponibles = async (checkin: string, checkout: string, tipoId?: string, excludeReservaId?: string): Promise<any> => {
+    const effectiveCheckout = checkout <= checkin ? addCalendarDays(checkin, 1) : checkout;
     let q = supabase
       .from('habitaciones')
       .select('*, tipos_habitacion(*)')
@@ -876,15 +877,23 @@ class ApiClient {
     if (habError) throw habError;
     let conflictsQuery = supabase
       .from('reservas')
-      .select('habitacion_id')
+      .select('habitacion_id, fecha_checkin, fecha_checkout')
       .eq('hotel_id', this.hid())
       .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
-      .lt('fecha_checkin', checkout)
-      .gt('fecha_checkout', checkin);
+      .lt('fecha_checkin', effectiveCheckout);
     if (excludeReservaId) conflictsQuery = conflictsQuery.neq('id', excludeReservaId);
     const { data: ocupadas, error: reservationError } = await conflictsQuery;
     if (reservationError) throw reservationError;
-    const ocupadasIds = new Set((ocupadas || []).map((r: any) => r.habitacion_id));
+    const ocupadasIds = new Set((ocupadas || [])
+      .filter((reservation: any) => {
+        const reservationCheckin = String(reservation.fecha_checkin || '').slice(0, 10);
+        const reservationCheckoutRaw = String(reservation.fecha_checkout || '').slice(0, 10);
+        const reservationCheckout = reservationCheckoutRaw <= reservationCheckin
+          ? addCalendarDays(reservationCheckin, 1)
+          : reservationCheckoutRaw;
+        return reservationCheckin < effectiveCheckout && reservationCheckout > checkin;
+      })
+      .map((reservation: any) => reservation.habitacion_id));
     return (habs || []).filter((h: any) => !ocupadasIds.has(h.id));
   };
   createHabitacion = async (data: any): Promise<any> => {

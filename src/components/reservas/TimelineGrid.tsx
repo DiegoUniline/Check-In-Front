@@ -28,6 +28,10 @@ export type TimelineRoomGrouping = 'smart' | 'none' | 'floor' | 'category' | 'bu
 
 const COLLAPSED_GROUPS_KEY = 'vulo:timeline:collapsed-groups';
 
+const effectiveCheckoutDate = (checkin: string, checkout: string) => (
+  checkout <= checkin ? format(addDays(parseISO(checkin), 1), 'yyyy-MM-dd') : checkout
+);
+
 const roomGroupDescriptor = (room: any, groupBy: TimelineRoomGrouping) => {
   if (groupBy === 'floor') {
     const floor = room.piso ?? 'Sin piso';
@@ -163,7 +167,7 @@ export function TimelineGrid({
     return roomReservas.find(r => {
       if (!r.fecha_checkin || !r.fecha_checkout) return false;
       const checkinStr = r.fecha_checkin.substring(0, 10);
-      const checkoutStr = r.fecha_checkout.substring(0, 10);
+      const checkoutStr = effectiveCheckoutDate(checkinStr, r.fecha_checkout.substring(0, 10));
       return currentDateStr >= checkinStr && currentDateStr < checkoutStr;
     });
   };
@@ -173,7 +177,7 @@ export function TimelineGrid({
     
     const currentDateStr = format(days[dayIndex], 'yyyy-MM-dd');
     const checkinStr = reserva.fecha_checkin.substring(0, 10);
-    const checkoutStr = reserva.fecha_checkout.substring(0, 10);
+    const checkoutStr = effectiveCheckoutDate(checkinStr, reserva.fecha_checkout.substring(0, 10));
     const noches = differenceInCalendarDays(parseISO(checkoutStr), parseISO(checkinStr));
     const ultimaNoche = format(addDays(parseISO(checkoutStr), -1), 'yyyy-MM-dd');
 
@@ -262,12 +266,12 @@ export function TimelineGrid({
       if (String(room.estado_habitacion || '') !== 'Disponible' || (!cleaning.includes('limpia') && !cleaning.includes('lista'))) return false;
     }
     const checkin = activeStay ? format(today, 'yyyy-MM-dd') : String(reserva.fecha_checkin || '').slice(0, 10);
-    const nextCheckout = String(checkout || '').slice(0, 10);
+    const nextCheckout = effectiveCheckoutDate(checkin, String(checkout || '').slice(0, 10));
     return !reservas.some((other) => {
       if (other.id === reserva.id || other.habitacion_id !== room.id) return false;
       if (['Cancelada', 'NoShow', 'CheckOut'].includes(String(other.estado || ''))) return false;
       const otherCheckin = String(other.fecha_checkin || '').slice(0, 10);
-      const otherCheckout = String(other.fecha_checkout || '').slice(0, 10);
+      const otherCheckout = effectiveCheckoutDate(otherCheckin, String(other.fecha_checkout || '').slice(0, 10));
       return checkin < otherCheckout && nextCheckout > otherCheckin;
     });
   };

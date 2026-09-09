@@ -329,7 +329,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   };
 
   useEffect(() => {
-    if (!open || differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin) < 1) return;
+    if (!open || differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin) < 0) return;
     const timer = window.setTimeout(() => {
       void buscarHabitaciones();
     }, 180);
@@ -354,7 +354,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   };
 
   // Cálculos
-  const noches = Math.max(0, differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin));
+  const stayDayDifference = differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin);
+  // Una estancia con entrada y salida el mismo día sigue ocupando inventario y
+  // genera como mínimo un cargo de hospedaje.
+  const noches = stayDayDifference >= 0 ? Math.max(1, stayDayDifference) : 0;
+  const sameDayStay = stayDayDifference === 0;
   const nuevoClienteValido = Boolean(
     formData.nuevoCliente.nombre.trim()
     && formData.nuevoCliente.apellido_paterno.trim()
@@ -550,8 +554,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         });
         return;
       }
-      if (noches < 1) {
-        toast({ title: 'Fechas inválidas', description: 'El check-out debe ser posterior al check-in.', variant: 'destructive' });
+      if (stayDayDifference < 0) {
+        toast({ title: 'Fechas inválidas', description: 'El check-out no puede ser anterior al check-in.', variant: 'destructive' });
         return;
       }
       if (availabilityStatus === 'error') {
@@ -696,7 +700,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   };
 
   const validationIssues = [
-    noches < 1 ? { key: 'dates', label: 'Corrige las fechas' } : null,
+    stayDayDifference < 0 ? { key: 'dates', label: 'Corrige las fechas' } : null,
     availabilityStatus === 'error'
       ? { key: 'room', label: 'Reintenta disponibilidad' }
       : !formData.habitacionId ? { key: 'room', label: 'Elige habitación' } : null,
@@ -737,7 +741,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <p className="truncate text-[11px] text-muted-foreground">
-            {noches > 0 ? `${noches} noche${noches === 1 ? '' : 's'} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona fechas'}
+            {noches > 0 ? `${sameDayStay ? 'Estancia del día' : `${noches} noche${noches === 1 ? '' : 's'}`} · ${formatDate(formData.fechaCheckin)} → ${formatDate(formData.fechaCheckout)}` : 'Selecciona fechas'}
             {selectedHabitacion ? ` · Hab. #${selectedHabitacion.numero}` : ''}
             {` · ${formData.adultos + formData.ninos} huésped(es)`}
             {total > 0 ? ` · ${fmt(total)}` : ''}
@@ -788,7 +792,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d >= formData.fechaCheckout ? addDays(d, 1) : formData.fechaCheckout })} disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))} />
+                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d > formData.fechaCheckout ? d : formData.fechaCheckout })} disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))} />
                   </PopoverContent>
                 </Popover>
               </Field>
@@ -801,7 +805,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" locale={es} selected={formData.fechaCheckout} onSelect={(d) => d && setFormData({ ...formData, fechaCheckout: d })} disabled={(d) => d <= formData.fechaCheckin} />
+                    <Calendar mode="single" locale={es} selected={formData.fechaCheckout} onSelect={(d) => d && setFormData({ ...formData, fechaCheckout: d })} disabled={(d) => d < formData.fechaCheckin} />
                   </PopoverContent>
                 </Popover>
               </Field>
@@ -813,17 +817,17 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               </Field>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {[1, 2, 3, 7].map((n) => (
+              {[0, 1, 2, 3, 7].map((n) => (
                 <button
                   key={n}
                   type="button"
                   onClick={() => setFormData({ ...formData, fechaCheckout: addDays(formData.fechaCheckin, n) })}
                   className={cn(
                     'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                    noches === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
+                    stayDayDifference === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
                   )}
                 >
-                  {n} noche{n === 1 ? '' : 's'}
+                  {n === 0 ? 'Mismo día' : `${n} noche${n === 1 ? '' : 's'}`}
                 </button>
               ))}
             </div>
@@ -1115,7 +1119,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <p className="text-xs font-semibold">Resumen de cuenta</p>
 
               <div className="space-y-1 text-xs">
-                <Line label={`Hospedaje · ${noches || 0} noche${noches === 1 ? '' : 's'}`} value={fmt(subtotalHospedaje)} />
+                <Line label={`Hospedaje · ${sameDayStay ? 'estancia del día' : `${noches || 0} noche${noches === 1 ? '' : 's'}`}`} value={fmt(subtotalHospedaje)} />
                 {tramosTarifa.map((rate, index) => (rate.temporada || tramosTarifa.length > 1) && (
                   <Line
                     key={`${rate.desde}-${rate.precio}-${index}`}
