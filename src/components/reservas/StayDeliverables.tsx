@@ -96,8 +96,8 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
   const pending = assigned.filter((item) => item.requiere_devolucion && !item.devuelto).length;
 
   return <>
-    <section className="overflow-hidden rounded-xl border border-[#10233F]/10 bg-white shadow-sm">
-      <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
+    <section className="overflow-hidden rounded-[8px] border border-slate-200/90 bg-white">
+      <div className="flex min-h-[52px] items-center justify-between gap-3 px-3.5 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <KeyRound className="h-4 w-4 shrink-0 text-[#10233F]" />
           <div className="min-w-0">
@@ -111,7 +111,7 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
             </p>
           </div>
         </div>
-        {active && <Button variant="ghost" size="sm" className="h-8 shrink-0 px-2.5 text-xs" onClick={openAssign}>
+        {active && <Button variant="ghost" size="toolbar" className="h-8 shrink-0 px-2.5 text-xs" onClick={openAssign}>
           <Plus className="mr-1 h-3.5 w-3.5" />Asignar
         </Button>}
       </div>
@@ -120,7 +120,7 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
         {assigned.map((item) => {
           const quantityAssigned = Number(item.cantidad || 1);
           const quantityReturned = Number(item.cantidad_devuelta || 0);
-          return <div key={item.id} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2.5">
+          return <div key={item.id} className="flex min-h-10 items-center justify-between gap-3 px-3.5 py-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{item.nombre}</p>
               <p className="truncate text-xs text-muted-foreground">
@@ -138,7 +138,7 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
                 : item.requiere_devolucion
                   ? <Badge variant="outline" className="border-amber-200 text-amber-700">Pendiente</Badge>
                   : <Badge variant="outline">Entregado</Badge>}
-              {!item.devuelto && item.requiere_devolucion && active && <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" disabled={processing} onClick={() => markReturned(item)}>
+              {!item.devuelto && item.requiere_devolucion && active && <Button size="toolbar" variant="outline" className="h-8 px-2.5 text-xs" disabled={processing} onClick={() => markReturned(item)}>
                 <RotateCcw className="mr-1 h-3.5 w-3.5" />Devolver
               </Button>}
             </div>
@@ -148,7 +148,7 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
     </section>
 
     <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="rounded-[8px] shadow-lg sm:max-w-lg [&_button]:rounded-[6px] [&_input]:rounded-[6px] [&_[role=combobox]]:rounded-[6px]">
         <DialogHeader>
           <DialogTitle>Asignar entregable</DialogTitle>
           <DialogDescription>Selecciona el objeto y la cantidad. El stock y la auditoría se actualizan al confirmar.</DialogDescription>
@@ -156,10 +156,10 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
         <div className="space-y-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar entregable…" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} className="rounded-[6px] pl-9" placeholder="Buscar entregable…" />
           </div>
           <Select value={selected} onValueChange={setSelected} disabled={processing}>
-            <SelectTrigger><SelectValue placeholder="Seleccionar entregable" /></SelectTrigger>
+            <SelectTrigger className="rounded-[6px]"><SelectValue placeholder="Seleccionar entregable" /></SelectTrigger>
             <SelectContent>
               {filteredCatalog.length === 0
                 ? <div className="px-3 py-4 text-center text-sm text-muted-foreground">Sin coincidencias</div>
@@ -170,12 +170,12 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
           </Select>
           <div>
             <label className="mb-1.5 block text-sm font-medium">Cantidad</label>
-            <Input type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
+            <Input className="rounded-[6px]" type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancelar</Button>
-          <Button onClick={assign} disabled={!selected || processing} className="bg-[#10233F] hover:bg-[#10233F]/90">
+          <Button variant="outline" className="rounded-[6px]" onClick={() => setAssignOpen(false)}>Cancelar</Button>
+          <Button onClick={assign} disabled={!selected || processing} className="rounded-[6px] bg-[#10233F] hover:bg-[#10233F]/90">
             {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
             Asignar
           </Button>
