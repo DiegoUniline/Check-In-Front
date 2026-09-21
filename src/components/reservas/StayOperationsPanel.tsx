@@ -30,6 +30,7 @@ type Props = {
   reserva: any;
   habitaciones?: any[];
   onUpdate?: () => void | Promise<void>;
+  onReservationCancelled?: () => void | Promise<void>;
   children?: ReactNode;
   initialOperationId?: string | null;
   initialCheckout?: string | null;
@@ -101,6 +102,7 @@ const shiftDate = (value: any, days: number) => {
 export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(function StayOperationsPanel({
   reserva,
   onUpdate,
+  onReservationCancelled,
   children,
   initialOperationId,
   initialCheckout,
@@ -154,6 +156,15 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
   const quickOperations = quickOperationIds
     .map((operationId) => groups.flatMap((group) => group.operations).find((operation) => operation.id === operationId))
     .filter(Boolean) as Operation[];
+
+  const cancelReservationOperation = groups
+    .flatMap((group) => group.operations)
+    .find((operation) => operation.id === 'cancel_reservation') as Operation | undefined;
+  const canCancelReservation = Boolean(
+    cancelReservationOperation
+    && operationApplies('cancel_reservation')
+    && canAccess('reservas.operacion.cancel_reservation', user?.rol),
+  );
 
   const roomTypes = useMemo<{ id: string; name: string }[]>(() => {
     const types = new Map<string, string>();
@@ -438,8 +449,20 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
             : selected.id === 'add_guest' ? 'Huésped adicional registrado'
               : 'Cuenta dividida desde la estancia',
       );
-      toast({ title: 'Operación completada', description: `${selected.label} se aplicó y quedó en el historial.` });
-      setSelected(null); await onUpdate?.(); await load();
+      const cancelledReservation = selected.id === 'cancel_reservation';
+      toast({
+        title: cancelledReservation ? 'Reserva cancelada' : 'Operación completada',
+        description: cancelledReservation
+          ? 'Las fechas quedaron liberadas y la cancelación se guardó en el historial.'
+          : `${selected.label} se aplicó y quedó en el historial.`,
+      });
+      setSelected(null);
+      await onUpdate?.();
+      if (cancelledReservation) {
+        await onReservationCancelled?.();
+      } else {
+        await load();
+      }
     } catch (error: any) {
       toast({ title: 'No se pudo completar', description: error.message, variant: 'destructive' });
     } finally { setProcessing(false); }
@@ -676,6 +699,15 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       case 'move_to_account': return <div className="space-y-3"><Field label="Subcuenta destino"><Select value={payload.account_id || 'main'} onValueChange={(v) => set('account_id', v === 'main' ? '' : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="main">Cuenta principal</SelectItem>{accounts.filter((account) => account.estado === 'Abierta').map((account) => <SelectItem key={account.id} value={account.id}>{account.nombre}</SelectItem>)}</SelectContent></Select></Field><MovementChecks title="Cargos a mover" items={activeCharges} selected={payload.charge_ids || []} onChange={(ids) => set('charge_ids', ids)} label={(item) => `${item.concepto} · ${formatCurrency(item.total ?? item.subtotal)}`} /><MovementChecks title="Pagos a mover" items={activePayments} selected={payload.payment_ids || []} onChange={(ids) => set('payment_ids', ids)} label={(item) => `${item.metodo_pago} · ${formatCurrency(item.monto)}`} /></div>;
       case 'consecutive_reservation': return reservationSelect('next_reservation_id','Siguiente reservación',true);
       case 'reopen_checkout': return <div className="space-y-3"><Field label="Nueva fecha de salida"><Input type="date" min={shiftDate(todayLocal(), 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{roomSelect('Habitación para reabrir la estancia')}</div>;
+      case 'cancel_reservation': return <div className="rounded-[6px] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <div className="flex items-start gap-2">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-semibold">Esta reserva se marcará como cancelada.</p>
+            <p className="mt-1 text-xs text-red-700">Dejará de bloquear la habitación en el calendario y las fechas volverán a estar disponibles. La reserva y su historial no se eliminan.</p>
+          </div>
+        </div>
+      </div>;
       default: return <p className="rounded-[6px] border bg-muted/40 p-3 text-sm text-muted-foreground">Esta acción conservará todos los datos históricos y actualizará las vistas relacionadas.</p>;
     }
   };
@@ -718,6 +750,15 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         <Button size="toolbar" variant="ghost" className="px-2.5 text-[#10233F]" onClick={() => setMoreOpen(true)}>
           Más operaciones
         </Button>
+        {canCancelReservation && cancelReservationOperation && <Button
+          size="toolbar"
+          variant="outline"
+          className="ml-auto gap-1.5 border-red-200 px-2.5 text-red-700 hover:border-red-300 hover:bg-red-50 hover:text-red-800"
+          onClick={() => openOperation(cancelReservationOperation)}
+        >
+          <XCircle className="h-3.5 w-3.5" />
+          Cancelar reserva
+        </Button>}
       </div>
     </section>
 
@@ -812,7 +853,14 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
           : selected && ROOM_OPERATIONS.includes(selected.id) ? 'sm:max-w-5xl' : 'sm:max-w-3xl',
     )}><DialogHeader><DialogTitle>{selected?.label}</DialogTitle><DialogDescription>{selected?.id === 'add_charge'
       ? 'Selecciona productos o servicios y cárgalos directamente a la cuenta de la habitación.'
-      : `${selected?.detail || ''} La disponibilidad, cargos y saldos se validarán antes de guardar.`}</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}{selectedRequiresReason && <><Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></>}</div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button><Button onClick={submit} disabled={processing || (selectedRequiresReason && reason.trim().length < 3) || dateOperationBlocked || roomOperationBlocked || consumptionBlocked || partialPaymentBlocked} className="bg-[#10233F] hover:bg-[#10233F]/90">{processing ? 'Procesando…' : validatingAvailability ? 'Validando disponibilidad…' : selected?.id === 'add_charge' ? 'Cargar a la habitación' : selected?.id === 'partial_payment' ? 'Registrar abono' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
+      : selected?.id === 'cancel_reservation'
+        ? 'Confirma la cancelación. El motivo es obligatorio y quedará auditado.'
+        : `${selected?.detail || ''} La disponibilidad, cargos y saldos se validarán antes de guardar.`}</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}{selectedRequiresReason && <><Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></>}</div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>{selected?.id === 'cancel_reservation' ? 'Volver' : 'Cancelar'}</Button><Button
+      variant={selected?.id === 'cancel_reservation' ? 'destructive' : 'default'}
+      onClick={submit}
+      disabled={processing || (selectedRequiresReason && reason.trim().length < 3) || dateOperationBlocked || roomOperationBlocked || consumptionBlocked || partialPaymentBlocked}
+      className={selected?.id === 'cancel_reservation' ? '' : 'bg-[#10233F] hover:bg-[#10233F]/90'}
+    >{processing ? 'Procesando…' : validatingAvailability ? 'Validando disponibilidad…' : selected?.id === 'cancel_reservation' ? 'Cancelar reserva' : selected?.id === 'add_charge' ? 'Cargar a la habitación' : selected?.id === 'partial_payment' ? 'Registrar abono' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
 
     <Dialog open={Boolean(reverseMovement)} onOpenChange={(open) => !open && setReverseMovement(null)}><DialogContent className="rounded-[8px] [&_button]:rounded-[6px] [&_input]:rounded-[6px] [&_textarea]:rounded-[6px] [&_[role=combobox]]:rounded-[6px]"><DialogHeader><DialogTitle>Revertir operación</DialogTitle><DialogDescription>Se validará nuevamente la disponibilidad y se restaurarán los valores anteriores.</DialogDescription></DialogHeader><Field label="Motivo de reversión"><Textarea value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => setReverseMovement(null)}>Cancelar</Button><Button variant="destructive" onClick={reverse} disabled={processing || reverseReason.trim().length < 3}>Revertir con control</Button></DialogFooter></DialogContent></Dialog>
   </div>;
