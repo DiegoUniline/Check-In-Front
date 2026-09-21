@@ -107,6 +107,9 @@ export default function ReservaDetalle() {
   const canCheckin = ['Pendiente', 'Confirmada'].includes(String(reserva.estado || '')) && !reserva.checkin_realizado;
   const canEditStay = canAccess('reservas.operacion.modify_dates', user?.rol)
     && !['Cancelada', 'NoShow', 'CheckOut'].includes(String(reserva.estado || ''));
+  const canRegisterPayment = canAccess('reservas.operacion.partial_payment', user?.rol)
+    && !['Cancelada', 'NoShow', 'CheckOut'].includes(String(reserva.estado || ''))
+    && account.balance > 0.01;
 
   const refreshAll = async () => { await load(true); };
   const adults = reservationMoney(reserva.adultos);
@@ -211,6 +214,7 @@ export default function ReservaDetalle() {
               paid={account.paid}
               balance={account.balance}
               onPay={() => operationsRef.current?.openOperation('partial_payment')}
+              canPay={canRegisterPayment}
             />
           </div>
         </StayOperationsPanel>
@@ -223,7 +227,7 @@ export default function ReservaDetalle() {
             ? <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>Check-in</Button>
             : activeStay
               ? <Button className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>Check-out</Button>
-              : <Button onClick={() => operationsRef.current?.openOperation('partial_payment')} disabled={account.balance <= 0.01}>Registrar pago</Button>}
+              : <Button onClick={() => operationsRef.current?.openOperation('partial_payment')} disabled={!canRegisterPayment}>Registrar pago</Button>}
         </div>
       </div>
     </div>
@@ -366,6 +370,7 @@ function ReservationAccountSummary({
   paid,
   balance,
   onPay,
+  canPay,
 }: {
   lodging: number;
   consumption: number;
@@ -374,6 +379,7 @@ function ReservationAccountSummary({
   paid: number;
   balance: number;
   onPay: () => void;
+  canPay: boolean;
 }) {
   return <aside className="order-first xl:order-none xl:sticky xl:top-[76px]">
     <section className="overflow-hidden rounded-xl border border-[#10233F]/15 bg-white shadow-sm">
@@ -397,7 +403,7 @@ function ReservationAccountSummary({
             </strong>
           </div>
         </div>
-        <Button className="mt-1 h-9 w-full bg-[#10233F] text-xs hover:bg-[#10233F]/90" onClick={onPay} disabled={balance <= 0.01}>
+        <Button className="mt-1 h-9 w-full bg-[#10233F] text-xs hover:bg-[#10233F]/90" onClick={onPay} disabled={!canPay}>
           Registrar pago
         </Button>
       </div>
