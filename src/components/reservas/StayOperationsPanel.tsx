@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeftRight, BadgeDollarSign, BedDouble, CalendarClock, CalendarDays,
-  CheckCircle2, ChevronDown, Clock, History, Loader2, LogIn, LogOut, Plus,
+  CheckCircle2, Clock, History, Loader2, LogIn, LogOut, Plus,
   Receipt, RefreshCcw, Search, ShieldAlert, Split, UserMinus, UserPlus, Wrench,
   XCircle,
 } from 'lucide-react';
@@ -26,10 +26,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 type Props = {
   reserva: any;
@@ -720,33 +716,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
             <span className="text-xs font-semibold">{operation.label === 'Pago parcial' ? 'Registrar pago' : operation.label}</span>
           </Button>;
         })}
-        <DropdownMenu open={moreOpen} onOpenChange={setMoreOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="ghost" className="h-9 gap-1.5 px-2.5 text-[#10233F]">
-              Más operaciones <ChevronDown className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-[70vh] w-80 overflow-y-auto">
-            {groups.map((group, groupIndex) => <div key={group.title}>
-              {groupIndex > 0 && <DropdownMenuSeparator />}
-              <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">{group.title}</DropdownMenuLabel>
-              {group.operations.filter((operation) => !quickOperationIds.includes(operation.id)).map((operation) => {
-                const Icon = operation.icon;
-                const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
-                const applies = operationApplies(operation.id);
-                return <DropdownMenuItem
-                  key={operation.id}
-                  disabled={loading || !allowed || !applies}
-                  onSelect={() => openOperation(operation)}
-                  className="items-start gap-3 py-2.5"
-                >
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#10233F]" />
-                  <span className="min-w-0"><span className="flex items-center gap-2 font-medium">{operation.label}{operation.sensitive && <span className="text-[9px] text-muted-foreground">GERENCIA</span>}</span><span className="block text-xs text-muted-foreground">{operation.detail}</span></span>
-                </DropdownMenuItem>;
-              })}
-            </div>)}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button size="sm" variant="ghost" className="h-9 px-2.5 text-[#10233F]" onClick={() => setMoreOpen(true)}>
+          Más operaciones
+        </Button>
       </div>
     </section>
 
@@ -777,6 +749,48 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         </div>)}
       </div>}
     </section>
+
+    <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Más operaciones</DialogTitle>
+          <DialogDescription>Acciones menos frecuentes y correcciones controladas de la estancia.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {groups.map((group) => {
+            const operations = group.operations.filter((operation) => !quickOperationIds.includes(operation.id));
+            if (operations.length === 0) return null;
+            return <section key={group.title}>
+              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{group.title}</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {operations.map((operation) => {
+                  const Icon = operation.icon;
+                  const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
+                  const applies = operationApplies(operation.id);
+                  return <Button
+                    key={operation.id}
+                    variant="outline"
+                    disabled={loading || !allowed || !applies}
+                    onClick={() => openOperation(operation)}
+                    className="h-auto min-h-14 items-start justify-start gap-3 px-3 py-2.5 text-left"
+                    title={!allowed ? 'Tu rol no tiene permiso para esta acción' : !applies ? 'Esta acción no aplica al estado actual' : undefined}
+                  >
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#10233F]" />
+                    <span className="min-w-0 whitespace-normal">
+                      <span className="flex items-center gap-2 text-sm font-semibold text-[#10233F]">
+                        {operation.label}
+                        {operation.sensitive && <span className="text-[9px] font-normal text-muted-foreground">GERENCIA</span>}
+                      </span>
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{operation.detail}</span>
+                    </span>
+                  </Button>;
+                })}
+              </div>
+            </section>;
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
 
     <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
       <DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-3xl">
