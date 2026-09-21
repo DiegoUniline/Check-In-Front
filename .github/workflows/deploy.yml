@@ -2,7 +2,7 @@
 name: Deploy
 on:
   push:
-    branches: [main]
+    branches: [validation/reservation-cancel-flow]
 permissions:
   contents: write
 jobs:
@@ -17,8 +17,4 @@ jobs:
       - run: npm run build
         env:
           VITE_API_URL: https://checkinapi-5cc3a2116a1c.herokuapp.com/api
-      - uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          force_orphan: true
+      - run: echo "Build validation only — no deployment"
