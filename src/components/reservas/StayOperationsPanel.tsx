@@ -91,6 +91,10 @@ const ROUTINE_OPERATIONS = ['add_charge', 'partial_payment', 'add_guest', 'split
 
 const dateOnly = (value: any) => String(value || '').slice(0, 10);
 const money = (value: any) => Number(value || 0);
+const dateFromValue = (value: any) => {
+  const [year, month, day] = dateOnly(value).split('-').map(Number);
+  return year && month && day ? new Date(year, month - 1, day, 12) : undefined;
+};
 const dateToValue = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 const shiftDate = (value: any, days: number) => {
   const [year, month, day] = dateOnly(value).split('-').map(Number);
