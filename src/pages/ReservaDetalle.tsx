@@ -125,11 +125,11 @@ export default function ReservaDetalle() {
   const otherAccountTotal = account.total - account.lodging - consumptionTotal;
 
   return <MainLayout>
-    <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC] pb-24 lg:pb-8">
+    <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC] pb-24 lg:pb-6">
       <header className="sticky top-0 z-30 border-b border-[#10233F]/10 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-2.5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-2 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-2.5">
-            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => navigate(-1)} aria-label="Volver">
+            <Button variant="ghost" size="toolbar" className="w-9 shrink-0 px-0" onClick={() => navigate(-1)} aria-label="Volver">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
@@ -149,26 +149,26 @@ export default function ReservaDetalle() {
           </div>
 
           <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
-            <Button variant="ghost" size="sm" className="h-9 px-2" onClick={() => void load(true)} title="Actualizar">
+            <Button variant="ghost" size="toolbar" className="px-2" onClick={() => void load(true)} title="Actualizar">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            {canEditStay && <Button variant="outline" size="sm" className="h-9" onClick={() => operationsRef.current?.openOperation('modify_dates')}>
+            {canEditStay && <Button variant="outline" size="toolbar" onClick={() => operationsRef.current?.openOperation('modify_dates')}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />Editar
             </Button>}
-            <Button variant="outline" size="sm" className="h-9" onClick={() => operationsRef.current?.openMoreOperations()}>
+            <Button variant="outline" size="toolbar" onClick={() => operationsRef.current?.openMoreOperations()}>
               <Ellipsis className="mr-1.5 h-4 w-4" />Más
             </Button>
-            {canCheckin && <Button size="sm" className="h-9 bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>
+            {canCheckin && <Button size="toolbar" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>
               <DoorOpen className="mr-1.5 h-4 w-4" />Check-in
             </Button>}
-            {activeStay && <Button size="sm" className="h-9 bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>
+            {activeStay && <Button size="toolbar" className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>
               <LogOut className="mr-1.5 h-4 w-4" />Check-out
             </Button>}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1680px] px-3 py-3 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-[1680px] px-3 py-2.5 sm:px-6 lg:px-8">
         <StayOperationsPanel
           ref={operationsRef}
           reserva={reserva}
@@ -178,8 +178,8 @@ export default function ReservaDetalle() {
           initialCheckout={searchParams.get('checkout')}
           initialRoomId={searchParams.get('roomId')}
         >
-          <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="min-w-0 space-y-3">
+          <div className="grid items-start gap-2.5 xl:grid-cols-[minmax(0,1fr)_318px]">
+            <div className="min-w-0 space-y-2.5">
               <ReservationQuickSummary
                 reserva={reserva}
                 nights={nights}
@@ -196,7 +196,7 @@ export default function ReservaDetalle() {
                 departureTime={departureTime}
               />
 
-              {(reserva.solicitudes_especiales || reserva.notas_internas) && <section className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50/60">
+              {(reserva.solicitudes_especiales || reserva.notas_internas) && <section className="overflow-hidden rounded-[8px] border border-amber-200 bg-amber-50/60">
                 {reserva.solicitudes_especiales && <NoteRow label="Solicitud especial" text={reserva.solicitudes_especiales} />}
                 {reserva.notas_internas && <NoteRow label="Nota interna" text={reserva.notas_internas} divided={Boolean(reserva.solicitudes_especiales)} />}
               </section>}
@@ -247,27 +247,27 @@ function ReservationQuickSummary({
   arrivalTime: string;
   departureTime: string;
 }) {
-  return <section className="flex flex-wrap items-center gap-x-0 gap-y-2 overflow-hidden rounded-xl border border-[#10233F]/10 bg-white px-3 py-2 shadow-sm">
+  return <section className="flex flex-wrap items-center gap-x-0 gap-y-1 overflow-hidden rounded-[8px] border border-slate-200/90 bg-white px-2.5 py-1.5">
     <Fact icon={CalendarDays} label="Estancia" value={`${nights} noche${nights === 1 ? '' : 's'}`} />
     <Fact icon={Clock3} label="Entrada" value={arrivalTime} />
     <Fact icon={Clock3} label="Salida" value={departureTime} />
     <Fact icon={Users} label="Huéspedes" value={String(totalGuests)} />
     <Fact icon={BedDouble} label="Origen" value={reserva.origen || 'Recepción'} />
-    {(reserva.cliente_telefono || reserva.cliente?.telefono) && <a className="flex h-9 items-center gap-1.5 border-l px-3 text-xs text-[#10233F] hover:underline" href={`tel:${reserva.cliente_telefono || reserva.cliente?.telefono}`}>
+    {(reserva.cliente_telefono || reserva.cliente?.telefono) && <a className="flex h-8 items-center gap-1.5 border-l px-2.5 text-[11px] text-[#10233F] hover:underline" href={`tel:${reserva.cliente_telefono || reserva.cliente?.telefono}`}>
       <Phone className="h-3.5 w-3.5" />{reserva.cliente_telefono || reserva.cliente?.telefono}
     </a>}
-    {(reserva.cliente_email || reserva.cliente?.email) && <a className="flex h-9 min-w-0 items-center gap-1.5 border-l px-3 text-xs text-[#10233F] hover:underline" href={`mailto:${reserva.cliente_email || reserva.cliente?.email}`}>
+    {(reserva.cliente_email || reserva.cliente?.email) && <a className="flex h-8 min-w-0 items-center gap-1.5 border-l px-2.5 text-[11px] text-[#10233F] hover:underline" href={`mailto:${reserva.cliente_email || reserva.cliente?.email}`}>
       <Mail className="h-3.5 w-3.5 shrink-0" /><span className="max-w-48 truncate">{reserva.cliente_email || reserva.cliente?.email}</span>
     </a>}
   </section>;
 }
 
 function Fact({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
-  return <div className="flex h-9 min-w-[118px] items-center gap-2 border-l first:border-l-0 px-3 first:pl-1">
-    <Icon className="h-3.5 w-3.5 shrink-0 text-[#10233F]" />
+  return <div className="flex h-8 min-w-[104px] items-center gap-1.5 border-l first:border-l-0 px-2.5 first:pl-1">
+    <Icon className="h-3 w-3 shrink-0 text-[#10233F]/75" />
     <div className="min-w-0">
-      <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="truncate text-xs font-semibold text-[#10233F]">{value}</p>
+      <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+      <p className="truncate text-[11px] font-semibold text-[#10233F]">{value}</p>
     </div>
   </div>;
 }
@@ -288,15 +288,15 @@ function StayRoomSummary({
   const typeName = reserva.tipo_habitacion?.nombre || reserva.tipo_habitacion_nombre || 'Sin categoría';
   const room = reserva.habitacion || {};
 
-  return <section className="rounded-xl border border-[#10233F]/10 bg-white shadow-sm">
-    <div className="flex items-center justify-between gap-3 border-b px-4 py-2.5">
+  return <section className="rounded-[8px] border border-slate-200/90 bg-white">
+    <div className="flex items-center justify-between gap-3 border-b px-3.5 py-2">
       <h2 className="text-sm font-semibold text-[#10233F]">Estancia y habitación</h2>
       <div className="flex gap-1.5">
-        {room.estado_limpieza && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{room.estado_limpieza}</Badge>}
-        {room.estado_mantenimiento && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{room.estado_mantenimiento}</Badge>}
+        {room.estado_limpieza && <Badge variant="outline" className="h-5 px-1.5 text-[9px]">{room.estado_limpieza}</Badge>}
+        {room.estado_mantenimiento && <Badge variant="outline" className="h-5 px-1.5 text-[9px]">{room.estado_mantenimiento}</Badge>}
       </div>
     </div>
-    <div className="grid gap-x-8 gap-y-2.5 px-4 py-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-x-7 gap-y-2 px-3.5 py-2.5 sm:grid-cols-2 xl:grid-cols-4">
       <DataPoint label="Entrada" value={`${formatDate(reserva.fecha_checkin)} · ${arrivalTime}`} />
       <DataPoint label="Salida" value={`${formatDate(reserva.fecha_checkout)} · ${departureTime}`} />
       <DataPoint label="Noches" value={String(nights)} />
@@ -310,15 +310,15 @@ function StayRoomSummary({
 }
 
 function DataPoint({ label, value }: { label: string; value: string }) {
-  return <div className="grid grid-cols-[86px_minmax(0,1fr)] items-baseline gap-2 text-xs">
+  return <div className="grid grid-cols-[78px_minmax(0,1fr)] items-baseline gap-2 text-[11px] sm:text-xs">
     <span className="text-muted-foreground">{label}</span>
     <span className="truncate font-medium text-foreground">{value}</span>
   </div>;
 }
 
 function ReservationLedger({ rows }: { rows: ReservationLedgerRow[] }) {
-  return <section id="cuenta" className="scroll-mt-24 overflow-hidden rounded-xl border border-[#10233F]/10 bg-white shadow-sm">
-    <div className="flex items-center justify-between border-b px-4 py-2.5">
+  return <section id="cuenta" className="scroll-mt-24 overflow-hidden rounded-[8px] border border-slate-200/90 bg-white">
+    <div className="flex items-center justify-between border-b px-3.5 py-2">
       <div className="flex items-center gap-2">
         <WalletCards className="h-4 w-4 text-[#10233F]" />
         <div>
@@ -326,35 +326,35 @@ function ReservationLedger({ rows }: { rows: ReservationLedgerRow[] }) {
           <p className="text-[11px] text-muted-foreground">Hospedaje, consumos, cargos y pagos en una sola secuencia.</p>
         </div>
       </div>
-      <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{rows.length} movimientos</Badge>
+      <Badge variant="outline" className="h-5 px-1.5 text-[9px]">{rows.length} movimientos</Badge>
     </div>
-    <div className="max-h-[300px] overflow-auto">
+    <div className="max-h-[248px] overflow-auto">
       <Table>
         <TableHeader className="sticky top-0 z-10 bg-white">
           <TableRow>
-            <TableHead className="w-24">Fecha</TableHead>
-            <TableHead>Concepto</TableHead>
-            <TableHead className="w-24">Tipo</TableHead>
-            <TableHead className="w-28 text-right">Cargo</TableHead>
-            <TableHead className="w-28 text-right">Pago</TableHead>
-            <TableHead className="w-28 text-right">Saldo</TableHead>
+            <TableHead className="h-8 w-24 px-2 text-[10px]">Fecha</TableHead>
+            <TableHead className="h-8 px-2 text-[10px]">Concepto</TableHead>
+            <TableHead className="h-8 w-24 px-2 text-[10px]">Tipo</TableHead>
+            <TableHead className="h-8 w-28 px-2 text-right text-[10px]">Cargo</TableHead>
+            <TableHead className="h-8 w-28 px-2 text-right text-[10px]">Pago</TableHead>
+            <TableHead className="h-8 w-28 px-2 text-right text-[10px]">Saldo</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0
-            ? <TableRow><TableCell colSpan={6} className="h-12 text-center text-sm text-muted-foreground">Sin movimientos financieros.</TableCell></TableRow>
+            ? <TableRow><TableCell colSpan={6} className="h-10 px-2 py-1.5 text-center text-xs text-muted-foreground">Sin movimientos financieros.</TableCell></TableRow>
             : rows.map((row) => <TableRow key={row.id} className={cn(row.cancelled && 'opacity-45')}>
-              <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{row.at ? formatDate(row.at) : '—'}</TableCell>
-              <TableCell>
+              <TableCell className="px-2 py-1.5 whitespace-nowrap text-[11px] text-muted-foreground">{row.at ? formatDate(row.at) : '—'}</TableCell>
+              <TableCell className="px-2 py-1.5">
                 <div className="min-w-0">
-                  <p className={cn('truncate text-sm font-medium', row.cancelled && 'line-through')}>{row.concept}</p>
+                  <p className={cn('truncate text-xs font-semibold', row.cancelled && 'line-through')}>{row.concept}</p>
                   {row.cancelled && <p className="text-[10px] text-muted-foreground">Cancelado · sin efecto en saldo</p>}
                 </div>
               </TableCell>
-              <TableCell><Badge variant="outline" className="h-5 px-1.5 text-[10px]">{row.type}</Badge></TableCell>
-              <TableCell className="text-right text-sm tabular-nums">{row.charge ? formatCurrency(row.charge) : '—'}</TableCell>
-              <TableCell className="text-right text-sm font-medium tabular-nums text-emerald-700">{row.payment ? formatCurrency(row.payment) : '—'}</TableCell>
-              <TableCell className="text-right text-sm font-semibold tabular-nums">{formatCurrency(row.balance)}</TableCell>
+              <TableCell className="px-2 py-1.5"><Badge variant="outline" className="h-4 px-1.5 text-[9px]">{row.type}</Badge></TableCell>
+              <TableCell className="px-2 py-1.5 text-right text-xs tabular-nums">{row.charge ? formatCurrency(row.charge) : '—'}</TableCell>
+              <TableCell className="px-2 py-1.5 text-right text-xs font-medium tabular-nums text-emerald-700">{row.payment ? formatCurrency(row.payment) : '—'}</TableCell>
+              <TableCell className="px-2 py-1.5 text-right text-xs font-semibold tabular-nums">{formatCurrency(row.balance)}</TableCell>
             </TableRow>)}
         </TableBody>
       </Table>
@@ -382,18 +382,18 @@ function ReservationAccountSummary({
   canPay: boolean;
 }) {
   return <aside className="order-first xl:order-none xl:sticky xl:top-[76px]">
-    <section className="overflow-hidden rounded-xl border border-[#10233F]/15 bg-white shadow-sm">
-      <div className="border-b px-4 py-3">
+    <section className="overflow-hidden rounded-[8px] border border-slate-300/80 bg-white">
+      <div className="border-b px-3.5 py-2.5">
         <h2 className="text-sm font-bold text-[#10233F]">Estado de cuenta</h2>
       </div>
-      <div className="space-y-2.5 px-4 py-3 text-sm">
+      <div className="space-y-2 px-3.5 py-2.5 text-sm">
         <AccountLine label="Hospedaje" value={lodging} />
         <AccountLine label="Consumos" value={consumption} />
         <AccountLine label="Otros / ajustes" value={other} />
         <Separator />
         <AccountLine label="Total" value={total} strong />
         <AccountLine label="Pagado" value={paid} accent />
-        <div className={cn('mt-1 rounded-lg px-3 py-2.5', balance > 0.01 ? 'bg-orange-50' : 'bg-emerald-50')}>
+        <div className={cn('mt-1 rounded-[6px] border px-2.5 py-2', balance > 0.01 ? 'border-orange-200 bg-orange-50/70' : 'border-emerald-200 bg-emerald-50/70')}>
           <div className="flex items-end justify-between gap-3">
             <span className={cn('text-xs font-semibold uppercase tracking-wide', balance > 0.01 ? 'text-orange-700' : 'text-emerald-700')}>
               {balance < -0.01 ? 'A favor' : 'Pendiente'}
@@ -403,7 +403,7 @@ function ReservationAccountSummary({
             </strong>
           </div>
         </div>
-        <Button className="mt-1 h-9 w-full bg-[#10233F] text-xs hover:bg-[#10233F]/90" onClick={onPay} disabled={!canPay}>
+        <Button size="toolbar" className="mt-1 w-full bg-[#10233F] text-xs hover:bg-[#10233F]/90" onClick={onPay} disabled={!canPay}>
           Registrar pago
         </Button>
       </div>
@@ -419,7 +419,7 @@ function AccountLine({ label, value, strong, accent }: { label: string; value: n
 }
 
 function NoteRow({ label, text, divided = false }: { label: string; text: string; divided?: boolean }) {
-  return <div className={cn('grid gap-1 px-4 py-2.5 sm:grid-cols-[140px_minmax(0,1fr)]', divided && 'border-t border-amber-200')}>
+  return <div className={cn('grid gap-1 px-3.5 py-2 sm:grid-cols-[132px_minmax(0,1fr)]', divided && 'border-t border-amber-200')}>
     <span className="text-xs font-semibold text-amber-900">{label}</span>
     <p className="line-clamp-2 whitespace-pre-wrap text-xs text-amber-900/80">{text}</p>
   </div>;
