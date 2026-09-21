@@ -252,8 +252,11 @@ function ReservationQuickSummary({
   departureTime: string;
   embedded?: boolean;
 }) {
+  const phone = reserva.cliente_telefono || reserva.cliente?.telefono;
+  const email = reserva.cliente_email || reserva.cliente?.email;
+
   return <section className={cn(
-    'flex flex-wrap items-center gap-x-0 gap-y-1 bg-white px-3.5 py-2',
+    'flex flex-wrap items-center bg-white px-4 py-2.5',
     embedded ? 'border-b border-slate-200' : 'overflow-hidden rounded-[8px] border border-slate-200',
   )}>
     <Fact icon={CalendarDays} label="Estancia" value={`${nights} noche${nights === 1 ? '' : 's'}`} />
@@ -261,21 +264,24 @@ function ReservationQuickSummary({
     <Fact icon={Clock3} label="Salida" value={departureTime} />
     <Fact icon={Users} label="Huéspedes" value={String(totalGuests)} />
     <Fact icon={BedDouble} label="Origen" value={reserva.origen || 'Recepción'} />
-    {(reserva.cliente_telefono || reserva.cliente?.telefono) && <a className="flex h-9 items-center gap-1.5 border-l px-3 text-xs text-[#10233F] hover:underline" href={`tel:${reserva.cliente_telefono || reserva.cliente?.telefono}`}>
-      <Phone className="h-3.5 w-3.5" />{reserva.cliente_telefono || reserva.cliente?.telefono}
-    </a>}
-    {(reserva.cliente_email || reserva.cliente?.email) && <a className="flex h-9 min-w-0 items-center gap-1.5 border-l px-3 text-xs text-[#10233F] hover:underline" href={`mailto:${reserva.cliente_email || reserva.cliente?.email}`}>
-      <Mail className="h-3.5 w-3.5 shrink-0" /><span className="max-w-48 truncate">{reserva.cliente_email || reserva.cliente?.email}</span>
-    </a>}
+
+    {(phone || email) && <div className="ml-auto flex min-w-0 items-center self-stretch border-l border-slate-200 pl-3">
+      {phone && <a className="flex h-10 items-center gap-1.5 px-2.5 text-[11px] text-muted-foreground hover:text-[#10233F] hover:underline" href={`tel:${phone}`}>
+        <Phone className="h-3.5 w-3.5 shrink-0" /><span>{phone}</span>
+      </a>}
+      {email && <a className="flex h-10 min-w-0 items-center gap-1.5 px-2.5 text-[11px] text-muted-foreground hover:text-[#10233F] hover:underline" href={`mailto:${email}`}>
+        <Mail className="h-3.5 w-3.5 shrink-0" /><span className="max-w-52 truncate">{email}</span>
+      </a>}
+    </div>}
   </section>;
 }
 
 function Fact({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
-  return <div className="flex h-9 min-w-[112px] items-center gap-2 border-l first:border-l-0 px-3 first:pl-0">
-    <Icon className="h-3.5 w-3.5 shrink-0 text-[#10233F]/70" />
+  return <div className="flex h-12 min-w-[128px] items-center gap-2.5 border-l border-slate-200 px-4 first:border-l-0 first:pl-0">
+    <Icon className="h-4 w-4 shrink-0 text-[#10233F]/70" />
     <div className="min-w-0">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
-      <p className="truncate text-[13px] font-semibold text-[#10233F]">{value}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">{label}</p>
+      <p className="mt-0.5 truncate text-[15px] font-bold leading-none text-[#10233F]">{value}</p>
     </div>
   </div>;
 }
