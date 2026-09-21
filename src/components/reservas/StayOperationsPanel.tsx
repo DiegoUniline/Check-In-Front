@@ -694,7 +694,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     (ROOM_OPERATIONS.includes(selected.id) && checkingRooms)
   ));
 
-  return <div className="space-y-3">
+  return <div className="space-y-2.5">
     <section id="reservation-operations" className="scroll-mt-24 rounded-[8px] border border-slate-200/90 bg-white px-2.5 py-1.5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Operaciones</span>
@@ -798,7 +798,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
           {movements.length === 0 ? <p className="p-5 text-center text-sm text-muted-foreground">Sin movimientos todavía.</p> : movements.map((move, index) => <div key={move.id} className="p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0"><p className="text-sm font-medium capitalize">{String(move.operacion).replace(/_/g,' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p>{move.motivo && <p className="mt-1 text-xs">{move.motivo}</p>}</div>
-              {move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => { setHistoryOpen(false); setReverseMovement(move); }}>Revertir</Button> : null}
+              {move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="toolbar" variant="outline" className="h-8" onClick={() => { setHistoryOpen(false); setReverseMovement(move); }}>Revertir</Button> : null}
             </div>
           </div>)}
         </div>
