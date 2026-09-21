@@ -174,6 +174,7 @@ export default function ReservaDetalle() {
           reserva={reserva}
           habitaciones={rooms}
           onUpdate={refreshAll}
+          onReservationCancelled={() => navigate('/reservas/timeline', { replace: true })}
           initialOperationId={searchParams.get('operation')}
           initialCheckout={searchParams.get('checkout')}
           initialRoomId={searchParams.get('roomId')}
