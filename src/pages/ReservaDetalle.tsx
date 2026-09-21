@@ -84,7 +84,7 @@ export default function ReservaDetalle() {
   const account = useMemo(() => reserva ? getReservationAccountSummary(reserva) : null, [reserva]);
 
   if (loading) {
-    return <MainLayout>
+    return <MainLayout fitViewport fullWidth>
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
           <RefreshCw className="mx-auto h-7 w-7 animate-spin text-[#10233F]" />
@@ -95,7 +95,7 @@ export default function ReservaDetalle() {
   }
 
   if (!reserva || !account) {
-    return <MainLayout>
+    return <MainLayout fitViewport fullWidth>
       <div className="mx-auto max-w-xl py-20 text-center">
         <h1 className="text-xl font-semibold">Reservación no encontrada</h1>
         <Button className="mt-4" onClick={() => navigate('/reservas')}>Volver a reservaciones</Button>
@@ -124,17 +124,17 @@ export default function ReservaDetalle() {
     .reduce((sum: number, item: any) => sum + reservationMoney(item.total ?? item.subtotal), 0);
   const otherAccountTotal = account.total - account.lodging - consumptionTotal;
 
-  return <MainLayout>
-    <div className="min-h-[calc(100dvh-4rem)] bg-[#F7F9FC] pb-24 lg:pb-6">
-      <header className="sticky top-0 z-30 border-b border-[#10233F]/10 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-2 sm:px-6 lg:px-8">
+  return <MainLayout fitViewport fullWidth>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F5F7FA] pb-16 sm:pb-0">
+      <header className="z-30 shrink-0 border-b border-slate-200 bg-white">
+        <div className="flex min-h-[58px] items-center justify-between gap-4 px-4 py-2 lg:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <Button variant="ghost" size="toolbar" className="w-9 shrink-0 px-0" onClick={() => navigate(-1)} aria-label="Volver">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <h1 className="max-w-[52vw] truncate text-base font-bold text-[#10233F] sm:max-w-none sm:text-lg">
+                <h1 className="max-w-[52vw] truncate text-lg font-bold text-[#10233F] sm:max-w-none sm:text-xl">
                   {reserva.cliente_nombre || 'Huésped sin nombre'}
                 </h1>
                 <span className="text-xs font-semibold text-muted-foreground">#{reserva.numero_reserva || reserva.id.slice(0, 8)}</span>
@@ -142,7 +142,7 @@ export default function ReservaDetalle() {
                   {reserva.estado}
                 </Badge>
               </div>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground sm:text-xs">
+              <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-[13px]">
                 Hab. {reserva.habitacion_numero || 'sin asignar'} · {formatDate(reserva.fecha_checkin)} → {formatDate(reserva.fecha_checkout)} · {adults} adulto{adults === 1 ? '' : 's'}{children > 0 ? ` · ${children} menor${children === 1 ? '' : 'es'}` : ''}
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function ReservaDetalle() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1680px] px-3 py-2.5 sm:px-6 lg:px-8">
+      <main className="min-h-0 flex-1 overflow-y-auto px-4 py-3 lg:px-6">
         <StayOperationsPanel
           ref={operationsRef}
           reserva={reserva}
@@ -178,9 +178,10 @@ export default function ReservaDetalle() {
           initialCheckout={searchParams.get('checkout')}
           initialRoomId={searchParams.get('roomId')}
         >
-          <div className="grid items-start gap-2.5 xl:grid-cols-[minmax(0,1fr)_318px]">
-            <div className="min-w-0 space-y-2.5">
+          <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_350px]">
+            <section className="min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white">
               <ReservationQuickSummary
+                embedded
                 reserva={reserva}
                 nights={nights}
                 totalGuests={totalGuests}
@@ -189,6 +190,7 @@ export default function ReservaDetalle() {
               />
 
               <StayRoomSummary
+                embedded
                 reserva={reserva}
                 nights={nights}
                 totalGuests={totalGuests}
@@ -196,15 +198,15 @@ export default function ReservaDetalle() {
                 departureTime={departureTime}
               />
 
-              {(reserva.solicitudes_especiales || reserva.notas_internas) && <section className="overflow-hidden rounded-[8px] border border-amber-200 bg-amber-50/60">
+              {(reserva.solicitudes_especiales || reserva.notas_internas) && <section className="border-b border-amber-200 bg-amber-50/60">
                 {reserva.solicitudes_especiales && <NoteRow label="Solicitud especial" text={reserva.solicitudes_especiales} />}
                 {reserva.notas_internas && <NoteRow label="Nota interna" text={reserva.notas_internas} divided={Boolean(reserva.solicitudes_especiales)} />}
               </section>}
 
-              <ReservationLedger rows={ledger} />
+              <ReservationLedger embedded rows={ledger} />
 
-              <StayDeliverables reservaId={reserva.id} active={activeStay || canCheckin} />
-            </div>
+              <StayDeliverables reservaId={reserva.id} active={activeStay || canCheckin} embedded />
+            </section>
 
             <ReservationAccountSummary
               lodging={account.lodging}
@@ -240,34 +242,39 @@ function ReservationQuickSummary({
   totalGuests,
   arrivalTime,
   departureTime,
+  embedded = false,
 }: {
   reserva: any;
   nights: number;
   totalGuests: number;
   arrivalTime: string;
   departureTime: string;
+  embedded?: boolean;
 }) {
-  return <section className="flex flex-wrap items-center gap-x-0 gap-y-1 overflow-hidden rounded-[8px] border border-slate-200/90 bg-white px-2.5 py-1.5">
+  return <section className={cn(
+    'flex flex-wrap items-center gap-x-0 gap-y-1 bg-white px-3.5 py-2',
+    embedded ? 'border-b border-slate-200' : 'overflow-hidden rounded-[8px] border border-slate-200',
+  )}>
     <Fact icon={CalendarDays} label="Estancia" value={`${nights} noche${nights === 1 ? '' : 's'}`} />
     <Fact icon={Clock3} label="Entrada" value={arrivalTime} />
     <Fact icon={Clock3} label="Salida" value={departureTime} />
     <Fact icon={Users} label="Huéspedes" value={String(totalGuests)} />
     <Fact icon={BedDouble} label="Origen" value={reserva.origen || 'Recepción'} />
-    {(reserva.cliente_telefono || reserva.cliente?.telefono) && <a className="flex h-8 items-center gap-1.5 border-l px-2.5 text-[11px] text-[#10233F] hover:underline" href={`tel:${reserva.cliente_telefono || reserva.cliente?.telefono}`}>
+    {(reserva.cliente_telefono || reserva.cliente?.telefono) && <a className="flex h-9 items-center gap-1.5 border-l px-3 text-xs text-[#10233F] hover:underline" href={`tel:${reserva.cliente_telefono || reserva.cliente?.telefono}`}>
       <Phone className="h-3.5 w-3.5" />{reserva.cliente_telefono || reserva.cliente?.telefono}
     </a>}
-    {(reserva.cliente_email || reserva.cliente?.email) && <a className="flex h-8 min-w-0 items-center gap-1.5 border-l px-2.5 text-[11px] text-[#10233F] hover:underline" href={`mailto:${reserva.cliente_email || reserva.cliente?.email}`}>
+    {(reserva.cliente_email || reserva.cliente?.email) && <a className="flex h-9 min-w-0 items-center gap-1.5 border-l px-3 text-xs text-[#10233F] hover:underline" href={`mailto:${reserva.cliente_email || reserva.cliente?.email}`}>
       <Mail className="h-3.5 w-3.5 shrink-0" /><span className="max-w-48 truncate">{reserva.cliente_email || reserva.cliente?.email}</span>
     </a>}
   </section>;
 }
 
 function Fact({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
-  return <div className="flex h-8 min-w-[104px] items-center gap-1.5 border-l first:border-l-0 px-2.5 first:pl-1">
-    <Icon className="h-3 w-3 shrink-0 text-[#10233F]/75" />
+  return <div className="flex h-9 min-w-[112px] items-center gap-2 border-l first:border-l-0 px-3 first:pl-0">
+    <Icon className="h-3.5 w-3.5 shrink-0 text-[#10233F]/70" />
     <div className="min-w-0">
-      <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
-      <p className="truncate text-[11px] font-semibold text-[#10233F]">{value}</p>
+      <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+      <p className="truncate text-[13px] font-semibold text-[#10233F]">{value}</p>
     </div>
   </div>;
 }
@@ -278,25 +285,27 @@ function StayRoomSummary({
   totalGuests,
   arrivalTime,
   departureTime,
+  embedded = false,
 }: {
   reserva: any;
   nights: number;
   totalGuests: number;
   arrivalTime: string;
   departureTime: string;
+  embedded?: boolean;
 }) {
   const typeName = reserva.tipo_habitacion?.nombre || reserva.tipo_habitacion_nombre || 'Sin categoría';
   const room = reserva.habitacion || {};
 
-  return <section className="rounded-[8px] border border-slate-200/90 bg-white">
-    <div className="flex items-center justify-between gap-3 border-b px-3.5 py-2">
+  return <section className={cn('bg-white', embedded ? 'border-b border-slate-200' : 'rounded-[8px] border border-slate-200')}>
+    <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5">
       <h2 className="text-sm font-semibold text-[#10233F]">Estancia y habitación</h2>
       <div className="flex gap-1.5">
         {room.estado_limpieza && <Badge variant="outline" className="h-5 px-1.5 text-[9px]">{room.estado_limpieza}</Badge>}
         {room.estado_mantenimiento && <Badge variant="outline" className="h-5 px-1.5 text-[9px]">{room.estado_mantenimiento}</Badge>}
       </div>
     </div>
-    <div className="grid gap-x-7 gap-y-2 px-3.5 py-2.5 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-x-8 gap-y-2.5 px-4 py-3 sm:grid-cols-2 xl:grid-cols-4">
       <DataPoint label="Entrada" value={`${formatDate(reserva.fecha_checkin)} · ${arrivalTime}`} />
       <DataPoint label="Salida" value={`${formatDate(reserva.fecha_checkout)} · ${departureTime}`} />
       <DataPoint label="Noches" value={String(nights)} />
@@ -310,14 +319,17 @@ function StayRoomSummary({
 }
 
 function DataPoint({ label, value }: { label: string; value: string }) {
-  return <div className="grid grid-cols-[78px_minmax(0,1fr)] items-baseline gap-2 text-[11px] sm:text-xs">
+  return <div className="grid grid-cols-[82px_minmax(0,1fr)] items-baseline gap-2 text-xs sm:text-[13px]">
     <span className="text-muted-foreground">{label}</span>
     <span className="truncate font-medium text-foreground">{value}</span>
   </div>;
 }
 
-function ReservationLedger({ rows }: { rows: ReservationLedgerRow[] }) {
-  return <section id="cuenta" className="scroll-mt-24 overflow-hidden rounded-[8px] border border-slate-200/90 bg-white">
+function ReservationLedger({ rows, embedded = false }: { rows: ReservationLedgerRow[]; embedded?: boolean }) {
+  return <section id="cuenta" className={cn(
+    'scroll-mt-24 overflow-hidden bg-white',
+    embedded ? 'border-b border-slate-200' : 'rounded-[8px] border border-slate-200',
+  )}>
     <div className="flex items-center justify-between border-b px-3.5 py-2">
       <div className="flex items-center gap-2">
         <WalletCards className="h-4 w-4 text-[#10233F]" />
@@ -332,29 +344,29 @@ function ReservationLedger({ rows }: { rows: ReservationLedgerRow[] }) {
       <Table>
         <TableHeader className="sticky top-0 z-10 bg-slate-50/95">
           <TableRow>
-            <TableHead className="h-8 w-24 px-2 text-[10px]">Fecha</TableHead>
-            <TableHead className="h-8 px-2 text-[10px]">Concepto</TableHead>
-            <TableHead className="h-8 w-24 px-2 text-[10px]">Tipo</TableHead>
-            <TableHead className="h-8 w-28 px-2 text-right text-[10px]">Cargo</TableHead>
-            <TableHead className="h-8 w-28 px-2 text-right text-[10px]">Pago</TableHead>
-            <TableHead className="h-8 w-28 px-2 text-right text-[10px]">Saldo</TableHead>
+            <TableHead className="h-9 w-24 px-3 text-[11px]">Fecha</TableHead>
+            <TableHead className="h-9 px-3 text-[11px]">Concepto</TableHead>
+            <TableHead className="h-9 w-24 px-3 text-[11px]">Tipo</TableHead>
+            <TableHead className="h-9 w-28 px-3 text-right text-[11px]">Cargo</TableHead>
+            <TableHead className="h-9 w-28 px-3 text-right text-[11px]">Pago</TableHead>
+            <TableHead className="h-9 w-28 px-3 text-right text-[11px]">Saldo</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0
             ? <TableRow><TableCell colSpan={6} className="h-10 px-2 py-1.5 text-center text-xs text-muted-foreground">Sin movimientos financieros.</TableCell></TableRow>
             : rows.map((row) => <TableRow key={row.id} className={cn(row.cancelled && 'opacity-45')}>
-              <TableCell className="px-2 py-1.5 whitespace-nowrap text-[11px] text-muted-foreground">{row.at ? formatDate(row.at) : '—'}</TableCell>
-              <TableCell className="px-2 py-1.5">
+              <TableCell className="px-3 py-2 whitespace-nowrap text-[11px] text-muted-foreground">{row.at ? formatDate(row.at) : '—'}</TableCell>
+              <TableCell className="px-3 py-2">
                 <div className="min-w-0">
                   <p className={cn('truncate text-xs font-semibold', row.cancelled && 'line-through')}>{row.concept}</p>
                   {row.cancelled && <p className="text-[10px] text-muted-foreground">Cancelado · sin efecto en saldo</p>}
                 </div>
               </TableCell>
-              <TableCell className="px-2 py-1.5"><Badge variant="outline" className="h-4 px-1.5 text-[9px]">{row.type}</Badge></TableCell>
-              <TableCell className="px-2 py-1.5 text-right text-xs tabular-nums">{row.charge ? formatCurrency(row.charge) : '—'}</TableCell>
-              <TableCell className="px-2 py-1.5 text-right text-xs font-medium tabular-nums text-emerald-700">{row.payment ? formatCurrency(row.payment) : '—'}</TableCell>
-              <TableCell className="px-2 py-1.5 text-right text-xs font-semibold tabular-nums">{formatCurrency(row.balance)}</TableCell>
+              <TableCell className="px-3 py-2"><Badge variant="outline" className="h-4 px-1.5 text-[9px]">{row.type}</Badge></TableCell>
+              <TableCell className="px-3 py-2 text-right text-[13px] tabular-nums">{row.charge ? formatCurrency(row.charge) : '—'}</TableCell>
+              <TableCell className="px-3 py-2 text-right text-[13px] font-medium tabular-nums text-emerald-700">{row.payment ? formatCurrency(row.payment) : '—'}</TableCell>
+              <TableCell className="px-3 py-2 text-right text-[13px] font-semibold tabular-nums">{formatCurrency(row.balance)}</TableCell>
             </TableRow>)}
         </TableBody>
       </Table>
@@ -381,12 +393,12 @@ function ReservationAccountSummary({
   onPay: () => void;
   canPay: boolean;
 }) {
-  return <aside className="order-first xl:order-none xl:sticky xl:top-[76px]">
+  return <aside className="order-first xl:order-none xl:sticky xl:top-0">
     <section className="overflow-hidden rounded-[8px] border border-slate-300/80 bg-white">
-      <div className="border-b px-3.5 py-2.5">
-        <h2 className="text-sm font-bold text-[#10233F]">Estado de cuenta</h2>
+      <div className="border-b px-4 py-3">
+        <h2 className="text-base font-bold text-[#10233F]">Estado de cuenta</h2>
       </div>
-      <div className="space-y-2 px-3.5 py-2.5 text-sm">
+      <div className="space-y-2.5 px-4 py-3 text-sm">
         <AccountLine label="Hospedaje" value={lodging} />
         <AccountLine label="Consumos" value={consumption} />
         <AccountLine label="Otros" value={other} />
@@ -419,7 +431,7 @@ function AccountLine({ label, value, strong, accent }: { label: string; value: n
 }
 
 function NoteRow({ label, text, divided = false }: { label: string; text: string; divided?: boolean }) {
-  return <div className={cn('grid gap-1 px-3.5 py-2 sm:grid-cols-[132px_minmax(0,1fr)]', divided && 'border-t border-amber-200')}>
+  return <div className={cn('grid gap-1 px-4 py-2.5 sm:grid-cols-[140px_minmax(0,1fr)]', divided && 'border-t border-amber-200')}>
     <span className="text-xs font-semibold text-amber-900">{label}</span>
     <p className="line-clamp-2 whitespace-pre-wrap text-xs text-amber-900/80">{text}</p>
   </div>;
