@@ -222,12 +222,12 @@ export default function ReservaDetalle() {
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-white p-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:hidden">
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={() => operationsRef.current?.openMoreOperations()}>Más operaciones</Button>
+          <Button variant="outline" size="toolbar" className="w-full" onClick={() => operationsRef.current?.openMoreOperations()}>Más operaciones</Button>
           {canCheckin
-            ? <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>Check-in</Button>
+            ? <Button size="toolbar" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>Check-in</Button>
             : activeStay
-              ? <Button className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>Check-out</Button>
-              : <Button onClick={() => operationsRef.current?.openOperation('partial_payment')} disabled={!canRegisterPayment}>Registrar pago</Button>}
+              ? <Button size="toolbar" className="w-full bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>Check-out</Button>
+              : <Button size="toolbar" className="w-full" onClick={() => operationsRef.current?.openOperation('partial_payment')} disabled={!canRegisterPayment}>Registrar pago</Button>}
         </div>
       </div>
     </div>
@@ -330,7 +330,7 @@ function ReservationLedger({ rows }: { rows: ReservationLedgerRow[] }) {
     </div>
     <div className="max-h-[248px] overflow-auto">
       <Table>
-        <TableHeader className="sticky top-0 z-10 bg-white">
+        <TableHeader className="sticky top-0 z-10 bg-slate-50/95">
           <TableRow>
             <TableHead className="h-8 w-24 px-2 text-[10px]">Fecha</TableHead>
             <TableHead className="h-8 px-2 text-[10px]">Concepto</TableHead>
@@ -389,7 +389,7 @@ function ReservationAccountSummary({
       <div className="space-y-2 px-3.5 py-2.5 text-sm">
         <AccountLine label="Hospedaje" value={lodging} />
         <AccountLine label="Consumos" value={consumption} />
-        <AccountLine label="Otros / ajustes" value={other} />
+        <AccountLine label="Otros" value={other} />
         <Separator />
         <AccountLine label="Total" value={total} strong />
         <AccountLine label="Pagado" value={paid} accent />
