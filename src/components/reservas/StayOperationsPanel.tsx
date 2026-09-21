@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeftRight, BadgeDollarSign, BedDouble, CalendarClock, CalendarDays,
   CheckCircle2, ChevronDown, Clock, History, Loader2, LogIn, LogOut, Plus,
@@ -11,6 +11,7 @@ import { canAccess } from '@/lib/permissions';
 import { useAuth } from '@/contexts/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/currency';
+import { calculateReservationReservationFinancialSnapshot, type ReservationReservationFinancialSnapshot } from '@/lib/reservationFinancials';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 import { StayConsumptionPicker, type StayConsumptionItem } from '@/components/reservas/StayConsumptionPicker';
@@ -40,6 +41,11 @@ type Props = {
   initialRoomId?: string | null;
 };
 type Operation = { id: string; label: string; detail: string; icon: any; sensitive?: boolean };
+
+export type StayOperationsPanelHandle = {
+  openOperation: (operationId: string) => void;
+  openMoreOperations: () => void;
+};
 
 const groups: { title: string; operations: Operation[] }[] = [
   { title: 'Estancia y fechas', operations: [
@@ -97,49 +103,6 @@ const nightsBetween = (checkin: any, checkout: any) => {
   return start && end ? Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000)) : 1;
 };
 
-type FinancialSnapshot = {
-  nights: number;
-  lodging: number;
-  charges: number;
-  taxes: number;
-  discount: number;
-  total: number;
-  paid: number;
-  balance: number;
-};
-
-const calculateFinancialSnapshot = (reserva: any, options: {
-  checkin?: string;
-  checkout?: string;
-  nightlyRate?: number;
-  extraGuests?: number;
-  extraGuestRate?: number;
-  additionalCharges?: number;
-  paidDelta?: number;
-  discountType?: string | null;
-  discountValue?: number;
-} = {}): FinancialSnapshot => {
-  const nights = nightsBetween(options.checkin || reserva.fecha_checkin, options.checkout || reserva.fecha_checkout);
-  const nightlyRate = options.nightlyRate ?? money(reserva.tarifa_noche);
-  const extraGuests = options.extraGuests ?? money(reserva.personas_extra);
-  const extraGuestRate = options.extraGuestRate ?? money(reserva.cargo_persona_extra);
-  const lodging = roundMoney(nights * nightlyRate + nights * extraGuests * extraGuestRate);
-  const activeCharges = (reserva.cargos || []).filter((charge: any) => charge.estado !== 'Cancelado');
-  const charges = roundMoney(activeCharges.reduce((sum: number, charge: any) => sum + money(charge.total ?? (money(charge.subtotal) + money(charge.impuesto))), 0) + money(options.additionalCharges));
-  const inferredTaxRate = money(reserva.impuesto_hospedaje_porcentaje) || (money(reserva.subtotal_hospedaje) > 0 ? money(reserva.total_impuestos) * 100 / money(reserva.subtotal_hospedaje) : 0);
-  const taxes = roundMoney(lodging * Math.max(0, inferredTaxRate) / 100);
-  const base = Math.max(0, lodging + charges + taxes);
-  const discountType = options.discountType === undefined ? reserva.descuento_tipo : options.discountType;
-  const discountValue = options.discountValue === undefined ? money(reserva.descuento_valor) : options.discountValue;
-  let discount = money(reserva.descuento);
-  if (String(discountType || '').toLowerCase().startsWith('porc')) discount = base * Math.max(0, discountValue) / 100;
-  else if (String(discountType || '').toLowerCase().startsWith('monto')) discount = Math.max(0, discountValue);
-  else if (options.discountType === null) discount = 0;
-  discount = roundMoney(Math.min(base, discount));
-  const total = roundMoney(Math.max(0, base - discount));
-  const paid = roundMoney((reserva.pagos || []).filter((payment: any) => payment.estado !== 'Cancelado').reduce((sum: number, payment: any) => sum + money(payment.monto), 0) + money(options.paidDelta));
-  return { nights, lodging, charges, taxes, discount, total, paid, balance: roundMoney(total - paid) };
-};
 const shiftDate = (value: any, days: number) => {
   const [year, month, day] = dateOnly(value).split('-').map(Number);
   if (!year || !month || !day) return '';
@@ -147,17 +110,19 @@ const shiftDate = (value: any, days: number) => {
   return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(shifted.getUTCDate()).padStart(2, '0')}`;
 };
 
-export function StayOperationsPanel({
+export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(function StayOperationsPanel({
   reserva,
   onUpdate,
   children,
   initialOperationId,
   initialCheckout,
   initialRoomId,
-}: Props) {
+}: Props, ref) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selected, setSelected] = useState<Operation | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [payload, setPayload] = useState<Record<string, any>>({});
   const [reason, setReason] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -231,9 +196,9 @@ export function StayOperationsPanel({
     .sort((a, b) => dateOnly(a.fecha_checkin).localeCompare(dateOnly(b.fecha_checkin)))[0] || null,
   [reservations, reserva.fecha_checkout, reserva.habitacion_id, reserva.id]);
   const financialPreview = useMemo(() => {
-    const current = calculateFinancialSnapshot(reserva);
+    const current = calculateReservationReservationFinancialSnapshot(reserva);
     if (!selected) return null;
-    const options: Parameters<typeof calculateFinancialSnapshot>[1] = {};
+    const options: Parameters<typeof calculateReservationReservationFinancialSnapshot>[1] = {};
     let visible = false;
 
     if (DATE_OPERATIONS.includes(selected.id) || selected.id === 'reopen_checkout') {
@@ -281,7 +246,7 @@ export function StayOperationsPanel({
       visible = true;
     }
 
-    return visible ? { current, next: calculateFinancialSnapshot(reserva, options) } : null;
+    return visible ? { current, next: calculateReservationReservationFinancialSnapshot(reserva, options) } : null;
   }, [payload, reserva, selected]);
 
   const load = async () => {
@@ -395,6 +360,7 @@ export function StayOperationsPanel({
   }, [selected?.id, payload.new_checkout, reserva.id, reserva.habitacion_id, reserva.fecha_checkin, reserva.fecha_checkout, isActiveStay]);
 
   const openOperation = (op: Operation) => {
+    setMoreOpen(false);
     setSelected(op); setReason('');
     setPayload({
       new_checkin: dateOnly(reserva.fecha_checkin), new_checkout: dateOnly(reserva.fecha_checkout),
@@ -406,6 +372,21 @@ export function StayOperationsPanel({
       items: [],
     });
   };
+
+  const openOperationById = (operationId: string) => {
+    const operation = groups.flatMap((group) => group.operations)
+      .find((item) => item.id === operationId);
+    if (!operation) return;
+    const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
+    const applies = operationApplies(operation.id);
+    if (!allowed || !applies) return;
+    openOperation(operation);
+  };
+
+  useImperativeHandle(ref, () => ({
+    openOperation: openOperationById,
+    openMoreOperations: () => setMoreOpen(true),
+  }), [accounts, cancelledCharges.length, cancelledPayments.length, reserva.estado, reserva.checkout_realizado, reserva.checkin_realizado, user?.rol]);
 
   useEffect(() => {
     if (!initialOperationId) return;
@@ -442,7 +423,7 @@ export function StayOperationsPanel({
     }
     if (selected.id === 'partial_payment') {
       const amount = money(payload.amount);
-      const currentBalance = calculateFinancialSnapshot(reserva).balance;
+      const currentBalance = calculateReservationReservationFinancialSnapshot(reserva).balance;
       if (amount <= 0 || amount > currentBalance + 0.009 || !payload.payment_method) {
         toast({ title: 'Revisa el pago', description: amount > currentBalance ? 'El abono no puede superar el saldo pendiente.' : 'Captura un importe válido y selecciona la forma de pago.', variant: 'destructive' });
         return;
@@ -716,7 +697,7 @@ export function StayOperationsPanel({
   const consumptionBlocked = Boolean(selected?.id === 'add_charge' && (!Array.isArray(payload.items) || payload.items.length === 0));
   const partialPaymentBlocked = Boolean(selected?.id === 'partial_payment' && (
     money(payload.amount) <= 0
-    || money(payload.amount) > calculateFinancialSnapshot(reserva).balance + 0.009
+    || money(payload.amount) > calculateReservationReservationFinancialSnapshot(reserva).balance + 0.009
     || !payload.payment_method
   ));
   const selectedRequiresReason = Boolean(selected && !ROUTINE_OPERATIONS.includes(selected.id));
@@ -725,17 +706,31 @@ export function StayOperationsPanel({
     (ROOM_OPERATIONS.includes(selected.id) && checkingRooms)
   ));
 
-  return <div className="space-y-4">
-    <section className="rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold text-[#10233F]">Acciones de la reserva</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Los cambios validan conflictos y quedan registrados.</p>
-        </div>
-        <DropdownMenu>
+  return <div className="space-y-3">
+    <section id="reservation-operations" className="scroll-mt-24 rounded-xl border border-[#10233F]/10 bg-white px-3 py-2.5 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Operaciones</span>
+        {quickOperations.map((operation) => {
+          const Icon = operation.icon;
+          const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
+          const applies = operationApplies(operation.id);
+          return <Button
+            key={operation.id}
+            size="sm"
+            variant="outline"
+            onClick={() => openOperation(operation)}
+            disabled={loading || !allowed || !applies}
+            className="h-9 gap-1.5 border-[#10233F]/15 px-2.5 text-[#10233F] hover:border-[#10233F]/35 hover:bg-[#10233F]/[0.03]"
+            title={!allowed ? 'Tu rol no tiene permiso para esta acción' : !applies ? 'Esta acción no aplica al estado actual' : operation.detail}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            <span className="text-xs font-semibold">{operation.label === 'Pago parcial' ? 'Registrar pago' : operation.label}</span>
+          </Button>;
+        })}
+        <DropdownMenu open={moreOpen} onOpenChange={setMoreOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="shrink-0 border-[#10233F]/20 text-[#10233F]">
-              Más operaciones <ChevronDown className="ml-2 h-4 w-4" />
+            <Button size="sm" variant="ghost" className="h-9 gap-1.5 px-2.5 text-[#10233F]">
+              Más operaciones <ChevronDown className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-[70vh] w-80 overflow-y-auto">
@@ -760,25 +755,6 @@ export function StayOperationsPanel({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {quickOperations.map((operation) => {
-          const Icon = operation.icon;
-          const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
-          const applies = operationApplies(operation.id);
-          return <Button
-            key={operation.id}
-            variant="outline"
-            onClick={() => openOperation(operation)}
-            disabled={loading || !allowed || !applies}
-            className="h-auto min-h-16 justify-start gap-3 border-[#10233F]/15 px-3 py-3 text-left hover:border-[#10233F]/35 hover:bg-[#10233F]/[0.03]"
-            title={!allowed ? 'Tu rol no tiene permiso para esta acción' : !applies ? 'Esta acción no aplica al estado actual' : undefined}
-          >
-            <span className="rounded-lg bg-[#10233F]/10 p-2 text-[#10233F]"><Icon className="h-4 w-4" /></span>
-            <span className="min-w-0 whitespace-normal"><span className="block text-sm font-semibold text-[#10233F]">{operation.label}</span><span className="hidden text-xs font-normal text-muted-foreground sm:block">{operation.detail}</span></span>
-          </Button>;
-        })}
-      </div>
     </section>
 
     {children}
@@ -787,9 +763,41 @@ export function StayOperationsPanel({
 
     {accounts.length > 0 && <AccountBreakdown accounts={accounts} charges={reserva.cargos || []} payments={reserva.pagos || []} />}
 
-    <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Historial de operaciones</h4><Button variant="ghost" size="sm" onClick={load}><RefreshCcw className="h-3.5 w-3.5" /></Button></div>
-      {movements.length === 0 ? <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay movimientos operativos.</p> : movements.map((move, index) => <div key={move.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-medium capitalize">{String(move.operacion).replace(/_/g,' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p><p className="mt-1 text-xs">{move.motivo}</p></div>{move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => setReverseMovement(move)}>Revertir</Button> : null}</div></div>)}
+    <section className="overflow-hidden rounded-xl border border-[#10233F]/10 bg-white shadow-sm">
+      <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <History className="h-4 w-4 shrink-0 text-[#10233F]" />
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-[#10233F]">Historial de operaciones</h4>
+            <p className="truncate text-xs text-muted-foreground">{movements.length === 0 ? 'Sin movimientos todavía' : `${movements.length} movimiento${movements.length === 1 ? '' : 's'} registrado${movements.length === 1 ? '' : 's'}`}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={load}><RefreshCcw className="h-3.5 w-3.5" /></Button>
+          {movements.length > 0 && <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs" onClick={() => setHistoryOpen(true)}>Ver historial</Button>}
+        </div>
+      </div>
+      {movements.length > 0 && <div className="divide-y border-t">
+        {movements.slice(0, 3).map((move) => <div key={move.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+          <div className="min-w-0"><p className="truncate text-sm font-medium capitalize">{String(move.operacion).replace(/_/g,' ')}</p><p className="truncate text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p></div>
+          {move.revertido && <Badge variant="secondary" className="shrink-0">Revertida</Badge>}
+        </div>)}
+      </div>}
     </section>
+
+    <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+      <DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader><DialogTitle>Historial de operaciones</DialogTitle><DialogDescription>Movimientos auditados de esta estancia.</DialogDescription></DialogHeader>
+        <div className="divide-y rounded-xl border">
+          {movements.length === 0 ? <p className="p-5 text-center text-sm text-muted-foreground">Sin movimientos todavía.</p> : movements.map((move, index) => <div key={move.id} className="p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0"><p className="text-sm font-medium capitalize">{String(move.operacion).replace(/_/g,' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p>{move.motivo && <p className="mt-1 text-xs">{move.motivo}</p>}</div>
+              {move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="sm" variant="outline" onClick={() => { setHistoryOpen(false); setReverseMovement(move); }}>Revertir</Button> : null}
+            </div>
+          </div>)}
+        </div>
+      </DialogContent>
+    </Dialog>
 
     <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className={cn(
       'h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[92dvh] sm:rounded-xl',
@@ -802,7 +810,7 @@ export function StayOperationsPanel({
 
     <Dialog open={Boolean(reverseMovement)} onOpenChange={(open) => !open && setReverseMovement(null)}><DialogContent><DialogHeader><DialogTitle>Revertir operación</DialogTitle><DialogDescription>Se validará nuevamente la disponibilidad y se restaurarán los valores anteriores.</DialogDescription></DialogHeader><Field label="Motivo de reversión"><Textarea value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => setReverseMovement(null)}>Cancelar</Button><Button variant="destructive" onClick={reverse} disabled={processing || reverseReason.trim().length < 3}>Revertir con control</Button></DialogFooter></DialogContent></Dialog>
   </div>;
-}
+});
 
 function Field({ label, children }: { label: string; children: ReactNode }) { return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>; }
 function MoneyInput({ value, onChange, autoFocus = false }: { value: string; onChange: (value: string) => void; autoFocus?: boolean }) {
@@ -811,7 +819,7 @@ function MoneyInput({ value, onChange, autoFocus = false }: { value: string; onC
     {value && <p className="mt-1 text-xs text-muted-foreground">Importe: <span className="font-semibold text-[#10233F]">{formatCurrency(money(value))}</span></p>}
   </div>;
 }
-function FinancialPreview({ current, next, mode }: { current: FinancialSnapshot; next: FinancialSnapshot; mode: 'full' | 'payment' }) {
+function FinancialPreview({ current, next, mode }: { current: ReservationFinancialSnapshot; next: ReservationFinancialSnapshot; mode: 'full' | 'payment' }) {
   const nightDelta = next.nights - current.nights;
   const balanceLabel = next.balance < -0.01 ? 'Saldo a favor' : 'Saldo pendiente';
   const changed = (before: number, after: number) => Math.abs(after - before) > 0.009;
