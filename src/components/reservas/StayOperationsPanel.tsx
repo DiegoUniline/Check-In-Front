@@ -18,7 +18,6 @@ import { StayConsumptionPicker, type StayConsumptionItem } from '@/components/re
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -463,7 +462,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     const checkin = reopening || isActiveStay ? todayLocal() : dateOnly(reserva.fecha_checkin);
     const checkout = reopening ? dateOnly(payload.new_checkout) : dateOnly(reserva.fecha_checkout);
     const selectedRoom = availableRooms.find((room) => room.id === payload.new_room_id);
-    return <div className="space-y-3">
+    return <div className="space-y-2.5">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <Label>{label}</Label>
@@ -501,11 +500,11 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         </Select>
       </div>
 
-      {checkingRooms ? <div className="flex min-h-28 items-center justify-center gap-2 rounded-xl border border-dashed text-sm text-muted-foreground">
+      {checkingRooms ? <div className="flex min-h-28 items-center justify-center gap-2 rounded-[8px] border border-dashed text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Buscando habitaciones realmente disponibles…
-      </div> : roomAvailabilityError ? <div className="flex gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+      </div> : roomAvailabilityError ? <div className="flex gap-2 rounded-[8px] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
         <XCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{roomAvailabilityError}</span>
-      </div> : filteredAvailableRooms.length === 0 ? <div className="rounded-xl border border-dashed p-5 text-center">
+      </div> : filteredAvailableRooms.length === 0 ? <div className="rounded-[8px] border border-dashed p-5 text-center">
         <BedDouble className="mx-auto h-6 w-6 text-muted-foreground" />
         <p className="mt-2 text-sm font-medium text-[#10233F]">No hay habitaciones con estos filtros</p>
         <p className="mt-1 text-xs text-muted-foreground">Cambia la búsqueda o los filtros. Nunca mostraremos una habitación con conflicto.</p>
@@ -526,7 +525,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
                 return next;
               });
             }}
-            className={`flex min-h-20 w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors ${selectedRoomId ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-[#10233F]/15 bg-white hover:border-[#10233F]/45 hover:bg-[#10233F]/[0.03]'}`}
+            className={`flex min-h-[68px] w-full items-center justify-between gap-3 rounded-[6px] border p-2.5 text-left transition-colors ${selectedRoomId ? 'border-[#10233F] bg-[#10233F] text-white' : 'border-slate-300 bg-white hover:border-[#10233F]/45 hover:bg-slate-50'}`}
           >
             <span className="min-w-0">
               <span className="block text-base font-bold">#{room.numero}</span>
@@ -538,7 +537,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         })}
       </div>}
 
-      {selectedRoom && <div className="flex items-center gap-2 rounded-lg bg-[#10233F]/[0.06] px-3 py-2 text-sm text-[#10233F]">
+      {selectedRoom && <div className="flex items-center gap-2 rounded-[6px] border border-[#10233F]/10 bg-[#10233F]/[0.04] px-3 py-2 text-sm text-[#10233F]">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> Seleccionaste la habitación #{selectedRoom.numero}.
       </div>}
       <p className="text-[11px] text-muted-foreground">La disponibilidad se vuelve a comprobar al aplicar el cambio para evitar cruces de último momento.</p>
@@ -549,7 +548,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     if (dateAvailability.status === 'idle') return null;
     const available = dateAvailability.status === 'available';
     const checking = dateAvailability.status === 'checking';
-    return <div className={`mt-2 flex gap-2 rounded-lg border px-3 py-2 text-xs ${available ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : checking ? 'border-[#10233F]/15 bg-[#10233F]/[0.03] text-[#10233F]' : 'border-red-200 bg-red-50 text-red-700'}`}>
+    return <div className={`mt-2 flex gap-2 rounded-[6px] border px-3 py-2 text-xs ${available ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : checking ? 'border-[#10233F]/15 bg-[#10233F]/[0.03] text-[#10233F]' : 'border-red-200 bg-red-50 text-red-700'}`}>
       {checking ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : available ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
       <span>{dateAvailability.message}</span>
     </div>;
@@ -565,7 +564,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     const selectedCheckout = dateOnly(payload.new_checkout);
     const limit = dateOnly(nextRoomReservation?.fecha_checkin);
     return <div className="grid items-start gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <div className="rounded-xl border border-[#10233F]/10 bg-white p-2">
+      <div className="rounded-[8px] border border-slate-200/90 bg-white p-2">
         <Calendar
           mode="single"
           selected={dateFromValue(selectedCheckout)}
@@ -600,7 +599,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         </div>
       </div>
       <div className="space-y-3">
-        <div className="rounded-xl border border-[#10233F]/10 bg-[#F7F9FC] p-4">
+        <div className="rounded-[8px] border border-slate-200 bg-slate-50/70 p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nueva salida</p>
           <p className="mt-1 text-xl font-bold text-[#10233F]">{selectedCheckout ? formatDate(selectedCheckout) : 'Selecciona una fecha'}</p>
           <p className="mt-1 text-xs text-muted-foreground">{limit
@@ -677,7 +676,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       case 'move_to_account': return <div className="space-y-3"><Field label="Subcuenta destino"><Select value={payload.account_id || 'main'} onValueChange={(v) => set('account_id', v === 'main' ? '' : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="main">Cuenta principal</SelectItem>{accounts.filter((account) => account.estado === 'Abierta').map((account) => <SelectItem key={account.id} value={account.id}>{account.nombre}</SelectItem>)}</SelectContent></Select></Field><MovementChecks title="Cargos a mover" items={activeCharges} selected={payload.charge_ids || []} onChange={(ids) => set('charge_ids', ids)} label={(item) => `${item.concepto} · ${formatCurrency(item.total ?? item.subtotal)}`} /><MovementChecks title="Pagos a mover" items={activePayments} selected={payload.payment_ids || []} onChange={(ids) => set('payment_ids', ids)} label={(item) => `${item.metodo_pago} · ${formatCurrency(item.monto)}`} /></div>;
       case 'consecutive_reservation': return reservationSelect('next_reservation_id','Siguiente reservación',true);
       case 'reopen_checkout': return <div className="space-y-3"><Field label="Nueva fecha de salida"><Input type="date" min={shiftDate(todayLocal(), 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{roomSelect('Habitación para reabrir la estancia')}</div>;
-      default: return <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">Esta acción conservará todos los datos históricos y actualizará las vistas relacionadas.</p>;
+      default: return <p className="rounded-[6px] border bg-muted/40 p-3 text-sm text-muted-foreground">Esta acción conservará todos los datos históricos y actualizará las vistas relacionadas.</p>;
     }
   };
 
@@ -696,7 +695,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
   ));
 
   return <div className="space-y-3">
-    <section id="reservation-operations" className="scroll-mt-24 rounded-xl border border-[#10233F]/10 bg-white px-3 py-2.5 shadow-sm">
+    <section id="reservation-operations" className="scroll-mt-24 rounded-[8px] border border-slate-200/90 bg-white px-2.5 py-1.5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Operaciones</span>
         {quickOperations.map((operation) => {
@@ -705,18 +704,18 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
           const applies = operationApplies(operation.id);
           return <Button
             key={operation.id}
-            size="sm"
+            size="toolbar"
             variant="outline"
             onClick={() => openOperation(operation)}
             disabled={loading || !allowed || !applies}
-            className="h-9 gap-1.5 border-[#10233F]/15 px-2.5 text-[#10233F] hover:border-[#10233F]/35 hover:bg-[#10233F]/[0.03]"
+            className="gap-1.5 border-slate-300 px-2.5 text-[#10233F] hover:border-[#10233F]/35 hover:bg-slate-50"
             title={!allowed ? 'Tu rol no tiene permiso para esta acción' : !applies ? 'Esta acción no aplica al estado actual' : operation.detail}
           >
             <Icon className="h-3.5 w-3.5" />
             <span className="text-xs font-semibold">{operation.label === 'Pago parcial' ? 'Registrar pago' : operation.label}</span>
           </Button>;
         })}
-        <Button size="sm" variant="ghost" className="h-9 px-2.5 text-[#10233F]" onClick={() => setMoreOpen(true)}>
+        <Button size="toolbar" variant="ghost" className="px-2.5 text-[#10233F]" onClick={() => setMoreOpen(true)}>
           Más operaciones
         </Button>
       </div>
@@ -724,12 +723,12 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
 
     {children}
 
-    {guests.length > 0 && <section className="space-y-2 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5"><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Huéspedes adicionales</h4>{guests.map((guest) => <Card key={guest.id} className={guest.activo ? '' : 'opacity-60'}><CardContent className="flex items-center justify-between p-3"><div><p className="text-sm font-medium">{guest.nombre} {guest.apellido_paterno}</p><p className="text-xs text-muted-foreground">{guest.tipo}{guest.genera_cargo ? ` · ${formatCurrency(guest.cargo_por_noche)} por noche` : ''}</p></div>{guest.activo && <Button size="sm" variant="outline" disabled={!operationApplies('remove_guest') || !canAccess('reservas.operacion.remove_guest', user?.rol)} onClick={() => { const op = { id:'remove_guest',label:'Retirar huésped',detail:'',icon:UserMinus,sensitive:true }; openOperation(op); setPayload({ guest_id: guest.id }); }}><UserMinus className="mr-1 h-4 w-4" />Retirar</Button>}</CardContent></Card>)}</section>}
+    {guests.length > 0 && <section className="overflow-hidden rounded-[8px] border border-slate-200/90 bg-white"><div className="border-b px-3.5 py-2"><h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Huéspedes adicionales</h4></div><div className="divide-y">{guests.map((guest) => <div key={guest.id} className={cn('flex min-h-10 items-center justify-between gap-3 px-3.5 py-2', !guest.activo && 'opacity-60')}><div><p className="text-xs font-semibold">{guest.nombre} {guest.apellido_paterno}</p><p className="text-[11px] text-muted-foreground">{guest.tipo}{guest.genera_cargo ? ` · ${formatCurrency(guest.cargo_por_noche)} por noche` : ''}</p></div>{guest.activo && <Button size="toolbar" variant="outline" className="h-8" disabled={!operationApplies('remove_guest') || !canAccess('reservas.operacion.remove_guest', user?.rol)} onClick={() => { const op = { id:'remove_guest',label:'Retirar huésped',detail:'',icon:UserMinus,sensitive:true }; openOperation(op); setPayload({ guest_id: guest.id }); }}><UserMinus className="mr-1 h-3.5 w-3.5" />Retirar</Button>}</div>)}</div></section>}
 
     {accounts.length > 0 && <AccountBreakdown accounts={accounts} charges={reserva.cargos || []} payments={reserva.pagos || []} />}
 
-    <section className="overflow-hidden rounded-xl border border-[#10233F]/10 bg-white shadow-sm">
-      <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
+    <section className="overflow-hidden rounded-[8px] border border-slate-200/90 bg-white">
+      <div className="flex min-h-[52px] items-center justify-between gap-3 px-3.5 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <History className="h-4 w-4 shrink-0 text-[#10233F]" />
           <div className="min-w-0">
@@ -738,12 +737,12 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={load}><RefreshCcw className="h-3.5 w-3.5" /></Button>
-          {movements.length > 0 && <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs" onClick={() => setHistoryOpen(true)}>Ver historial</Button>}
+          <Button variant="ghost" size="toolbar" className="h-8 px-2" onClick={load}><RefreshCcw className="h-3.5 w-3.5" /></Button>
+          {movements.length > 0 && <Button variant="ghost" size="toolbar" className="h-8 px-2.5 text-xs" onClick={() => setHistoryOpen(true)}>Ver historial</Button>}
         </div>
       </div>
       {movements.length > 0 && <div className="divide-y border-t">
-        {movements.slice(0, 3).map((move) => <div key={move.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+        {movements.slice(0, 3).map((move) => <div key={move.id} className="flex min-h-10 items-center justify-between gap-3 px-3.5 py-2">
           <div className="min-w-0"><p className="truncate text-sm font-medium capitalize">{String(move.operacion).replace(/_/g,' ')}</p><p className="truncate text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p></div>
           {move.revertido && <Badge variant="secondary" className="shrink-0">Revertida</Badge>}
         </div>)}
@@ -751,7 +750,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     </section>
 
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-[8px] shadow-lg sm:max-w-4xl [&_button]:rounded-[6px] [&_input]:rounded-[6px] [&_textarea]:rounded-[6px] [&_[role=combobox]]:rounded-[6px]">
         <DialogHeader>
           <DialogTitle>Más operaciones</DialogTitle>
           <DialogDescription>Acciones menos frecuentes y correcciones controladas de la estancia.</DialogDescription>
@@ -772,7 +771,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
                     variant="outline"
                     disabled={loading || !allowed || !applies}
                     onClick={() => openOperation(operation)}
-                    className="h-auto min-h-14 items-start justify-start gap-3 px-3 py-2.5 text-left"
+                    className="h-auto min-h-12 items-start justify-start gap-3 rounded-[6px] px-3 py-2 text-left"
                     title={!allowed ? 'Tu rol no tiene permiso para esta acción' : !applies ? 'Esta acción no aplica al estado actual' : undefined}
                   >
                     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#10233F]" />
@@ -793,9 +792,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     </Dialog>
 
     <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-      <DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[88dvh] overflow-y-auto rounded-[8px] shadow-lg sm:max-w-3xl [&_button]:rounded-[6px] [&_input]:rounded-[6px] [&_textarea]:rounded-[6px] [&_[role=combobox]]:rounded-[6px]">
         <DialogHeader><DialogTitle>Historial de operaciones</DialogTitle><DialogDescription>Movimientos auditados de esta estancia.</DialogDescription></DialogHeader>
-        <div className="divide-y rounded-xl border">
+        <div className="divide-y rounded-[6px] border">
           {movements.length === 0 ? <p className="p-5 text-center text-sm text-muted-foreground">Sin movimientos todavía.</p> : movements.map((move, index) => <div key={move.id} className="p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0"><p className="text-sm font-medium capitalize">{String(move.operacion).replace(/_/g,' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p>{move.motivo && <p className="mt-1 text-xs">{move.motivo}</p>}</div>
@@ -807,7 +806,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     </Dialog>
 
     <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className={cn(
-      'h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none sm:h-auto sm:max-h-[92dvh] sm:rounded-xl',
+      'h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none shadow-xl sm:h-auto sm:max-h-[92dvh] sm:rounded-[8px] [&_button]:rounded-[6px] [&_input]:rounded-[6px] [&_textarea]:rounded-[6px] [&_[role=combobox]]:rounded-[6px]',
       selected?.id === 'add_charge' ? 'sm:max-w-6xl'
         : selected?.id === 'extend_stay' || selected?.id === 'modify_dates' ? 'sm:max-w-4xl'
           : selected && ROOM_OPERATIONS.includes(selected.id) ? 'sm:max-w-5xl' : 'sm:max-w-3xl',
@@ -815,14 +814,14 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       ? 'Selecciona productos o servicios y cárgalos directamente a la cuenta de la habitación.'
       : `${selected?.detail || ''} La disponibilidad, cargos y saldos se validarán antes de guardar.`}</DialogDescription></DialogHeader><div className="space-y-4">{renderFields()}{selectedRequiresReason && <><Separator/><Field label="Motivo obligatorio"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explica por qué se realiza este cambio…" rows={3}/></Field></>}</div><DialogFooter className="gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button><Button onClick={submit} disabled={processing || (selectedRequiresReason && reason.trim().length < 3) || dateOperationBlocked || roomOperationBlocked || consumptionBlocked || partialPaymentBlocked} className="bg-[#10233F] hover:bg-[#10233F]/90">{processing ? 'Procesando…' : validatingAvailability ? 'Validando disponibilidad…' : selected?.id === 'add_charge' ? 'Cargar a la habitación' : selected?.id === 'partial_payment' ? 'Registrar abono' : 'Validar y aplicar'}</Button></DialogFooter></DialogContent></Dialog>
 
-    <Dialog open={Boolean(reverseMovement)} onOpenChange={(open) => !open && setReverseMovement(null)}><DialogContent><DialogHeader><DialogTitle>Revertir operación</DialogTitle><DialogDescription>Se validará nuevamente la disponibilidad y se restaurarán los valores anteriores.</DialogDescription></DialogHeader><Field label="Motivo de reversión"><Textarea value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => setReverseMovement(null)}>Cancelar</Button><Button variant="destructive" onClick={reverse} disabled={processing || reverseReason.trim().length < 3}>Revertir con control</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(reverseMovement)} onOpenChange={(open) => !open && setReverseMovement(null)}><DialogContent className="rounded-[8px] [&_button]:rounded-[6px] [&_input]:rounded-[6px] [&_textarea]:rounded-[6px] [&_[role=combobox]]:rounded-[6px]"><DialogHeader><DialogTitle>Revertir operación</DialogTitle><DialogDescription>Se validará nuevamente la disponibilidad y se restaurarán los valores anteriores.</DialogDescription></DialogHeader><Field label="Motivo de reversión"><Textarea value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => setReverseMovement(null)}>Cancelar</Button><Button variant="destructive" onClick={reverse} disabled={processing || reverseReason.trim().length < 3}>Revertir con control</Button></DialogFooter></DialogContent></Dialog>
   </div>;
 });
 
 function Field({ label, children }: { label: string; children: ReactNode }) { return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>; }
 function MoneyInput({ value, onChange, autoFocus = false }: { value: string; onChange: (value: string) => void; autoFocus?: boolean }) {
   return <div>
-    <div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-[#10233F]">$</span><Input autoFocus={autoFocus} type="text" inputMode="decimal" value={value} onChange={(event) => onChange(event.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'))} className="pl-7 text-base font-semibold" placeholder="0.00" /></div>
+    <div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-[#10233F]">$</span><Input autoFocus={autoFocus} type="text" inputMode="decimal" value={value} onChange={(event) => onChange(event.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'))} className="rounded-[6px] pl-7 text-base font-semibold" placeholder="0.00" /></div>
     {value && <p className="mt-1 text-xs text-muted-foreground">Importe: <span className="font-semibold text-[#10233F]">{formatCurrency(money(value))}</span></p>}
   </div>;
 }
@@ -830,7 +829,7 @@ function FinancialPreview({ current, next, mode }: { current: ReservationFinanci
   const nightDelta = next.nights - current.nights;
   const balanceLabel = next.balance < -0.01 ? 'Saldo a favor' : 'Saldo pendiente';
   const changed = (before: number, after: number) => Math.abs(after - before) > 0.009;
-  return <section className="overflow-hidden rounded-xl border border-[#10233F]/10 bg-white">
+  return <section className="overflow-hidden rounded-[8px] border border-slate-200/90 bg-white">
     <div className="flex flex-wrap items-center justify-between gap-2 bg-[#10233F] px-4 py-3 text-white">
       <div><p className="text-xs text-white/65">Cuenta después de aplicar</p><p className="text-lg font-bold">{balanceLabel}: {formatCurrency(Math.abs(next.balance))}</p></div>
       {mode === 'full' && nightDelta !== 0 && <Badge className="bg-white/15 text-white hover:bg-white/15">{nightDelta > 0 ? '+' : ''}{nightDelta} noche{Math.abs(nightDelta) === 1 ? '' : 's'}</Badge>}
@@ -852,18 +851,18 @@ function FinancialPreview({ current, next, mode }: { current: ReservationFinanci
 }
 function ChargeFields({ payload, set }: { payload: any; set: (key: string, value: any) => void }) { return <div className="grid gap-3 sm:grid-cols-2"><Field label="Concepto"><Input value={payload.concept || ''} onChange={(e) => set('concept', e.target.value)} /></Field><Field label="Cantidad"><Input type="number" min="0.01" value={payload.quantity || ''} onChange={(e) => set('quantity', e.target.value)} /></Field><Field label="Precio unitario"><Input type="number" min="0" value={payload.amount || ''} onChange={(e) => set('amount', e.target.value)} /></Field><Field label="Impuesto"><Input type="number" min="0" value={payload.tax || ''} onChange={(e) => set('tax', e.target.value)} /></Field><div className="sm:col-span-2"><Field label="Notas"><Input value={payload.notes || ''} onChange={(e) => set('notes', e.target.value)} /></Field></div></div>; }
 function PaymentMethod({ payload, set }: { payload: any; set: (key: string, value: any) => void }) { return <Field label="Forma de pago"><MetodoPagoSelect value={payload.payment_method || ''} onChange={(value) => set('payment_method', value)} /></Field>; }
-function MovementChecks({ title, items, selected, onChange, label }: { title: string; items: any[]; selected: string[]; onChange: (ids: string[]) => void; label: (item: any) => string }) { return <div className="space-y-2"><Label>{title}</Label><div className="max-h-32 space-y-2 overflow-y-auto rounded-lg border p-2">{items.length === 0 ? <p className="text-xs text-muted-foreground">Sin movimientos disponibles</p> : items.map((item) => <label key={item.id} className="flex items-center gap-2 text-sm"><Checkbox checked={selected.includes(item.id)} onCheckedChange={(checked) => onChange(checked ? [...selected,item.id] : selected.filter((id) => id !== item.id))}/><span>{label(item)}</span></label>)}</div></div>; }
+function MovementChecks({ title, items, selected, onChange, label }: { title: string; items: any[]; selected: string[]; onChange: (ids: string[]) => void; label: (item: any) => string }) { return <div className="space-y-2"><Label>{title}</Label><div className="max-h-32 space-y-2 overflow-y-auto rounded-[6px] border p-2">{items.length === 0 ? <p className="text-xs text-muted-foreground">Sin movimientos disponibles</p> : items.map((item) => <label key={item.id} className="flex items-center gap-2 text-sm"><Checkbox checked={selected.includes(item.id)} onCheckedChange={(checked) => onChange(checked ? [...selected,item.id] : selected.filter((id) => id !== item.id))}/><span>{label(item)}</span></label>)}</div></div>; }
 
 function AccountBreakdown({ accounts, charges, payments }: { accounts: any[]; charges: any[]; payments: any[] }) {
   const rows = [{ id: '', nombre: 'Cuenta principal', responsable: '' }, ...accounts];
-  return <section className="space-y-3 rounded-xl border border-[#10233F]/10 bg-white p-4 shadow-sm sm:p-5">
+  return <section className="space-y-2.5 rounded-[8px] border border-slate-200/90 bg-white p-3.5">
     <div><h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">División de cuenta</h4><p className="mt-1 text-sm text-muted-foreground">Totales, pagos y saldo de cada responsable.</p></div>
     <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{rows.map((account) => {
       const accountCharges = charges.filter((item) => item.estado !== 'Cancelado' && (item.cuenta_estancia_id || '') === account.id);
       const accountPayments = payments.filter((item) => item.estado !== 'Cancelado' && (item.cuenta_estancia_id || '') === account.id);
       const charged = accountCharges.reduce((sum, item) => sum + money(item.total ?? item.subtotal), 0);
       const paid = accountPayments.reduce((sum, item) => sum + money(item.monto), 0);
-      return <div key={account.id || 'main'} className="rounded-xl border border-[#10233F]/10 p-3">
+      return <div key={account.id || 'main'} className="rounded-[6px] border border-slate-200 p-2.5">
         <div className="flex items-start justify-between gap-2"><div><p className="font-semibold text-[#10233F]">{account.nombre}</p><p className="text-xs text-muted-foreground">{account.responsable || (account.id ? 'Sin responsable' : 'Titular de la reserva')}</p></div>{account.estado && <Badge variant="outline">{account.estado}</Badge>}</div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-xs"><div><p className="text-muted-foreground">Cargos</p><p className="font-semibold">{formatCurrency(charged)}</p></div><div><p className="text-muted-foreground">Pagado</p><p className="font-semibold text-emerald-700">{formatCurrency(paid)}</p></div><div><p className="text-muted-foreground">Saldo</p><p className="font-semibold">{formatCurrency(charged - paid)}</p></div></div>
       </div>;
