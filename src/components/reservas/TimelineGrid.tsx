@@ -32,6 +32,57 @@ const effectiveCheckoutDate = (checkin: string, checkout: string) => (
   checkout <= checkin ? format(addDays(parseISO(checkin), 1), 'yyyy-MM-dd') : checkout
 );
 
+interface TimelineBarGeometry {
+  left: number;
+  width: number;
+  clippedStart: boolean;
+  clippedEnd: boolean;
+}
+
+const getTimelineBarGeometry = (
+  reserva: any,
+  timelineStart: Date,
+  daysToShow: number,
+  cellWidthPx: number,
+  checkoutOverride?: string,
+): TimelineBarGeometry | null => {
+  const checkinStr = String(reserva.fecha_checkin || '').slice(0, 10);
+  const rawCheckout = String(checkoutOverride || reserva.fecha_checkout || '').slice(0, 10);
+  if (!checkinStr || !rawCheckout) return null;
+
+  const checkoutStr = effectiveCheckoutDate(checkinStr, rawCheckout);
+  const timelineStartDay = startOfDay(timelineStart);
+  const checkinOffset = differenceInCalendarDays(parseISO(checkinStr), timelineStartDay);
+  const checkoutOffset = differenceInCalendarDays(parseISO(checkoutStr), timelineStartDay);
+
+  // En hotelería una fecha representa dos límites operativos:
+  // la primera mitad recibe la salida y la segunda mitad recibe la entrada.
+  const rawLeft = (checkinOffset + 0.5) * cellWidthPx;
+  const rawRight = (checkoutOffset + 0.5) * cellWidthPx;
+  const timelineWidth = daysToShow * cellWidthPx;
+
+  if (rawRight <= 0 || rawLeft >= timelineWidth) return null;
+
+  const left = Math.max(0, rawLeft);
+  const right = Math.min(timelineWidth, rawRight);
+  if (right <= left) return null;
+
+  return {
+    left,
+    width: right - left,
+    clippedStart: rawLeft < 0,
+    clippedEnd: rawRight > timelineWidth,
+  };
+};
+
+const getReservationClipPath = ({ clippedStart, clippedEnd }: TimelineBarGeometry) => {
+  const slant = '6px';
+  if (clippedStart && clippedEnd) return 'none';
+  if (clippedStart) return `polygon(0 0, 100% 0, calc(100% - ${slant}) 100%, 0 100%)`;
+  if (clippedEnd) return `polygon(${slant} 0, 100% 0, 100% 100%, 0 100%)`;
+  return `polygon(${slant} 0, 100% 0, calc(100% - ${slant}) 100%, 0 100%)`;
+};
+
 const roomGroupDescriptor = (room: any, groupBy: TimelineRoomGrouping) => {
   if (groupBy === 'floor') {
     const floor = room.piso ?? 'Sin piso';
@@ -171,23 +222,6 @@ export function TimelineGrid({
       return currentDateStr >= checkinStr && currentDateStr < checkoutStr;
     });
   };
-
-  const getReservationPosition = (reserva: any, dayIndex: number) => {
-    if (!reserva.fecha_checkin || !reserva.fecha_checkout) return null;
-    
-    const currentDateStr = format(days[dayIndex], 'yyyy-MM-dd');
-    const checkinStr = reserva.fecha_checkin.substring(0, 10);
-    const checkoutStr = effectiveCheckoutDate(checkinStr, reserva.fecha_checkout.substring(0, 10));
-    const noches = differenceInCalendarDays(parseISO(checkoutStr), parseISO(checkinStr));
-    const ultimaNoche = format(addDays(parseISO(checkoutStr), -1), 'yyyy-MM-dd');
-
-    if (noches === 1 && currentDateStr === checkinStr) return 'single';
-    if (currentDateStr === checkinStr) return 'start';
-    if (currentDateStr === ultimaNoche) return 'end';
-    return 'middle';
-  };
-
-  const getStatusClasses = (reserva: any) => getEstadoConfig(reserva.estado).block;
 
   const handleMouseDown = (habitacionId: string, dayIndex: number) => {
     if (!canCreate) return;
@@ -417,6 +451,23 @@ export function TimelineGrid({
                 {!collapsed && group.rooms.map((hab) => {
             const status = roomStatus(hab);
             const dropActive = dropTarget?.roomId === hab.id;
+            const roomReservationBars = getReservasForRoom(hab.id)
+              .map((reserva) => {
+                const checkoutPreview = resizePreview?.reservationId === reserva.id
+                  ? resizePreview.checkout
+                  : undefined;
+                return {
+                  reserva,
+                  geometry: getTimelineBarGeometry(
+                    reserva,
+                    startDate,
+                    days.length,
+                    cellWidthPx,
+                    checkoutPreview,
+                  ),
+                };
+              })
+              .filter((item): item is { reserva: any; geometry: TimelineBarGeometry } => Boolean(item.geometry));
             return (
             <div
               key={hab.id}
@@ -449,38 +500,55 @@ export function TimelineGrid({
                   {hab.tipo_nombre || status.label}
                 </span>
               </div>
-                  {days.map((day, dayIndex) => {
-                    const reserva = getReservationForCell(hab.id, dayIndex);
-                    const position = reserva ? getReservationPosition(reserva, dayIndex) : null;
-                    const isSelecting = isCellInDragSelection(hab.id, dayIndex);
-                    const isToday = isSameDay(day, today);
+                  <div
+                    className={cn("relative flex flex-shrink-0", cellHeight)}
+                    style={{ width: `${days.length * cellWidthPx}px` }}
+                  >
+                    {/* La cuadrícula siempre conserva celdas completas. Las reservas viven encima
+                        con geometría de media jornada: salida a la izquierda, entrada a la derecha. */}
+                    {days.map((day, dayIndex) => {
+                      const isSelecting = isCellInDragSelection(hab.id, dayIndex);
+                      const isToday = isSameDay(day, today);
+                      return (
+                        <div
+                          key={dayIndex}
+                          className={cn(
+                            "h-full border-r border-b transition-colors flex-shrink-0",
+                            canCreate ? "cursor-crosshair hover:bg-accent/50" : "cursor-default bg-muted/10",
+                            cellWidth,
+                            isSelecting && "bg-primary/20",
+                            isToday && "border-l-2 border-l-[#10233F] bg-[#10233F]/[0.03]"
+                          )}
+                          onMouseDown={canCreate ? () => handleMouseDown(hab.id, dayIndex) : undefined}
+                          onMouseEnter={canCreate ? () => handleMouseEnter(hab.id, dayIndex) : undefined}
+                          onMouseUp={canCreate ? handleMouseUp : undefined}
+                        />
+                      );
+                    })}
 
-                    if (reserva && position) {
+                    {roomReservationBars.map(({ reserva, geometry }) => {
                       const estadoCfg = getEstadoConfig(reserva.estado);
-                      // Cada noche sigue siendo una celda para conservar el cálculo y los clics,
-                      // pero la reserva debe percibirse como una sola barra continua.
                       const solidStatusClasses = estadoCfg.block
                         .split(' ')
                         .filter((className) => !className.startsWith('hover:'))
                         .join(' ');
+                      const statusTextClasses = solidStatusClasses
+                        .split(' ')
+                        .filter((className) => !className.startsWith('bg-'))
+                        .join(' ');
                       const EstadoIcon = estadoCfg.icon;
                       const tienesSaldo = parseFloat(reserva.saldo_pendiente) > 0;
-                      const previousReservation = dayIndex > 0 ? getReservationForCell(hab.id, dayIndex - 1) : null;
-                      const isLabelCell = !previousReservation || previousReservation.id !== reserva.id;
-                      let visibleSpan = 1;
-                      while (
-                        dayIndex + visibleSpan < days.length
-                        && getReservationForCell(hab.id, dayIndex + visibleSpan)?.id === reserva.id
-                      ) visibleSpan += 1;
                       const guestFullName = fullName(reserva);
                       const total = Number(reserva.total || 0);
                       const paid = Number(reserva.total_pagado || 0);
                       const balance = Number(reserva.saldo_pendiente ?? Math.max(0, total - paid));
                       const canCheckin = ['Pendiente', 'Confirmada'].includes(String(reserva.estado || '')) && !reserva.checkin_realizado;
                       const activeStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && !reserva.checkout_realizado;
-                      const resizing = resizePreview?.reservationId === reserva.id && (position === 'end' || position === 'single');
+                      const resizing = resizePreview?.reservationId === reserva.id;
+                      const clipPath = getReservationClipPath(geometry);
+
                       return (
-                        <Popover key={dayIndex}>
+                        <Popover key={reserva.id}>
                           <TooltipProvider delayDuration={450}>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -495,35 +563,41 @@ export function TimelineGrid({
                                     }}
                                     onDragEnd={() => { setDraggedReservation(null); setDropTarget(null); }}
                                     className={cn(
-                                      "relative border-b cursor-pointer flex-shrink-0 select-none",
-                                      cellWidth,
-                                      cellHeight,
-                                      solidStatusClasses,
-                                      isLabelCell ? 'z-[2]' : 'z-0',
-                                      (position === 'end' || position === 'single') && 'border-r',
-                                      (position === 'start' || position === 'single') && 'rounded-l',
-                                      (position === 'end' || position === 'single') && 'rounded-r',
+                                      "group absolute top-0.5 bottom-0.5 z-[2] cursor-pointer select-none",
+                                      statusTextClasses,
                                       focusReservationId === reserva.id && 'ring-2 ring-[#10233F] ring-offset-1',
-                                      resizing && !resizePreview?.valid && 'ring-2 ring-red-500 ring-inset',
+                                      resizing && !resizePreview?.valid && 'ring-2 ring-red-500',
                                     )}
+                                    style={{ left: geometry.left, width: geometry.width }}
                                     aria-label={`Reserva ${guestFullName} — ${estadoCfg.label}`}
                                   >
-                                    {isLabelCell && (
-                                      <div
-                                        className="pointer-events-none relative z-10 flex h-full items-center gap-1 overflow-hidden px-1.5"
-                                        style={{ width: `${visibleSpan * cellWidthPx}px` }}
-                                        title={guestFullName}
-                                      >
-                                        <EstadoIcon className={cn('flex-shrink-0', isCompact ? 'h-2.5 w-2.5' : 'h-3 w-3')} aria-hidden="true" />
-                                        <span className={cn("min-w-0 flex-1 truncate font-semibold", isCompact ? "text-[8px]" : "text-[10px]")}>
-                                          {guestFullName}
-                                        </span>
-                                        {String(reserva.origen || '').toLowerCase() === 'web' && !isCompact && <CalendarPlus className="h-3 w-3 shrink-0" aria-label="Reserva en línea" />}
-                                        {reserva.solicitudes_especiales && !isCompact && <Clock3 className="h-3 w-3 shrink-0" aria-label="Solicitud especial" />}
-                                        {tienesSaldo && !isCompact && <CircleDollarSign className="h-3 w-3 shrink-0" aria-label="Saldo pendiente" />}
-                                      </div>
-                                    )}
-                                    {canCreate && (position === 'end' || position === 'single') && (
+                                    <div
+                                      aria-hidden="true"
+                                      className={cn(
+                                        "pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/60 transition-[filter] group-hover:brightness-95",
+                                        solidStatusClasses,
+                                      )}
+                                      style={{ clipPath }}
+                                    />
+
+                                    <div
+                                      className={cn(
+                                        "pointer-events-none relative z-10 flex h-full items-center gap-1 overflow-hidden",
+                                        geometry.clippedStart ? "pl-1.5" : "pl-3",
+                                        geometry.clippedEnd ? "pr-1.5" : "pr-3",
+                                      )}
+                                      title={guestFullName}
+                                    >
+                                      <EstadoIcon className={cn('flex-shrink-0', isCompact ? 'h-2.5 w-2.5' : 'h-3 w-3')} aria-hidden="true" />
+                                      <span className={cn("min-w-0 flex-1 truncate font-semibold", isCompact ? "text-[8px]" : "text-[10px]")}>
+                                        {guestFullName}
+                                      </span>
+                                      {String(reserva.origen || '').toLowerCase() === 'web' && !isCompact && <CalendarPlus className="h-3 w-3 shrink-0" aria-label="Reserva en línea" />}
+                                      {reserva.solicitudes_especiales && !isCompact && <Clock3 className="h-3 w-3 shrink-0" aria-label="Solicitud especial" />}
+                                      {tienesSaldo && !isCompact && <CircleDollarSign className="h-3 w-3 shrink-0" aria-label="Saldo pendiente" />}
+                                    </div>
+
+                                    {canCreate && !geometry.clippedEnd && (
                                       <button
                                         type="button"
                                         className="absolute inset-y-1 right-0 z-20 w-2 cursor-ew-resize rounded-full bg-white/0 transition-colors hover:bg-white/50"
@@ -541,6 +615,7 @@ export function TimelineGrid({
                                         }}
                                       />
                                     )}
+
                                     {resizing && resizePreview && (
                                       <div className={cn(
                                         'pointer-events-none absolute bottom-full right-0 z-50 mb-2 w-max rounded-lg px-2.5 py-1.5 text-[10px] font-semibold shadow-lg',
@@ -588,25 +663,8 @@ export function TimelineGrid({
                           </PopoverContent>
                         </Popover>
                       );
-                    }
-
-                    return (
-                      <div
-                        key={dayIndex}
-                        className={cn(
-                          "border-r border-b transition-colors flex-shrink-0",
-                          canCreate ? "cursor-crosshair hover:bg-accent/50" : "cursor-default bg-muted/10",
-                          cellWidth,
-                          cellHeight,
-                          isSelecting && "bg-primary/20",
-                          isToday && "border-l-2 border-l-[#10233F] bg-[#10233F]/[0.03]"
-                        )}
-                        onMouseDown={canCreate ? () => handleMouseDown(hab.id, dayIndex) : undefined}
-                        onMouseEnter={canCreate ? () => handleMouseEnter(hab.id, dayIndex) : undefined}
-                        onMouseUp={canCreate ? handleMouseUp : undefined}
-                      />
-                    );
-                  })}
+                    })}
+                  </div>
                 </div>
               );
             })}
