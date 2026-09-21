@@ -11,7 +11,7 @@ import { canAccess } from '@/lib/permissions';
 import { useAuth } from '@/contexts/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/currency';
-import { calculateReservationReservationFinancialSnapshot, type ReservationReservationFinancialSnapshot } from '@/lib/reservationFinancials';
+import { calculateReservationFinancialSnapshot, type ReservationFinancialSnapshot } from '@/lib/reservationFinancials';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 import { StayConsumptionPicker, type StayConsumptionItem } from '@/components/reservas/StayConsumptionPicker';
@@ -91,18 +91,7 @@ const ROUTINE_OPERATIONS = ['add_charge', 'partial_payment', 'add_guest', 'split
 
 const dateOnly = (value: any) => String(value || '').slice(0, 10);
 const money = (value: any) => Number(value || 0);
-const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
-const dateFromValue = (value: any) => {
-  const [year, month, day] = dateOnly(value).split('-').map(Number);
-  return year && month && day ? new Date(year, month - 1, day, 12) : undefined;
-};
 const dateToValue = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-const nightsBetween = (checkin: any, checkout: any) => {
-  const start = dateFromValue(checkin);
-  const end = dateFromValue(checkout);
-  return start && end ? Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000)) : 1;
-};
-
 const shiftDate = (value: any, days: number) => {
   const [year, month, day] = dateOnly(value).split('-').map(Number);
   if (!year || !month || !day) return '';
@@ -196,9 +185,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     .sort((a, b) => dateOnly(a.fecha_checkin).localeCompare(dateOnly(b.fecha_checkin)))[0] || null,
   [reservations, reserva.fecha_checkout, reserva.habitacion_id, reserva.id]);
   const financialPreview = useMemo(() => {
-    const current = calculateReservationReservationFinancialSnapshot(reserva);
+    const current = calculateReservationFinancialSnapshot(reserva);
     if (!selected) return null;
-    const options: Parameters<typeof calculateReservationReservationFinancialSnapshot>[1] = {};
+    const options: Parameters<typeof calculateReservationFinancialSnapshot>[1] = {};
     let visible = false;
 
     if (DATE_OPERATIONS.includes(selected.id) || selected.id === 'reopen_checkout') {
@@ -246,7 +235,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       visible = true;
     }
 
-    return visible ? { current, next: calculateReservationReservationFinancialSnapshot(reserva, options) } : null;
+    return visible ? { current, next: calculateReservationFinancialSnapshot(reserva, options) } : null;
   }, [payload, reserva, selected]);
 
   const load = async () => {
@@ -423,7 +412,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     }
     if (selected.id === 'partial_payment') {
       const amount = money(payload.amount);
-      const currentBalance = calculateReservationReservationFinancialSnapshot(reserva).balance;
+      const currentBalance = calculateReservationFinancialSnapshot(reserva).balance;
       if (amount <= 0 || amount > currentBalance + 0.009 || !payload.payment_method) {
         toast({ title: 'Revisa el pago', description: amount > currentBalance ? 'El abono no puede superar el saldo pendiente.' : 'Captura un importe válido y selecciona la forma de pago.', variant: 'destructive' });
         return;
@@ -697,7 +686,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
   const consumptionBlocked = Boolean(selected?.id === 'add_charge' && (!Array.isArray(payload.items) || payload.items.length === 0));
   const partialPaymentBlocked = Boolean(selected?.id === 'partial_payment' && (
     money(payload.amount) <= 0
-    || money(payload.amount) > calculateReservationReservationFinancialSnapshot(reserva).balance + 0.009
+    || money(payload.amount) > calculateReservationFinancialSnapshot(reserva).balance + 0.009
     || !payload.payment_method
   ));
   const selectedRequiresReason = Boolean(selected && !ROUTINE_OPERATIONS.includes(selected.id));
