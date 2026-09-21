@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, LockKeyhole } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -23,6 +24,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, title, subtitle, fitViewport = false, fullWidth = false }: MainLayoutProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const workspaceMode = fitViewport && fullWidth;
   const { openShift, shiftRequired, viewOnlyMode } = useShift();
   const location = useLocation();
   const readOnlyActive = shiftRequired && !openShift && viewOnlyMode && location.pathname !== '/turnos';
@@ -160,7 +162,12 @@ export function MainLayout({ children, title, subtitle, fitViewport = false, ful
         }}
       >
         <AppSidebar />
-        <SidebarInset className="flex flex-1 flex-col min-w-0 h-full overflow-hidden bg-background lg:rounded-l-2xl lg:my-2 lg:mr-2 lg:border lg:shadow-sm">
+        <SidebarInset className={cn(
+          'flex flex-1 flex-col min-w-0 h-full overflow-hidden bg-background',
+          workspaceMode
+            ? 'lg:m-0 lg:rounded-none lg:border-0 lg:shadow-none'
+            : 'lg:my-2 lg:mr-2 lg:rounded-l-2xl lg:border lg:shadow-sm',
+        )}>
           <OfflineBanner />
           <AlertaSuscripcion />
           <Header title={title} subtitle={subtitle} />
