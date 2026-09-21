@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export function StayDeliverables({ reservaId, active }: { reservaId: string; active: boolean }) {
+export function StayDeliverables({ reservaId, active, embedded = false }: { reservaId: string; active: boolean; embedded?: boolean }) {
   const { toast } = useToast();
   const [catalog, setCatalog] = useState<any[]>([]);
   const [assigned, setAssigned] = useState<any[]>([]);
@@ -96,8 +96,8 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
   const pending = assigned.filter((item) => item.requiere_devolucion && !item.devuelto).length;
 
   return <>
-    <section className="overflow-hidden rounded-[8px] border border-slate-200/90 bg-white">
-      <div className="flex min-h-[52px] items-center justify-between gap-3 px-3.5 py-2">
+    <section className={embedded ? 'bg-white' : 'overflow-hidden rounded-[8px] border border-slate-200 bg-white'}>
+      <div className={`flex min-h-[54px] items-center justify-between gap-3 px-4 py-2.5 ${embedded ? '' : ''}`}>
         <div className="flex min-w-0 items-center gap-2">
           <KeyRound className="h-4 w-4 shrink-0 text-[#10233F]" />
           <div className="min-w-0">
@@ -116,11 +116,11 @@ export function StayDeliverables({ reservaId, active }: { reservaId: string; act
         </Button>}
       </div>
 
-      {!loading && assigned.length > 0 && <div className="divide-y border-t">
+      {!loading && assigned.length > 0 && <div className="divide-y border-t border-slate-100">
         {assigned.map((item) => {
           const quantityAssigned = Number(item.cantidad || 1);
           const quantityReturned = Number(item.cantidad_devuelta || 0);
-          return <div key={item.id} className="flex min-h-10 items-center justify-between gap-3 px-3.5 py-2">
+          return <div key={item.id} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2.5">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{item.nombre}</p>
               <p className="truncate text-xs text-muted-foreground">
