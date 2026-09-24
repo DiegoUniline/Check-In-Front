@@ -62,6 +62,7 @@ const VIEWS: ViewItem[] = [
   { label: 'Proveedores', path: '/proveedores', icon: Truck },
   { label: 'Historial', path: '/historial', icon: History },
   { label: 'Histórico Entradas', path: '/historial-reservas', icon: History },
+  { label: 'Facturación', path: '/facturacion', icon: FileText },
   { label: 'Catálogos', path: '/catalogos', icon: FileText },
   { label: 'Usuarios', path: '/usuarios', icon: UserCog },
   { label: 'Permisos', path: '/permisos', icon: ShieldCheck },

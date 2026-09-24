@@ -175,6 +175,9 @@ export default function Reservas() {
   // Se usa para poder "visualizar" las llegadas (no solo contarlas).
   const [llegadasHoyData, setLlegadasHoyData] = useState<any[]>([]);
   const [modalLlegadas, setModalLlegadas] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<any | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState('');
+  const [cancelSaving, setCancelSaving] = useState(false);
 
   // Relacionado con `check-in-back/src/routes/reservas.js` (GET `/reservas/checkouts-hoy`):
   // Este arreglo contiene las "salidas de hoy" ya filtradas por backend (fecha + estado).
@@ -449,6 +452,15 @@ export default function Reservas() {
       return;
     }
     if (action === 'checkin') return navigate(`/checkin/${reserva.id}`);
+    if (action === 'cancel') {
+      if (viewOnlyMode) {
+        toast({ title: 'Modo sólo consulta', description: 'Abre un turno para cancelar reservaciones.' });
+        return;
+      }
+      setCancelMotivo('');
+      setCancelTarget(reserva);
+      return;
+    }
     if (action === 'checkout') return navigate(`/checkout/${reserva.id}`);
     if (viewOnlyMode) {
       toast({ title: 'Modo sólo consulta', description: 'Abre un turno para realizar esta operación.' });
@@ -1422,6 +1434,64 @@ export default function Reservas() {
       />
 
       {/* Modal: Llegadas de hoy */}
+      {/* Cancelación rápida: motivo obligatorio; el servidor guarda quién y cuándo. */}
+      <Dialog open={Boolean(cancelTarget)} onOpenChange={(open) => { if (!open && !cancelSaving) setCancelTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancelar reservación</DialogTitle>
+          </DialogHeader>
+          {cancelTarget && (
+            <div className="space-y-3">
+              <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                <p className="font-semibold">{cancelTarget.cliente_nombre || 'Huésped'} · #{cancelTarget.numero_reserva || String(cancelTarget.id).slice(0, 8)}</p>
+                <p className="text-xs text-muted-foreground">
+                  Hab. {cancelTarget.habitacion_numero || '—'} · {formatDate(cancelTarget.fecha_checkin)} → {formatDate(cancelTarget.fecha_checkout)}
+                  {Number(cancelTarget.total_pagado || 0) > 0 ? ` · Pagado ${formatCurrency(Number(cancelTarget.total_pagado))}` : ''}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium" htmlFor="motivo-cancelacion">Motivo de cancelación *</label>
+                <textarea
+                  id="motivo-cancelacion"
+                  autoFocus
+                  rows={3}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  placeholder="Ej. El huésped canceló por teléfono"
+                  value={cancelMotivo}
+                  onChange={(e) => setCancelMotivo(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se registrará con tu usuario ({user?.nombre || user?.email}) y la fecha y hora actual.
+                  {Number(cancelTarget.total_pagado || 0) > 0 ? ' Los pagos registrados se conservan; revisa si hay que devolver dinero.' : ''}
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" disabled={cancelSaving} onClick={() => setCancelTarget(null)}>Volver</Button>
+                <Button
+                  variant="destructive"
+                  disabled={cancelSaving || cancelMotivo.trim().length < 3}
+                  onClick={async () => {
+                    setCancelSaving(true);
+                    try {
+                      await api.cancelarReserva(cancelTarget.id, cancelMotivo.trim());
+                      toast({ title: 'Reservación cancelada', description: `Motivo: ${cancelMotivo.trim()}` });
+                      setCancelTarget(null);
+                      await cargarDatos();
+                    } catch (error: any) {
+                      toast({ title: 'No se pudo cancelar', description: error.message, variant: 'destructive' });
+                    } finally {
+                      setCancelSaving(false);
+                    }
+                  }}
+                >
+                  {cancelSaving ? 'Cancelando…' : 'Cancelar reservación'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={modalLlegadas} onOpenChange={setModalLlegadas}>
         <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[calc(100dvh-1rem)] sm:max-h-[80dvh] overflow-y-auto">
           <DialogHeader>

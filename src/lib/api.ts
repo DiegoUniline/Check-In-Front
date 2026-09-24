@@ -1417,6 +1417,35 @@ class ApiClient {
     });
     return r;
   };
+  // ------- Facturación de reservas -------
+  getFacturacion = async (): Promise<any[]> => {
+    const { data, error } = await (supabase as any).from('reservas')
+      .select('*, clientes(nombre, apellido_paterno, apellido_materno, email, telefono, tipo_documento, numero_documento), habitaciones(numero)')
+      .eq('hotel_id', this.hid())
+      .eq('requiere_factura', true)
+      .order('fecha_checkin', { ascending: false });
+    if (error) throw error;
+    return (data || []).map((r: any) => ({
+      ...r,
+      cliente_nombre: r.clientes ? [r.clientes.nombre, r.clientes.apellido_paterno, r.clientes.apellido_materno].filter(Boolean).join(' ') : '',
+      habitacion_numero: r.habitaciones?.numero,
+    }));
+  };
+  setRequiereFactura = async (id: string, requiere: boolean): Promise<any> => {
+    const { data, error } = await (supabase as any).from('reservas')
+      .update({ requiere_factura: requiere }).eq('id', id).eq('hotel_id', this.hid()).select().single();
+    if (error) throw error;
+    return data;
+  };
+  updateFacturaEstado = async (id: string, estado: 'Pendiente' | 'Realizada' | 'Enviada', extra: { folio?: string; notas?: string } = {}): Promise<any> => {
+    const patch: Record<string, any> = { factura_estado: estado };
+    if (extra.folio !== undefined) patch.factura_folio = extra.folio || null;
+    if (extra.notas !== undefined) patch.factura_notas = extra.notas || null;
+    const { data, error } = await (supabase as any).from('reservas')
+      .update(patch).eq('id', id).eq('hotel_id', this.hid()).eq('requiere_factura', true).select().single();
+    if (error) throw error;
+    return data;
+  };
   confirmarReserva = async (id: string): Promise<any> => {
     const { data: r, error } = await supabase.from('reservas').update({ estado: 'Confirmada' }).eq('id', id).select().single();
     if (error) throw error; return r;

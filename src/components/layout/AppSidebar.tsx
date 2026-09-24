@@ -30,6 +30,7 @@ import {
   PanelLeftClose,
   ClipboardCheck,
   X,
+  FileText,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
@@ -71,6 +72,7 @@ const operationsNavItems = [
   { title: 'Mantenimiento', url: '/mantenimiento', icon: Wrench, viewKey: 'mantenimiento' },
   { title: 'Cierre del día', url: '/cierre-dia', icon: ClipboardCheck, viewKey: 'cierre-dia' },
   { title: 'Histórico Entradas', url: '/historial-reservas', icon: History, viewKey: 'reservas' },
+  { title: 'Facturación', url: '/facturacion', icon: FileText, viewKey: 'facturacion' },
 ];
 
 const salesNavItems = [

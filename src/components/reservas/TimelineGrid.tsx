@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import {
   ArrowLeftRight, BedDouble, CalendarPlus, CircleDollarSign, Clock3,
-  ChevronDown, ChevronRight, CreditCard, DoorOpen, Eye, Layers3, LogOut, Receipt, UserPlus, Wrench,
+  ChevronDown, ChevronRight, CreditCard, DoorOpen, Eye, Layers3, LogOut, Receipt, UserPlus, Wrench, XCircle,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { getEstadoConfig } from './estadoConfig';
@@ -24,7 +24,8 @@ export type TimelineReservationAction =
   | 'early_departure'
   | 'room_change'
   | 'add_charge'
-  | 'partial_payment';
+  | 'partial_payment'
+  | 'cancel';
 
 export type TimelineRoomGrouping = 'smart' | 'none' | 'floor' | 'category' | 'building' | 'cleaning';
 
@@ -711,6 +712,7 @@ export function TimelineGrid({
                                   <QuickAction icon={Receipt} label="Consumo" onClick={() => dispatchAction(reserva, 'add_charge')} />
                                   <QuickAction icon={CreditCard} label="Registrar pago" onClick={() => dispatchAction(reserva, 'partial_payment')} />
                                 </div>
+                                {canCheckin && <Button variant="outline" className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => dispatchAction(reserva, 'cancel')}><XCircle className="mr-2 h-4 w-4" />Cancelar reserva</Button>}
                               </> : <p className="rounded-lg bg-blue-50 p-2.5 text-center text-xs text-blue-800">Modo sólo consulta. Abre un turno para realizar operaciones.</p>}
                             </div>
                           </PopoverContent>

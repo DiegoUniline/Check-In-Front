@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, BedDouble, CalendarDays, Clock3, DoorOpen, Ellipsis, History,
+  ArrowLeft, BedDouble, CalendarDays, Clock3, DoorOpen, Ellipsis, FileText, History,
   LogOut, Mail, Pencil, Phone, RefreshCw, Users, WalletCards,
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -266,6 +266,7 @@ function ReservationQuickSummary({
     <Fact icon={Clock3} label="Salida" value={departureTime} />
     <Fact icon={Users} label="Huéspedes" value={String(totalGuests)} />
     <Fact icon={BedDouble} label="Origen" value={reserva.origen || 'Recepción'} />
+    <InvoiceFact reserva={reserva} />
 
     {(phone || email) && <div className="ml-auto flex min-w-0 items-center self-stretch border-l border-slate-200 pl-3">
       {phone && <a className="flex h-10 items-center gap-1.5 px-2.5 text-[11px] text-muted-foreground hover:text-[#10233F] hover:underline" href={`tel:${phone}`}>
@@ -488,4 +489,32 @@ function ReservationTrail({ reserva }: { reserva: any }) {
         </div>)}
     </div>
   </section>;
+}
+
+function InvoiceFact({ reserva }: { reserva: any }) {
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+  const requiere = Boolean(reserva.requiere_factura);
+  const toggle = async () => {
+    setSaving(true);
+    try {
+      await api.setRequiereFactura(reserva.id, !requiere);
+      toast({ title: requiere ? 'Ya no requiere factura' : 'Factura pendiente', description: requiere ? '' : 'Aparece en Facturación › Pendientes.' });
+    } catch (error: any) {
+      toast({ title: 'No se pudo actualizar', description: error.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+  return <div className="flex h-12 min-w-[150px] items-center gap-2.5 border-l border-slate-200 px-4">
+    <FileText className="h-4 w-4 shrink-0 text-[#10233F]/70" />
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Factura</p>
+      <button type="button" disabled={saving || reserva.factura_estado === 'Enviada'} onClick={() => void toggle()}
+        className="mt-0.5 text-[13px] font-bold leading-none text-[#10233F] underline-offset-2 hover:underline disabled:no-underline disabled:opacity-80"
+        title={requiere ? 'Clic para quitar' : 'Clic para marcar que requiere factura'}>
+        {requiere ? (reserva.factura_estado || 'Pendiente') : 'No requiere'}
+      </button>
+    </div>
+  </div>;
 }

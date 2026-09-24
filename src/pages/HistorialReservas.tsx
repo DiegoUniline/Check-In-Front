@@ -526,6 +526,7 @@ export default function HistorialReservas() {
                       <TableHead>Estado</TableHead>
                       <TableHead>Origen</TableHead>
                       <TableHead className="whitespace-nowrap">Creada por</TableHead>
+                      <TableHead>Factura</TableHead>
                       <TableHead className="text-right w-[60px]">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -580,6 +581,11 @@ export default function HistorialReservas() {
                           {['Cancelada', 'NoShow'].includes(reserva.estado) && reserva.cancelada_por_nombre && (
                             <p className="max-w-[140px] truncate text-red-700">Canceló: {reserva.cancelada_por_nombre}</p>
                           )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {reserva.requiere_factura
+                            ? <Badge variant="outline" className={reserva.factura_estado === 'Enviada' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : reserva.factura_estado === 'Realizada' ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'}>{reserva.factura_estado || 'Pendiente'}</Badge>
+                            : <span className="text-muted-foreground">No</span>}
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
@@ -650,7 +656,7 @@ export default function HistorialReservas() {
                     ))}
                     {reservasPaginadas.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
+                        <TableCell colSpan={13} className="text-center text-muted-foreground py-12">
                           No se encontraron reservas
                         </TableCell>
                       </TableRow>

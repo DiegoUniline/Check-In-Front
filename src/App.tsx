@@ -38,6 +38,7 @@ import Compras from "./pages/Compras";
 import Proveedores from "./pages/Proveedores";
 import Historial from "./pages/Historial";
 import HistorialReservas from "./pages/HistorialReservas";
+import Facturacion from "./pages/Facturacion";
 import NotFound from "./pages/NotFound";
 import Catalogos from "./pages/Catalogos";
 import Usuarios from "./pages/Usuarios";
@@ -366,6 +367,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="historial">
           <Historial />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/facturacion"
+      element={
+        <ProtectedRoute viewKey="facturacion">
+          <Facturacion />
         </ProtectedRoute>
       }
     />

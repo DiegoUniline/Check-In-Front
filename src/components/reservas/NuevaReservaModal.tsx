@@ -206,6 +206,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
   const [loading, setLoading] = useState(false);
   const [origen, setOrigen] = useState<'Reserva' | 'Recepcion'>('Reserva');
+  const [requiereFactura, setRequiereFactura] = useState(false);
   const { toast } = useToast();
 
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
@@ -236,6 +237,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         || format(preload.fechaCheckin, 'yyyy-MM-dd') <= todayLocal();
       setOrigen(entradaHoy ? 'Recepcion' : (preload?.origen || 'Reserva'));
       setCrearNuevoCliente(false);
+      setRequiereFactura(false);
       setMostrarSelectorHabitacion(!preload?.habitacion?.id);
       setFiltroTipoHabitacion('all');
       setAvailabilityStatus('idle');
@@ -667,6 +669,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         })),
         checkin: origen === 'Recepcion',
       });
+      if (requiereFactura && reserva?.id) {
+        try {
+          await api.setRequiereFactura(reserva.id, true);
+        } catch (err: any) {
+          toast({ title: 'La reserva se creó, pero no se marcó la factura', description: err.message, variant: 'destructive' });
+        }
+      }
       if (origen === 'Recepcion' && roomIsDirty(freshRoom)) {
         toast({ title: 'Habitación pendiente de limpieza', description: `Se registró la entrada en la #${freshRoom.numero}; avisa a limpieza.` });
       }
@@ -1113,6 +1122,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         <div className="border-t border-border pt-4 lg:col-span-2">
           <FormSection icon={StickyNote} title="Opcionales" hint="Notas, impuestos y entregables en una sola franja compacta.">
             <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(280px,0.9fr)]">
+              <label className="col-span-full flex w-fit cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted/40">
+                <input type="checkbox" className="h-4 w-4 accent-[#10233F]" checked={requiereFactura} onChange={(e) => setRequiereFactura(e.target.checked)} />
+                ¿Requiere factura? {requiereFactura && <span className="text-muted-foreground">· quedará Pendiente en Facturación</span>}
+              </label>
               <Field label="Solicitudes del huésped">
                 <Textarea rows={2} className="h-12 min-h-12 resize-none text-xs" value={formData.solicitudesEspeciales} onChange={(e) => setFormData({ ...formData, solicitudesEspeciales: e.target.value })} placeholder="Cuna, piso alto, llegada tarde…" />
               </Field>
