@@ -435,7 +435,7 @@ export function TimelineGrid({
           <div className="flex sticky top-0 z-20 bg-card border-b">
             <div className={cn(
               "flex-shrink-0 p-2 border-r bg-card flex items-center justify-center sticky left-0 z-30",
-              isCompact ? "w-28" : "w-40"
+              isCompact ? "w-44" : "w-60"
             )}>
               <span className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
                 Habitación
@@ -472,7 +472,7 @@ export function TimelineGrid({
                       onClick={() => toggleGroup(group.key)}
                       className={cn(
                         'sticky left-0 z-[15] flex shrink-0 items-center gap-1.5 border-r border-[#10233F]/10 bg-[#F5F7FA] px-2 text-left text-[#10233F] transition-colors hover:bg-[#EAF0F7] dark:bg-card dark:text-foreground dark:hover:bg-muted',
-                        isCompact ? 'w-28' : 'w-40',
+                        isCompact ? 'w-44' : 'w-60',
                       )}
                       aria-expanded={!collapsed}
                       aria-label={`${collapsed ? 'Expandir' : 'Contraer'} ${group.label}`}
@@ -539,13 +539,13 @@ export function TimelineGrid({
               <div
                 className={cn(
                   "flex-shrink-0 border-r border-b bg-card px-2 py-1 flex items-center gap-1.5 sticky left-0 z-10 min-w-0",
-                  isCompact ? "w-28" : "w-40",
+                  isCompact ? "w-44" : "w-60",
                   cellHeight
                 )}
               >
                 <span className={cn('h-2 w-2 shrink-0 rounded-full', status.dot)} title={status.label} />
                 <span className={cn("font-semibold flex-shrink-0", isCompact ? "text-[11px]" : "text-sm")}>{hab.numero}</span>
-                <span className={cn("min-w-0 truncate text-muted-foreground", isCompact ? "text-[9px]" : "text-[11px]")} title={`${hab.tipo_nombre || 'Sin categoría'} · ${status.label}`}>
+                <span className={cn("min-w-0 line-clamp-2 leading-tight text-muted-foreground", isCompact ? "text-[9px]" : "text-[10.5px]")} title={`${hab.tipo_nombre || 'Sin categoría'} · ${status.label}`}>
                   {hab.tipo_nombre || status.label}
                 </span>
               </div>

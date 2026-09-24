@@ -24,6 +24,8 @@ interface RecepcionGridProps {
   onLibreClick: (habitacion: any) => void;
   onOcupadaClick?: (reserva: any) => void;
   onReservadaClick?: (reserva: any) => void;
+  /** Oculta el panel de filtros propio (la página ya filtra). */
+  hideFilters?: boolean;
 }
 
 type EstadoCard = 'libre' | 'reservada' | 'ocupada' | 'mantenimiento';
@@ -111,6 +113,7 @@ export function RecepcionGrid({
   onLibreClick,
   onOcupadaClick,
   onReservadaClick,
+  hideFilters = false,
 }: RecepcionGridProps) {
   const [vista, setVista] = useState<'cards' | 'tabla'>('cards');
   const [filtroEstado, setFiltroEstado] = useState<EstadoCard | 'all'>('all');
@@ -209,9 +212,9 @@ export function RecepcionGrid({
   };
 
   return (
-    <div className="grid items-start gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+    <div className={cn('grid items-start gap-3', !hideFilters && 'lg:grid-cols-[220px_minmax(0,1fr)]')}>
       {/* Filtros a la izquierda */}
-      <aside className="space-y-3 rounded-lg border bg-card p-2.5 lg:sticky lg:top-2 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+      {!hideFilters && <aside className="space-y-3 rounded-lg border bg-card p-2.5 lg:sticky lg:top-2 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -293,7 +296,7 @@ export function RecepcionGrid({
             <X className="mr-1 h-3 w-3" />Limpiar filtros
           </Button>
         )}
-      </aside>
+      </aside>}
 
       <div className="min-w-0">
         {itemsFiltrados.length === 0 ? (
