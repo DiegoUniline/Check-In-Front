@@ -1574,6 +1574,26 @@ class ApiClient {
   };
 
   // ------- Entregables -------
+  // ------- Políticas de reserva -------
+  getPoliticasReserva = async (): Promise<any[]> => {
+    const { data, error } = await (supabase as any).from('politicas_reserva').select('*').eq('hotel_id', this.hid())
+      .order('fecha_inicio', { ascending: true, nullsFirst: false }).order('created_at');
+    if (error) throw error;
+    return data || [];
+  };
+  savePoliticaReserva = async (id: string | null, data: Record<string, any>): Promise<any> => {
+    const q = id
+      ? (supabase as any).from('politicas_reserva').update(data).eq('id', id).eq('hotel_id', this.hid())
+      : (supabase as any).from('politicas_reserva').insert({ ...data, hotel_id: this.hid() });
+    const { data: r, error } = await q.select().single();
+    if (error) throw error;
+    return r;
+  };
+  deletePoliticaReserva = async (id: string): Promise<void> => {
+    const { error } = await (supabase as any).from('politicas_reserva').delete().eq('id', id).eq('hotel_id', this.hid());
+    if (error) throw error;
+  };
+
   // ------- Descuentos -------
   getDescuentos = async (soloActivos = false): Promise<any[]> => {
     let q = (supabase as any).from('descuentos').select('*').eq('hotel_id', this.hid()).order('nombre');

@@ -26,6 +26,7 @@ import { format, addDays, differenceInCalendarDays, eachDayOfInterval, parseISO 
 import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { resolverPrecioTemporada, loadTemporadas } from '@/lib/temporadas';
+import { describirPolitica, validarPoliticas, type PoliticaReserva } from '@/lib/politicasReserva';
 import bannerImg from '@/assets/hotel-banner.jpg';
 import room1 from '@/assets/room-1.jpg';
 import room2 from '@/assets/room-2.jpg';
@@ -117,6 +118,7 @@ export default function PublicHotel() {
     noches: number;
   } | null>(null);
   const [form, setForm] = useState({ nombre: '', apellido_paterno: '', email: '', telefono: '', solicitudes: '' });
+  const [politicas, setPoliticas] = useState<PoliticaReserva[]>([]);
 
   // Carga inicial
   useEffect(() => {
@@ -140,6 +142,9 @@ export default function PublicHotel() {
       setTipos((tps || []) as any);
       setHabitaciones((hbs || []) as any);
       loadTemporadas(h.id).catch(() => {});
+      (supabase as any).rpc('get_public_booking_policies', { p_hotel_id: h.id })
+        .then(({ data }: any) => setPoliticas(Array.isArray(data) ? data : []))
+        .catch(() => setPoliticas([]));
       setLoading(false);
     })();
   }, [slug]);
@@ -201,6 +206,12 @@ export default function PublicHotel() {
 
   const ns = range?.from && range?.to ? Math.max(0, differenceInCalendarDays(range.to, range.from)) : 0;
   const nsBooking = bookingRange?.from && bookingRange?.to ? Math.max(0, differenceInCalendarDays(bookingRange.to, bookingRange.from)) : 0;
+  const politicaError = range?.from && range?.to
+    ? validarPoliticas(politicas, format(range.from, 'yyyy-MM-dd'), format(range.to, 'yyyy-MM-dd'))
+    : null;
+  const politicaErrorBooking = bookingRange?.from && bookingRange?.to
+    ? validarPoliticas(politicas, format(bookingRange.from, 'yyyy-MM-dd'), format(bookingRange.to, 'yyyy-MM-dd'))
+    : null;
 
   const habitacionesConFotos = (h: Habitacion) => {
     const t = h.tipo_habitacion_id ? tipoMap[h.tipo_habitacion_id] : null;
@@ -217,6 +228,9 @@ export default function PublicHotel() {
     if (!hotel || !bookingHab) return;
     if (!bookingRange?.from || !bookingRange?.to || nsBooking < 1) {
       toast({ title: 'Selecciona fechas', description: 'Elige check-in y check-out en el calendario.', variant: 'destructive' }); return;
+    }
+    if (politicaErrorBooking) {
+      toast({ title: 'Política de reserva', description: politicaErrorBooking, variant: 'destructive' }); return;
     }
     if (!isHabDisponibleEnRango(bookingHab.id, bookingRange)) {
       toast({ title: 'Fechas no disponibles', description: 'Esa habitación tiene reservas en ese rango.', variant: 'destructive' }); return;
@@ -440,6 +454,24 @@ export default function PublicHotel() {
           </div>
         </div>
       </section>
+
+      {(politicaError || politicas.length > 0) && (
+        <section className="mx-auto max-w-7xl px-5 pt-4 sm:px-8 lg:px-10">
+          {politicaError && (
+            <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              {politicaError} Ajusta tus fechas para continuar.
+            </div>
+          )}
+          {politicas.length > 0 && (
+            <div className="rounded-md border border-stone-200 bg-white px-4 py-2.5 text-xs text-stone-600">
+              <span className="font-semibold text-stone-800">Políticas de reserva: </span>
+              {politicas.map((p, i) => (
+                <span key={p.id}>{i > 0 ? ' · ' : ''}<span className="font-medium text-stone-800">{p.nombre}</span> ({describirPolitica(p)}){p.notas ? ` — ${p.notas}` : ''}</span>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Confianza */}
       <section className="mx-auto max-w-7xl px-5 pb-4 pt-8 sm:px-8 lg:px-10">
@@ -692,13 +724,16 @@ export default function PublicHotel() {
                       {bookingRange?.from && bookingRange?.to && !disponible && (
                         <div className="text-xs text-rose-600 pt-1">Estas fechas chocan con una reserva existente.</div>
                       )}
+                      {politicaErrorBooking && (
+                        <div className="text-xs text-amber-700 pt-1">{politicaErrorBooking}</div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <DialogFooter className="border-t border-stone-100 bg-stone-50 px-5 py-4 sm:px-7">
                   <Button variant="ghost" onClick={() => setBookingHab(null)} disabled={submitting} className="rounded-full">Cancelar</Button>
-                  <Button onClick={handleBookSubmit} disabled={submitting || nsBooking < 1 || !disponible} className="h-12 rounded-md bg-stone-900 px-6 font-semibold text-white hover:bg-emerald-800">
+                  <Button onClick={handleBookSubmit} disabled={submitting || nsBooking < 1 || !disponible || Boolean(politicaErrorBooking)} className="h-12 rounded-md bg-stone-900 px-6 font-semibold text-white hover:bg-emerald-800">
                     {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Enviar solicitud de reserva
                   </Button>

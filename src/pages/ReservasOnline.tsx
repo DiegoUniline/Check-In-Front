@@ -12,6 +12,8 @@ import api from '@/lib/api';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PoliticasReservaPanel } from '@/components/reservas/PoliticasReservaPanel';
 
 export default function ReservasOnline() {
   const { toast } = useToast();
@@ -52,6 +54,15 @@ export default function ReservasOnline() {
 
   return (
     <MainLayout title="Reservas Online" subtitle="Bandeja de reservas pendientes desde la web pública">
+      <Tabs defaultValue="pendientes" className="space-y-3">
+        <TabsList className="h-8">
+          <TabsTrigger value="pendientes" className="h-7 text-xs">Pendientes{reservas.length ? ` (${reservas.length})` : ''}</TabsTrigger>
+          <TabsTrigger value="politicas" className="h-7 text-xs">Políticas de reserva</TabsTrigger>
+        </TabsList>
+        <TabsContent value="politicas" className="mt-0">
+          <PoliticasReservaPanel />
+        </TabsContent>
+        <TabsContent value="pendientes" className="mt-0">
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <Inbox className="h-6 w-6 text-primary" />
@@ -147,6 +158,8 @@ export default function ReservasOnline() {
           </div>
         )}
       </div>
+        </TabsContent>
+      </Tabs>
     </MainLayout>
   );
 }
