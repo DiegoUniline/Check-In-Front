@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
   ROLES, VIEWS, RoleId, PermissionMatrix,
-  loadPermissions, savePermissions, resetPermissions, DEFAULT_PERMISSIONS,
+  loadPermissions, savePermissions, resetPermissions, DEFAULT_PERMISSIONS, ROLE_PROFILES, aplicarPerfil,
 } from '@/lib/permissions';
 import { SaveButton, isDirty } from '@/components/ui/save-button';
 import { useUnsavedChanges } from '@/contexts/UnsavedChangesContext';
@@ -83,6 +83,13 @@ export default function Permisos() {
     }
   };
 
+  const aplicar = (role: RoleId) => {
+    setMatrix(prev => aplicarPerfil(prev, role));
+    toast({ title: `Perfil de ${ROLES.find(r => r.id === role)?.nombre} aplicado`, description: 'Revisa y guarda para que tome efecto.' });
+  };
+
+  const contar = (role: RoleId) => VIEWS.filter(v => (matrix[v.key] || []).includes(role)).length;
+
   const handleReset = () => {
     const def = resetPermissions();
     setMatrix(def);
@@ -120,8 +127,33 @@ export default function Permisos() {
           <Shield className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
             El rol <strong>Administrador</strong> siempre tiene acceso completo y no puede ser deshabilitado.
-            Los cambios se guardan localmente y se aplican al iniciar sesión.
+            Los permisos se guardan en la base de datos y se validan también en el servidor; se aplican al instante a todos los usuarios.
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Perfiles por rol</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {ROLES.map(r => (
+            <div key={r.id} className="flex flex-col rounded-md border p-3">
+              <div className="flex items-center gap-2">
+                <span className={cn('h-2 w-2 rounded-full', r.color)} />
+                <span className="text-sm font-semibold">{r.nombre}</span>
+                <Badge variant="secondary" className="ml-auto text-[10px]">
+                  {r.id === 'Admin' ? 'Todo' : `${contar(r.id)} / ${VIEWS.length}`}
+                </Badge>
+              </div>
+              <p className="mt-2 flex-1 text-xs text-muted-foreground">{ROLE_PROFILES[r.id]}</p>
+              {r.id !== 'Admin' && (
+                <Button size="sm" variant="outline" className="mt-3 h-7 text-xs" onClick={() => aplicar(r.id)}>
+                  Aplicar perfil recomendado
+                </Button>
+              )}
+            </div>
+          ))}
         </CardContent>
       </Card>
 

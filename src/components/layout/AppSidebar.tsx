@@ -58,40 +58,42 @@ import { useAuth } from '@/contexts/useAuth';
 import { canAccess } from '@/lib/permissions';
 import { Logo, LogoHorizontal } from '@/components/Logo';
 
+// Menú ordenado por flujo de trabajo: lo del día arriba, lo administrativo abajo.
 const mainNavItems = [
   { title: 'Inicio', url: '/dashboard', icon: LayoutDashboard, viewKey: 'dashboard' },
+];
+
+const recepcionNavItems = [
   { title: 'Reservas', url: '/reservas', icon: CalendarDays, viewKey: 'reservas' },
   { title: 'Check-In', url: '/reservas/checkin', icon: LogIn, viewKey: 'reservas' },
   { title: 'Check-Out', url: '/reservas/checkout', icon: LogOut, viewKey: 'reservas' },
-  { title: 'Reservas Online', url: '/reservas-online', icon: Inbox, viewKey: 'reservas', badgeKey: 'reservas-online' },
-  { title: 'Políticas de reserva', url: '/politicas-reserva', icon: ShieldCheck, viewKey: 'politicas_reserva' },
-  { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
+  { title: 'Reservas online', url: '/reservas-online', icon: Inbox, viewKey: 'reservas', badgeKey: 'reservas-online' },
   { title: 'Clientes', url: '/clientes', icon: Users, viewKey: 'clientes' },
+  { title: 'Histórico de entradas', url: '/historial-reservas', icon: History, viewKey: 'historial-reservas' },
 ];
 
-const operationsNavItems = [
+const habitacionesNavItems = [
+  { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
   { title: 'Limpieza', url: '/limpieza', icon: Sparkles, viewKey: 'limpieza' },
   { title: 'Mantenimiento', url: '/mantenimiento', icon: Wrench, viewKey: 'mantenimiento' },
-  { title: 'Cierre del día', url: '/cierre-dia', icon: ClipboardCheck, viewKey: 'cierre-dia' },
-  { title: 'Histórico Entradas', url: '/historial-reservas', icon: History, viewKey: 'reservas' },
-  { title: 'Facturación', url: '/facturacion', icon: FileText, viewKey: 'facturacion' },
 ];
 
-const salesNavItems = [
-  { title: 'POS', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
-  { title: 'Historial Ventas', url: '/historial', icon: History, viewKey: 'historial' },
-  { title: 'Reportes', url: '/reportes', icon: BarChart3, viewKey: 'reportes' },
+const cajaNavItems = [
+  { title: 'Turno y caja', url: '/turnos', icon: Clock, viewKey: 'turnos' },
+  { title: 'Punto de venta', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
+  { title: 'Historial de ventas', url: '/historial', icon: History, viewKey: 'historial' },
+  { title: 'Facturación', url: '/facturacion', icon: FileText, viewKey: 'facturacion' },
+  { title: 'Cierre del día', url: '/cierre-dia', icon: ClipboardCheck, viewKey: 'cierre-dia' },
 ];
 
 const stockNavItems = [
   { title: 'Productos', url: '/productos', icon: Package, viewKey: 'inventario' },
   { title: 'Inventario', url: '/inventario', icon: Package, viewKey: 'inventario' },
-  { title: 'Ajustes de Stock', url: '/ajustes-stock', icon: ArrowUpDown, viewKey: 'inventario' },
-  { title: 'Historial de Ajustes', url: '/historial-ajustes', icon: History, viewKey: 'inventario' },
-  { title: 'Órdenes de Compra', url: '/compras', icon: ShoppingBag, viewKey: 'compras' },
+  { title: 'Ajustes de stock', url: '/ajustes-stock', icon: ArrowUpDown, viewKey: 'inventario' },
+  { title: 'Historial de ajustes', url: '/historial-ajustes', icon: History, viewKey: 'inventario' },
+  { title: 'Órdenes de compra', url: '/compras', icon: ShoppingBag, viewKey: 'compras' },
   { title: 'Proveedores', url: '/proveedores', icon: Truck, viewKey: 'proveedores' },
   { title: 'Gastos', url: '/gastos', icon: Receipt, viewKey: 'gastos' },
-  { title: 'Temporadas', url: '/temporadas', icon: CalendarRange, viewKey: 'catalogos' },
 ];
 
 const whatsappNavItems = [
@@ -100,13 +102,18 @@ const whatsappNavItems = [
   { title: 'Conexión / QR', url: '/whatsapp/conexion', icon: Settings, viewKey: 'configuracion' },
 ];
 
-const adminNavItems = [
-  { title: 'Usuarios', url: '/usuarios', icon: UserCog, viewKey: 'usuarios' },
-  { title: 'Permisos', url: '/permisos', icon: ShieldAlert, viewKey: 'permisos' },
+const reportesNavItems = [
+  { title: 'Reportes', url: '/reportes', icon: BarChart3, viewKey: 'reportes' },
   { title: 'Auditoría', url: '/auditoria', icon: ScrollText, viewKey: 'auditoria' },
-  { title: 'Turnos', url: '/turnos', icon: Clock, viewKey: 'turnos' },
-  { title: 'Catálogos', url: '/catalogos', icon: BookOpen, viewKey: 'catalogos' },
+];
+
+const adminNavItems = [
   { title: 'Configuración', url: '/configuracion', icon: Settings, viewKey: 'configuracion' },
+  { title: 'Catálogos', url: '/catalogos', icon: BookOpen, viewKey: 'catalogos' },
+  { title: 'Temporadas y tarifas', url: '/temporadas', icon: CalendarRange, viewKey: 'catalogos' },
+  { title: 'Políticas de reserva', url: '/politicas-reserva', icon: ShieldCheck, viewKey: 'politicas_reserva' },
+  { title: 'Usuarios', url: '/usuarios', icon: UserCog, viewKey: 'usuarios' },
+  { title: 'Permisos y perfiles', url: '/permisos', icon: ShieldAlert, viewKey: 'permisos' },
 ];
 
 const adminSaaSItem = [
@@ -234,10 +241,12 @@ export function AppSidebar() {
   };
 
   const groups = [
-    { key: 'operacion', label: 'Operación', icon: Wrench, items: operationsNavItems, defaultOpen: false },
-    { key: 'ventas', label: 'Ventas y caja', icon: ShoppingCart, items: salesNavItems, defaultOpen: false },
-    { key: 'stock', label: 'Inventario y compras', icon: Package, items: stockNavItems, defaultOpen: false },
+    { key: 'recepcion', label: 'Recepción', icon: CalendarDays, items: recepcionNavItems, defaultOpen: true },
+    { key: 'habitaciones', label: 'Habitaciones', icon: BedDouble, items: habitacionesNavItems, defaultOpen: true },
+    { key: 'caja', label: 'Caja y ventas', icon: ShoppingCart, items: cajaNavItems, defaultOpen: false },
+    { key: 'stock', label: 'Compras e inventario', icon: Package, items: stockNavItems, defaultOpen: false },
     { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, items: whatsappNavItems, defaultOpen: false },
+    { key: 'reportes', label: 'Reportes', icon: BarChart3, items: reportesNavItems, defaultOpen: false },
     { key: 'admin', label: 'Administración', icon: Settings, items: adminNavItems, defaultOpen: false },
   ];
 
@@ -245,7 +254,7 @@ export function AppSidebar() {
   const q = normalizar(menuQuery);
   const searchable = [
     ...(user?.email === 'diego.leon@uniline.mx' ? adminSaaSItem.map((item) => ({ ...item, group: 'Administración maestro' })) : []),
-    ...mainNavItems.map((item) => ({ ...item, group: 'Principal' })),
+    ...mainNavItems.map((item) => ({ ...item, group: 'Inicio' })),
     ...groups.flatMap((g) => g.items.map((item) => ({ ...item, group: g.label }))),
   ].filter((item: any) => !item.viewKey || canAccess(item.viewKey, user?.rol));
   const resultados = q
@@ -341,7 +350,6 @@ export function AppSidebar() {
         )}
 
         <SidebarGroup className="pb-1">
-          {!collapsed && <SidebarGroupLabel className="px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-navy/55">Principal</SidebarGroupLabel>}
           <SidebarGroupContent>{renderNavItems(mainNavItems)}</SidebarGroupContent>
         </SidebarGroup>
 

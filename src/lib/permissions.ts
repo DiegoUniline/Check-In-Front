@@ -231,3 +231,23 @@ export function firstAllowedPath(role: string | undefined): string | null {
   const view = VIEWS.find((v) => v.path && !v.path.includes(':') && canAccess(v.key, role));
   return view?.path || null;
 }
+
+/** Perfil recomendado por rol: lo que cada puesto ocupa para trabajar. */
+export const ROLE_PROFILES: Record<RoleId, string> = {
+  Admin: 'Acceso total a todo el sistema.',
+  Gerente: 'Operación completa, compras, gastos, reportes y catálogos. Sin usuarios, permisos ni configuración.',
+  Recepcion: 'Reservas, check-in/out, clientes, habitaciones, punto de venta, turno y caja, facturación y chats. Sin cancelar pagos ni cambiar tarifas.',
+  Housekeeping: 'Habitaciones y limpieza.',
+  Mantenimiento: 'Habitaciones y mantenimiento.',
+};
+
+export function aplicarPerfil(matrix: PermissionMatrix, role: RoleId): PermissionMatrix {
+  const next: PermissionMatrix = { ...matrix };
+  const keys = new Set([...VIEWS.map((v) => v.key), ...Object.keys(DEFAULT_PERMISSIONS)]);
+  for (const key of keys) {
+    const current = new Set(next[key] || []);
+    if ((DEFAULT_PERMISSIONS[key] || []).includes(role)) current.add(role); else current.delete(role);
+    next[key] = Array.from(current) as RoleId[];
+  }
+  return next;
+}
