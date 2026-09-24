@@ -55,6 +55,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import api, { todayLocal } from '@/lib/api';
+import { runAll } from '@/lib/bulk';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 import { formatCurrency } from '@/lib/currency';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -216,7 +217,7 @@ export default function Gastos() {
     setEliminandoBulk(true);
     try {
       const ids = Array.from(dt.selected);
-      await Promise.all(ids.map((id) => api.deleteGasto(id)));
+      await runAll(ids, (id) => api.deleteGasto(id));
       toast({ title: 'Gastos eliminados', description: `${ids.length} registro(s) eliminados.` });
       dt.clearSelection();
       await cargarGastos();

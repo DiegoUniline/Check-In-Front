@@ -166,7 +166,7 @@ const AppRoutes = () => (
     <Route
       path="/politicas-reserva"
       element={
-        <ProtectedRoute viewKey="reservas">
+        <ProtectedRoute viewKey="politicas_reserva">
           <PoliticasReserva />
         </ProtectedRoute>
       }

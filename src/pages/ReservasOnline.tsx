@@ -14,9 +14,13 @@ import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PoliticasReservaPanel } from '@/components/reservas/PoliticasReservaPanel';
+import { canAccess } from '@/lib/permissions';
+import { useAuth } from '@/contexts/useAuth';
 
 export default function ReservasOnline() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const verPoliticas = canAccess('politicas_reserva', user?.rol);
   const qc = useQueryClient();
   const [procesando, setProcesando] = useState<string | null>(null);
 
@@ -57,11 +61,11 @@ export default function ReservasOnline() {
       <Tabs defaultValue="pendientes" className="space-y-3">
         <TabsList className="h-8">
           <TabsTrigger value="pendientes" className="h-7 text-xs">Pendientes{reservas.length ? ` (${reservas.length})` : ''}</TabsTrigger>
-          <TabsTrigger value="politicas" className="h-7 text-xs">Políticas de reserva</TabsTrigger>
+          {verPoliticas && <TabsTrigger value="politicas" className="h-7 text-xs">Políticas de reserva</TabsTrigger>}
         </TabsList>
-        <TabsContent value="politicas" className="mt-0">
+        {verPoliticas && <TabsContent value="politicas" className="mt-0">
           <PoliticasReservaPanel />
-        </TabsContent>
+        </TabsContent>}
         <TabsContent value="pendientes" className="mt-0">
       <div className="space-y-4">
         <div className="flex items-center gap-3">

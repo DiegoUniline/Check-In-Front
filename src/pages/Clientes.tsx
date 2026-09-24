@@ -47,6 +47,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { runAll } from '@/lib/bulk';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { splitPhone, joinPhone, DEFAULT_COUNTRY } from '@/lib/phoneCountries';
 import { formatDate } from '@/lib/dateFormat';
@@ -201,7 +202,7 @@ export default function Clientes() {
     setEliminandoBulk(true);
     try {
       const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.deleteCliente(id)));
+      await runAll(ids, id => api.deleteCliente(id));
       toast({ title: 'Clientes eliminados', description: `Se eliminaron ${ids.length} cliente(s).` });
       dt.clearSelection();
       await cargarClientes();
@@ -491,7 +492,7 @@ export default function Clientes() {
                 )}
               </div>
               {(() => {
-                const validas = historial.filter((r: any) => r.estado !== 'Cancelada');
+                const validas = historial.filter((r: any) => !['Cancelada', 'NoShow'].includes(r.estado));
                 const totalGastado = validas.reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
                 const totalNoches = validas.reduce((s: number, r: any) => s + (Number(r.noches) || 0), 0);
                 const estancias = validas.length || (selectedCliente?.total_estancias || 0);

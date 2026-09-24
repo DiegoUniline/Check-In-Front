@@ -66,6 +66,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { MultiImageUpload } from '@/components/ui/multi-image-upload';
 import api from '@/lib/api';
+import { runAll } from '@/lib/bulk';
 import { ReportarFallaDialog } from '@/components/mantenimiento/ReportarFallaDialog';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
@@ -183,7 +184,7 @@ export default function Habitaciones() {
     setEliminandoBulk(true);
     try {
       const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.deleteHabitacion(id)));
+      await runAll(ids, id => api.deleteHabitacion(id));
       toast({ title: 'Habitaciones eliminadas', description: `Se eliminaron ${ids.length}.` });
       dt.clearSelection();
       await cargarDatos();
@@ -216,7 +217,7 @@ export default function Habitaciones() {
         const resto = ids.filter((id) => !bloqueadas.some((h) => h.id === id));
         await Promise.all(resto.map(id => api.updateHabitacion(id, { estado_habitacion: nuevo })));
       } else {
-        await Promise.all(ids.map(id => api.updateHabitacion(id, { estado_habitacion: nuevo })));
+        await runAll(ids, id => api.updateHabitacion(id, { estado_habitacion: nuevo }));
       }
       toast({ title: 'Estado actualizado', description: `${ids.length} habitación(es) → ${nuevo}` });
       dt.clearSelection();
@@ -232,7 +233,7 @@ export default function Habitaciones() {
     setEliminandoBulk(true);
     try {
       const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.updateHabitacion(id, { excluida_publica: excluida })));
+      await runAll(ids, id => api.updateHabitacion(id, { excluida_publica: excluida }));
       toast({
         title: excluida ? 'Excluidas de la web' : 'Publicadas en la web',
         description: `${ids.length} habitación(es) actualizada(s)`,

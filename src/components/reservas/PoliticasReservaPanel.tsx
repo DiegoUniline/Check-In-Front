@@ -113,7 +113,9 @@ export function PoliticasReservaPanel() {
     const max = form.max_noches ? Number(form.max_noches) : null;
     if (!form.nombre.trim()) return toast({ title: 'Escribe un nombre', variant: 'destructive' });
     if (form.fecha_inicio && form.fecha_fin && form.fecha_fin < form.fecha_inicio) return toast({ title: 'La fecha final es antes de la inicial', variant: 'destructive' });
-    if ((min !== null && min < 1) || (max !== null && max < 1)) return toast({ title: 'Las noches deben ser 1 o más', variant: 'destructive' });
+    if ((min !== null && (!Number.isInteger(min) || min < 1)) || (max !== null && (!Number.isInteger(max) || max < 1))) {
+      return toast({ title: 'Las noches deben ser números enteros de 1 o más', variant: 'destructive' });
+    }
     if (min !== null && max !== null && max < min) return toast({ title: 'El máximo no puede ser menor al mínimo', variant: 'destructive' });
     if (!min && !max && !form.dias_llegada_no_permitidos.length && !form.noche_sola_no_permitida.length) {
       return toast({ title: 'Agrega al menos una regla', description: 'Estancia mínima/máxima o días restringidos.', variant: 'destructive' });

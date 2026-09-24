@@ -32,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
+import { runAll } from '@/lib/bulk';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 import { formatDate } from '@/lib/dateFormat';
 
@@ -115,7 +116,7 @@ export default function Mantenimiento() {
     setEliminandoBulk(true);
     try {
       const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.deleteTareaMantenimiento?.(id) ?? Promise.resolve()));
+      await runAll(ids, id => api.deleteTareaMantenimiento?.(id) ?? Promise.resolve());
       toast({ title: 'Tickets eliminados', description: `Se eliminaron ${ids.length} ticket(s).` });
       dt.clearSelection();
       await cargarDatos();
@@ -129,7 +130,7 @@ export default function Mantenimiento() {
   const cambiarEstadoBulk = async (estado: string) => {
     try {
       const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.updateEstadoMantenimiento(id, estado)));
+      await runAll(ids, id => api.updateEstadoMantenimiento(id, estado));
       toast({ title: 'Estado actualizado', description: `${ids.length} ticket(s) → ${estado}` });
       dt.clearSelection();
       await cargarDatos();

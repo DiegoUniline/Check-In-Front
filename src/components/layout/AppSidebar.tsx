@@ -64,7 +64,7 @@ const mainNavItems = [
   { title: 'Check-In', url: '/reservas/checkin', icon: LogIn, viewKey: 'reservas' },
   { title: 'Check-Out', url: '/reservas/checkout', icon: LogOut, viewKey: 'reservas' },
   { title: 'Reservas Online', url: '/reservas-online', icon: Inbox, viewKey: 'reservas', badgeKey: 'reservas-online' },
-  { title: 'Políticas de reserva', url: '/politicas-reserva', icon: ShieldCheck, viewKey: 'reservas' },
+  { title: 'Políticas de reserva', url: '/politicas-reserva', icon: ShieldCheck, viewKey: 'politicas_reserva' },
   { title: 'Habitaciones', url: '/habitaciones', icon: BedDouble, viewKey: 'habitaciones' },
   { title: 'Clientes', url: '/clientes', icon: Users, viewKey: 'clientes' },
 ];

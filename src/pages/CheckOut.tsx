@@ -33,6 +33,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
+import { StayDeliverables } from '@/components/reservas/StayDeliverables';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
 import { cn } from '@/lib/utils';
@@ -43,7 +44,8 @@ export default function CheckOut() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmarRevision, setConfirmarRevision] = useState(false);
-  const [metodoPago, setMetodoPago] = useState('Tarjeta');
+  const [metodoPago, setMetodoPago] = useState('');
+  const [mostrarEntregables, setMostrarEntregables] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [reserva, setReserva] = useState<any>(null);
@@ -68,8 +70,10 @@ export default function CheckOut() {
       setPagos((Array.isArray(pagosData) ? pagosData : []).filter((p: any) => p.estado !== 'Cancelado'));
       setCargosExtra(((reservaData as any)?.cargos_extra || (reservaData as any)?.cargos || [])
         .filter((c: any) => c.estado !== 'Cancelado'));
-      setEntregablesPendientes((Array.isArray(entregablesData) ? entregablesData : [])
-        .filter((e: any) => e.requiere_devolucion && !e.devuelto));
+      const pendientes = (Array.isArray(entregablesData) ? entregablesData : [])
+        .filter((e: any) => e.requiere_devolucion && !e.devuelto);
+      setEntregablesPendientes(pendientes);
+      if (pendientes.length) setMostrarEntregables(true);
     } catch (error) {
       console.error('Error cargando reserva:', error);
       toast({ title: 'Error', description: 'No se pudo cargar la reserva', variant: 'destructive' });
@@ -152,17 +156,26 @@ export default function CheckOut() {
       });
       return;
     }
-    if (entregablesPendientes.length > 0) {
+    // Se revisa de nuevo: la devolución pudo registrarse en esta misma pantalla.
+    const frescos = await api.getEntregablesReserva(id!).catch(() => entregablesPendientes);
+    const pendientesAhora = (Array.isArray(frescos) ? frescos : []).filter((e: any) => e.requiere_devolucion && !e.devuelto);
+    setEntregablesPendientes(pendientesAhora);
+    if (pendientesAhora.length > 0) {
+      setMostrarEntregables(true);
       toast({
         variant: 'destructive',
         title: 'Entregables pendientes',
-        description: `Registra la devolución de: ${entregablesPendientes.map((e: any) => e.nombre).join(', ')}.`,
+        description: `Registra la devolución de: ${pendientesAhora.map((e: any) => e.nombre).join(', ')} (sección Entregables).`,
       });
       return;
     }
     if (saldoAFavor > 0) {
       const ok = window.confirm(`El huésped tiene un saldo a favor de ${formatCurrency(saldoAFavor)}. ¿Ya se le devolvió o se aplicará? Pulsa Aceptar para continuar con la salida.`);
       if (!ok) return;
+    }
+    if (saldoPendiente > 0 && !metodoPago) {
+      toast({ variant: 'destructive', title: 'Elige el método de pago', description: `Falta liquidar ${formatCurrency(saldoPendiente)}.` });
+      return;
     }
     if (!confirmarRevision) {
       toast({
@@ -200,7 +213,7 @@ export default function CheckOut() {
   const steps = [
     { label: 'Estancia', icon: User, done: true },
     { label: 'Revisión', icon: ClipboardCheck, done: confirmarRevision },
-    { label: 'Liquidación', icon: CircleDollarSign, done: saldoPendiente <= 0 || confirmarRevision },
+    { label: 'Liquidación', icon: CircleDollarSign, done: saldoPendiente <= 0 || Boolean(metodoPago) },
     { label: 'Salida', icon: CheckCircle2, done: false },
   ];
 
@@ -251,6 +264,12 @@ export default function CheckOut() {
 
         <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
           <div className="space-y-4 lg:col-span-2">
+            {mostrarEntregables && id && (
+              <div className="overflow-hidden rounded-lg border border-amber-200">
+                <p className="bg-amber-50 px-4 py-2 text-xs font-medium text-amber-900">Registra la devolución de los entregables antes de la salida.</p>
+                <StayDeliverables reservaId={id} active embedded />
+              </div>
+            )}
             <Card className="border-border/70 shadow-sm">
               <CardContent className="p-4 sm:p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

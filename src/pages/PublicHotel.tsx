@@ -119,6 +119,13 @@ export default function PublicHotel() {
   } | null>(null);
   const [form, setForm] = useState({ nombre: '', apellido_paterno: '', email: '', telefono: '', solicitudes: '' });
   const [politicas, setPoliticas] = useState<PoliticaReserva[]>([]);
+  const [, setTemporadasTick] = useState(0);
+  const [pantallaChica, setPantallaChica] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setPantallaChica(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Carga inicial
   useEffect(() => {
@@ -141,7 +148,7 @@ export default function PublicHotel() {
       ]);
       setTipos((tps || []) as any);
       setHabitaciones((hbs || []) as any);
-      loadTemporadas(h.id).catch(() => {});
+      loadTemporadas(h.id).then(() => setTemporadasTick((n) => n + 1)).catch(() => {});
       (supabase as any).rpc('get_public_booking_policies', { p_hotel_id: h.id })
         .then(({ data }: any) => setPoliticas(Array.isArray(data) ? data : []))
         .catch(() => setPoliticas([]));
@@ -158,7 +165,8 @@ export default function PublicHotel() {
         .select('id, habitacion_id, tipo_habitacion_id, fecha_checkin, fecha_checkout, estado')
         .eq('hotel_id', hotel.id)
         .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
-        .gt('fecha_checkout', localDateForZone(hotel.timezone));
+        // Hospedados con salida vencida siguen ocupando la habitación.
+        .or(`fecha_checkout.gt.${localDateForZone(hotel.timezone)},estado.in.(CheckIn,Hospedado)`);
       setReservas(data || []);
     };
     load();
@@ -175,14 +183,18 @@ export default function PublicHotel() {
     const m: Record<string, Set<string>> = {};
     reservas.forEach((r: any) => {
       if (!r.habitacion_id || !r.fecha_checkin || !r.fecha_checkout) return;
-      const start = parseISO(r.fecha_checkin);
-      const end = addDays(parseISO(r.fecha_checkout), -1);
-      if (end < start) return;
+      const start = parseISO(String(r.fecha_checkin).slice(0, 10));
+      const hoy = parseISO(localDateForZone(hotel?.timezone));
+      let end = addDays(parseISO(String(r.fecha_checkout).slice(0, 10)), -1);
+      // Entrada y salida el mismo día ocupa esa noche.
+      if (end < start) end = start;
+      // Huésped que no ha salido: ocupa al menos hasta hoy.
+      if (['CheckIn', 'Hospedado'].includes(String(r.estado)) && end < hoy) end = hoy;
       const arr = (m[r.habitacion_id] ||= new Set());
       eachDayOfInterval({ start, end }).forEach(d => arr.add(format(d, 'yyyy-MM-dd')));
     });
     return m;
-  }, [reservas]);
+  }, [reservas, hotel?.timezone]);
 
   // Habitaciones visibles (filtro tipo + publicación + capacidad + disponibles en rango)
   const habsVisibles = useMemo(() => {
@@ -190,7 +202,9 @@ export default function PublicHotel() {
       const t = h.tipo_habitacion_id ? tipoMap[h.tipo_habitacion_id] : null;
       if (!t) return false; // no publicada
       if (filtroTipo !== 'todos' && h.tipo_habitacion_id !== filtroTipo) return false;
-      if ((adultos + ninos) > t.capacidad_maxima) return false;
+      if (Number(t.capacidad_maxima) > 0 && (adultos + ninos) > t.capacidad_maxima) return false;
+      if (Number(t.capacidad_adultos) > 0 && adultos > t.capacidad_adultos) return false;
+      if (Number(t.capacidad_ninos) > 0 && ninos > t.capacidad_ninos) return false;
       return true;
     });
   }, [habitaciones, tipoMap, filtroTipo, adultos, ninos]);
@@ -206,6 +220,25 @@ export default function PublicHotel() {
 
   const ns = range?.from && range?.to ? Math.max(0, differenceInCalendarDays(range.to, range.from)) : 0;
   const nsBooking = bookingRange?.from && bookingRange?.to ? Math.max(0, differenceInCalendarDays(bookingRange.to, bookingRange.from)) : 0;
+  // Precio de la estancia noche por noche (igual que el servidor).
+  const precioEstancia = (base: number, tipoId: string, habId: string, from: Date | undefined, noches: number) => {
+    if (!from || noches < 1) {
+      const r = resolverPrecioTemporada(base, localDateForZone(hotel?.timezone), tipoId, habId, hotel?.id);
+      return { total: r.precio, promedio: r.precio, temporada: r.temporada };
+    }
+    let total = 0;
+    let temporada: any = null;
+    for (let i = 0; i < noches; i += 1) {
+      const r = resolverPrecioTemporada(base, format(addDays(from, i), 'yyyy-MM-dd'), tipoId, habId, hotel?.id);
+      total += r.precio;
+      temporada = temporada || r.temporada;
+    }
+    return { total, promedio: total / noches, temporada };
+  };
+  const anticipoDe = (total: number) => hotel?.requiere_anticipo
+    ? Math.round(total * (Number(hotel.porcentaje_anticipo) || 0)) / 100
+    : 0;
+
   const politicaError = range?.from && range?.to
     ? validarPoliticas(politicas, format(range.from, 'yyyy-MM-dd'), format(range.to, 'yyyy-MM-dd'))
     : null;
@@ -238,21 +271,20 @@ export default function PublicHotel() {
     if (!form.nombre.trim() || !form.email.trim() || !form.telefono.trim()) {
       toast({ title: 'Faltan datos', description: 'Nombre, email y teléfono son requeridos.', variant: 'destructive' }); return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) {
+      toast({ title: 'Correo no válido', description: 'Revisa tu correo electrónico.', variant: 'destructive' }); return;
+    }
     const tipo = bookingHab.tipo_habitacion_id ? tipoMap[bookingHab.tipo_habitacion_id] : null;
     if (!tipo) return;
 
     setSubmitting(true);
     try {
       const baseTarifa = Number(tipo.precio_base) || 0;
-      const fechaIn = format(bookingRange.from, 'yyyy-MM-dd');
-      const { precio: tarifa } = resolverPrecioTemporada(baseTarifa, fechaIn, tipo.id, bookingHab.id, hotel.id);
+      const estancia = precioEstancia(baseTarifa, tipo.id, bookingHab.id, bookingRange.from, nsBooking);
+      const tarifa = estancia.promedio;
       const personasExtra = Math.max(0, (adultos + ninos) - tipo.capacidad_adultos);
       const cargoExtra = personasExtra * (Number(tipo.precio_persona_extra) || 0);
-      const subtotal = tarifa * nsBooking + cargoExtra * nsBooking;
-      const total = subtotal;
-      const anticipo = hotel.requiere_anticipo
-        ? Math.round(total * (Number(hotel.porcentaje_anticipo) || 0)) / 100
-        : 0;
+      const total = estancia.total + cargoExtra * nsBooking;
 
       // Cliente y reserva se crean en una sola transacción. El trigger de la DB
       // vuelve a comprobar disponibilidad para cerrar carreras entre dos usuarios.
@@ -279,10 +311,12 @@ export default function PublicHotel() {
       });
       if (errR) throw errR;
 
+      // Se muestra lo que el servidor guardó (fuente de verdad).
+      const totalFinal = Number(reservaCreada?.total ?? total) || total;
       setConfirmacion({
         numero: reservaCreada?.numero_reserva || '',
-        total,
-        anticipo,
+        total: totalFinal,
+        anticipo: anticipoDe(totalFinal),
         email: form.email.trim(),
         habitacion: `${tipo.nombre} · Habitación ${bookingHab.numero}`,
         fechas: `${format(bookingRange.from, 'd MMM', { locale: es })} — ${format(bookingRange.to, 'd MMM yyyy', { locale: es })}`,
@@ -421,7 +455,7 @@ export default function PublicHotel() {
                   mode="range"
                   selected={range}
                   onSelect={setRange}
-                  numberOfMonths={2}
+                  numberOfMonths={pantallaChica ? 1 : 2}
                   disabled={(d) => d < todayHotel}
                   locale={es}
                   className={cn("p-3 pointer-events-auto")}
@@ -520,11 +554,12 @@ export default function PublicHotel() {
             const fotoActual = fotos[idx];
             const disponible = isHabDisponibleEnRango(h.id, range);
             const precioBase = Number(t.precio_base) || 0;
-            const fechaRefTarjeta = range?.from ? format(range.from, 'yyyy-MM-dd') : localDateForZone(hotel.timezone);
-            const { precio, temporada: tempTarjeta } = resolverPrecioTemporada(precioBase, fechaRefTarjeta, t.id, h.id, hotel?.id);
+            const estanciaTarjeta = precioEstancia(precioBase, t.id, h.id, range?.from, ns);
+            const precio = estanciaTarjeta.promedio;
+            const tempTarjeta = estanciaTarjeta.temporada;
             const personasExtra = Math.max(0, (adultos + ninos) - t.capacidad_adultos);
             const extraPorNoche = personasExtra * (Number(t.precio_persona_extra) || 0);
-            const total = (precio + extraPorNoche) * Math.max(1, ns || 1);
+            const total = ns > 0 ? estanciaTarjeta.total + extraPorNoche * ns : precio + extraPorNoche;
             return (
               <Card key={h.id} className="group flex flex-col overflow-hidden rounded-[8px] border border-stone-200/80 bg-white shadow-[0_18px_55px_-38px_rgba(28,25,23,.7)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_28px_70px_-35px_rgba(28,25,23,.45)]">
                 <div className="relative aspect-[16/10] cursor-pointer overflow-hidden bg-gradient-to-br from-stone-100 to-stone-200" onClick={() => openBooking(h)}>
@@ -632,11 +667,12 @@ export default function PublicHotel() {
             const ocupados = diasOcupadosPorHab[bookingHab.id] || new Set();
             const disponible = isHabDisponibleEnRango(bookingHab.id, bookingRange);
             const tarifaBase = Number(t.precio_base) || 0;
-            const fechaRef = bookingRange?.from ? format(bookingRange.from, 'yyyy-MM-dd') : localDateForZone(hotel.timezone);
-            const { precio: tarifa, temporada: tempReserva } = resolverPrecioTemporada(tarifaBase, fechaRef, t.id, bookingHab.id, hotel?.id);
+            const estanciaReserva = precioEstancia(tarifaBase, t.id, bookingHab.id, bookingRange?.from, nsBooking);
+            const tarifa = estanciaReserva.promedio;
+            const tempReserva = estanciaReserva.temporada;
             const personasExtra = Math.max(0, (adultos + ninos) - t.capacidad_adultos);
             const extraPorNoche = personasExtra * (Number(t.precio_persona_extra) || 0);
-            const totalEstim = (tarifa + extraPorNoche) * nsBooking;
+            const totalEstim = estanciaReserva.total + extraPorNoche * nsBooking;
             return (
               <>
                 <div className="relative h-[190px] shrink-0 overflow-hidden bg-stone-100 sm:h-[240px]">
@@ -660,7 +696,9 @@ export default function PublicHotel() {
                         numberOfMonths={1}
                         disabled={[
                           (d) => d < todayHotel,
-                          (d) => ocupados.has(format(d, 'yyyy-MM-dd')),
+                          // El día en que entra otra reserva sí puede ser la salida.
+                          (d) => ocupados.has(format(d, 'yyyy-MM-dd'))
+                            && !(bookingRange?.from && !bookingRange?.to && d > bookingRange.from),
                         ]}
                         modifiers={{ reservado: (d) => ocupados.has(format(d, 'yyyy-MM-dd')) }}
                         modifiersClassNames={{ reservado: 'bg-rose-100 text-rose-700 line-through' }}
@@ -718,7 +756,7 @@ export default function PublicHotel() {
                       {hotel.requiere_anticipo && nsBooking > 0 && (
                         <div className="flex justify-between text-amber-700 text-xs pt-1">
                           <span>Anticipo ({hotel.porcentaje_anticipo}%)</span>
-                          <span>{formatCurrency(Math.round(totalEstim * Number(hotel.porcentaje_anticipo) / 100))}</span>
+                          <span>{formatCurrency(anticipoDe(totalEstim))}</span>
                         </div>
                       )}
                       {bookingRange?.from && bookingRange?.to && !disponible && (
