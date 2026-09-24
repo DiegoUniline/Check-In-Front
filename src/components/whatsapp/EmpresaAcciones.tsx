@@ -1,3 +1,4 @@
+import api from '@/lib/api';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -70,29 +71,56 @@ export function EmpresaAcciones({ chat, hotelId }: Props) {
     if (!hotelId) return;
     sb.from('hotels').select('*').eq('id', hotelId).single()
       .then(({ data }: any) => setHotel(data));
-    try {
-      const b = localStorage.getItem(bancoKey(hotelId));
-      setBanco(b ? JSON.parse(b) : {});
-      const r = localStorage.getItem(respuestasKey(hotelId));
-      setRespuestas(r ? JSON.parse(r) : defaultRespuestas());
-    } catch {
-      setBanco({});
-      setRespuestas(defaultRespuestas());
-    }
+    // Se leen de la base. Si la base aún no tiene datos pero este navegador sí
+    // (versión anterior), se suben una vez y se borran del navegador.
+    const leerLocal = (key: string) => {
+      try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; }
+    };
+    (async () => {
+      try {
+        const [bancoDb, respuestasDb] = await Promise.all([
+          api.getConfigHotel<BancoEmpresa>('whatsapp_banco'),
+          api.getConfigHotel<Respuesta[]>('whatsapp_respuestas'),
+        ]);
+        let b = bancoDb;
+        let r = respuestasDb;
+        const bLocal = leerLocal(bancoKey(hotelId));
+        const rLocal = leerLocal(respuestasKey(hotelId));
+        if (!b && bLocal) { await api.setConfigHotel('whatsapp_banco', bLocal); b = bLocal; }
+        if (!r && Array.isArray(rLocal)) { await api.setConfigHotel('whatsapp_respuestas', rLocal); r = rLocal; }
+        try { localStorage.removeItem(bancoKey(hotelId)); localStorage.removeItem(respuestasKey(hotelId)); } catch { /* sin almacenamiento */ }
+        setBanco(b || {});
+        setRespuestas(Array.isArray(r) ? r : defaultRespuestas());
+      } catch (error: any) {
+        setBanco({});
+        setRespuestas(defaultRespuestas());
+        toast({ title: 'No se pudo cargar la configuración de WhatsApp', description: error?.message, variant: 'destructive' });
+      }
+    })();
   }, [hotelId]);
 
-  const guardarBanco = () => {
+  const guardarBanco = async () => {
     if (!hotelId) return;
-    localStorage.setItem(bancoKey(hotelId), JSON.stringify(bancoDraft));
-    setBanco(bancoDraft);
-    setBancoOpen(false);
-    toast({ title: 'Datos bancarios guardados' });
+    try {
+      await api.setConfigHotel('whatsapp_banco', bancoDraft);
+      setBanco(bancoDraft);
+      setBancoOpen(false);
+      toast({ title: 'Datos bancarios guardados' });
+    } catch (error: any) {
+      toast({ title: 'No se guardaron los datos bancarios', description: error?.message, variant: 'destructive' });
+    }
   };
 
-  const guardarRespuestas = (list: Respuesta[]) => {
+  const guardarRespuestas = async (list: Respuesta[]) => {
     if (!hotelId) return;
-    localStorage.setItem(respuestasKey(hotelId), JSON.stringify(list));
+    const anterior = respuestas;
     setRespuestas(list);
+    try {
+      await api.setConfigHotel('whatsapp_respuestas', list);
+    } catch (error: any) {
+      setRespuestas(anterior);
+      toast({ title: 'No se guardaron las respuestas', description: error?.message, variant: 'destructive' });
+    }
   };
 
   const copiar = (txt: string) => {

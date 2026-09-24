@@ -26,141 +26,87 @@ export interface BitacoraEntrada {
   resuelto?: boolean;
 }
 
-function key(hotelId: string) {
-  return `vulo:bitacora:${hotelId}`;
-}
+const fromRow = (row: any): BitacoraEntrada => ({
+  id: row.id,
+  hotelId: row.hotel_id,
+  fecha: row.created_at,
+  autor: row.autor_nombre || 'Usuario',
+  autorId: row.autor_id || 'anon',
+  categoria: row.categoria as BitacoraCategoria,
+  prioridad: row.prioridad || 'Normal',
+  titulo: row.titulo,
+  detalle: row.detalle || '',
+  responsable: row.responsable || undefined,
+  turnoId: row.turno_id || undefined,
+  resuelto: row.estado === 'Resuelto',
+});
 
-function readAll(hotelId: string): BitacoraEntrada[] {
-  try {
-    const raw = localStorage.getItem(key(hotelId));
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as BitacoraEntrada[];
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeAll(hotelId: string, list: BitacoraEntrada[]) {
-  localStorage.setItem(key(hotelId), JSON.stringify(list));
+const notify = (hotelId: string) =>
   window.dispatchEvent(new CustomEvent('vulo:bitacora-updated', { detail: { hotelId } }));
-}
 
+// La bitácora vive sólo en la base de datos; cada cambio se guarda ahí primero.
 export function useBitacora() {
   const { user } = useAuth();
   const hotelId = api.getHotelId() || 'default';
-  const [entradas, setEntradas] = useState<BitacoraEntrada[]>(() => readAll(hotelId));
+  const [entradas, setEntradas] = useState<BitacoraEntrada[]>([]);
+
+  const cargar = useCallback(async () => {
+    const rows = await api.getBitacoraOperativa();
+    setEntradas((rows || []).map(fromRow));
+  }, []);
 
   useEffect(() => {
-    setEntradas(readAll(hotelId));
-    void api.getBitacoraOperativa()
-      .then((rows) => {
-        const remote = rows.map((row: any): BitacoraEntrada => ({
-          id: row.id,
-          hotelId: row.hotel_id,
-          fecha: row.created_at,
-          autor: row.autor_nombre || 'Usuario',
-          autorId: row.autor_id || 'anon',
-          categoria: row.categoria as BitacoraCategoria,
-          prioridad: row.prioridad || 'Normal',
-          titulo: row.titulo,
-          detalle: row.detalle || '',
-          responsable: row.responsable || undefined,
-          turnoId: row.turno_id || undefined,
-          resuelto: row.estado === 'Resuelto',
-        }));
-        // Las entradas creadas sin conexión (aún no están en el servidor) se
-        // conservan y se vuelven a enviar; antes se perdían al recargar.
-        const remoteIds = new Set(remote.map((entry) => entry.id));
-        const pendientes = readAll(hotelId).filter((entry) => !remoteIds.has(entry.id));
-        pendientes.forEach((entry) => {
-          void api.createBitacoraOperativa({
-            id: entry.id,
-            turno_id: entry.turnoId || null,
-            categoria: entry.categoria,
-            prioridad: entry.prioridad || 'Normal',
-            titulo: entry.titulo,
-            detalle: entry.detalle || null,
-            responsable: entry.responsable || null,
-            estado: entry.resuelto ? 'Resuelto' : 'Abierto',
-            autor_id: entry.autorId,
-            autor_nombre: entry.autor,
-          }).catch(() => { /* se reintenta en la próxima carga */ });
-        });
-        writeAll(hotelId, [...pendientes, ...remote]);
-      })
-      .catch(() => {
-        // Sin conexión o migración pendiente: se conserva la copia local.
-      });
+    void cargar().catch(() => setEntradas([]));
     const onUpdate = (e: any) => {
-      if (e?.detail?.hotelId === hotelId) setEntradas(readAll(hotelId));
-    };
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === key(hotelId)) setEntradas(readAll(hotelId));
+      if (e?.detail?.hotelId === hotelId) void cargar().catch(() => undefined);
     };
     window.addEventListener('vulo:bitacora-updated', onUpdate);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener('vulo:bitacora-updated', onUpdate);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [hotelId]);
+    return () => window.removeEventListener('vulo:bitacora-updated', onUpdate);
+  }, [hotelId, cargar]);
 
   const agregar = useCallback(
-    (data: Omit<BitacoraEntrada, 'id' | 'hotelId' | 'fecha' | 'autor' | 'autorId'>) => {
-      const nueva: BitacoraEntrada = {
-        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `bit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        hotelId,
-        fecha: new Date().toISOString(),
-        autor: user?.nombre || user?.email || 'Usuario',
-        autorId: user?.id || 'anon',
-        ...data,
-      };
-      const list = [nueva, ...readAll(hotelId)];
-      writeAll(hotelId, list);
-      void api.createBitacoraOperativa({
-        id: nueva.id,
-        turno_id: nueva.turnoId || null,
-        categoria: nueva.categoria,
-        prioridad: nueva.prioridad || 'Normal',
-        titulo: nueva.titulo,
-        detalle: nueva.detalle || null,
-        responsable: nueva.responsable || null,
-        estado: nueva.resuelto ? 'Resuelto' : 'Abierto',
-        autor_id: nueva.autorId,
-        autor_nombre: nueva.autor,
-      }).catch(() => {
-        // La entrada permanece disponible localmente y podrá reintentarse después.
+    async (data: Omit<BitacoraEntrada, 'id' | 'hotelId' | 'fecha' | 'autor' | 'autorId'>) => {
+      const row = await api.createBitacoraOperativa({
+        turno_id: data.turnoId || null,
+        categoria: data.categoria,
+        prioridad: data.prioridad || 'Normal',
+        titulo: data.titulo,
+        detalle: data.detalle || null,
+        responsable: data.responsable || null,
+        estado: data.resuelto ? 'Resuelto' : 'Abierto',
+        autor_id: user?.id || null,
+        autor_nombre: user?.nombre || user?.email || 'Usuario',
       });
-      return nueva;
+      await cargar();
+      notify(hotelId);
+      return row ? fromRow(row) : null;
     },
-    [hotelId, user],
+    [hotelId, user, cargar],
   );
 
   const togglePendiente = useCallback(
-    (id: string) => {
-      const list = readAll(hotelId).map((e) =>
-        e.id === id ? { ...e, resuelto: !e.resuelto } : e,
-      );
-      writeAll(hotelId, list);
-      const updated = list.find((entry) => entry.id === id);
-      if (updated) {
-        void api.updateBitacoraOperativa(id, {
-          estado: updated.resuelto ? 'Resuelto' : 'Abierto',
-          resuelto_at: updated.resuelto ? new Date().toISOString() : null,
-          resuelto_por: updated.resuelto ? (user?.nombre || user?.email || 'Usuario') : null,
-        }).catch(() => null);
-      }
+    async (id: string) => {
+      const actual = entradas.find((entry) => entry.id === id);
+      if (!actual) return;
+      const resuelto = !actual.resuelto;
+      await api.updateBitacoraOperativa(id, {
+        estado: resuelto ? 'Resuelto' : 'Abierto',
+        resuelto_at: resuelto ? new Date().toISOString() : null,
+        resuelto_por: resuelto ? (user?.nombre || user?.email || 'Usuario') : null,
+      });
+      await cargar();
+      notify(hotelId);
     },
-    [hotelId, user],
+    [entradas, hotelId, user, cargar],
   );
 
   const eliminar = useCallback(
-    (id: string) => {
-      writeAll(hotelId, readAll(hotelId).filter((e) => e.id !== id));
-      void api.deleteBitacoraOperativa(id).catch(() => null);
+    async (id: string) => {
+      await api.deleteBitacoraOperativa(id);
+      await cargar();
+      notify(hotelId);
     },
-    [hotelId],
+    [hotelId, cargar],
   );
 
   return { entradas, agregar, togglePendiente, eliminar, hotelId };

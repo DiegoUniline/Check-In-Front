@@ -367,9 +367,12 @@ class ApiClient {
   private isMissingOperationalTable(error: any): boolean {
     const text = `${error?.code || ''} ${error?.message || ''}`.toLowerCase();
     // Sesiones demo / sin hotel real: la BD rechaza por RLS; usamos respaldo local.
-    const noRealHotel = !this.getHotelId() || (typeof window !== 'undefined' && localStorage.getItem('demoMode') === 'true');
-    if (noRealHotel && (text.includes('42501') || text.includes('row-level security'))) return true;
-    return text.includes('42p01') || text.includes('pgrst205') || text.includes('could not find the table') || text.includes('does not exist');
+    // Sólo el modo demo usa respaldo local; con un hotel real todo se guarda en
+    // la base y un error se muestra en lugar de guardarse en el navegador.
+    const demo = typeof window !== 'undefined' && localStorage.getItem('demoMode') === 'true';
+    if (!demo) return false;
+    return text.includes('42501') || text.includes('row-level security')
+      || text.includes('42p01') || text.includes('pgrst205') || text.includes('could not find the table') || text.includes('does not exist');
   }
 
   // ------- Dashboard -------
@@ -826,8 +829,30 @@ class ApiClient {
     }
     const remoteRows = data || [];
     const remoteIds = new Set(remoteRows.map((entry: any) => entry.id));
-    return [...remoteRows, ...localRows.filter((entry) => !remoteIds.has(entry.id))]
-      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    // Notas que quedaron sólo en este navegador (versiones anteriores): se suben
+    // a la base una vez y se borran del navegador.
+    const pendientes = localRows.filter((entry) => !remoteIds.has(entry.id));
+    if (pendientes.length) {
+      const subidas: any[] = [];
+      const subidasIds = new Set<string>();
+      const esUuid = (v: unknown) => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v);
+      for (const entry of pendientes) {
+        const { _local_only: _ignored, id, autor_id, turno_id, ...row } = entry as any;
+        const { data: inserted, error: insertError } = await operationalDb.from('bitacora_operativa')
+          .insert({
+            ...row,
+            ...(esUuid(id) ? { id } : {}),
+            autor_id: esUuid(autor_id) ? autor_id : null,
+            turno_id: esUuid(turno_id) ? turno_id : null,
+            hotel_id: this.hid(),
+          }).select().single();
+        if (!insertError && inserted) { subidas.push(inserted); subidasIds.add(String(id)); }
+      }
+      this.writeLegacyBitacora(this.readLegacyBitacora().filter((entry: any) => !subidasIds.has(String(entry.id))));
+      remoteRows.push(...subidas);
+    }
+    return remoteRows
+      .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
       .slice(0, 300);
   };
 
@@ -1588,6 +1613,29 @@ class ApiClient {
   };
 
   // ------- Entregables -------
+  // ------- Configuración por hotel (en base de datos) -------
+  getConfigHotel = async <T = any>(clave: string): Promise<T | null> => {
+    const { data, error } = await (supabase as any).from('configuracion_hotel')
+      .select('valor').eq('hotel_id', this.hid()).eq('clave', clave).maybeSingle();
+    if (error) {
+      if (/configuracion_hotel|schema cache|does not exist/i.test(error.message || '')) {
+        throw new Error('Falta correr el SQL de configuración en Supabase.');
+      }
+      throw error;
+    }
+    return (data?.valor ?? null) as T | null;
+  };
+  setConfigHotel = async (clave: string, valor: unknown): Promise<void> => {
+    const { error } = await (supabase as any).from('configuracion_hotel')
+      .upsert({ hotel_id: this.hid(), clave, valor }, { onConflict: 'hotel_id,clave' });
+    if (error) {
+      if (/configuracion_hotel|schema cache|does not exist/i.test(error.message || '')) {
+        throw new Error('Falta correr el SQL de configuración en Supabase.');
+      }
+      throw error;
+    }
+  };
+
   // ------- Políticas de reserva -------
   getPoliticasReserva = async (): Promise<any[]> => {
     const { data, error } = await (supabase as any).from('politicas_reserva').select('*').eq('hotel_id', this.hid())
@@ -2344,9 +2392,9 @@ class ApiClient {
     if (error) throw error;
     const matrix: Record<string, string[]> = {};
     for (const r of (data as any[]) || []) {
-      if (!r.permitido) continue;
+      // Un módulo guardado sin roles permitidos también cuenta (acceso quitado).
       if (!matrix[r.modulo]) matrix[r.modulo] = [];
-      if (!matrix[r.modulo].includes(r.rol)) matrix[r.modulo].push(r.rol);
+      if (r.permitido && !matrix[r.modulo].includes(r.rol)) matrix[r.modulo].push(r.rol);
     }
     return matrix;
   };

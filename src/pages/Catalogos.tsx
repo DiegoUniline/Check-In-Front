@@ -52,6 +52,7 @@ import {
   setTipoDefault,
   getHotelDefault,
   setHotelDefault,
+  syncImpuestosDefault,
   type ImpuestoDefault,
 } from '@/lib/impuestosDefault';
 
@@ -88,6 +89,9 @@ export default function Catalogos() {
   const [impuestosHotel, setImpuestosHotelState] = useState<ImpuestoDefault[]>(
     () => getHotelDefault() || []
   );
+  useEffect(() => {
+    void syncImpuestosDefault().then(() => setImpuestosHotelState(getHotelDefault() || [])).catch(() => undefined);
+  }, []);
   const guardarImpuestosHotel = (list: ImpuestoDefault[]) => {
     setImpuestosHotelState(list);
     setHotelDefault(list);
@@ -184,7 +188,7 @@ export default function Catalogos() {
       publicar_web: tipo.publicar_web !== false,
       fotos: Array.isArray(tipo.fotos) ? tipo.fotos : [],
     });
-    const impuestos = getTipoDefault(tipo.id);
+    const impuestos = Array.isArray(tipo.impuestos_default) ? tipo.impuestos_default : getTipoDefault(tipo.id);
     setUsarImpuestosHotel(impuestos === null);
     setFormTipoImpuestos(impuestos || []);
     setModalTipoOpen(true);

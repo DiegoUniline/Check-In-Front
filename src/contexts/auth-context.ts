@@ -17,6 +17,8 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  /** Cambia cada vez que se recargan los permisos desde la base. */
+  permisosVersion: number;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

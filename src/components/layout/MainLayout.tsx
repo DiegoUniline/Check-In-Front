@@ -29,6 +29,15 @@ export function MainLayout({ children, title, subtitle, fitViewport = false, ful
   const location = useLocation();
   const readOnlyActive = shiftRequired && !openShift && viewOnlyMode && location.pathname !== '/turnos';
 
+  // Avisos cuando la configuración no se pudo guardar en la base.
+  useEffect(() => {
+    const onError = (e: Event) => {
+      toast.error('No se guardó la configuración de impuestos', { description: String((e as CustomEvent).detail || '') });
+    };
+    window.addEventListener('vulo:impuestos-default-error', onError);
+    return () => window.removeEventListener('vulo:impuestos-default-error', onError);
+  }, []);
+
   const explainReadOnly = () => {
     toast.info('Estás en modo de consulta', {
       description: 'Abre un turno para registrar o modificar información.',

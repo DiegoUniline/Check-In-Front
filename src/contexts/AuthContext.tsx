@@ -2,27 +2,30 @@ import { clearOfflineCache } from '@/lib/offlineCache';
 import React, { useState, useEffect, ReactNode } from 'react';
 import api from '@/lib/api';
 import { AuthContext, User } from './auth-context';
-import { savePermissions, loadPermissions, DEFAULT_PERMISSIONS, PermissionMatrix } from '@/lib/permissions';
+import { savePermissions, resetPermissions, PermissionMatrix } from '@/lib/permissions';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
+// Permisos = valores por defecto + lo guardado en la base para el hotel.
 async function syncPermisosFromBD() {
   try {
     const remote = await api.getPermisosHotel();
-    // Solo sobrescribimos si la respuesta remota trae claves; si viene vacía,
-    // conservamos los permisos ya guardados en local (evita "perder" acceso
-    // cuando la BD no tiene overrides o falla la consulta).
-    if (remote && typeof remote === 'object' && Object.keys(remote).length > 0) {
-      const current = loadPermissions();
-      const merged = { ...DEFAULT_PERMISSIONS, ...current, ...(remote as PermissionMatrix) };
-      savePermissions(merged);
-    }
+    resetPermissions();
+    savePermissions((remote || {}) as PermissionMatrix);
   } catch {
-    // Fallback: preservar permisos locales; no tocar nada.
+    // Sin conexión: se mantienen los permisos ya leídos en esta sesión.
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [permisosVersion, setPermisosVersion] = useState(0);
+  const recargarPermisos = async () => {
+    await syncPermisosFromBD();
+    setPermisosVersion((v) => v + 1);
+  };
+  // Si un administrador cambia permisos, se aplican sin volver a iniciar sesión.
+  useRealtimeSync('permisos_hotel', () => void recargarPermisos(), { enabled: Boolean(user) });
 
 useEffect(() => {
     const bootstrapAuth = async () => {
@@ -105,7 +108,7 @@ useEffect(() => {
           localStorage.setItem('user', JSON.stringify(hydratedUser));
           localStorage.setItem('token', session.access_token);
           localStorage.removeItem('demoMode');
-          void syncPermisosFromBD();
+          await recargarPermisos();
         } catch (e) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -147,7 +150,7 @@ useEffect(() => {
       if (email === 'admin@hotel.com') {
         localStorage.setItem('demoMode', 'true');
       }
-      void syncPermisosFromBD();
+      await recargarPermisos();
       setIsLoading(false);
       return true;
     } catch (error) {
@@ -165,7 +168,7 @@ useEffect(() => {
     localStorage.removeItem('demoMode');
     // En equipos compartidos no deben quedar datos de huéspedes ni permisos de otro hotel.
     clearOfflineCache();
-    localStorage.removeItem('permisos_matrix');
+    resetPermissions();
   };
 
   const refreshUser = async () => {
@@ -219,7 +222,7 @@ useEffect(() => {
       localStorage.setItem('user', JSON.stringify(u));
       localStorage.setItem('token', session.access_token);
       localStorage.removeItem('demoMode');
-      void syncPermisosFromBD();
+      await recargarPermisos();
     } catch (e) {
       console.error('refreshUser error', e);
     }
@@ -233,6 +236,7 @@ useEffect(() => {
       login,
       logout,
       refreshUser,
+      permisosVersion,
     }}>
       {children}
     </AuthContext.Provider>

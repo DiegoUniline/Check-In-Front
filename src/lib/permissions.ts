@@ -195,25 +195,21 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   'reservas.operacion.correction_note': ['Admin', 'Gerente', 'Recepcion'],
 };
 
-const STORAGE_KEY = 'permisos_matrix';
+// La matriz vive en la base (permisos_hotel). Aquí sólo se guarda en memoria
+// lo que se leyó de la base en esta sesión; nada se guarda en el navegador.
+let currentMatrix: PermissionMatrix = { ...DEFAULT_PERMISSIONS };
+try { localStorage.removeItem('permisos_matrix'); } catch { /* sin almacenamiento */ }
 
 export function loadPermissions(): PermissionMatrix {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_PERMISSIONS };
-    const parsed = JSON.parse(raw) as PermissionMatrix;
-    return { ...DEFAULT_PERMISSIONS, ...parsed };
-  } catch {
-    return { ...DEFAULT_PERMISSIONS };
-  }
+  return { ...currentMatrix };
 }
 
 export function savePermissions(matrix: PermissionMatrix): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(matrix));
+  currentMatrix = { ...DEFAULT_PERMISSIONS, ...matrix };
 }
 
 export function resetPermissions(): PermissionMatrix {
-  localStorage.removeItem(STORAGE_KEY);
+  currentMatrix = { ...DEFAULT_PERMISSIONS };
   return { ...DEFAULT_PERMISSIONS };
 }
 

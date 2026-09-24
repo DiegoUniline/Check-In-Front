@@ -344,7 +344,7 @@ export default function Habitaciones() {
       excluida_publica: !!hab.excluida_publica,
       fotos: Array.isArray(hab.fotos) ? hab.fotos : [],
     });
-    const impuestos = getHabDefault(hab.id);
+    const impuestos = Array.isArray(hab.impuestos_default) ? hab.impuestos_default : getHabDefault(hab.id);
     setUsarImpuestosTipo(impuestos === null);
     setFormImpuestos(impuestos || []);
     setModalOpen(true);

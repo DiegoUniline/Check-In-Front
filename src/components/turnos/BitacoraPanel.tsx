@@ -60,15 +60,26 @@ export function BitacoraPanel({ turnoId }: Props) {
 
   const pendientes = entradas.filter((e) => CATEGORIAS_CON_SEGUIMIENTO.includes(e.categoria) && !e.resuelto).length;
 
-  const handleAgregar = () => {
+  const [guardando, setGuardando] = useState(false);
+  const handleAgregar = async () => {
     if (!form.titulo.trim()) {
       toast({ title: 'Falta el título', variant: 'destructive' });
       return;
     }
-    agregar({ ...form, turnoId, resuelto: false });
-    toast({ title: 'Entrada agregada a la bitácora' });
-    setForm({ categoria: 'General', prioridad: 'Normal', responsable: '', titulo: '', detalle: '' });
-    setOpen(false);
+    setGuardando(true);
+    try {
+      await agregar({ ...form, turnoId, resuelto: false });
+      toast({ title: 'Entrada agregada a la bitácora' });
+      setForm({ categoria: 'General', prioridad: 'Normal', responsable: '', titulo: '', detalle: '' });
+      setOpen(false);
+    } catch (error: any) {
+      toast({ title: 'No se guardó en la bitácora', description: error?.message, variant: 'destructive' });
+    } finally {
+      setGuardando(false);
+    }
+  };
+  const accion = (fn: () => Promise<unknown>) => {
+    void fn().catch((error: any) => toast({ title: 'No se pudo actualizar la bitácora', description: error?.message, variant: 'destructive' }));
   };
 
   return (
@@ -155,7 +166,7 @@ export function BitacoraPanel({ turnoId }: Props) {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button onClick={handleAgregar}>Agregar</Button>
+                <Button onClick={() => void handleAgregar()} disabled={guardando}>{guardando ? "Guardando…" : "Agregar"}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -199,7 +210,7 @@ export function BitacoraPanel({ turnoId }: Props) {
                 )}
               >
                 {CATEGORIAS_CON_SEGUIMIENTO.includes(e.categoria) && (
-                  <button onClick={() => togglePendiente(e.id)} className="shrink-0 mt-0.5">
+                  <button onClick={() => accion(() => togglePendiente(e.id))} className="shrink-0 mt-0.5">
                     {e.resuelto
                       ? <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                       : <Circle className="h-5 w-5 text-amber-500" />}
@@ -220,7 +231,7 @@ export function BitacoraPanel({ turnoId }: Props) {
                     {e.autor}{e.responsable ? ` · Responsable: ${e.responsable}` : ''} · {formatDateTime(e.fecha)}
                   </p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => eliminar(e.id)} className="shrink-0">
+                <Button variant="ghost" size="icon" onClick={() => accion(() => eliminar(e.id))} className="shrink-0">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>

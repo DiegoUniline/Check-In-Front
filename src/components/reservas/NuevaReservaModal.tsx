@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import api, { todayLocal } from '@/lib/api';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
-import { resolveImpuestosDefault } from '@/lib/impuestosDefault';
+import { resolveImpuestosDefault, syncImpuestosDefault } from '@/lib/impuestosDefault';
 import { resolverPrecioTemporada, describirAjuste, loadTemporadas } from '@/lib/temporadas';
 import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
 import { formatDate } from '@/lib/dateFormat';
@@ -290,18 +290,24 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   // Prellena los impuestos configurados por defecto (habitación → tipo → hotel).
   useEffect(() => {
     if (!open) return;
-    const defaults = resolveImpuestosDefault(
-      formData.tipoHabitacion,
-      formData.habitacionId,
-    );
-    setFormData((prev) => ({
-      ...prev,
-      impuestos: defaults.map((d, i) => ({
-        id: `def-${Date.now()}-${i}`,
-        nombre: d.nombre,
-        tasa: Number(d.tasa) || 0,
-      })),
-    }));
+    let cancelled = false;
+    // Se leen de la base antes de prellenar.
+    void syncImpuestosDefault().catch(() => undefined).finally(() => {
+      if (cancelled) return;
+      const defaults = resolveImpuestosDefault(
+        formData.tipoHabitacion,
+        formData.habitacionId,
+      );
+      setFormData((prev) => ({
+        ...prev,
+        impuestos: defaults.map((d, i) => ({
+          id: `def-${Date.now()}-${i}`,
+          nombre: d.nombre,
+          tasa: Number(d.tasa) || 0,
+        })),
+      }));
+    });
+    return () => { cancelled = true; };
   }, [open, formData.tipoHabitacion, formData.habitacionId]);
 
   const cargarDatos = async () => {
