@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { loadCaller, targetAccessError } from '../_shared/userAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,29 +20,16 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-    if (userErr || !userData?.user) return json({ error: 'Sesión inválida' }, 401);
-    const caller = userData.user;
-
-    const { data: callerRoles } = await admin
-      .from('user_roles').select('role').eq('user_id', caller.id);
-    const roles = (callerRoles || []).map((r: any) => r.role);
-    const isSuperAdmin = roles.includes('SuperAdmin') || caller.email === 'diego.leon@uniline.mx';
-    const isAdmin = roles.includes('Admin') || roles.includes('Gerente') || isSuperAdmin;
-    if (!isAdmin) return json({ error: 'Solo administradores pueden eliminar usuarios' }, 403);
+    const caller = await loadCaller(admin, jwt);
+    if (!caller) return json({ error: 'Sesión inválida' }, 401);
+    if (!caller.isManager) return json({ error: 'Solo administradores pueden eliminar usuarios' }, 403);
 
     const body = await req.json();
     const { id } = body || {};
     if (!id) return json({ error: 'Falta id de usuario' }, 400);
     if (id === caller.id) return json({ error: 'No puedes eliminar tu propio usuario' }, 400);
-
-    // No permitir eliminar a un SuperAdmin salvo que el caller también lo sea
-    const { data: targetRoles } = await admin
-      .from('user_roles').select('role').eq('user_id', id);
-    const targetIsSuper = (targetRoles || []).some((r: any) => r.role === 'SuperAdmin');
-    if (targetIsSuper && !isSuperAdmin) {
-      return json({ error: 'No puedes eliminar a un SuperAdmin' }, 403);
-    }
+    const accessError = await targetAccessError(admin, caller, id);
+    if (accessError) return json({ error: accessError }, 403);
 
     // Borrar user_roles y profile primero (por FKs), luego auth.users
     await admin.from('user_roles').delete().eq('user_id', id);

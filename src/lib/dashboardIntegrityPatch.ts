@@ -23,7 +23,7 @@ if (!root[PATCH_KEY]) {
         .select('*, habitaciones(numero)')
         .eq('hotel_id', hotelId)
         .in('prioridad', ['Alta', 'Urgente'])
-        .neq('estado', 'Completada')
+        .not('estado', 'in', '(Completada,Completado,Resuelto,Cerrado)')
         .order('fecha_reporte', { ascending: true })
         .limit(5),
     ]);

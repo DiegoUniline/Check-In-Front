@@ -1,3 +1,4 @@
+import { clearOfflineCache } from '@/lib/offlineCache';
 import React, { useState, useEffect, ReactNode } from 'react';
 import api from '@/lib/api';
 import { AuthContext, User } from './auth-context';
@@ -96,7 +97,7 @@ useEffect(() => {
             email: session.user.email || '',
             nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
             apellidoPaterno: profile?.apellido_paterno || '',
-            rol: (roleRow?.role as string) || 'Admin',
+            rol: (roleRow?.role as string) || 'Recepcion',
             hotelNombre: h0?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
           };
 
@@ -162,6 +163,9 @@ useEffect(() => {
     api.setDemoMode(false);
     localStorage.removeItem('user');
     localStorage.removeItem('demoMode');
+    // En equipos compartidos no deben quedar datos de huéspedes ni permisos de otro hotel.
+    clearOfflineCache();
+    localStorage.removeItem('permisos_matrix');
   };
 
   const refreshUser = async () => {
@@ -208,7 +212,7 @@ useEffect(() => {
         email: session.user.email || '',
         nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
         apellidoPaterno: profile?.apellido_paterno || '',
-        rol: (roleRow?.role as string) || 'Admin',
+        rol: (roleRow?.role as string) || 'Recepcion',
         hotelNombre: h2?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
       };
       setUser(u);

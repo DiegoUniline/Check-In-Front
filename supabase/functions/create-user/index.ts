@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { loadCaller, normalizeRole, roleAssignmentError } from '../_shared/userAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,7 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const ALLOWED_ROLES = ['Admin', 'Recepcion', 'Housekeeping', 'Mantenimiento', 'Gerente', 'SuperAdmin'];
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -21,25 +21,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Validar quién es el caller
-    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-    if (userErr || !userData?.user) return json({ error: 'Sesión inválida' }, 401);
-    const caller = userData.user;
-
-    // Perfil + rol del caller
-    const { data: callerProfile } = await admin
-      .from('profiles')
-      .select('hotel_id, hotel_activo_id')
-      .eq('id', caller.id)
-      .maybeSingle();
-    const { data: callerRoles } = await admin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', caller.id);
-    const roles = (callerRoles || []).map((r: any) => r.role);
-    const isSuperAdmin = roles.includes('SuperAdmin') || caller.email === 'diego.leon@uniline.mx';
-    const isAdmin = roles.includes('Admin') || roles.includes('Gerente') || isSuperAdmin;
-    if (!isAdmin) return json({ error: 'Solo administradores pueden crear usuarios' }, 403);
+    const caller = await loadCaller(admin, jwt);
+    if (!caller) return json({ error: 'Sesión inválida' }, 401);
+    if (!caller.isManager) return json({ error: 'Solo administradores pueden crear usuarios' }, 403);
 
     const body = await req.json();
     const {
@@ -59,13 +43,16 @@ Deno.serve(async (req) => {
     }
 
     // Normalizar rol (case-insensitive → enum exacto)
-    const rolNorm = ALLOWED_ROLES.find((r) => r.toLowerCase() === String(rol).toLowerCase());
+    const rolNorm = normalizeRole(rol);
     if (!rolNorm) return json({ error: `Rol inválido: ${rol}` }, 400);
+    const roleError = roleAssignmentError(caller, rolNorm);
+    if (roleError) return json({ error: roleError }, 403);
 
-    // hotel_id: SuperAdmin puede pasar cualquiera (o null); resto queda al del caller
-    const targetHotelId = isSuperAdmin
-      ? (hotelIdBody === undefined ? callerProfile?.hotel_id ?? null : hotelIdBody)
-      : (callerProfile?.hotel_activo_id || callerProfile?.hotel_id || null);
+    // hotel_id: SuperAdmin puede pasar cualquiera; el resto queda en su propio hotel.
+    const targetHotelId = caller.isSuperAdmin
+      ? (hotelIdBody === undefined ? caller.hotelId : hotelIdBody)
+      : caller.hotelId;
+    if (!caller.isSuperAdmin && !targetHotelId) return json({ error: 'Tu usuario no tiene hotel asignado' }, 400);
 
     // 1. Crear usuario en auth (email confirmado)
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
@@ -73,6 +60,8 @@ Deno.serve(async (req) => {
       password,
       email_confirm: true,
       user_metadata: { nombre, apellido_paterno, apellido_materno },
+      // Evita que el trigger de registro público le cree otro hotel y rol Admin.
+      app_metadata: { created_by_admin: true },
     });
     if (createErr || !created?.user) {
       return json({ error: createErr?.message || 'No se pudo crear el usuario' }, 400);
@@ -98,11 +87,13 @@ Deno.serve(async (req) => {
       return json({ error: `Perfil: ${profErr.message}` }, 400);
     }
 
-    // 3. Insertar rol
+    // 3. Rol único: se reemplaza cualquier rol que se haya creado automáticamente.
+    await admin.from('user_roles').delete().eq('user_id', newUserId);
     const { error: roleErr } = await admin
       .from('user_roles')
       .insert({ user_id: newUserId, role: rolNorm });
-    if (roleErr && !String(roleErr.message).includes('duplicate')) {
+    if (roleErr) {
+      await admin.auth.admin.deleteUser(newUserId);
       return json({ error: `Rol: ${roleErr.message}` }, 400);
     }
 

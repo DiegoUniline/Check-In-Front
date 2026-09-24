@@ -65,7 +65,11 @@ export async function withOfflineCache<T>(
     writeCache(key, fresh);
     return fresh;
   } catch (err) {
-    const cached = readCache<T>(key);
+    // Sólo se usa la copia local cuando realmente no hay conexión; un error de
+    // permisos o de sesión no debe mostrar datos viejos como si fueran actuales.
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    const networkError = err instanceof TypeError || /fetch|network|Failed to fetch|NetworkError/i.test(String((err as any)?.message || ''));
+    const cached = offline || networkError ? readCache<T>(key) : null;
     if (cached !== null) {
       console.warn(`[offlineCache] usando cache para "${key}":`, err);
       return cached;

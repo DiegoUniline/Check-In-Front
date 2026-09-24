@@ -179,6 +179,10 @@ class ApiClient {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     const { data: profile } = await supabase.from('profiles').select('*, hotels(nombre)').eq('id', data.user.id).maybeSingle();
+    if (profile && (profile as any).activo === false) {
+      await supabase.auth.signOut().catch(() => {});
+      throw new Error('Tu usuario está desactivado. Contacta al administrador del hotel.');
+    }
     const hotelId = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
     this.setHotelId(hotelId);
     // Leer el rol real desde user_roles (no asumir Admin)
@@ -442,7 +446,7 @@ class ApiClient {
       supabase.from('reservas').select('id,numero_reserva,fecha_checkin,fecha_checkout,estado,origen,checkin_realizado,checkout_realizado,habitacion_id,saldo_pendiente,total,total_pagado').eq('hotel_id', hotelId),
       supabase.from('habitaciones').select('id,numero,estado_habitacion,estado_limpieza,estado_mantenimiento').eq('hotel_id', hotelId),
       supabase.from('tareas_limpieza').select('id,estado,prioridad,asignado_a,habitacion_id').eq('hotel_id', hotelId).neq('estado', 'Completada'),
-      supabase.from('tareas_mantenimiento').select('id,estado,prioridad,habitacion_id,titulo').eq('hotel_id', hotelId).neq('estado', 'Completada'),
+      supabase.from('tareas_mantenimiento').select('id,estado,prioridad,habitacion_id,titulo').eq('hotel_id', hotelId).not('estado', 'in', '(Completada,Completado,Resuelto,Cerrado)'),
       operationalDb.from('turnos_operativos').select('*').eq('hotel_id', hotelId).eq('estado', 'Abierto').order('abierto_at', { ascending: false }).limit(1).maybeSingle(),
       operationalDb.from('bitacora_operativa').select('id,categoria,prioridad,estado').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
       operationalDb.from('cierres_diarios').select('*').eq('hotel_id', hotelId).eq('fecha_operativa', today).maybeSingle(),
@@ -1495,7 +1499,8 @@ class ApiClient {
     return withOfflineCache(key, async () => {
       let q = supabase.from('tareas_limpieza').select('*, habitaciones(numero, tipo:tipos_habitacion(nombre))').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
       if (params?.estado) q = q.eq('estado', params.estado);
-      const { data } = await q;
+      const { data, error } = await q;
+      if (error) throw error;
       return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
     });
   };
@@ -1512,7 +1517,8 @@ class ApiClient {
       .from('tareas_limpieza')
       .select('habitacion_id, estado')
       .eq('hotel_id', hid)
-      .in('estado', ['Pendiente', 'EnProceso', 'En Proceso', 'Completada']);
+      // Una tarea ya completada no impide crear la nueva limpieza de hoy.
+      .in('estado', ['Pendiente', 'EnProceso', 'En Proceso']);
     const yaConTarea = new Set((tareasActivas || []).map((t: any) => t.habitacion_id));
     const faltantes = habs.filter((h: any) => !yaConTarea.has(h.id));
     if (!faltantes.length) return;
@@ -1549,8 +1555,16 @@ class ApiClient {
           patch.estado_limpieza = 'EnLimpieza';
         } else if (estado === 'Completada' || estado === 'Verificada') {
           patch.estado_limpieza = 'Limpia';
-          // Si la habitación no está ocupada/reservada/mantenimiento, marcarla Disponible
-          if (hab && !['Ocupada', 'Reservada', 'Mantenimiento', 'FueraDeServicio'].includes(hab.estado_habitacion)) {
+          // Sólo se libera si no hay huésped hospedado y la habitación no está bloqueada.
+          const { data: enCasa } = await supabase.from('reservas').select('id')
+            .eq('habitacion_id', r.habitacion_id)
+            .in('estado', ['CheckIn', 'Hospedado'])
+            .eq('checkin_realizado', true)
+            .eq('checkout_realizado', false)
+            .limit(1);
+          if (enCasa?.length) {
+            patch.estado_habitacion = 'Ocupada';
+          } else if (hab && !['Ocupada', 'Reservada', 'Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(hab.estado_habitacion)) {
             patch.estado_habitacion = 'Disponible';
           }
         } else if (estado === 'Pendiente') {
@@ -1574,11 +1588,12 @@ class ApiClient {
   getTareasMantenimiento = async (params?: Record<string, string>): Promise<any> => {
     let q = supabase.from('tareas_mantenimiento').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).order('fecha_reporte', { ascending: false });
     if (params?.estado) q = q.eq('estado', params.estado);
-    const { data } = await q;
+    const { data, error } = await q;
+    if (error) throw error;
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
   };
   getTareasMantenimientoPendientes = async (): Promise<any> => {
-    const { data } = await supabase.from('tareas_mantenimiento').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).neq('estado', 'Completada');
+    const { data } = await supabase.from('tareas_mantenimiento').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).not('estado', 'in', '(Completada,Completado,Resuelto,Cerrado)');
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
   };
   createTareaMantenimiento = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('tareas_mantenimiento').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
@@ -2017,15 +2032,18 @@ class ApiClient {
     const { error } = await supabase
       .from('reservas')
       .update({ estado: 'Confirmada', revisada_at: new Date().toISOString() } as any)
-      .eq('id', id);
+      .eq('id', id)
+      .eq('estado', 'Pendiente');
     if (error) throw error;
     return {};
   };
   rechazarReservaOnline = async (id: string, motivo?: string): Promise<any> => {
     const { error } = await supabase
       .from('reservas')
-      .update({ estado: 'Cancelada', revisada_at: new Date().toISOString(), notas_internas: motivo || 'Rechazada por hotel' } as any)
-      .eq('id', id);
+      // El motivo va a su propio campo; no se borran las notas internas.
+      .update({ estado: 'Cancelada', revisada_at: new Date().toISOString(), motivo_cancelacion: motivo || 'Rechazada por el hotel' } as any)
+      .eq('id', id)
+      .eq('estado', 'Pendiente');
     if (error) throw error;
     return {};
   };
