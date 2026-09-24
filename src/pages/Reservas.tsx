@@ -559,7 +559,7 @@ export default function Reservas() {
         </div>
 
         {/* KPI compactos, mobile-first */}
-        {!isCalendarWorkspace && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {!isCalendarWorkspace && !(tabActiva === 'timeline' && reservasSubView === 'card') && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Card className="p-3">
             <div className="flex items-center gap-2 min-w-0">
               <div className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
@@ -629,33 +629,13 @@ export default function Reservas() {
 
           {/* TAB RECEPCIÓN: Cards por habitación */}
           <TabsContent value="recepcion" className="space-y-3 mt-3">
-            <Card>
-              <CardContent className="p-2">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
-                    <PisoChips value={filtroPiso} onChange={setFiltroPiso} pisos={pisosDisponibles} />
-                  </div>
-                  <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar habitación..."
-                      className="h-10 w-full pl-8 text-sm sm:h-8 sm:w-[200px] sm:text-xs"
-                      value={busqueda}
-                      onChange={(e) => setBusqueda(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {loading ? (
               <div className="flex items-center justify-center py-12 border rounded-lg bg-card">
                 <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
               <RecepcionGrid
-                habitaciones={habitacionesFiltradas}
+                habitaciones={habitaciones}
                 reservas={reservas}
                 onLibreClick={handleRecepcionLibreClick}
                 onOcupadaClick={handleReservationClick}
@@ -720,13 +700,23 @@ export default function Reservas() {
                     key={opt.key}
                     variant={reservasSubView === opt.key ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-10 w-full px-2 text-xs font-medium sm:w-32 sm:px-4 sm:text-sm"
+                    className={cn('w-full px-2 text-xs font-medium sm:px-4', reservasSubView === 'card' ? 'h-8 sm:w-24' : 'h-10 sm:w-32 sm:text-sm')}
                     onClick={() => setReservasSubView(opt.key)}
                   >
                     {opt.label}
                   </Button>
                 ))}
               </div>
+              {reservasSubView === 'card' && (
+                <div className="flex h-9 flex-1 items-center gap-1 overflow-x-auto rounded-md border bg-card px-2 text-xs">
+                  <span className="flex shrink-0 items-center gap-1.5 px-2"><BedDouble className="h-3.5 w-3.5 text-[#10233F]" /><strong className="tabular-nums">{habitacionesOcupadas}/{totalHabitaciones}</strong><span className="text-muted-foreground">ocupadas</span></span>
+                  <span className="h-4 w-px shrink-0 bg-border" />
+                  <button type="button" className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 hover:bg-emerald-50" onClick={() => setModalLlegadas(true)}><LogIn className="h-3.5 w-3.5 text-emerald-600" /><strong className="tabular-nums text-emerald-700">{llegadasHoy}</strong><span className="text-muted-foreground">llegadas</span></button>
+                  <button type="button" className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 hover:bg-orange-50" onClick={() => setModalSalidas(true)}><LogOut className="h-3.5 w-3.5 text-orange-600" /><strong className="tabular-nums text-orange-700">{salidasHoy}</strong><span className="text-muted-foreground">salidas</span></button>
+                  <span className="h-4 w-px shrink-0 bg-border" />
+                  <span className="flex shrink-0 items-center gap-1.5 px-2"><Calendar className="h-3.5 w-3.5 text-sky-600" /><strong className="tabular-nums text-sky-700">{occupancyPercent}%</strong><span className="text-muted-foreground">ocupación</span></span>
+                </div>
+              )}
             </div>
 
             {reservasSubView === 'timeline' && (
@@ -990,7 +980,7 @@ export default function Reservas() {
                     </div>
                   ) : (
                     <TimelineGrid
-                      habitaciones={habitacionesFiltradas}
+                      habitaciones={habitaciones}
                       reservas={reservas}
                       startDate={startDate}
                       daysToShow={daysToShow}
@@ -1008,25 +998,6 @@ export default function Reservas() {
 
             {reservasSubView === 'card' && (
               <>
-                <Card>
-                  <CardContent className="p-2">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <TipoChips value={filtroTipo} onChange={setFiltroTipo} tipos={tiposHabitacion} />
-                        <PisoChips value={filtroPiso} onChange={setFiltroPiso} pisos={pisosDisponibles} />
-                      </div>
-                      <div className="relative">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                        <Input
-                          placeholder="Buscar habitación..."
-                          className="pl-7 h-8 w-[200px] text-xs"
-                          value={busqueda}
-                          onChange={(e) => setBusqueda(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
                 {loading ? (
                   <div className="flex items-center justify-center py-12 border rounded-lg bg-card">
                     <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />

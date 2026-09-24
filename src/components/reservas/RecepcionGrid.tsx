@@ -209,16 +209,16 @@ export function RecepcionGrid({
   };
 
   return (
-    <div className="space-y-3">
-      {/* Toolbar: búsqueda + toggle vista */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="relative flex-1 max-w-sm min-w-[180px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+    <div className="grid items-start gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+      {/* Filtros a la izquierda */}
+      <aside className="space-y-3 rounded-lg border bg-card p-2.5 lg:sticky lg:top-2 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por habitación, tipo o huésped…"
+            placeholder="Habitación, tipo o huésped…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-8 h-8 text-xs"
+            className="h-8 pl-8 text-xs"
           />
           {query && (
             <button
@@ -231,174 +231,123 @@ export function RecepcionGrid({
           )}
         </div>
 
-        <div className="flex items-center gap-1 p-0.5 bg-muted rounded-lg">
-          <Button
-            variant={vista === 'cards' ? 'default' : 'ghost'}
-            size="sm"
-            className="h-7 px-2.5"
-            onClick={() => setVista('cards')}
-          >
-            <LayoutGrid className="h-3.5 w-3.5 mr-1" />
-            <span className="text-xs">Cards</span>
-          </Button>
-          <Button
-            variant={vista === 'tabla' ? 'default' : 'ghost'}
-            size="sm"
-            className="h-7 px-2.5"
-            onClick={() => setVista('tabla')}
-          >
-            <List className="h-3.5 w-3.5 mr-1" />
-            <span className="text-xs">Tabla</span>
-          </Button>
+        <div className="grid grid-cols-2 gap-1 rounded-md bg-muted p-0.5">
+          <button type="button" onClick={() => setVista('cards')} className={cn('flex h-7 items-center justify-center gap-1 rounded text-xs', vista === 'cards' ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground')}>
+            <LayoutGrid className="h-3.5 w-3.5" />Cards
+          </button>
+          <button type="button" onClick={() => setVista('tabla')} className={cn('flex h-7 items-center justify-center gap-1 rounded text-xs', vista === 'tabla' ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground')}>
+            <List className="h-3.5 w-3.5" />Tabla
+          </button>
         </div>
-      </div>
 
-      {/* Chips: Estado */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <FilterChip
-          active={filtroEstado === 'all'}
-          onClick={() => setFiltroEstado('all')}
-          label="Todas"
-          count={items.length}
-        />
-        {(['libre', 'reservada', 'ocupada', 'mantenimiento'] as EstadoCard[]).map((e) => {
-          const count = (stats as any)[e === 'libre' ? 'libres' : e === 'reservada' ? 'reservadas' : e === 'ocupada' ? 'ocupadas' : 'mantenimiento'];
-          if (e === 'mantenimiento' && count === 0) return null;
-          const meta = ESTADO_META[e];
-          return (
-            <FilterChip
-              key={e}
-              active={filtroEstado === e}
-              onClick={() => setFiltroEstado(filtroEstado === e ? 'all' : e)}
-              label={meta.label}
-              count={count}
-              dotClass={meta.dot}
-            />
-          );
-        })}
-      </div>
-
-      {/* Chips: Piso y Tipo */}
-      {(pisos.length > 1 || tipos.length > 1) && (
-        <div className="flex flex-wrap items-center gap-3">
-          {pisos.length > 1 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mr-1">
-                Piso
-              </span>
-              <FilterChip
-                active={filtroPiso === 'all'}
-                onClick={() => setFiltroPiso('all')}
-                label="Todos"
-                size="sm"
+        <FilterGroup title="Estado">
+          <FilterRow active={filtroEstado === 'all'} onClick={() => setFiltroEstado('all')} label="Todas" count={items.length} />
+          {(['libre', 'reservada', 'ocupada', 'mantenimiento'] as EstadoCard[]).map((e) => {
+            const count = (stats as any)[e === 'libre' ? 'libres' : e === 'reservada' ? 'reservadas' : e === 'ocupada' ? 'ocupadas' : 'mantenimiento'];
+            const meta = ESTADO_META[e];
+            return (
+              <FilterRow
+                key={e}
+                active={filtroEstado === e}
+                onClick={() => setFiltroEstado(filtroEstado === e ? 'all' : e)}
+                label={meta.label}
+                count={count}
+                dotClass={meta.dot}
               />
-              {pisos.map((p) => (
-                <FilterChip
-                  key={p}
-                  active={filtroPiso === p}
-                  onClick={() => setFiltroPiso(filtroPiso === p ? 'all' : p)}
-                  label={p === 0 ? 'S/P' : `P${p}`}
-                  size="sm"
-                />
-              ))}
-            </div>
-          )}
-          {tipos.length > 1 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mr-1">
-                Tipo
-              </span>
-              <FilterChip
-                active={filtroTipo === 'all'}
-                onClick={() => setFiltroTipo('all')}
-                label="Todos"
-                size="sm"
-              />
-              {tipos.map((t) => (
-                <FilterChip
-                  key={t.id}
-                  active={filtroTipo === t.id}
-                  onClick={() => setFiltroTipo(filtroTipo === t.id ? 'all' : t.id)}
-                  label={t.nombre}
-                  size="sm"
-                />
-              ))}
-            </div>
-          )}
-          {hayFiltros && (
-            <button
-              onClick={limpiarFiltros}
-              className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 ml-auto"
-            >
-              <X className="h-3 w-3" />
-              Limpiar
-            </button>
-          )}
-        </div>
-      )}
+            );
+          })}
+        </FilterGroup>
 
-      {itemsFiltrados.length === 0 ? (
-        <Card className="p-12 text-center">
-          <BedDouble className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">
-            {hayFiltros ? 'No hay habitaciones que coincidan con los filtros' : 'No hay habitaciones para mostrar'}
-          </p>
-          {hayFiltros && (
-            <Button variant="outline" size="sm" className="mt-4" onClick={limpiarFiltros}>
-              Limpiar filtros
-            </Button>
-          )}
-        </Card>
-      ) : vista === 'cards' ? (
-        <FloorGroups items={itemsFiltrados} onClick={handleClick} />
-      ) : (
-        <RoomTable items={itemsFiltrados} onRowClick={handleClick} />
-      )}
+        {pisos.length > 1 && (
+          <FilterGroup title="Piso">
+            <FilterRow active={filtroPiso === 'all'} onClick={() => setFiltroPiso('all')} label="Todos" />
+            {pisos.map((p) => (
+              <FilterRow
+                key={p}
+                active={filtroPiso === p}
+                onClick={() => setFiltroPiso(filtroPiso === p ? 'all' : p)}
+                label={p === 0 ? 'Sin piso' : `Piso ${p}`}
+                count={items.filter((i) => (Number(i.habitacion.piso) || 0) === p).length}
+              />
+            ))}
+          </FilterGroup>
+        )}
+
+        {tipos.length > 1 && (
+          <FilterGroup title="Tipo">
+            <FilterRow active={filtroTipo === 'all'} onClick={() => setFiltroTipo('all')} label="Todos" />
+            {tipos.map((t) => (
+              <FilterRow
+                key={t.id}
+                active={filtroTipo === t.id}
+                onClick={() => setFiltroTipo(filtroTipo === t.id ? 'all' : t.id)}
+                label={t.nombre}
+                count={items.filter((i) => String(i.habitacion.tipo_habitacion_id || i.habitacion.tipo_id || i.habitacion.tipo_nombre) === t.id).length}
+              />
+            ))}
+          </FilterGroup>
+        )}
+
+        {hayFiltros && (
+          <Button variant="ghost" size="sm" className="h-7 w-full text-xs" onClick={limpiarFiltros}>
+            <X className="mr-1 h-3 w-3" />Limpiar filtros
+          </Button>
+        )}
+      </aside>
+
+      <div className="min-w-0">
+        {itemsFiltrados.length === 0 ? (
+          <Card className="p-12 text-center">
+            <BedDouble className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
+              {hayFiltros ? 'No hay habitaciones que coincidan con los filtros' : 'No hay habitaciones para mostrar'}
+            </p>
+            {hayFiltros && (
+              <Button variant="outline" size="sm" className="mt-4" onClick={limpiarFiltros}>
+                Limpiar filtros
+              </Button>
+            )}
+          </Card>
+        ) : vista === 'cards' ? (
+          <FloorGroups items={itemsFiltrados} onClick={handleClick} />
+        ) : (
+          <RoomTable items={itemsFiltrados} onRowClick={handleClick} />
+        )}
+      </div>
     </div>
   );
 }
 
-/* ---------------- CHIP DE FILTRO ---------------- */
+function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      <div className="space-y-0.5">{children}</div>
+    </div>
+  );
+}
 
-function FilterChip({
-  active,
-  onClick,
-  label,
-  count,
-  dotClass,
-  size = 'md',
-}: {
+function FilterRow({ active, onClick, label, count, dotClass }: {
   active: boolean;
   onClick: () => void;
   label: string;
   count?: number;
   dotClass?: string;
-  size?: 'sm' | 'md';
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border transition-all',
-        size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs',
-        'font-medium',
-        active
-          ? 'bg-foreground text-background border-foreground shadow-sm'
-          : 'bg-card text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
+        'flex h-7 w-full items-center gap-2 rounded px-1.5 text-left text-xs transition-colors',
+        active ? 'bg-[#10233F] text-white' : 'text-foreground hover:bg-muted',
       )}
+      title={label}
     >
-      {dotClass && <span className={cn('h-1.5 w-1.5 rounded-full', dotClass)} />}
-      <span>{label}</span>
+      {dotClass && <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotClass)} />}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
       {typeof count === 'number' && (
-        <span
-          className={cn(
-            'tabular-nums font-semibold',
-            active ? 'text-background/80' : 'text-foreground'
-          )}
-        >
-          {count}
-        </span>
+        <span className={cn('shrink-0 tabular-nums text-[11px]', active ? 'text-white/80' : 'text-muted-foreground')}>{count}</span>
       )}
     </button>
   );
@@ -430,12 +379,12 @@ function FloorGroups({
   }, [items]);
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-4">
       {grupos.map(([piso, hab]) => {
         const libres = hab.filter((h) => h.estado === 'libre').length;
         return (
           <section key={piso}>
-            <header className="mb-3 flex items-baseline justify-between">
+            <header className="mb-1.5 flex items-baseline justify-between">
               <div className="flex items-baseline gap-3">
                 <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
                   {piso === 0 ? 'Sin piso' : `Piso ${piso}`}
@@ -448,7 +397,7 @@ function FloorGroups({
                 <span className="font-semibold text-foreground tabular-nums">{libres}</span> disponibles
               </span>
             </header>
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-2">
               {hab.map((item) => (
                 <RoomCard key={item.habitacion.id} item={item} onClick={() => onClick(item)} />
               ))}
@@ -506,7 +455,7 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
       onKeyDown={handleKey}
       className={cn(
         'group relative rounded-xl border transition-all duration-200',
-        'p-4 min-h-[128px] flex flex-col',
+        'p-2.5 min-h-[84px] flex flex-col',
         meta.cardBg,
         meta.cardBorder,
         isClickable && 'cursor-pointer ' + meta.cardHover,
@@ -515,7 +464,7 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
       )}
     >
       {/* Estado: punto + texto pequeño en la esquina superior */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="flex items-start justify-between gap-2 mb-1">
         <div className="flex items-center gap-1.5">
           <span className={cn('h-1.5 w-1.5 rounded-full', meta.accent)} />
           <span className={cn('text-[10px] uppercase tracking-wider font-semibold', meta.accentText)}>
@@ -531,7 +480,7 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
 
       {/* Número de habitación: protagonista, peso ligero */}
       <div className="flex items-baseline gap-2">
-        <h3 className="text-3xl font-light leading-none tracking-tight tabular-nums text-foreground">
+        <h3 className="text-2xl font-light leading-none tracking-tight tabular-nums text-foreground">
           {habitacion.numero}
         </h3>
         {isClickable && (
@@ -540,13 +489,13 @@ function RoomCard({ item, onClick }: { item: HabitacionStatus; onClick: () => vo
       </div>
 
       {/* Tipo de habitación */}
-      <p className="text-xs text-muted-foreground mt-1.5 truncate">
+      <p className="mt-1 truncate text-[11px] text-muted-foreground" title={habitacion.tipo_nombre || undefined}>
         {habitacion.tipo_nombre || 'Sin tipo'}
       </p>
 
       {/* Información del huésped (solo si aplica) */}
       {huesped ? (
-        <div className={cn('mt-auto pt-3 border-t', meta.divider)}>
+        <div className={cn('mt-auto pt-1.5 mt-1.5 border-t', meta.divider)}>
           <p className="text-xs font-medium text-foreground truncate flex items-center gap-1.5">
             <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
             <span className="truncate">{huesped}</span>
