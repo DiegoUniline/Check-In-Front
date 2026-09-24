@@ -23,7 +23,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b120000_1$
 DECLARE
   v_product public.productos%ROWTYPE;
   v_before numeric;
@@ -77,7 +77,7 @@ BEGIN
 
   RETURN to_jsonb(v_move);
 END;
-$$;
+$b120000_1$;
 
 REVOKE ALL ON FUNCTION public.vulo_inventory_move(uuid, text, numeric, text, text, boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.vulo_inventory_move(uuid, text, numeric, text, text, boolean) TO authenticated;
@@ -90,7 +90,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b120000_2$
 DECLARE
   v_last integer;
 BEGIN
@@ -107,7 +107,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$;
+$b120000_2$;
 
 REVOKE ALL ON FUNCTION public.vulo_assign_purchase_folio() FROM PUBLIC, anon, authenticated;
 
@@ -124,7 +124,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b120000_3$
 DECLARE
   v_compra public.compras%ROWTYPE;
   v_item record;
@@ -178,7 +178,7 @@ BEGIN
   RETURNING * INTO v_compra;
   RETURN to_jsonb(v_compra);
 END;
-$$;
+$b120000_3$;
 
 REVOKE ALL ON FUNCTION public.vulo_receive_purchase(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.vulo_receive_purchase(uuid) TO authenticated;
@@ -192,7 +192,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b120000_4$
 DECLARE
   v_compra public.compras%ROWTYPE;
   v_item record;
@@ -241,7 +241,7 @@ BEGIN
   DELETE FROM public.compras WHERE id = v_compra.id;
   RETURN jsonb_build_object('ok', true);
 END;
-$$;
+$b120000_4$;
 
 REVOKE ALL ON FUNCTION public.vulo_delete_purchase(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.vulo_delete_purchase(uuid) TO authenticated;
@@ -256,7 +256,7 @@ LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b120000_5$
 DECLARE
   v_tz text;
   v_raw text := NULLIF(COALESCE(p_row->>'fecha', p_row->>'created_at'), '');
@@ -268,14 +268,14 @@ BEGIN
   IF length(v_raw) <= 10 THEN RETURN v_raw::date; END IF;
   RETURN (v_raw::timestamptz AT TIME ZONE v_tz)::date;
 END;
-$$;
+$b120000_5$;
 
 CREATE OR REPLACE FUNCTION public.vulo_prevent_closed_day_change()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b120000_6$
 DECLARE
   v_hotel_id uuid;
   v_fecha date;
@@ -311,55 +311,51 @@ BEGIN
   IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
   RETURN NEW;
 END;
-$$;
+$b120000_6$;
 
 -- ---------------------------------------------------------------------------
 -- 5. Pagos a proveedor
 -- ---------------------------------------------------------------------------
-DO $$
+CREATE OR REPLACE FUNCTION public.vulo_guard_purchase_payment()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $b120000_7$
+DECLARE
+  v_compra public.compras%ROWTYPE;
+  v_paid numeric;
+BEGIN
+  SELECT * INTO v_compra FROM public.compras WHERE id = NEW.compra_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Orden de compra no encontrada'; END IF;
+  IF v_compra.hotel_id <> NEW.hotel_id THEN RAISE EXCEPTION 'La orden pertenece a otro hotel'; END IF;
+  IF v_compra.estado = 'Cancelada' THEN RAISE EXCEPTION 'No se pueden registrar pagos en una orden cancelada'; END IF;
+  SELECT COALESCE(SUM(monto), 0) INTO v_paid FROM public.pagos_compras
+  WHERE compra_id = NEW.compra_id AND id IS DISTINCT FROM NEW.id;
+  IF v_paid + COALESCE(NEW.monto, 0) > COALESCE(v_compra.total, 0) + 0.009 THEN
+    RAISE EXCEPTION 'El pago excede el saldo de la orden (pendiente %)', GREATEST(0, COALESCE(v_compra.total, 0) - v_paid);
+  END IF;
+  NEW.created_by := COALESCE(NEW.created_by, auth.uid());
+  RETURN NEW;
+END;
+$b120000_7$;
+
+REVOKE ALL ON FUNCTION public.vulo_guard_purchase_payment() FROM PUBLIC, anon, authenticated;
+
+DO $b120000_8$
 BEGIN
   IF to_regclass('public.pagos_compras') IS NULL THEN RETURN; END IF;
-
-  EXECUTE $f$
-    CREATE OR REPLACE FUNCTION public.vulo_guard_purchase_payment()
-    RETURNS trigger
-    LANGUAGE plpgsql
-    SECURITY DEFINER
-    SET search_path = public
-    AS $b$
-    DECLARE
-      v_compra public.compras%ROWTYPE;
-      v_paid numeric;
-    BEGIN
-      SELECT * INTO v_compra FROM public.compras WHERE id = NEW.compra_id FOR UPDATE;
-      IF NOT FOUND THEN RAISE EXCEPTION 'Orden de compra no encontrada'; END IF;
-      IF v_compra.hotel_id <> NEW.hotel_id THEN RAISE EXCEPTION 'La orden pertenece a otro hotel'; END IF;
-      IF v_compra.estado = 'Cancelada' THEN RAISE EXCEPTION 'No se pueden registrar pagos en una orden cancelada'; END IF;
-      SELECT COALESCE(SUM(monto), 0) INTO v_paid FROM public.pagos_compras
-      WHERE compra_id = NEW.compra_id AND id IS DISTINCT FROM NEW.id;
-      IF v_paid + COALESCE(NEW.monto, 0) > COALESCE(v_compra.total, 0) + 0.009 THEN
-        RAISE EXCEPTION 'El pago excede el saldo de la orden (pendiente %)', GREATEST(0, COALESCE(v_compra.total, 0) - v_paid);
-      END IF;
-      NEW.created_by := COALESCE(NEW.created_by, auth.uid());
-      RETURN NEW;
-    END;
-    $b$;
-  $f$;
-
-  EXECUTE 'REVOKE ALL ON FUNCTION public.vulo_guard_purchase_payment() FROM PUBLIC, anon, authenticated';
   EXECUTE 'DROP TRIGGER IF EXISTS trg_vulo_guard_purchase_payment ON public.pagos_compras';
   EXECUTE 'CREATE TRIGGER trg_vulo_guard_purchase_payment BEFORE INSERT OR UPDATE OF monto, compra_id ON public.pagos_compras FOR EACH ROW EXECUTE FUNCTION public.vulo_guard_purchase_payment()';
-
   -- Los pagos a proveedor de un día cerrado no se modifican ni se borran.
   EXECUTE 'DROP TRIGGER IF EXISTS prevent_closed_day_pagos_compras ON public.pagos_compras';
   EXECUTE 'CREATE TRIGGER prevent_closed_day_pagos_compras BEFORE INSERT OR UPDATE OR DELETE ON public.pagos_compras FOR EACH ROW EXECUTE FUNCTION public.vulo_prevent_closed_day_change()';
-
   -- La orden ya no arrastra en cascada sus pagos: se debe decidir explícitamente.
   IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'pagos_compras_compra_id_fkey') THEN
     EXECUTE 'ALTER TABLE public.pagos_compras DROP CONSTRAINT pagos_compras_compra_id_fkey';
   END IF;
   EXECUTE 'ALTER TABLE public.pagos_compras ADD CONSTRAINT pagos_compras_compra_id_fkey FOREIGN KEY (compra_id) REFERENCES public.compras(id) ON DELETE RESTRICT';
-END $$;
+END $b120000_8$;
 
 -- ---------------------------------------------------------------------------
 -- 6. Check-out sólo sobre estancias activas
@@ -372,7 +368,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY INVOKER
 SET search_path = public
-AS $$
+AS $b120000_9$
 DECLARE
   v_reserva public.reservas%ROWTYPE;
 BEGIN
@@ -424,7 +420,7 @@ BEGIN
 
   RETURN (SELECT to_jsonb(r) FROM public.reservas r WHERE r.id = p_reserva_id);
 END;
-$$;
+$b120000_9$;
 
 REVOKE ALL ON FUNCTION public.complete_reservation_checkout(uuid, jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.complete_reservation_checkout(uuid, jsonb) TO authenticated;
@@ -441,7 +437,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b120000_10$
 DECLARE
   v_assignment jsonb;
   v_row public.entregables_reserva%ROWTYPE;
@@ -466,7 +462,7 @@ BEGIN
   END IF;
   RETURN v_assignment;
 END;
-$$;
+$b120000_10$;
 
 REVOKE ALL ON FUNCTION public.vulo_return_deliverable_charge(uuid, numeric, boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.vulo_return_deliverable_charge(uuid, numeric, boolean) TO authenticated;
@@ -481,7 +477,7 @@ LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b120000_11$
 DECLARE
   v_role text := COALESCE(public.vulo_current_role(), '');
   v_override boolean;
@@ -507,14 +503,14 @@ BEGIN
   END IF;
   RETURN false;
 END;
-$$;
+$b120000_11$;
 
 -- ---------------------------------------------------------------------------
 -- 10. Mantenimiento: cerrar un reporte no libera la habitación si quedan
 --     otros reportes abiertos.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.vulo_release_room_after_maintenance()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $b120000_12$
 DECLARE v_resolved boolean;
 BEGIN
   v_resolved := NEW.estado IN ('Completada','Completado','Resuelto','Cerrado');
@@ -537,6 +533,6 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$;
+$b120000_12$;
 
 NOTIFY pgrst, 'reload schema';

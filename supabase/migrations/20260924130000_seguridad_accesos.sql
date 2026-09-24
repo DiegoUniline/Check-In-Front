@@ -9,7 +9,7 @@
 -- ---------------------------------------------------------------------------
 -- 1. Políticas demo abiertas
 -- ---------------------------------------------------------------------------
-DO $$
+DO $b130000_1$
 DECLARE
   t text;
 BEGIN
@@ -21,12 +21,12 @@ BEGIN
     'ventas','ventas_detalle'
   ] LOOP
     IF to_regclass('public.' || quote_ident(t)) IS NULL THEN CONTINUE; END IF;
-    EXECUTE format('DROP POLICY IF EXISTS "Public select %1$s" ON public.%1$I', t);
-    EXECUTE format('DROP POLICY IF EXISTS "Public insert %1$s" ON public.%1$I', t);
-    EXECUTE format('DROP POLICY IF EXISTS "Public update %1$s" ON public.%1$I', t);
-    EXECUTE format('DROP POLICY IF EXISTS "Public delete %1$s" ON public.%1$I', t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'Public select ' || t, t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'Public insert ' || t, t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'Public update ' || t, t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'Public delete ' || t, t);
   END LOOP;
-END $$;
+END $b130000_1$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Hotel del usuario: hotel_activo_id sólo cuenta para SuperAdmin
@@ -37,7 +37,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b130000_2$
   SELECT CASE
     WHEN EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role::text = 'SuperAdmin')
       THEN COALESCE(p.hotel_activo_id, p.hotel_id)
@@ -45,14 +45,14 @@ AS $$
   END
   FROM public.profiles p
   WHERE p.id = auth.uid()
-$$;
+$b130000_2$;
 
 CREATE OR REPLACE FUNCTION public.vulo_guard_profile_hotel()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b130000_3$
 BEGIN
   -- Procesos internos (service role / funciones del servidor) sí pueden.
   IF auth.uid() IS NULL OR public.vulo_is_superadmin() THEN RETURN NEW; END IF;
@@ -66,7 +66,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$;
+$b130000_3$;
 
 REVOKE ALL ON FUNCTION public.vulo_guard_profile_hotel() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS trg_vulo_guard_profile_hotel ON public.profiles;
@@ -82,7 +82,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b130000_4$
 DECLARE
   new_hotel_id uuid;
   v_hotel_nombre text;
@@ -112,7 +112,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$;
+$b130000_4$;
 
 -- Corrige usuarios ya afectados: empleados que recibieron un rol Admin extra y
 -- un hotel huérfano (creado con su correo y distinto de su hotel real).
@@ -134,7 +134,7 @@ WHERE ur.user_id = p.id
 -- 4. Hoteles: el público sólo ve columnas seguras; sólo Admin edita;
 --    sólo SuperAdmin suspende o reactiva.
 -- ---------------------------------------------------------------------------
-DO $$
+DO $b130000_5$
 DECLARE
   v_cols text;
 BEGIN
@@ -145,7 +145,7 @@ BEGIN
     AND column_name NOT IN ('whatsapp_token', 'rfc', 'razon_social', 'suspendido_motivo', 'suspendido_at');
   EXECUTE 'REVOKE SELECT ON public.hotels FROM anon';
   EXECUTE format('GRANT SELECT (%s) ON public.hotels TO anon', v_cols);
-END $$;
+END $b130000_5$;
 
 DROP POLICY IF EXISTS "Tenant update hotel" ON public.hotels;
 CREATE POLICY "Tenant update hotel" ON public.hotels
@@ -166,7 +166,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b130000_6$
 BEGIN
   IF auth.uid() IS NULL OR public.vulo_is_superadmin() THEN RETURN NEW; END IF;
   IF NEW.activo_plataforma IS DISTINCT FROM OLD.activo_plataforma
@@ -176,7 +176,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$;
+$b130000_6$;
 
 REVOKE ALL ON FUNCTION public.vulo_guard_hotel_platform_fields() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS trg_vulo_guard_hotel_platform_fields ON public.hotels;
@@ -217,7 +217,7 @@ LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b130000_7$
 DECLARE
   v_base numeric;
   v_t record;
@@ -227,19 +227,17 @@ BEGIN
   v_base := COALESCE(v_base, 0);
   IF v_base = 0 OR to_regclass('public.temporadas') IS NULL THEN RETURN v_base; END IF;
 
-  EXECUTE $q$
-    SELECT tipo_ajuste, valor FROM public.temporadas
-    WHERE hotel_id = $1 AND activo IS NOT FALSE
-      AND $4 BETWEEN fecha_inicio::date AND fecha_fin::date
-      AND (alcance = 'todos'
-        OR (alcance = 'tipo' AND tipo_habitacion_id = $2)
-        OR (alcance = 'habitacion' AND habitacion_id = $3))
-    ORDER BY CASE alcance WHEN 'habitacion' THEN 3 WHEN 'tipo' THEN 2 ELSE 1 END DESC,
-             COALESCE(prioridad, 0) DESC
-    LIMIT 1
-  $q$ INTO v_t USING p_hotel_id, p_tipo_id, p_habitacion_id, p_fecha;
+  SELECT tipo_ajuste, valor INTO v_t FROM public.temporadas
+  WHERE hotel_id = p_hotel_id AND activo IS NOT FALSE
+    AND p_fecha BETWEEN fecha_inicio::date AND fecha_fin::date
+    AND (alcance = 'todos'
+      OR (alcance = 'tipo' AND tipo_habitacion_id = p_tipo_id)
+      OR (alcance = 'habitacion' AND habitacion_id = p_habitacion_id))
+  ORDER BY CASE alcance WHEN 'habitacion' THEN 3 WHEN 'tipo' THEN 2 ELSE 1 END DESC,
+           COALESCE(prioridad, 0) DESC
+  LIMIT 1;
 
-  IF v_t IS NULL THEN RETURN v_base; END IF;
+  IF NOT FOUND THEN RETURN v_base; END IF;
   RETURN CASE v_t.tipo_ajuste
     WHEN 'porcentaje' THEN GREATEST(0, v_base + v_base * COALESCE(v_t.valor, 0) / 100)
     WHEN 'monto' THEN GREATEST(0, v_base + COALESCE(v_t.valor, 0))
@@ -247,7 +245,7 @@ BEGIN
     ELSE v_base
   END;
 END;
-$$;
+$b130000_7$;
 
 REVOKE ALL ON FUNCTION public.vulo_nightly_rate(uuid, uuid, uuid, date) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.vulo_nightly_rate(uuid, uuid, uuid, date) TO anon, authenticated;
@@ -261,7 +259,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $b130000_8$
 DECLARE
   v_cliente_id uuid;
   v_reserva public.reservas%ROWTYPE;
@@ -358,7 +356,7 @@ BEGIN
     'estado', v_reserva.estado
   );
 END;
-$$;
+$b130000_8$;
 
 REVOKE ALL ON FUNCTION public.create_public_reservation(uuid, jsonb, jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_public_reservation(uuid, jsonb, jsonb) TO anon, authenticated;
