@@ -40,9 +40,16 @@ Deno.serve(async (req) => {
       .eq('hotel_id', hotel_id)
       .maybeSingle();
     if (!inst || inst.estado !== 'connected') {
+      // No es un error de la app: el hotel simplemente no ha vinculado WhatsApp.
+      // Respondemos 200 con skipped para no romper los flujos de reserva/check-in.
       return new Response(
-        JSON.stringify({ error: 'WhatsApp no está vinculado. Conecta el QR en WhatsApp → Conexión.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        JSON.stringify({
+          ok: false,
+          skipped: true,
+          reason: 'whatsapp_no_vinculado',
+          message: 'WhatsApp no está vinculado. Conecta el QR en WhatsApp → Conexión.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
