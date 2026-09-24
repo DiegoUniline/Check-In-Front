@@ -586,7 +586,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       </div>}
 
       {selectedRoom && <div className="flex items-center gap-2 rounded-[6px] border border-[#10233F]/10 bg-[#10233F]/[0.04] px-3 py-2 text-sm text-[#10233F]">
-        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> Seleccionaste la habitación #{selectedRoom.numero}.
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> {reserva.habitacion_numero && selected?.id !== 'reopen_checkout' && selected?.id !== 'early_checkin'
+          ? <>Cambio: habitación #{reserva.habitacion_numero} → <strong>#{selectedRoom.numero}</strong>.</>
+          : <>Seleccionaste la habitación #{selectedRoom.numero}.</>}
       </div>}
       <p className="text-[11px] text-muted-foreground">La disponibilidad se vuelve a comprobar al aplicar el cambio para evitar cruces de último momento.</p>
     </div>;
@@ -733,9 +735,15 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <p className="font-semibold">Esta reserva se marcará como cancelada.</p>
-            <p className="mt-1 text-xs text-red-700">Dejará de bloquear la habitación en el calendario y las fechas volverán a estar disponibles. La reserva y su historial no se eliminan.</p>
+            <p className="mt-1 text-xs text-red-700">Dejará de bloquear la habitación en el calendario y las fechas volverán a estar disponibles. La reserva y su historial no se eliminan; gerencia puede reactivarla si fue un error.</p>
           </div>
         </div>
+        <div className="mt-3 grid grid-cols-3 gap-2 rounded-[6px] bg-white/70 p-2 text-xs text-[#10233F]">
+          <div><p className="text-muted-foreground">Total</p><p className="font-semibold">{formatCurrency(money(reserva.total))}</p></div>
+          <div><p className="text-muted-foreground">Pagado</p><p className="font-semibold text-emerald-700">{formatCurrency(activePayments.reduce((sum: number, p: any) => sum + money(p.monto), 0))}</p></div>
+          <div><p className="text-muted-foreground">Pagos</p><p className="font-semibold">{activePayments.length}</p></div>
+        </div>
+        {activePayments.length > 0 && <p className="mt-2 text-xs text-red-800">Los pagos se conservan. Si vas a devolver el dinero, después cancela cada pago desde la cuenta (menú ⋯ del movimiento) con su motivo.</p>}
       </div>;
       default: return <p className="rounded-[6px] border bg-muted/40 p-3 text-sm text-muted-foreground">Esta acción conservará todos los datos históricos y actualizará las vistas relacionadas.</p>;
     }

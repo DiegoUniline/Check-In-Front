@@ -56,7 +56,7 @@ export default function NuevaReserva() {
         pageMode
         preload={preload}
         onOpenChange={(open) => { if (!open) navigate(-1); }}
-        onSuccess={(reservation) => navigate(reservation?.id ? `/reservas/detalle/${reservation.id}` : '/reservas', { replace: true })}
+        onSuccess={(reservation) => navigate(reservation?.id ? `/reservas/detalle/${reservation.id}?nueva=1` : '/reservas', { replace: true })}
       />
     )}
   </MainLayout>;

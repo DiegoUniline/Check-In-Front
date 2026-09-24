@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import {
   ArrowLeftRight, BedDouble, CalendarPlus, CircleDollarSign, Clock3,
-  ChevronDown, ChevronRight, CreditCard, DoorOpen, Eye, Layers3, LogOut, Receipt, UserPlus, Wrench, XCircle,
+  ChevronDown, ChevronRight, CreditCard, DoorOpen, Eye, Layers3, LogOut, Pencil, Receipt, UserPlus, Wrench, XCircle,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { getEstadoConfig } from './estadoConfig';
@@ -25,6 +25,7 @@ export type TimelineReservationAction =
   | 'room_change'
   | 'add_charge'
   | 'partial_payment'
+  | 'edit'
   | 'cancel';
 
 export type TimelineRoomGrouping = 'smart' | 'none' | 'floor' | 'category' | 'building' | 'cleaning';
@@ -149,6 +150,8 @@ export function TimelineGrid({
   const [dragEnd, setDragEnd] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedReservation, setDraggedReservation] = useState<any | null>(null);
+  // Menú de acciones de una reserva: clic o clic derecho sobre la barra.
+  const [menuReservationId, setMenuReservationId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ roomId: string; valid: boolean } | null>(null);
   const [resizePreview, setResizePreview] = useState<{
     reservationId: string;
@@ -619,7 +622,7 @@ export function TimelineGrid({
                       const clipPath = getReservationClipPath(geometry);
 
                       return (
-                        <Popover key={reserva.id}>
+                        <Popover key={reserva.id} open={menuReservationId === reserva.id} onOpenChange={(open) => setMenuReservationId(open ? reserva.id : null)}>
                           <TooltipProvider delayDuration={450}>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -633,6 +636,7 @@ export function TimelineGrid({
                                       setDraggedReservation(reserva);
                                     }}
                                     onDragEnd={() => { setDraggedReservation(null); setDropTarget(null); }}
+                                    onContextMenu={(event) => { event.preventDefault(); setMenuReservationId(reserva.id); }}
                                     className={cn(
                                       "group absolute top-0.5 bottom-0.5 z-[2] cursor-pointer select-none",
                                       statusTextClasses,
@@ -720,7 +724,10 @@ export function TimelineGrid({
                               <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#10233F]/[0.04] p-2.5 text-xs"><div><p className="text-muted-foreground">Total</p><p className="font-bold">{formatCurrency(total)}</p></div><div><p className="text-muted-foreground">Pagado</p><p className="font-bold text-emerald-700">{formatCurrency(paid)}</p></div><div><p className="text-muted-foreground">Saldo</p><p className={cn('font-bold', balance > 0 && 'text-red-600')}>{formatCurrency(balance)}</p></div></div>
                             </div>
                             <div className="space-y-3 p-3">
-                              <Button className="w-full bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => dispatchAction(reserva, 'view')}><Eye className="mr-2 h-4 w-4" />Ver expediente completo</Button>
+                              <div className={cn('grid gap-2', canCreate ? 'grid-cols-2' : 'grid-cols-1')}>
+                                <Button className="w-full bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => { setMenuReservationId(null); dispatchAction(reserva, 'view'); }}><Eye className="mr-2 h-4 w-4" />Ver expediente</Button>
+                                {canCreate && <Button variant="outline" className="w-full" onClick={() => { setMenuReservationId(null); dispatchAction(reserva, 'edit'); }}><Pencil className="mr-2 h-4 w-4" />Editar</Button>}
+                              </div>
                               {canCreate ? <>
                                 {(canCheckin || activeStay) && <Button variant="outline" className="w-full" onClick={() => dispatchAction(reserva, canCheckin ? 'checkin' : 'checkout')}>{canCheckin ? <DoorOpen className="mr-2 h-4 w-4 text-emerald-600" /> : <LogOut className="mr-2 h-4 w-4 text-orange-600" />}{canCheckin ? 'Realizar check-in' : 'Realizar check-out'}</Button>}
                                 <div className="grid grid-cols-2 gap-2">
@@ -729,7 +736,7 @@ export function TimelineGrid({
                                   <QuickAction icon={Receipt} label="Consumo" onClick={() => dispatchAction(reserva, 'add_charge')} />
                                   <QuickAction icon={CreditCard} label="Registrar pago" onClick={() => dispatchAction(reserva, 'partial_payment')} />
                                 </div>
-                                {canCheckin && <Button variant="outline" className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => dispatchAction(reserva, 'cancel')}><XCircle className="mr-2 h-4 w-4" />Cancelar reserva</Button>}
+                                {canCheckin && <Button variant="outline" className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => { setMenuReservationId(null); dispatchAction(reserva, 'cancel'); }}><XCircle className="mr-2 h-4 w-4" />Cancelar reserva</Button>}
                               </> : <p className="rounded-lg bg-blue-50 p-2.5 text-center text-xs text-blue-800">Modo sólo consulta. Abre un turno para realizar operaciones.</p>}
                             </div>
                           </PopoverContent>
@@ -763,7 +770,7 @@ export function TimelineGrid({
           <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500"></div> Pendiente</span>
           <span className="flex items-center gap-1"><CircleDollarSign className="h-3 w-3" /> Saldo</span>
         </div>
-        <span className="hidden sm:inline">{canCreate ? 'Arrastra un espacio para reservar · mueve una barra para cambiar habitación · ajusta su extremo para cambiar la salida' : 'Modo sólo consulta'}</span>
+        <span className="hidden sm:inline">{canCreate ? 'Arrastra un espacio para reservar · mueve una barra para cambiar habitación · ajusta su extremo para cambiar la salida · clic derecho para acciones' : 'Modo sólo consulta'}</span>
       </div>
     </div>
   );

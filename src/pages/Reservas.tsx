@@ -468,6 +468,7 @@ export default function Reservas() {
       return;
     }
     if (action === 'checkin') return navigate(`/checkin/${reserva.id}`);
+    if (action === 'edit') return navigate(`/reservas/detalle/${reserva.id}?editar=1`);
     if (action === 'cancel') {
       if (viewOnlyMode) {
         toast({ title: 'Modo sólo consulta', description: 'Abre un turno para cancelar reservaciones.' });

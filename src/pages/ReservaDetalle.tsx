@@ -3,10 +3,14 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, BedDouble, CalendarDays, Clock3, DoorOpen, Ellipsis, FileText, History,
   LogOut, Mail, Pencil, Phone, Printer, RefreshCw, Users, WalletCards,
+  CheckCircle2, CreditCard, MessageCircle, RotateCcw, X, XCircle,
 } from 'lucide-react';
+import { EditarReservaDialog } from '@/components/reservas/EditarReservaDialog';
+import { ReactivarReservaDialog } from '@/components/reservas/ReactivarReservaDialog';
+import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { imprimirComprobanteReserva, imprimirRegistroRecepcion } from '@/lib/pdfExport';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
@@ -49,7 +53,16 @@ const guestCount = (reserva: any) =>
 export default function ReservaDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [editOpen, setEditOpen] = useState(searchParams.get('editar') === '1');
+  const [reactivarOpen, setReactivarOpen] = useState(false);
+  const [recienCreada, setRecienCreada] = useState(searchParams.get('nueva') === '1');
+  const [enviandoWa, setEnviandoWa] = useState(false);
+  const quitarParam = (key: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
   const { toast } = useToast();
   const imprimir = async (tipo: 'registro' | 'comprobante') => {
     if (!id) return;
@@ -120,13 +133,45 @@ export default function ReservaDetalle() {
 
   const activeStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && Boolean(reserva.checkin_realizado) && !reserva.checkout_realizado;
   const canCheckin = ['Pendiente', 'Confirmada'].includes(String(reserva.estado || '')) && !reserva.checkin_realizado;
-  const canEditStay = canAccess('reservas.operacion.modify_dates', user?.rol)
-    && !['Cancelada', 'NoShow', 'CheckOut'].includes(String(reserva.estado || ''));
   const canRegisterPayment = canAccess('reservas.operacion.partial_payment', user?.rol)
     && !['Cancelada', 'NoShow', 'CheckOut'].includes(String(reserva.estado || ''))
     && account.balance > 0.01;
 
   const refreshAll = async () => { await load(true); };
+  const estadoActual = String(reserva.estado || '');
+  const canEditReservation = canAccess('reservas.operacion.reservation_correction', user?.rol);
+  const canCancelReservation = canAccess('reservas.operacion.cancel_reservation', user?.rol)
+    && ['Pendiente', 'Confirmada'].includes(estadoActual) && !reserva.checkin_realizado;
+  const canReactivate = canAccess('reservas.operacion.reactivate_reservation', user?.rol)
+    && ['Cancelada', 'NoShow'].includes(estadoActual) && !reserva.checkin_realizado;
+  const telefonoHuesped = reserva.cliente_telefono || reserva.cliente?.telefono || '';
+  const enviarConfirmacion = async () => {
+    setEnviandoWa(true);
+    try {
+      const ok = await enviarWhatsAppReserva({
+        hotel_id: reserva.hotel_id,
+        telefono: telefonoHuesped,
+        reserva_id: reserva.id,
+        template_key: 'confirmacion_reserva',
+        mensajeFallback: MENSAJES_DEFAULT.confirmacion_reserva,
+        vars: {
+          nombre: reserva.cliente?.nombre || reserva.cliente_nombre || '',
+          numero_reserva: reserva.numero_reserva || '',
+          tipo_habitacion: reserva.tipo_habitacion?.nombre || '',
+          habitacion: reserva.habitacion_numero || reserva.habitacion?.numero || '',
+          fecha_checkin: formatDate(reserva.fecha_checkin),
+          fecha_checkout: formatDate(reserva.fecha_checkout),
+          noches: reserva.noches || '',
+          total: formatCurrency(Number(reserva.total || 0)),
+        },
+      });
+      toast(ok
+        ? { title: 'Confirmación enviada por WhatsApp' }
+        : { title: 'No se pudo enviar por WhatsApp', description: telefonoHuesped ? 'Revisa la conexión de WhatsApp en Configuración.' : 'El huésped no tiene teléfono registrado.', variant: 'destructive' });
+    } finally {
+      setEnviandoWa(false);
+    }
+  };
   const adults = reservationMoney(reserva.adultos);
   const children = reservationMoney(reserva.ninos);
   const totalGuests = guestCount(reserva);
@@ -167,8 +212,14 @@ export default function ReservaDetalle() {
             <Button variant="ghost" size="toolbar" className="px-2" onClick={() => void load(true)} title="Actualizar">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            {canEditStay && <Button variant="outline" size="toolbar" onClick={() => operationsRef.current?.openOperation('modify_dates')}>
+            {canEditReservation && <Button variant="outline" size="toolbar" onClick={() => setEditOpen(true)}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />Editar
+            </Button>}
+            {canCancelReservation && <Button variant="outline" size="toolbar" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => operationsRef.current?.openOperation('cancel_reservation')}>
+              <XCircle className="mr-1.5 h-3.5 w-3.5" />Cancelar
+            </Button>}
+            {canReactivate && <Button size="toolbar" className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => setReactivarOpen(true)}>
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reactivar
             </Button>}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -193,6 +244,34 @@ export default function ReservaDetalle() {
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto px-4 py-3 lg:px-6">
+        {recienCreada && <div className="mb-3 rounded-[8px] border border-emerald-200 bg-emerald-50 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+              <div>
+                <p className="font-semibold text-emerald-900">Reserva #{reserva.numero_reserva || ''} creada</p>
+                <p className="text-xs text-emerald-800">¿Qué sigue?</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" className="h-7 w-7 px-0 text-emerald-800" aria-label="Cerrar" onClick={() => { setRecienCreada(false); quitarParam('nueva'); }}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {canRegisterPayment && <Button size="sm" className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => operationsRef.current?.openOperation('partial_payment')}>
+              <CreditCard className="mr-1.5 h-3.5 w-3.5" />Cobrar anticipo ({formatCurrency(account.balance)})
+            </Button>}
+            {canCheckin && String(reserva.fecha_checkin || '').slice(0, 10) <= todayLocal() && <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>
+              <DoorOpen className="mr-1.5 h-3.5 w-3.5" />Hacer check-in ahora
+            </Button>}
+            <Button size="sm" variant="outline" onClick={() => void imprimir('comprobante')}>
+              <Printer className="mr-1.5 h-3.5 w-3.5" />Imprimir comprobante
+            </Button>
+            <Button size="sm" variant="outline" disabled={enviandoWa || !telefonoHuesped} onClick={() => void enviarConfirmacion()}>
+              <MessageCircle className="mr-1.5 h-3.5 w-3.5" />{enviandoWa ? 'Enviando…' : 'Enviar confirmación por WhatsApp'}
+            </Button>
+          </div>
+        </div>}
         <StayOperationsPanel
           ref={operationsRef}
           reserva={reserva}
@@ -269,6 +348,9 @@ export default function ReservaDetalle() {
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-white p-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:hidden">
         <div className="grid grid-cols-2 gap-2">
+          {canEditReservation && <Button variant="outline" size="toolbar" className="w-full" onClick={() => setEditOpen(true)}><Pencil className="mr-1.5 h-3.5 w-3.5" />Editar</Button>}
+          {canCancelReservation && <Button variant="outline" size="toolbar" className="w-full border-red-200 text-red-700" onClick={() => operationsRef.current?.openOperation('cancel_reservation')}><XCircle className="mr-1.5 h-3.5 w-3.5" />Cancelar</Button>}
+          {canReactivate && <Button size="toolbar" className="w-full bg-[#10233F]" onClick={() => setReactivarOpen(true)}><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reactivar</Button>}
           <Button variant="outline" size="toolbar" className="w-full" onClick={() => operationsRef.current?.openMoreOperations()}>Más operaciones</Button>
           <Button variant="outline" size="toolbar" className="w-full" onClick={() => void imprimir('registro')}><Printer className="mr-1.5 h-3.5 w-3.5" />Registro PDF</Button>
           {canCheckin
@@ -278,6 +360,13 @@ export default function ReservaDetalle() {
               : <Button size="toolbar" className="w-full" onClick={() => operationsRef.current?.openOperation('partial_payment')} disabled={!canRegisterPayment}>Registrar pago</Button>}
         </div>
       </div>
+      <EditarReservaDialog
+        open={editOpen}
+        onOpenChange={(v) => { setEditOpen(v); if (!v && searchParams.get('editar')) quitarParam('editar'); }}
+        reserva={reserva}
+        onSaved={refreshAll}
+      />
+      <ReactivarReservaDialog open={reactivarOpen} onOpenChange={setReactivarOpen} reserva={reserva} onDone={refreshAll} />
     </div>
   </MainLayout>;
 }

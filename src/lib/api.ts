@@ -1021,7 +1021,9 @@ class ApiClient {
     // se evalúa local en offline filtrando el resultado cacheado).
     if (params?.search) {
       let q = supabase.from('clientes').select('*').eq('hotel_id', this.hid()).order('nombre');
-      q = q.ilike('nombre', `%${params.search}%`);
+      const term = String(params.search).replace(/[,()%*]/g, ' ').trim();
+      q = q.or(['nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'email']
+        .map((col) => `${col}.ilike.%${term}%`).join(','));
       const { data, error } = await q;
       if (error) throw error;
       return (data || []).map((c: any) => this.sanitizeClienteResponse(c));
@@ -1317,6 +1319,21 @@ class ApiClient {
     window.dispatchEvent(new CustomEvent('data:changed'));
     return data;
   };
+  private rpcReserva = async (fn: string, args: Record<string, any>): Promise<any> => {
+    const { data, error } = await (operationalDb as any).rpc(fn, args);
+    if (error) {
+      if (error.code === 'PGRST202' || new RegExp(`${fn}|schema cache`, 'i').test(error.message || '')) {
+        throw new Error('Falta correr el SQL de edición y reactivación de reservas en Supabase.');
+      }
+      throw error;
+    }
+    window.dispatchEvent(new CustomEvent('data:changed'));
+    return data;
+  };
+  editarDatosReserva = (reservaId: string, datos: Record<string, any>, motivo = ''): Promise<any> =>
+    this.rpcReserva('vulo_editar_datos_reserva', { p_reserva_id: reservaId, p_datos: datos, p_motivo: motivo || null });
+  reactivarReserva = (reservaId: string, habitacionId: string | null, motivo: string): Promise<any> =>
+    this.rpcReserva('vulo_reactivar_reserva', { p_reserva_id: reservaId, p_habitacion_id: habitacionId || null, p_motivo: motivo });
   applyStayOperation = async (id: string, operation: string, payload: Record<string, any> = {}, reason = ''): Promise<any> => {
     if (operation === 'add_charge' && Array.isArray(payload.items)) {
       const { data, error } = await operationalDb.rpc('vulo_register_sale', {
