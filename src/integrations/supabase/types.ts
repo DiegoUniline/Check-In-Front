@@ -139,14 +139,17 @@ export type Database = {
         Row: {
           actualizado_at: string | null
           actualizado_por: string | null
+          actualizado_por_nombre: string | null
           cancelado_at: string | null
           cancelado_por: string | null
+          cancelado_por_nombre: string | null
           cantidad: number | null
           concepto: string
           concepto_cargo_id: string | null
           concepto_id: string | null
           created_at: string | null
           created_by: string | null
+          created_by_nombre: string | null
           cuenta_estancia_id: string | null
           estado: string
           fecha: string | null
@@ -168,14 +171,17 @@ export type Database = {
         Insert: {
           actualizado_at?: string | null
           actualizado_por?: string | null
+          actualizado_por_nombre?: string | null
           cancelado_at?: string | null
           cancelado_por?: string | null
+          cancelado_por_nombre?: string | null
           cantidad?: number | null
           concepto: string
           concepto_cargo_id?: string | null
           concepto_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          created_by_nombre?: string | null
           cuenta_estancia_id?: string | null
           estado?: string
           fecha?: string | null
@@ -197,14 +203,17 @@ export type Database = {
         Update: {
           actualizado_at?: string | null
           actualizado_por?: string | null
+          actualizado_por_nombre?: string | null
           cancelado_at?: string | null
           cancelado_por?: string | null
+          cancelado_por_nombre?: string | null
           cantidad?: number | null
           concepto?: string
           concepto_cargo_id?: string | null
           concepto_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          created_by_nombre?: string | null
           cuenta_estancia_id?: string | null
           estado?: string
           fecha?: string | null
@@ -1432,9 +1441,14 @@ export type Database = {
         Row: {
           actualizado_at: string | null
           actualizado_por: string | null
+          actualizado_por_nombre: string | null
+          cancelado_at: string | null
+          cancelado_por: string | null
+          cancelado_por_nombre: string | null
           concepto: string | null
           created_at: string | null
           created_by: string | null
+          created_by_nombre: string | null
           cuenta_estancia_id: string | null
           estado: string
           fecha: string | null
@@ -1453,9 +1467,14 @@ export type Database = {
         Insert: {
           actualizado_at?: string | null
           actualizado_por?: string | null
+          actualizado_por_nombre?: string | null
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          cancelado_por_nombre?: string | null
           concepto?: string | null
           created_at?: string | null
           created_by?: string | null
+          created_by_nombre?: string | null
           cuenta_estancia_id?: string | null
           estado?: string
           fecha?: string | null
@@ -1474,9 +1493,14 @@ export type Database = {
         Update: {
           actualizado_at?: string | null
           actualizado_por?: string | null
+          actualizado_por_nombre?: string | null
+          cancelado_at?: string | null
+          cancelado_por?: string | null
+          cancelado_por_nombre?: string | null
           concepto?: string | null
           created_at?: string | null
           created_by?: string | null
+          created_by_nombre?: string | null
           cuenta_estancia_id?: string | null
           estado?: string
           fecha?: string | null
@@ -1879,11 +1903,27 @@ export type Database = {
       }
       reservas: {
         Row: {
+          actualizado_por: string | null
+          actualizado_por_nombre: string | null
           adultos: number | null
+          cancelada_at: string | null
+          cancelada_por: string | null
+          cancelada_por_nombre: string | null
           cargo_persona_extra: number
+          checkin_at: string | null
+          checkin_por: string | null
+          checkin_por_nombre: string | null
           checkin_realizado: boolean | null
+          checkout_at: string | null
+          checkout_por: string | null
+          checkout_por_nombre: string | null
           checkout_realizado: boolean | null
           cliente_id: string | null
+          confirmada_at: string | null
+          confirmada_por: string | null
+          confirmada_por_nombre: string | null
+          creado_por: string | null
+          creado_por_nombre: string | null
           created_at: string | null
           descuento: number | null
           descuento_tipo: string | null
@@ -1899,6 +1939,7 @@ export type Database = {
           id: string
           impuesto_hospedaje_porcentaje: number | null
           late_checkout_until: string | null
+          motivo_cancelacion: string | null
           ninos: number | null
           noches: number | null
           notas: string | null
@@ -1923,11 +1964,27 @@ export type Database = {
           version_operativa: number
         }
         Insert: {
+          actualizado_por?: string | null
+          actualizado_por_nombre?: string | null
           adultos?: number | null
+          cancelada_at?: string | null
+          cancelada_por?: string | null
+          cancelada_por_nombre?: string | null
           cargo_persona_extra?: number
+          checkin_at?: string | null
+          checkin_por?: string | null
+          checkin_por_nombre?: string | null
           checkin_realizado?: boolean | null
+          checkout_at?: string | null
+          checkout_por?: string | null
+          checkout_por_nombre?: string | null
           checkout_realizado?: boolean | null
           cliente_id?: string | null
+          confirmada_at?: string | null
+          confirmada_por?: string | null
+          confirmada_por_nombre?: string | null
+          creado_por?: string | null
+          creado_por_nombre?: string | null
           created_at?: string | null
           descuento?: number | null
           descuento_tipo?: string | null
@@ -1943,6 +2000,7 @@ export type Database = {
           id?: string
           impuesto_hospedaje_porcentaje?: number | null
           late_checkout_until?: string | null
+          motivo_cancelacion?: string | null
           ninos?: number | null
           noches?: number | null
           notas?: string | null
@@ -1967,11 +2025,27 @@ export type Database = {
           version_operativa?: number
         }
         Update: {
+          actualizado_por?: string | null
+          actualizado_por_nombre?: string | null
           adultos?: number | null
+          cancelada_at?: string | null
+          cancelada_por?: string | null
+          cancelada_por_nombre?: string | null
           cargo_persona_extra?: number
+          checkin_at?: string | null
+          checkin_por?: string | null
+          checkin_por_nombre?: string | null
           checkin_realizado?: boolean | null
+          checkout_at?: string | null
+          checkout_por?: string | null
+          checkout_por_nombre?: string | null
           checkout_realizado?: boolean | null
           cliente_id?: string | null
+          confirmada_at?: string | null
+          confirmada_por?: string | null
+          confirmada_por_nombre?: string | null
+          creado_por?: string | null
+          creado_por_nombre?: string | null
           created_at?: string | null
           descuento?: number | null
           descuento_tipo?: string | null
@@ -1987,6 +2061,7 @@ export type Database = {
           id?: string
           impuesto_hospedaje_porcentaje?: number | null
           late_checkout_until?: string | null
+          motivo_cancelacion?: string | null
           ninos?: number | null
           noches?: number | null
           notas?: string | null
@@ -3396,6 +3471,7 @@ export type Database = {
         Args: { _modulo: string; _rol?: string }
         Returns: boolean
       }
+      vulo_actor_name: { Args: never; Returns: string }
       vulo_adjust_stay_charge: {
         Args: {
           p_action: string
@@ -3416,6 +3492,16 @@ export type Database = {
         Returns: Json
       }
       vulo_assert_open_shift: { Args: { p_hotel_id?: string }; Returns: string }
+      vulo_assert_room_ready_for_checkin: {
+        Args: {
+          p_desde: string
+          p_habitacion_id: string
+          p_hasta: string
+          p_hotel_id: string
+          p_reserva_id: string
+        }
+        Returns: undefined
+      }
       vulo_assign_deliverable: {
         Args: {
           p_cantidad?: number
@@ -3440,11 +3526,39 @@ export type Database = {
       }
       vulo_current_hotel_id: { Args: never; Returns: string }
       vulo_current_role: { Args: never; Returns: string }
+      vulo_delete_purchase: { Args: { p_compra_id: string }; Returns: Json }
+      vulo_hotel_today: { Args: { p_hotel_id: string }; Returns: string }
+      vulo_inventory_move: {
+        Args: {
+          p_absoluto?: boolean
+          p_cantidad: number
+          p_motivo?: string
+          p_producto_id: string
+          p_referencia?: string
+          p_tipo: string
+        }
+        Returns: Json
+      }
       vulo_is_superadmin: { Args: never; Returns: boolean }
+      vulo_movement_hotel_date: {
+        Args: { p_hotel_id: string; p_row: Json }
+        Returns: string
+      }
+      vulo_nightly_rate: {
+        Args: {
+          p_fecha: string
+          p_habitacion_id: string
+          p_hotel_id: string
+          p_tipo_id: string
+        }
+        Returns: number
+      }
       vulo_operation_allowed: {
         Args: { p_operacion: string }
         Returns: boolean
       }
+      vulo_platform_owner: { Args: never; Returns: boolean }
+      vulo_receive_purchase: { Args: { p_compra_id: string }; Returns: Json }
       vulo_register_sale: {
         Args: {
           p_cuenta_estancia_id?: string
@@ -3470,6 +3584,14 @@ export type Database = {
         Args: { p_assignment_id: string; p_cantidad_devuelta: number }
         Returns: Json
       }
+      vulo_return_deliverable_charge: {
+        Args: {
+          p_assignment_id: string
+          p_cantidad_devuelta: number
+          p_crear_cargo?: boolean
+        }
+        Returns: Json
+      }
       vulo_reverse_stay_operation: {
         Args: { p_motivo: string; p_movement_id: string }
         Returns: Json
@@ -3485,6 +3607,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      vulo_user_name: { Args: { p_user_id: string }; Returns: string }
       vulo_user_requires_shift: { Args: never; Returns: boolean }
     }
     Enums: {
