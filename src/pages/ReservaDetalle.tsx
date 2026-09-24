@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, BedDouble, CalendarDays, Clock3, DoorOpen, Ellipsis,
+  ArrowLeft, BedDouble, CalendarDays, Clock3, DoorOpen, Ellipsis, History,
   LogOut, Mail, Pencil, Phone, RefreshCw, Users, WalletCards,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/currency';
-import { formatDate } from '@/lib/dateFormat';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import {
   buildReservationLedger,
   getReservationAccountSummary,
@@ -206,6 +206,8 @@ export default function ReservaDetalle() {
 
               <ReservationLedger embedded rows={ledger} />
 
+              <ReservationTrail reserva={reserva} />
+
               <StayDeliverables reservaId={reserva.id} active={activeStay || canCheckin} embedded />
             </section>
 
@@ -351,7 +353,7 @@ function ReservationLedger({ rows, embedded = false }: { rows: ReservationLedger
       <Table>
         <TableHeader className="sticky top-0 z-10 bg-slate-50/95">
           <TableRow>
-            <TableHead className="h-9 w-24 px-3 text-[11px]">Fecha</TableHead>
+            <TableHead className="h-9 w-32 px-3 text-[11px]">Fecha y hora</TableHead>
             <TableHead className="h-9 px-3 text-[11px]">Concepto</TableHead>
             <TableHead className="h-9 w-24 px-3 text-[11px]">Tipo</TableHead>
             <TableHead className="h-9 w-28 px-3 text-right text-[11px]">Cargo</TableHead>
@@ -363,11 +365,14 @@ function ReservationLedger({ rows, embedded = false }: { rows: ReservationLedger
           {rows.length === 0
             ? <TableRow><TableCell colSpan={6} className="h-10 px-2 py-1.5 text-center text-xs text-muted-foreground">Sin movimientos financieros.</TableCell></TableRow>
             : rows.map((row) => <TableRow key={row.id} className={cn(row.cancelled && 'opacity-45')}>
-              <TableCell className="px-3 py-2 whitespace-nowrap text-[11px] text-muted-foreground">{row.at ? formatDate(row.at) : '—'}</TableCell>
+              <TableCell className="px-3 py-2 whitespace-nowrap text-[11px] text-muted-foreground">{movementDate(row.at)}</TableCell>
               <TableCell className="px-3 py-2">
                 <div className="min-w-0">
                   <p className={cn('truncate text-xs font-semibold', row.cancelled && 'line-through')}>{row.concept}</p>
-                  {row.cancelled && <p className="text-[10px] text-muted-foreground">Cancelado · sin efecto en saldo</p>}
+                  {row.by && <p className="truncate text-[10px] text-muted-foreground">Registró: {row.by}</p>}
+                  {row.cancelled && <p className="text-[10px] text-red-700">
+                    Cancelado{row.cancelledBy ? ` por ${row.cancelledBy}` : ''}{row.cancelledAt ? ` · ${formatDateTime(row.cancelledAt)}` : ''}{row.cancelReason ? ` · ${row.cancelReason}` : ''} · sin efecto en saldo
+                  </p>}
                 </div>
               </TableCell>
               <TableCell className="px-3 py-2"><Badge variant="outline" className="h-4 px-1.5 text-[9px]">{row.type}</Badge></TableCell>
@@ -442,4 +447,45 @@ function NoteRow({ label, text, divided = false }: { label: string; text: string
     <span className="text-xs font-semibold text-amber-900">{label}</span>
     <p className="line-clamp-2 whitespace-pre-wrap text-xs text-amber-900/80">{text}</p>
   </div>;
+}
+
+const movementDate = (value?: string | null) => {
+  if (!value) return '—';
+  // Los renglones de hospedaje sólo tienen fecha; pagos y cargos traen hora.
+  return String(value).length <= 10 ? formatDate(value) : formatDateTime(value);
+};
+
+function ReservationTrail({ reserva }: { reserva: any }) {
+  const events = [
+    { label: 'Creada', who: reserva.creado_por_nombre, at: reserva.created_at },
+    { label: 'Confirmada', who: reserva.confirmada_por_nombre, at: reserva.confirmada_at },
+    { label: 'Check-in', who: reserva.checkin_por_nombre, at: reserva.checkin_at },
+    { label: 'Check-out', who: reserva.checkout_por_nombre, at: reserva.checkout_at },
+    {
+      label: reserva.estado === 'NoShow' ? 'No-show' : 'Cancelada',
+      who: reserva.cancelada_por_nombre,
+      at: reserva.cancelada_at,
+      detail: reserva.motivo_cancelacion,
+      danger: true,
+    },
+    { label: 'Última modificación', who: reserva.actualizado_por_nombre, at: reserva.updated_at },
+  ].filter((event) => event.at && (event.who || event.label === 'Creada'));
+
+  return <section className="border-b border-slate-200 bg-white">
+    <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
+      <History className="h-4 w-4 text-[#10233F]" />
+      <h2 className="text-sm font-semibold text-[#10233F]">Quién y cuándo</h2>
+    </div>
+    <div className="grid gap-x-8 gap-y-2 px-4 py-3 sm:grid-cols-2 xl:grid-cols-3">
+      {events.length === 0
+        ? <p className="text-xs text-muted-foreground">Sin registro de usuario para esta reservación.</p>
+        : events.map((event) => <div key={event.label} className="min-w-0 text-xs sm:text-[13px]">
+          <p className={cn('font-semibold', event.danger ? 'text-red-700' : 'text-[#10233F]')}>{event.label}</p>
+          <p className="truncate text-muted-foreground">
+            {event.who || 'Sin usuario registrado'} · {formatDateTime(event.at)}
+          </p>
+          {event.detail && <p className="truncate text-muted-foreground">Motivo: {event.detail}</p>}
+        </div>)}
+    </div>
+  </section>;
 }

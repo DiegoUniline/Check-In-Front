@@ -1364,7 +1364,8 @@ class ApiClient {
     return this.completeCheckout(id);
   };
   cancelarReserva = async (id: string, motivo?: string): Promise<any> => {
-    const { data: r, error } = await supabase.from('reservas').update({ estado: 'Cancelada', notas: motivo }).eq('id', id).select().single();
+    // El motivo va a su propio campo; el servidor registra quién y cuándo canceló.
+    const { data: r, error } = await supabase.from('reservas').update({ estado: 'Cancelada', motivo_cancelacion: motivo || null } as any).eq('id', id).select().single();
     if (error) throw error;
     void registrarAuditoria({
       accion: 'actualizar', entidad: 'reserva', entidad_id: id,
@@ -1391,13 +1392,6 @@ class ApiClient {
   createPago = async (data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('pagos').insert({ ...data, hotel_id: this.hid() }).select().single();
     if (error) throw error;
-    if (r?.reserva_id) {
-      const { data: pagos } = await supabase.from('pagos').select('monto').eq('reserva_id', r.reserva_id);
-      const totalPagado = (pagos || []).reduce((s: number, p: any) => s + Number(p.monto || 0), 0);
-      const { data: reserva } = await supabase.from('reservas').select('total').eq('id', r.reserva_id).maybeSingle();
-      const total = Number(reserva?.total || 0);
-      await supabase.from('reservas').update({ total_pagado: totalPagado, saldo_pendiente: Math.max(0, total - totalPagado) }).eq('id', r.reserva_id);
-    }
     void crearNotificacion({
       tipo: 'pago',
       titulo: 'Pago registrado',

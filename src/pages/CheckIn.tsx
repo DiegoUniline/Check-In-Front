@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 import { PagosMultiplesGrid, type PagoItem } from '@/components/PagosMultiplesGrid';
 import { formatCurrency } from '@/lib/currency';
 import { SignaturePad } from '@/components/SignaturePad';
@@ -74,16 +74,21 @@ export default function CheckIn() {
       setReserva(reservaData);
 
       if (reservaData.fecha_checkin && reservaData.fecha_checkout) {
+        // Llegada anticipada: el servidor mueve la entrada a hoy, así que la
+        // disponibilidad se revisa desde hoy.
+        const hoy = todayLocal();
+        const desde = String(reservaData.fecha_checkin).slice(0, 10) > hoy ? hoy : String(reservaData.fecha_checkin).slice(0, 10);
         const habsDisp = await api.getHabitacionesDisponibles(
-          reservaData.fecha_checkin,
+          desde,
           reservaData.fecha_checkout,
           reservaData.tipo_habitacion_id,
           reservaData.id,
         );
+        // La disponibilidad ya excluye habitaciones con otra estancia en esas
+        // fechas; aquí sólo se descartan las que están en mantenimiento.
         const listas = (Array.isArray(habsDisp) ? habsDisp : []).filter((h: any) => {
-          const limpieza = String(h.estado_limpieza || 'Limpia').toLowerCase();
           const mantenimiento = String(h.estado_mantenimiento || 'OK').toLowerCase();
-          return h.estado_habitacion === 'Disponible' && limpieza === 'limpia' && mantenimiento === 'ok';
+          return mantenimiento === 'ok' && !['Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(String(h.estado_habitacion || ''));
         });
         setHabitacionesDisponibles(listas);
       }
@@ -426,9 +431,11 @@ export default function CheckIn() {
                       {habitacionesDisponibles.map((hab) => (
                         <SelectItem key={hab.id} value={hab.id}>
                           Hab. {hab.numero} · Piso {hab.piso}
+                          {hab.id === reserva.habitacion_id ? ' · Preasignada' : ''}
+                          {!['limpia', 'lista', 'inspeccionada'].includes(String(hab.estado_limpieza || 'Limpia').toLowerCase()) ? ' · Pendiente de limpieza' : ''}
                         </SelectItem>
                       ))}
-                      {reserva.habitacion_id && (
+                      {reserva.habitacion_id && !habitacionesDisponibles.some((hab) => hab.id === reserva.habitacion_id) && (
                         <SelectItem value={reserva.habitacion_id}>
                           Hab. {reserva.habitacion?.numero || reserva.habitacion_numero} · Preasignada
                         </SelectItem>
@@ -442,6 +449,12 @@ export default function CheckIn() {
                   <Badge variant="secondary">{reserva.adultos || 1} adulto(s)</Badge>
                   {(reserva.ninos || 0) > 0 && <Badge variant="secondary">{reserva.ninos} niño(s)</Badge>}
                 </div>
+
+                {String(reserva.fecha_checkin || '').slice(0, 10) > todayLocal() && (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    Llegada anticipada: la entrada se registrará hoy ({formatDate(todayLocal())}) y se recalcularán las noches y el total.
+                  </p>
+                )}
               </CardContent>
             </Card>
 

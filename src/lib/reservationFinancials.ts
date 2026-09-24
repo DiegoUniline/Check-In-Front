@@ -32,6 +32,11 @@ export type ReservationLedgerRow = {
   cancelled?: boolean;
   state?: string | null;
   source?: any;
+  /** Usuario que registró el movimiento. */
+  by?: string | null;
+  cancelledBy?: string | null;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
 };
 
 export const reservationMoney = (value: unknown) => Number(value || 0);
@@ -129,7 +134,14 @@ export const calculateReservationFinancialSnapshot = (
 };
 
 const movementTimestamp = (item: any, fallback: string) =>
-  String(item?.fecha || item?.created_at || item?.actualizado_at || fallback || '');
+  String(item?.created_at || item?.fecha || item?.actualizado_at || fallback || '');
+
+const movementAudit = (item: any) => ({
+  by: item?.created_by_nombre || null,
+  cancelledBy: item?.cancelado_por_nombre || null,
+  cancelledAt: item?.cancelado_at || null,
+  cancelReason: item?.motivo_cancelacion || item?.motivo_cambio || null,
+});
 
 export const getReservationAccountSummary = (reserva: any) => {
   const activeCharges = getActiveReservationCharges(reserva);
@@ -222,6 +234,7 @@ export const buildReservationLedger = (reserva: any): ReservationLedgerRow[] => 
       cancelled,
       state: item.estado,
       source: item,
+      ...movementAudit(item),
     });
   });
 
@@ -248,6 +261,7 @@ export const buildReservationLedger = (reserva: any): ReservationLedgerRow[] => 
       cancelled,
       state: item.estado,
       source: item,
+      ...movementAudit(item),
     });
   });
 
