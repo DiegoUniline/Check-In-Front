@@ -125,7 +125,7 @@ export function DatosFiscalesFields({ value, onChange, onCsfFile, csfPath, email
         </div>
       </div>
       {archivo && <p className="text-[11px] text-emerald-700">✓ {archivo} · se guardará con el cliente</p>}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5">
           <Label>RFC</Label>
           <Input value={value.rfc} maxLength={13} onChange={(e) => set({ rfc: e.target.value.toUpperCase().replace(/\s/g, '') })} placeholder="XAXX010101000" />
@@ -161,7 +161,7 @@ export function DatosFiscalesFields({ value, onChange, onCsfFile, csfPath, email
           <Label>Correo para la factura</Label>
           <Input type="email" value={value.email_facturacion} onChange={(e) => set({ email_facturacion: e.target.value })} placeholder={emailSugerido || 'facturas@empresa.com'} />
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
+        <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
           <Label>Domicilio fiscal</Label>
           <Input value={value.domicilio_fiscal} onChange={(e) => set({ domicilio_fiscal: e.target.value })} placeholder="Calle, número, colonia, municipio, estado" />
         </div>
