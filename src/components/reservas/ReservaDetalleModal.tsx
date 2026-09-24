@@ -936,7 +936,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                   </Card>
                 )}
 
-                {r.estado === 'CheckIn' && (
+                {['CheckIn', 'Hospedado'].includes(r.estado) && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">✓ Verificaciones Check-out</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
@@ -1009,7 +1009,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
 
               {/* TAB CARGOS */}
               <TabsContent value="cargos" className="mt-4 space-y-4">
-                {r.estado === 'CheckIn' && (
+                {['CheckIn', 'Hospedado'].includes(r.estado) && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">Agregar Cargo</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
@@ -1017,13 +1017,13 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
                         <Select value={cargoConcepto} onValueChange={(v) => {
                           setCargoConcepto(v);
                           const c = conceptosCargo.find(x => x.id === v);
-                          if (c?.precio_default) setCargoMonto(c.precio_default.toString());
+                          if (c?.precio ?? c?.precio_default) setCargoMonto(String(c.precio ?? c.precio_default));
                         }}>
                           <SelectTrigger><SelectValue placeholder="Concepto..." /></SelectTrigger>
                           <SelectContent>
                             {conceptosCargo.map(c => (
                               <SelectItem key={c.id} value={c.id}>
-                                {c.nombre} {c.precio_default > 0 && `- ${formatCurrency(c.precio_default)}`}
+                                {c.nombre} {Number(c.precio ?? c.precio_default) > 0 && `- ${formatCurrency(Number(c.precio ?? c.precio_default))}`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1077,7 +1077,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
 
               {/* TAB ENTREGABLES */}
               <TabsContent value="entregables" className="mt-4 space-y-4">
-                {r.estado === 'CheckIn' && (
+                {['CheckIn', 'Hospedado'].includes(r.estado) && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">Asignar Entregable</CardTitle></CardHeader>
                     <CardContent>
@@ -1269,7 +1269,7 @@ export function ReservaDetalleModal({ open, onOpenChange, reserva: reservaInicia
               </div>
             )}
 
-            {r.estado === 'CheckIn' && (
+            {['CheckIn', 'Hospedado'].includes(r.estado) && (
               <div className="space-y-2">
                 <Button 
                   className="w-full bg-orange-600 hover:bg-orange-700" 

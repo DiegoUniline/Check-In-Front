@@ -122,6 +122,15 @@ export default function CheckIn() {
       });
       return;
     }
+    const saldoActual = Math.max(0, Number(reserva?.saldo_pendiente ?? 0) || 0);
+    if (totalPagos > saldoActual + 0.009 && String(reserva?.fecha_checkin || '').slice(0, 10) <= todayLocal()) {
+      toast({
+        variant: 'destructive',
+        title: 'El pago excede el saldo',
+        description: `El saldo pendiente es ${formatCurrency(saldoActual)}.`,
+      });
+      return;
+    }
     if (!aceptaTerminos) {
       toast({
         variant: 'destructive',
@@ -262,7 +271,9 @@ export default function CheckIn() {
   const total = reserva.total || reserva.monto_total || 0;
   const impuestos = Number(reserva.impuestos ?? reserva.total_impuestos ?? 0) || 0;
   const subtotal = Number(reserva.subtotal ?? reserva.subtotal_hospedaje ?? total - impuestos) || 0;
-  const saldoRestante = Math.max(0, total - totalPagos);
+  // Lo que falta por pagar descontando anticipos ya registrados.
+  const saldoPrevio = Math.max(0, Number(reserva.saldo_pendiente ?? (total - Number(reserva.total_pagado || 0))) || 0);
+  const saldoRestante = Math.max(0, saldoPrevio - totalPagos);
   const identidadLista = Boolean(formData.nombre.trim() && formData.apellidoPaterno.trim());
   const registroListo = aceptaTerminos && Boolean(firma);
 
@@ -540,7 +551,7 @@ export default function CheckIn() {
 
                 <Separator />
 
-                <PagosMultiplesGrid total={total} pagos={pagos} onChange={setPagos} />
+                <PagosMultiplesGrid total={saldoPrevio} pagos={pagos} onChange={setPagos} />
 
                 <Button
                   className="h-11 w-full text-sm font-semibold"

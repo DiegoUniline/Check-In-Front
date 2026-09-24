@@ -69,7 +69,25 @@ export function useBitacora() {
           turnoId: row.turno_id || undefined,
           resuelto: row.estado === 'Resuelto',
         }));
-        writeAll(hotelId, remote);
+        // Las entradas creadas sin conexión (aún no están en el servidor) se
+        // conservan y se vuelven a enviar; antes se perdían al recargar.
+        const remoteIds = new Set(remote.map((entry) => entry.id));
+        const pendientes = readAll(hotelId).filter((entry) => !remoteIds.has(entry.id));
+        pendientes.forEach((entry) => {
+          void api.createBitacoraOperativa({
+            id: entry.id,
+            turno_id: entry.turnoId || null,
+            categoria: entry.categoria,
+            prioridad: entry.prioridad || 'Normal',
+            titulo: entry.titulo,
+            detalle: entry.detalle || null,
+            responsable: entry.responsable || null,
+            estado: entry.resuelto ? 'Resuelto' : 'Abierto',
+            autor_id: entry.autorId,
+            autor_nombre: entry.autor,
+          }).catch(() => { /* se reintenta en la próxima carga */ });
+        });
+        writeAll(hotelId, [...pendientes, ...remote]);
       })
       .catch(() => {
         // Sin conexión o migración pendiente: se conserva la copia local.

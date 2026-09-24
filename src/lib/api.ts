@@ -4,6 +4,7 @@ import { crearNotificacion } from '@/lib/notificaciones';
 import { setHotelCurrency, formatCurrency } from '@/lib/currency';
 import { withOfflineCache } from '@/lib/offlineCache';
 import { assertShiftWriteAllowed } from '@/lib/shiftAccess';
+import { occupiesNight } from '@/lib/stayOccupancy';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const operationalDb = supabase as any;
@@ -78,6 +79,32 @@ const calendarWeekday = (ymd: string): number => {
   const { year, month, day } = parseCalendarParts(ymd);
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 };
+
+// Convierte una fecha/hora local del hotel ('YYYY-MM-DDTHH:mm') a ISO con el
+// desfase de la zona del hotel, sin depender de la zona de la computadora.
+export const hotelLocalToIso = (local: string): string => {
+  const match = String(local || '').match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if (!match) return new Date(local).toISOString();
+  const [, y, mo, d, h, mi] = match;
+  const guess = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi)));
+  let offset = '+00:00';
+  try {
+    const name = new Intl.DateTimeFormat('en-US', { timeZone: HOTEL_TZ, timeZoneName: 'longOffset' })
+      .formatToParts(guess).find((part) => part.type === 'timeZoneName')?.value || 'GMT';
+    const m = name.match(/GMT([+-]\d{2}):?(\d{2})?/);
+    if (m) offset = `${m[1]}:${m[2] || '00'}`;
+  } catch {
+    return new Date(local).toISOString();
+  }
+  return `${y}-${mo}-${d}T${h}:${mi}:00${offset}`;
+};
+
+// Límites [inicio, fin) de uno o varios días del hotel como marcas de tiempo con
+// zona, para filtrar columnas timestamptz (created_at) sin corrimiento UTC.
+export const hotelDayBounds = (desde: string, hasta: string = desde): [string, string] => [
+  hotelLocalToIso(`${desde.slice(0, 10)}T00:00`),
+  hotelLocalToIso(`${addCalendarDays(hasta.slice(0, 10), 1)}T00:00`),
+];
 
 // Fecha "hoy" YYYY-MM-DD en la zona horaria del hotel (no en UTC ni en la del navegador).
 export const todayLocal = (): string => {
@@ -179,6 +206,10 @@ class ApiClient {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     const { data: profile } = await supabase.from('profiles').select('*, hotels(nombre)').eq('id', data.user.id).maybeSingle();
+    if (profile && (profile as any).activo === false) {
+      await supabase.auth.signOut().catch(() => {});
+      throw new Error('Tu usuario está desactivado. Contacta al administrador del hotel.');
+    }
     const hotelId = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
     this.setHotelId(hotelId);
     // Leer el rol real desde user_roles (no asumir Admin)
@@ -353,8 +384,9 @@ class ApiClient {
     const disponibles = habList.filter((h: any) => h.estado_habitacion === 'Disponible').length;
     const mantenimiento = habList.filter((h: any) => h.estado_habitacion === 'Mantenimiento').length;
     const today = todayLocal();
-    const reservasHoy = (reservas.data || []).filter((r: any) => r.fecha_checkin === today).length;
-    const ingresosHoy = (reservas.data || []).filter((r: any) => r.fecha_checkin === today).reduce((s: number, r: any) => s + Number(r.total || 0), 0);
+    const vigentesHoy = (reservas.data || []).filter((r: any) => r.fecha_checkin === today && !['Cancelada', 'NoShow'].includes(r.estado));
+    const reservasHoy = vigentesHoy.length;
+    const ingresosHoy = vigentesHoy.reduce((s: number, r: any) => s + Number(r.total || 0), 0);
     return {
       ocupacion: total ? Math.round((ocupadas / total) * 100) : 0,
       habitaciones_total: total,
@@ -368,9 +400,12 @@ class ApiClient {
   getDashboardCheckinsHoy = () => this.getCheckinsHoy();
   getDashboardCheckoutsHoy = () => this.getCheckoutsHoy();
   getDashboardVentasHoy = async (): Promise<any> => {
-    const today = todayLocal();
-    const tomorrow = addCalendarDays(today, 1);
-    const { data } = await supabase.from('ventas').select('total').eq('hotel_id', this.hid()).gte('fecha', today).lt('fecha', tomorrow);
+    // Ventas de mostrador vigentes del día del hotel (las cargadas a habitación
+    // forman parte de la cuenta de la reserva).
+    const [inicio, fin] = hotelDayBounds(todayLocal());
+    const { data } = await (supabase as any).from('ventas').select('total').eq('hotel_id', this.hid())
+      .neq('estado', 'Cancelada').is('reserva_id', null)
+      .gte('created_at', inicio).lt('created_at', fin);
     const total = (data || []).reduce((s: number, v: any) => s + Number(v.total || 0), 0);
     return { total, count: (data || []).length };
   };
@@ -395,7 +430,9 @@ class ApiClient {
     const start = `${year}-${String(month).padStart(2, '0')}-01`;
     const nextMonthDate = new Date(Date.UTC(year, month, 1));
     const nextMonth = `${nextMonthDate.getUTCFullYear()}-${String(nextMonthDate.getUTCMonth() + 1).padStart(2, '0')}-01`;
-    const { data } = await supabase.from('reservas').select('total, fecha_checkin').eq('hotel_id', this.hid()).gte('fecha_checkin', start).lt('fecha_checkin', nextMonth);
+    const { data } = await supabase.from('reservas').select('total, fecha_checkin').eq('hotel_id', this.hid())
+      .not('estado', 'in', '(Cancelada,NoShow)').or('origen.neq.Web,estado.neq.Pendiente')
+      .gte('fecha_checkin', start).lt('fecha_checkin', nextMonth);
     const total = (data || []).reduce((s: number, r: any) => s + Number(r.total || 0), 0);
     return { total, count: (data || []).length };
   };
@@ -413,19 +450,19 @@ class ApiClient {
       supabase.from('habitaciones').select('id').eq('hotel_id', hotel_id),
       supabase
         .from('reservas')
-        .select('fecha_checkin, fecha_checkout, estado')
+        .select('habitacion_id, fecha_checkin, fecha_checkout, estado, checkin_realizado, checkout_realizado')
         .eq('hotel_id', hotel_id)
         .lte('fecha_checkin', sunday)
-        .gt('fecha_checkout', monday),
+        .or(`fecha_checkout.gte.${monday},checkout_realizado.eq.false`),
     ]);
     const total = (habs || []).length || 1;
     const result: { dia: string; ocupacion: number }[] = [];
     for (let i = 0; i < 7; i++) {
       const ds = addCalendarDays(monday, i);
-      const ocupadas = (reservas || []).filter((r: any) => {
-        if (r.estado === 'Cancelada') return false;
-        return r.fecha_checkin <= ds && r.fecha_checkout > ds;
-      }).length;
+      // Misma regla que el calendario (estancias del día y salidas vencidas).
+      const ocupadas = new Set((reservas || [])
+        .filter((r: any) => occupiesNight(r, ds, today))
+        .map((r: any) => r.habitacion_id || r.fecha_checkin)).size;
       result.push({
         dia: dias[calendarWeekday(ds)],
         ocupacion: total ? Math.round((ocupadas / total) * 100) : 0,
@@ -442,7 +479,7 @@ class ApiClient {
       supabase.from('reservas').select('id,numero_reserva,fecha_checkin,fecha_checkout,estado,origen,checkin_realizado,checkout_realizado,habitacion_id,saldo_pendiente,total,total_pagado').eq('hotel_id', hotelId),
       supabase.from('habitaciones').select('id,numero,estado_habitacion,estado_limpieza,estado_mantenimiento').eq('hotel_id', hotelId),
       supabase.from('tareas_limpieza').select('id,estado,prioridad,asignado_a,habitacion_id').eq('hotel_id', hotelId).neq('estado', 'Completada'),
-      supabase.from('tareas_mantenimiento').select('id,estado,prioridad,habitacion_id,titulo').eq('hotel_id', hotelId).neq('estado', 'Completada'),
+      supabase.from('tareas_mantenimiento').select('id,estado,prioridad,habitacion_id,titulo').eq('hotel_id', hotelId).not('estado', 'in', '(Completada,Completado,Resuelto,Cerrado)'),
       operationalDb.from('turnos_operativos').select('*').eq('hotel_id', hotelId).eq('estado', 'Abierto').order('abierto_at', { ascending: false }).limit(1).maybeSingle(),
       operationalDb.from('bitacora_operativa').select('id,categoria,prioridad,estado').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
       operationalDb.from('cierres_diarios').select('*').eq('hotel_id', hotelId).eq('fecha_operativa', today).maybeSingle(),
@@ -683,11 +720,16 @@ class ApiClient {
     const [reservasR, habitacionesR, turnosR, bitacoraR, pagosR, gastosR, ventasR, cierreR] = await Promise.all([
       supabase.from('reservas').select('*').eq('hotel_id', hotelId),
       supabase.from('habitaciones').select('id,numero,estado_habitacion').eq('hotel_id', hotelId),
-      operationalDb.from('turnos_operativos').select('id').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
+      // Sólo cuentan las cajas abiertas antes de terminar el día auditado.
+      operationalDb.from('turnos_operativos').select('id').eq('hotel_id', hotelId).eq('estado', 'Abierto').lt('abierto_at', hotelDayBounds(date)[1]),
       operationalDb.from('bitacora_operativa').select('id,categoria,prioridad').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
-      supabase.from('pagos').select('monto').eq('hotel_id', hotelId).eq('fecha', date),
-      supabase.from('gastos').select('monto').eq('hotel_id', hotelId).eq('fecha', date),
-      supabase.from('ventas').select('total').eq('hotel_id', hotelId).eq('fecha', date),
+      // Sólo movimientos vigentes, por hora local del hotel.
+      supabase.from('pagos').select('monto').eq('hotel_id', hotelId).neq('estado', 'Cancelado')
+        .gte('created_at', hotelDayBounds(date)[0]).lt('created_at', hotelDayBounds(date)[1]),
+      supabase.from('gastos').select('monto').eq('hotel_id', hotelId).gte('fecha', date).lt('fecha', addCalendarDays(date, 1)),
+      // Ventas de mostrador (las cargadas a habitación ya son cargos del folio).
+      (supabase as any).from('ventas').select('total').eq('hotel_id', hotelId).neq('estado', 'Cancelada').is('reserva_id', null)
+        .gte('created_at', hotelDayBounds(date)[0]).lt('created_at', hotelDayBounds(date)[1]),
       operationalDb.from('cierres_diarios').select('*').eq('hotel_id', hotelId).eq('fecha_operativa', date).maybeSingle(),
     ]);
     const reservas = reservasR.data || [];
@@ -730,7 +772,8 @@ class ApiClient {
   };
 
   closeOperationalDay = async (payload: { fecha_operativa: string; checklist: unknown; resumen: unknown; observaciones?: string; cerrado_por?: string; cerrado_por_nombre?: string }): Promise<any> => {
-    const { data, error } = await operationalDb.from('cierres_diarios').upsert({ ...payload, hotel_id: this.hid(), estado: 'Cerrado', cerrado_at: new Date().toISOString(), reabierto_at: null, motivo_reapertura: null }, { onConflict: 'hotel_id,fecha_operativa' }).select().single();
+    // Se conserva el registro de una reapertura previa (quién, cuándo y por qué).
+    const { data, error } = await operationalDb.from('cierres_diarios').upsert({ ...payload, hotel_id: this.hid(), estado: 'Cerrado', cerrado_at: new Date().toISOString() }, { onConflict: 'hotel_id,fecha_operativa' }).select().single();
     if (error) {
       if (!this.isMissingOperationalTable(error)) throw error;
       const closures = this.readOperationalFallback<any[]>('cierres', []);
@@ -1098,8 +1141,9 @@ class ApiClient {
     return withOfflineCache(key, async () => {
       let q = supabase.from('reservas').select('*, clientes(*), habitaciones(numero, tipos_habitacion(nombre)), tipos_habitacion(nombre)').eq('hotel_id', this.hid()).order('fecha_checkin', { ascending: false });
       if (params?.estado) q = q.eq('estado', params.estado);
-      // Excluir reservas online aún pendientes de aprobación
-      q = q.or('origen.neq.Web,estado.neq.Pendiente');
+      // Excluir reservas online aún pendientes de aprobación, salvo en el
+      // calendario, donde sí bloquean la habitación.
+      if (params?.incluir_pendientes_web !== 'true') q = q.or('origen.neq.Web,estado.neq.Pendiente');
       const { data, error } = await q;
       if (error) throw error;
       return (data || []).map((r: any) => ({
@@ -1155,7 +1199,7 @@ class ApiClient {
   };
   getCheckoutsHoy = async (): Promise<any> => {
     const today = todayLocal();
-    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false).not('estado', 'in', '(Cancelada,NoShow)').or('origen.neq.Web,estado.neq.Pendiente');
+    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).lte('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false).not('estado', 'in', '(Cancelada,NoShow)').or('origen.neq.Web,estado.neq.Pendiente');
     return (data || []).map((r: any) => ({
       ...r,
       cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
@@ -1479,9 +1523,10 @@ class ApiClient {
     return r;
   };
   devolverEntregable = async (id: string, data?: any): Promise<any> => {
-    const { data: r, error } = await operationalDb.rpc('vulo_return_deliverable', {
+    const { data: r, error } = await operationalDb.rpc('vulo_return_deliverable_charge', {
       p_assignment_id: id,
       p_cantidad_devuelta: Number(data?.cantidad_devuelta ?? 0),
+      p_crear_cargo: Boolean(data?.crear_cargo),
     });
     if (error) throw error;
     return r;
@@ -1495,7 +1540,8 @@ class ApiClient {
     return withOfflineCache(key, async () => {
       let q = supabase.from('tareas_limpieza').select('*, habitaciones(numero, tipo:tipos_habitacion(nombre))').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
       if (params?.estado) q = q.eq('estado', params.estado);
-      const { data } = await q;
+      const { data, error } = await q;
+      if (error) throw error;
       return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
     });
   };
@@ -1512,7 +1558,8 @@ class ApiClient {
       .from('tareas_limpieza')
       .select('habitacion_id, estado')
       .eq('hotel_id', hid)
-      .in('estado', ['Pendiente', 'EnProceso', 'En Proceso', 'Completada']);
+      // Una tarea ya completada no impide crear la nueva limpieza de hoy.
+      .in('estado', ['Pendiente', 'EnProceso', 'En Proceso']);
     const yaConTarea = new Set((tareasActivas || []).map((t: any) => t.habitacion_id));
     const faltantes = habs.filter((h: any) => !yaConTarea.has(h.id));
     if (!faltantes.length) return;
@@ -1549,8 +1596,16 @@ class ApiClient {
           patch.estado_limpieza = 'EnLimpieza';
         } else if (estado === 'Completada' || estado === 'Verificada') {
           patch.estado_limpieza = 'Limpia';
-          // Si la habitación no está ocupada/reservada/mantenimiento, marcarla Disponible
-          if (hab && !['Ocupada', 'Reservada', 'Mantenimiento', 'FueraDeServicio'].includes(hab.estado_habitacion)) {
+          // Sólo se libera si no hay huésped hospedado y la habitación no está bloqueada.
+          const { data: enCasa } = await supabase.from('reservas').select('id')
+            .eq('habitacion_id', r.habitacion_id)
+            .in('estado', ['CheckIn', 'Hospedado'])
+            .eq('checkin_realizado', true)
+            .eq('checkout_realizado', false)
+            .limit(1);
+          if (enCasa?.length) {
+            patch.estado_habitacion = 'Ocupada';
+          } else if (hab && !['Ocupada', 'Reservada', 'Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(hab.estado_habitacion)) {
             patch.estado_habitacion = 'Disponible';
           }
         } else if (estado === 'Pendiente') {
@@ -1574,11 +1629,12 @@ class ApiClient {
   getTareasMantenimiento = async (params?: Record<string, string>): Promise<any> => {
     let q = supabase.from('tareas_mantenimiento').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).order('fecha_reporte', { ascending: false });
     if (params?.estado) q = q.eq('estado', params.estado);
-    const { data } = await q;
+    const { data, error } = await q;
+    if (error) throw error;
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
   };
   getTareasMantenimientoPendientes = async (): Promise<any> => {
-    const { data } = await supabase.from('tareas_mantenimiento').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).neq('estado', 'Completada');
+    const { data } = await supabase.from('tareas_mantenimiento').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).not('estado', 'in', '(Completada,Completado,Resuelto,Cerrado)');
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
   };
   createTareaMantenimiento = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('tareas_mantenimiento').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
@@ -1605,48 +1661,48 @@ class ApiClient {
   getCategorias = async (): Promise<any> => { const { data } = await supabase.from('categorias_producto').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
   createCategoria = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('categorias_producto').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
   getProductos = async (params?: Record<string, string>): Promise<any> => {
-    let q = supabase.from('productos').select('*').eq('hotel_id', this.hid()).order('nombre');
+    let q = supabase.from('productos').select('*, categorias_producto(nombre)').eq('hotel_id', this.hid()).order('nombre');
     if (params?.categoria) q = q.eq('categoria', params.categoria);
-    const { data } = await q;
-    return data || [];
+    const { data, error } = await q;
+    if (error) throw error;
+    // El formulario guarda categoria_id; las vistas agrupan por nombre.
+    return (data || []).map((p: any) => ({
+      ...p,
+      categoria_nombre: p.categorias_producto?.nombre || p.categoria || null,
+    }));
   };
   getProducto = async (id: string): Promise<any> => { const { data } = await supabase.from('productos').select('*').eq('id', id).maybeSingle(); return data; };
   createProducto = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('productos').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
   updateProducto = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('productos').update(data).eq('id', id).select().single(); if (error) throw error; return r; };
   deleteProducto = async (id: string): Promise<any> => { const { error } = await supabase.from('productos').delete().eq('id', id); if (error) throw error; return { ok: true }; };
+  // Transacción única en la base: sin pérdidas por ventas simultáneas ni stock negativo.
   movimientoInventario = async (id: string, data: any): Promise<any> => {
-    const { data: prod } = await supabase.from('productos').select('stock_actual').eq('id', id).maybeSingle();
-    const stockAnterior = Number(prod?.stock_actual || 0);
-    const cantidad = Number(data.cantidad || 0);
-    const tipo = String(data.tipo || '').toLowerCase();
-    const stockNuevo = tipo === 'salida' ? stockAnterior - cantidad : stockAnterior + cantidad;
-    await supabase.from('productos').update({ stock_actual: stockNuevo }).eq('id', id);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: m, error } = await supabase.from('movimientos_inventario').insert({
-      producto_id: id,
-      ...data,
-      stock_anterior: stockAnterior,
-      stock_nuevo: stockNuevo,
-      usuario_id: user?.id ?? null,
-    }).select().single();
-    if (error) throw error; return m;
+    const { data: m, error } = await operationalDb.rpc('vulo_inventory_move', {
+      p_producto_id: id,
+      p_tipo: data.tipo,
+      p_cantidad: Number(data.cantidad || 0),
+      p_motivo: data.motivo || null,
+      p_referencia: data.referencia || null,
+      p_absoluto: false,
+    });
+    if (error) throw error;
+    return m;
   };
   getMovimientosProducto = async (id: string): Promise<any> => { const { data } = await supabase.from('movimientos_inventario').select('*').eq('producto_id', id).order('created_at', { ascending: false }); return data || []; };
   // Lista todos los movimientos del hotel actual (a través de productos)
   getMovimientosInventario = async (limit = 200): Promise<any[]> => {
-    const { data: prods } = await supabase.from('productos').select('id, nombre, codigo').eq('hotel_id', this.hid());
-    const ids = (prods || []).map((p: any) => p.id);
-    if (!ids.length) return [];
-    const map: Record<string, any> = {};
-    (prods || []).forEach((p: any) => { map[p.id] = p; });
-    const { data, error } = await supabase
+    // Unión con productos (en lugar de enviar todos los ids en la URL, que
+    // falla con catálogos grandes).
+    const { data, error } = await (supabase as any)
       .from('movimientos_inventario')
-      .select('*')
-      .in('producto_id', ids)
+      .select('*, productos!inner(nombre, codigo, hotel_id)')
+      .eq('productos.hotel_id', this.hid())
       .order('created_at', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    const userIds = Array.from(new Set((data || []).map((m: any) => m.usuario_id).filter(Boolean)));
+    const map: Record<string, any> = {};
+    (data || []).forEach((m: any) => { if (m.productos) map[m.producto_id] = m.productos; });
+    const userIds: string[] = Array.from(new Set<string>((data || []).map((m: any) => m.usuario_id).filter(Boolean)));
     const users: Record<string, string> = {};
     if (userIds.length) {
       const { data: profs } = await supabase.from('profiles').select('id, nombre, email').in('id', userIds);
@@ -1661,22 +1717,14 @@ class ApiClient {
   };
   // Ajusta el stock a un valor absoluto y registra el movimiento
   ajustarStockAbsoluto = async (productoId: string, stockReal: number, motivo?: string): Promise<any> => {
-    const { data: prod } = await supabase.from('productos').select('stock_actual').eq('id', productoId).maybeSingle();
-    const anterior = Number(prod?.stock_actual || 0);
-    const nuevo = Number(stockReal) || 0;
-    const diff = nuevo - anterior;
-    if (diff === 0) return null;
-    await supabase.from('productos').update({ stock_actual: nuevo }).eq('id', productoId);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: m, error } = await supabase.from('movimientos_inventario').insert({
-      producto_id: productoId,
-      tipo: diff > 0 ? 'Entrada' : 'Salida',
-      cantidad: Math.abs(diff),
-      stock_anterior: anterior,
-      stock_nuevo: nuevo,
-      motivo: motivo || 'Ajuste de stock',
-      usuario_id: user?.id ?? null,
-    }).select().single();
+    const { data: m, error } = await operationalDb.rpc('vulo_inventory_move', {
+      p_producto_id: productoId,
+      p_tipo: 'Ajuste',
+      p_cantidad: Math.max(0, Number(stockReal) || 0),
+      p_motivo: motivo || 'Ajuste de stock',
+      p_referencia: null,
+      p_absoluto: true,
+    });
     if (error) throw error;
     return m;
   };
@@ -1715,7 +1763,7 @@ class ApiClient {
   getCompras = async (params?: Record<string, string>): Promise<any> => {
     let q = supabase.from('compras').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
     if (params?.fecha_desde) q = q.gte('fecha', params.fecha_desde);
-    if (params?.fecha_hasta) q = q.lte('fecha', params.fecha_hasta);
+    if (params?.fecha_hasta) q = q.lt('fecha', addCalendarDays(params.fecha_hasta, 1));
     const { data, error } = await q;
     if (error) throw error;
     return data || [];
@@ -1868,8 +1916,8 @@ class ApiClient {
     const items = detalles ?? detalle ?? [];
     const { data: result, error } = await operationalDb.rpc('vulo_register_sale', {
       p_items: (items as any[]).map((item) => ({
-        product_id: item.product_id || null,
-        concept_id: item.concept_id || null,
+        product_id: item.product_id || item.producto_id || null,
+        concept_id: item.concept_id || item.concepto_id || null,
         quantity: Number(item.cantidad ?? item.quantity ?? 0),
       })),
       p_metodo_pago: header.metodo_pago || 'Efectivo',
@@ -2025,15 +2073,18 @@ class ApiClient {
     const { error } = await supabase
       .from('reservas')
       .update({ estado: 'Confirmada', revisada_at: new Date().toISOString() } as any)
-      .eq('id', id);
+      .eq('id', id)
+      .eq('estado', 'Pendiente');
     if (error) throw error;
     return {};
   };
   rechazarReservaOnline = async (id: string, motivo?: string): Promise<any> => {
     const { error } = await supabase
       .from('reservas')
-      .update({ estado: 'Cancelada', revisada_at: new Date().toISOString(), notas_internas: motivo || 'Rechazada por hotel' } as any)
-      .eq('id', id);
+      // El motivo va a su propio campo; no se borran las notas internas.
+      .update({ estado: 'Cancelada', revisada_at: new Date().toISOString(), motivo_cancelacion: motivo || 'Rechazada por el hotel' } as any)
+      .eq('id', id)
+      .eq('estado', 'Pendiente');
     if (error) throw error;
     return {};
   };

@@ -49,6 +49,7 @@ export default function CheckOut() {
   const [reserva, setReserva] = useState<any>(null);
   const [cargosExtra, setCargosExtra] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
+  const [entregablesPendientes, setEntregablesPendientes] = useState<any[]>([]);
 
   useEffect(() => {
     cargarDatos();
@@ -57,13 +58,18 @@ export default function CheckOut() {
   const cargarDatos = async () => {
     if (!id) return;
     try {
-      const [reservaData, pagosData] = await Promise.all([
+      const [reservaData, pagosData, entregablesData] = await Promise.all([
         api.getReserva(id),
         api.getPagosReserva(id),
+        api.getEntregablesReserva(id).catch(() => []),
       ]);
       setReserva(reservaData);
-      setPagos(Array.isArray(pagosData) ? pagosData : []);
-      setCargosExtra((reservaData as any)?.cargos_extra || (reservaData as any)?.cargos || []);
+      // Los pagos y cargos cancelados se conservan en el historial pero no cuentan.
+      setPagos((Array.isArray(pagosData) ? pagosData : []).filter((p: any) => p.estado !== 'Cancelado'));
+      setCargosExtra(((reservaData as any)?.cargos_extra || (reservaData as any)?.cargos || [])
+        .filter((c: any) => c.estado !== 'Cancelado'));
+      setEntregablesPendientes((Array.isArray(entregablesData) ? entregablesData : [])
+        .filter((e: any) => e.requiere_devolucion && !e.devuelto));
     } catch (error) {
       console.error('Error cargando reserva:', error);
       toast({ title: 'Error', description: 'No se pudo cargar la reserva', variant: 'destructive' });
@@ -124,7 +130,13 @@ export default function CheckOut() {
     (sum, c) => sum + Number(c.total ?? c.subtotal ?? (Number(c.precio_unitario ?? c.precio) * (c.cantidad || 1))),
     0,
   );
-  const saldoPendiente = Math.max(0, total - totalPagado);
+  // El saldo lo calcula el servidor (incluye cargos, impuestos y descuentos);
+  // negativo significa saldo a favor del huésped.
+  const saldoServidor = reserva.saldo_pendiente == null ? total - totalPagado : Number(reserva.saldo_pendiente) || 0;
+  const saldoPendiente = Math.max(0, Math.round(saldoServidor * 100) / 100);
+  const saldoAFavor = saldoServidor < -0.009 ? Math.abs(saldoServidor) : 0;
+  const estanciaActiva = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || ''))
+    && Boolean(reserva.checkin_realizado) && !reserva.checkout_realizado;
   const cliente = reserva.cliente || reserva.clientes || {};
   const huesped = `${cliente.nombre || reserva.huesped_nombre || ''} ${
     cliente.apellido_paterno || ''
@@ -132,6 +144,26 @@ export default function CheckOut() {
   const habitacion = reserva.habitacion?.numero || reserva.habitacion_numero || 'N/A';
 
   const handleSubmit = async () => {
+    if (!estanciaActiva) {
+      toast({
+        variant: 'destructive',
+        title: 'No se puede hacer check-out',
+        description: `La reserva está en estado ${reserva.estado}; sólo se registra salida de una estancia con check-in.`,
+      });
+      return;
+    }
+    if (entregablesPendientes.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Entregables pendientes',
+        description: `Registra la devolución de: ${entregablesPendientes.map((e: any) => e.nombre).join(', ')}.`,
+      });
+      return;
+    }
+    if (saldoAFavor > 0) {
+      const ok = window.confirm(`El huésped tiene un saldo a favor de ${formatCurrency(saldoAFavor)}. ¿Ya se le devolvió o se aplicará? Pulsa Aceptar para continuar con la salida.`);
+      if (!ok) return;
+    }
     if (!confirmarRevision) {
       toast({
         variant: 'destructive',

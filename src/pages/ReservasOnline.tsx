@@ -121,10 +121,10 @@ export default function ReservasOnline() {
                         variant="outline"
                         disabled={procesando === r.id}
                         onClick={() => {
-                          const motivo = prompt('Motivo del rechazo (opcional):') || '';
-                          if (motivo === null) return;
+                          const respuesta = prompt('Motivo del rechazo (opcional):');
+                          if (respuesta === null) return; // Canceló: no se rechaza.
                           setProcesando(r.id);
-                          rechazar.mutate({ id: r.id, motivo });
+                          rechazar.mutate({ id: r.id, motivo: respuesta.trim() });
                         }}
                       >
                         <X className="h-4 w-4 mr-1" /> Rechazar

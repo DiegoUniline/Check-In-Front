@@ -120,14 +120,14 @@ export default function Historial() {
 
         const pagosTransformed = (pagos || []).map((p: any) => ({
           id: p.id,
-          fecha: p.fecha || p.created_at,
+          fecha: p.created_at || p.fecha,
           tipo: 'Ingreso' as const,
           categoria: p.concepto?.includes('Check') ? 'Hospedaje' : (p.concepto?.includes('POS') ? 'POS' : 'Servicio'),
           concepto: p.concepto || 'Pago',
           referencia: p.reserva_id ? `RES-${p.reserva_id}` : undefined,
           monto: Number(p.monto) || 0,
           metodoPago: p.metodo_pago || 'Efectivo',
-          usuario: p.usuario_nombre || 'Sistema',
+          usuario: p.created_by_nombre || p.usuario_nombre || 'Sistema',
           cliente: p.cliente_nombre,
           habitacion: p.habitacion_numero,
         }));
@@ -143,7 +143,8 @@ export default function Historial() {
           usuario: g.usuario_nombre || 'Admin',
         }));
 
-        const comprasTransformed = (compras || []).map((c: any) => ({
+        // Una orden cancelada no es un egreso.
+        const comprasTransformed = (compras || []).filter((c: any) => c.estado !== 'Cancelada').map((c: any) => ({
           id: c.id,
           fecha: c.fecha || c.created_at,
           tipo: 'Egreso' as const,

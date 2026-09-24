@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { loadCaller, normalizeRole, roleAssignmentError, targetAccessError } from '../_shared/userAdmin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,7 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const ALLOWED_ROLES = ['Admin', 'Recepcion', 'Housekeeping', 'Mantenimiento', 'Gerente', 'SuperAdmin'];
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -21,16 +21,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-    if (userErr || !userData?.user) return json({ error: 'Sesión inválida' }, 401);
-    const caller = userData.user;
-
-    const { data: callerRoles } = await admin
-      .from('user_roles').select('role').eq('user_id', caller.id);
-    const roles = (callerRoles || []).map((r: any) => r.role);
-    const isSuperAdmin = roles.includes('SuperAdmin') || caller.email === 'diego.leon@uniline.mx';
-    const isAdmin = roles.includes('Admin') || roles.includes('Gerente') || isSuperAdmin;
-    if (!isAdmin) return json({ error: 'Solo administradores pueden editar usuarios' }, 403);
+    const caller = await loadCaller(admin, jwt);
+    if (!caller) return json({ error: 'Sesión inválida' }, 401);
+    if (!caller.isManager) return json({ error: 'Solo administradores pueden editar usuarios' }, 403);
 
     const body = await req.json();
     const {
@@ -46,6 +39,15 @@ Deno.serve(async (req) => {
     } = body || {};
 
     if (!id) return json({ error: 'Falta id de usuario' }, 400);
+    if (id !== caller.id) {
+      const accessError = await targetAccessError(admin, caller, id);
+      if (accessError) return json({ error: accessError }, 403);
+    }
+    const requestedRole = rol ? normalizeRole(rol) : null;
+    if (id === caller.id && requestedRole && !caller.roles.includes(requestedRole)) {
+      return json({ error: 'No puedes cambiar tu propio rol' }, 403);
+    }
+    if (id === caller.id && activo === false) return json({ error: 'No puedes desactivar tu propio usuario' }, 400);
 
     // 1. Actualizar profile
     const profileUpdate: Record<string, unknown> = {};
@@ -65,19 +67,20 @@ Deno.serve(async (req) => {
     const authUpdate: Record<string, unknown> = {};
     if (email) authUpdate.email = email;
     if (password) authUpdate.password = password;
+    // Un usuario desactivado ya no puede iniciar sesión.
+    if (activo === false) authUpdate.ban_duration = '876000h';
+    if (activo === true) authUpdate.ban_duration = 'none';
     if (Object.keys(authUpdate).length > 0) {
       const { error: authErr } = await admin.auth.admin.updateUserById(id, authUpdate);
       if (authErr) return json({ error: `Auth: ${authErr.message}` }, 400);
     }
 
     // 3. Actualizar rol si se envía
-    if (rol) {
-      const rolNorm = ALLOWED_ROLES.find((r) => r.toLowerCase() === String(rol).toLowerCase());
+    if (rol && !(id === caller.id && requestedRole && caller.roles.includes(requestedRole))) {
+      const rolNorm = normalizeRole(rol);
       if (!rolNorm) return json({ error: `Rol inválido: ${rol}` }, 400);
-      // Solo SuperAdmin puede otorgar SuperAdmin
-      if (rolNorm === 'SuperAdmin' && !isSuperAdmin) {
-        return json({ error: 'Solo un SuperAdmin puede asignar ese rol' }, 403);
-      }
+      const roleError = roleAssignmentError(caller, rolNorm);
+      if (roleError) return json({ error: roleError }, 403);
       // Reemplazar roles del usuario
       await admin.from('user_roles').delete().eq('user_id', id);
       const { error: roleErr } = await admin.from('user_roles').insert({ user_id: id, role: rolNorm });

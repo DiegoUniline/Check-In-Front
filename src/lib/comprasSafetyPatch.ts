@@ -19,7 +19,6 @@ if (!root[PATCH_KEY]) {
   const client = api as any;
   const db = supabase as any;
   const originalUpdateEstadoCompra = client.updateEstadoCompra.bind(client);
-  const originalDeleteCompra = client.deleteCompra.bind(client);
 
   client.createCompra = async (data: any) => {
     const { detalles, detalle, ...header } = data || {};
@@ -39,20 +38,8 @@ if (!root[PATCH_KEY]) {
       proveedorNombre = proveedor?.nombre;
     }
 
-    let numeroOrden = header.numero_orden as string | undefined;
-    if (!numeroOrden) {
-      const { data: ultimas, error: folioError } = await db
-        .from('compras')
-        .select('numero_orden')
-        .eq('hotel_id', hotelId)
-        .like('numero_orden', 'OC-%')
-        .order('numero_orden', { ascending: false })
-        .limit(1);
-      if (folioError) throw folioError;
-      const ultimo = ultimas?.[0]?.numero_orden as string | undefined;
-      const ultimoNum = ultimo ? parseInt(ultimo.replace(/\D/g, ''), 10) || 0 : 0;
-      numeroOrden = `OC-${String(ultimoNum + 1).padStart(6, '0')}`;
-    }
+    // El folio OC-###### lo asigna la base (único por hotel).
+    const numeroOrden = header.numero_orden || null;
 
     const { data: compra, error: compraError } = await db
       .from('compras')
@@ -98,109 +85,12 @@ if (!root[PATCH_KEY]) {
     return compra;
   };
 
+  // Recepción en una sola transacción: bloquea la orden, suma stock una sola
+  // vez y registra movimientos.
   const recibirCompra = async (id: string) => {
-    const hotelId = client.getHotelId?.();
-    if (!hotelId) throw new Error('Hotel no definido');
-
-    const { data: compra, error: compraError } = await db
-      .from('compras')
-      .select('*, compras_detalle(*)')
-      .eq('id', id)
-      .eq('hotel_id', hotelId)
-      .maybeSingle();
-    if (compraError) throw compraError;
-    if (!compra) throw new Error('Orden de compra no encontrada');
-    if (compra.estado === 'Recibida') return compra;
-    if (compra.estado === 'Cancelada') throw new Error('Una orden cancelada no puede recibirse.');
-
-    const folio = compra.numero_orden || compra.numero || compra.codigo || null;
-
-    // Compatibilidad histórica: el flujo anterior ingresaba stock al CREAR.
-    // Si ya existen movimientos de compra con este folio, solo actualizamos estado.
-    if (folio) {
-      const { data: movimientosPrevios, error: movimientosError } = await db
-        .from('movimientos_inventario')
-        .select('id')
-        .eq('referencia', folio)
-        .eq('motivo', 'Compra')
-        .limit(1);
-      if (movimientosError) throw movimientosError;
-      if (movimientosPrevios?.length) return originalUpdateEstadoCompra(id, 'Recibida');
-    }
-
-    const detalle = (compra.compras_detalle || compra.detalle || []) as any[];
-    const cantidades = new Map<string, number>();
-    detalle.forEach((item: any) => {
-      if (!item.producto_id) return;
-      const cantidad = Number(item.cantidad) || 0;
-      if (cantidad <= 0) return;
-      cantidades.set(item.producto_id, (cantidades.get(item.producto_id) || 0) + cantidad);
-    });
-
-    if (!cantidades.size) return originalUpdateEstadoCompra(id, 'Recibida');
-
-    const ids = [...cantidades.keys()];
-    const { data: productos, error: productosError } = await db
-      .from('productos')
-      .select('id,stock_actual')
-      .eq('hotel_id', hotelId)
-      .in('id', ids);
-    if (productosError) throw productosError;
-
-    const anteriores = new Map<string, number>();
-    (productos || []).forEach((p: any) => anteriores.set(p.id, Number(p.stock_actual) || 0));
-    const actualizados: string[] = [];
-    let movimientosInsertados: any[] = [];
-
-    try {
-      for (const productoId of ids) {
-        if (!anteriores.has(productoId)) throw new Error(`No se encontró el producto ${productoId} para recibir la compra`);
-        const anterior = anteriores.get(productoId) || 0;
-        const nuevo = anterior + (cantidades.get(productoId) || 0);
-        const { error } = await db
-          .from('productos')
-          .update({ stock_actual: nuevo })
-          .eq('id', productoId)
-          .eq('hotel_id', hotelId);
-        if (error) throw error;
-        actualizados.push(productoId);
-      }
-
-      const movimientos = ids.map((productoId) => {
-        const anterior = anteriores.get(productoId) || 0;
-        const cantidad = cantidades.get(productoId) || 0;
-        return {
-          producto_id: productoId,
-          tipo: 'Entrada',
-          cantidad,
-          stock_anterior: anterior,
-          stock_nuevo: anterior + cantidad,
-          motivo: 'Compra',
-          referencia: folio,
-        };
-      });
-
-      const { data: movData, error: movimientosError } = await db
-        .from('movimientos_inventario')
-        .insert(movimientos)
-        .select('id');
-      if (movimientosError) throw movimientosError;
-      movimientosInsertados = movData || [];
-
-      return await originalUpdateEstadoCompra(id, 'Recibida');
-    } catch (error) {
-      if (movimientosInsertados.length) {
-        await db.from('movimientos_inventario').delete().in('id', movimientosInsertados.map((m: any) => m.id));
-      }
-      for (const productoId of actualizados.reverse()) {
-        await db
-          .from('productos')
-          .update({ stock_actual: anteriores.get(productoId) || 0 })
-          .eq('id', productoId)
-          .eq('hotel_id', hotelId);
-      }
-      throw error;
-    }
+    const { data, error } = await db.rpc('vulo_receive_purchase', { p_compra_id: id });
+    if (error) throw error;
+    return data;
   };
 
   client.updateEstadoCompra = async (id: string, estado: string) => {
@@ -209,62 +99,9 @@ if (!root[PATCH_KEY]) {
   };
 
   client.deleteCompra = async (id: string) => {
-    const hotelId = client.getHotelId?.();
-    const { data: compra, error } = await db
-      .from('compras')
-      .select('id,estado,numero_orden')
-      .eq('id', id)
-      .eq('hotel_id', hotelId)
-      .maybeSingle();
+    const { data, error } = await db.rpc('vulo_delete_purchase', { p_compra_id: id });
     if (error) throw error;
-    if (!compra) return { ok: true };
-
-    if (compra.estado === 'Recibida') {
-      throw new Error('Una orden recibida ya afectó inventario y no debe eliminarse. Usa un ajuste documentado si necesitas corregirla.');
-    }
-
-    // Órdenes históricas no recibidas pudieron haber afectado stock por la lógica
-    // anterior. Si es seguro, revertimos ese stock antes de eliminar.
-    const folio = compra.numero_orden;
-    if (folio) {
-      const { data: movs, error: movError } = await db
-        .from('movimientos_inventario')
-        .select('id,producto_id,cantidad')
-        .eq('referencia', folio)
-        .eq('motivo', 'Compra');
-      if (movError) throw movError;
-
-      if (movs?.length) {
-        const qty = new Map<string, number>();
-        movs.forEach((m: any) => qty.set(m.producto_id, (qty.get(m.producto_id) || 0) + (Number(m.cantidad) || 0)));
-        const ids = [...qty.keys()];
-        const { data: prods, error: prodError } = await db
-          .from('productos')
-          .select('id,stock_actual')
-          .eq('hotel_id', hotelId)
-          .in('id', ids);
-        if (prodError) throw prodError;
-
-        for (const p of prods || []) {
-          const actual = Number(p.stock_actual) || 0;
-          const restar = qty.get(p.id) || 0;
-          if (actual < restar) {
-            throw new Error('No se puede eliminar esta orden porque parte del stock que generó ya fue consumido. Usa un ajuste de inventario para conservar trazabilidad.');
-          }
-        }
-
-        for (const p of prods || []) {
-          await db
-            .from('productos')
-            .update({ stock_actual: (Number(p.stock_actual) || 0) - (qty.get(p.id) || 0) })
-            .eq('id', p.id)
-            .eq('hotel_id', hotelId);
-        }
-        await db.from('movimientos_inventario').delete().in('id', movs.map((m: any) => m.id));
-      }
-    }
-
-    return originalDeleteCompra(id);
+    return data || { ok: true };
   };
 }
 
