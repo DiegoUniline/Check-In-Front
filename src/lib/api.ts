@@ -4,6 +4,7 @@ import { crearNotificacion } from '@/lib/notificaciones';
 import { setHotelCurrency, formatCurrency } from '@/lib/currency';
 import { withOfflineCache } from '@/lib/offlineCache';
 import { assertShiftWriteAllowed } from '@/lib/shiftAccess';
+import { occupiesNight } from '@/lib/stayOccupancy';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const operationalDb = supabase as any;
@@ -383,8 +384,9 @@ class ApiClient {
     const disponibles = habList.filter((h: any) => h.estado_habitacion === 'Disponible').length;
     const mantenimiento = habList.filter((h: any) => h.estado_habitacion === 'Mantenimiento').length;
     const today = todayLocal();
-    const reservasHoy = (reservas.data || []).filter((r: any) => r.fecha_checkin === today).length;
-    const ingresosHoy = (reservas.data || []).filter((r: any) => r.fecha_checkin === today).reduce((s: number, r: any) => s + Number(r.total || 0), 0);
+    const vigentesHoy = (reservas.data || []).filter((r: any) => r.fecha_checkin === today && !['Cancelada', 'NoShow'].includes(r.estado));
+    const reservasHoy = vigentesHoy.length;
+    const ingresosHoy = vigentesHoy.reduce((s: number, r: any) => s + Number(r.total || 0), 0);
     return {
       ocupacion: total ? Math.round((ocupadas / total) * 100) : 0,
       habitaciones_total: total,
@@ -428,7 +430,9 @@ class ApiClient {
     const start = `${year}-${String(month).padStart(2, '0')}-01`;
     const nextMonthDate = new Date(Date.UTC(year, month, 1));
     const nextMonth = `${nextMonthDate.getUTCFullYear()}-${String(nextMonthDate.getUTCMonth() + 1).padStart(2, '0')}-01`;
-    const { data } = await supabase.from('reservas').select('total, fecha_checkin').eq('hotel_id', this.hid()).gte('fecha_checkin', start).lt('fecha_checkin', nextMonth);
+    const { data } = await supabase.from('reservas').select('total, fecha_checkin').eq('hotel_id', this.hid())
+      .not('estado', 'in', '(Cancelada,NoShow)').or('origen.neq.Web,estado.neq.Pendiente')
+      .gte('fecha_checkin', start).lt('fecha_checkin', nextMonth);
     const total = (data || []).reduce((s: number, r: any) => s + Number(r.total || 0), 0);
     return { total, count: (data || []).length };
   };
@@ -446,19 +450,19 @@ class ApiClient {
       supabase.from('habitaciones').select('id').eq('hotel_id', hotel_id),
       supabase
         .from('reservas')
-        .select('fecha_checkin, fecha_checkout, estado')
+        .select('habitacion_id, fecha_checkin, fecha_checkout, estado, checkin_realizado, checkout_realizado')
         .eq('hotel_id', hotel_id)
         .lte('fecha_checkin', sunday)
-        .gt('fecha_checkout', monday),
+        .or(`fecha_checkout.gte.${monday},checkout_realizado.eq.false`),
     ]);
     const total = (habs || []).length || 1;
     const result: { dia: string; ocupacion: number }[] = [];
     for (let i = 0; i < 7; i++) {
       const ds = addCalendarDays(monday, i);
-      const ocupadas = (reservas || []).filter((r: any) => {
-        if (r.estado === 'Cancelada') return false;
-        return r.fecha_checkin <= ds && r.fecha_checkout > ds;
-      }).length;
+      // Misma regla que el calendario (estancias del día y salidas vencidas).
+      const ocupadas = new Set((reservas || [])
+        .filter((r: any) => occupiesNight(r, ds, today))
+        .map((r: any) => r.habitacion_id || r.fecha_checkin)).size;
       result.push({
         dia: dias[calendarWeekday(ds)],
         ocupacion: total ? Math.round((ocupadas / total) * 100) : 0,
@@ -1137,8 +1141,9 @@ class ApiClient {
     return withOfflineCache(key, async () => {
       let q = supabase.from('reservas').select('*, clientes(*), habitaciones(numero, tipos_habitacion(nombre)), tipos_habitacion(nombre)').eq('hotel_id', this.hid()).order('fecha_checkin', { ascending: false });
       if (params?.estado) q = q.eq('estado', params.estado);
-      // Excluir reservas online aún pendientes de aprobación
-      q = q.or('origen.neq.Web,estado.neq.Pendiente');
+      // Excluir reservas online aún pendientes de aprobación, salvo en el
+      // calendario, donde sí bloquean la habitación.
+      if (params?.incluir_pendientes_web !== 'true') q = q.or('origen.neq.Web,estado.neq.Pendiente');
       const { data, error } = await q;
       if (error) throw error;
       return (data || []).map((r: any) => ({
@@ -1194,7 +1199,7 @@ class ApiClient {
   };
   getCheckoutsHoy = async (): Promise<any> => {
     const today = todayLocal();
-    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).eq('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false).not('estado', 'in', '(Cancelada,NoShow)').or('origen.neq.Web,estado.neq.Pendiente');
+    const { data } = await supabase.from('reservas').select('*, clientes(nombre, apellido_paterno), habitaciones(numero)').eq('hotel_id', this.hid()).lte('fecha_checkout', today).eq('checkin_realizado', true).eq('checkout_realizado', false).not('estado', 'in', '(Cancelada,NoShow)').or('origen.neq.Web,estado.neq.Pendiente');
     return (data || []).map((r: any) => ({
       ...r,
       cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',

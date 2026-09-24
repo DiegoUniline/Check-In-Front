@@ -36,6 +36,7 @@ import { TimelineGrid, type TimelineReservationAction, type TimelineRoomGrouping
 import { useRealtimeSync, type RealtimeSyncEvent } from '@/hooks/useRealtimeSync';
 import type { ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
+import { departsTodayOrOverdue, occupiesNight } from '@/lib/stayOccupancy';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
@@ -280,7 +281,7 @@ export default function Reservas() {
     try {
       const [habData, resData, tiposData, llegadasData, salidasData] = await Promise.all([
         api.getHabitaciones(),
-        api.getReservas(),
+        api.getReservas({ incluir_pendientes_web: 'true' }),
         api.getTiposHabitacion(),
         // Consumido por este archivo para mostrar el listado de llegadas.
         api.getCheckinsHoy().catch(() => []),
@@ -377,17 +378,13 @@ export default function Reservas() {
       const roomId = reservation.habitacion_id || reservation.habitaciones?.id;
       return roomId === h.id && !['Cancelada', 'NoShow'].includes(String(reservation.estado || ''));
     });
-    const occupiedToday = roomReservations.some((reservation) => {
-      const checkin = String(reservation.fecha_checkin || '').slice(0, 10);
-      const checkout = String(reservation.fecha_checkout || '').slice(0, 10);
-      return checkin <= today && today < checkout;
-    });
+    const occupiedToday = roomReservations.some((reservation) => occupiesNight(reservation, today, today));
     const maintenance = String(h.estado_mantenimiento || 'OK').toLowerCase() !== 'ok'
       || String(h.estado_habitacion || '').toLowerCase().includes('mantenimiento');
     if (operationalFilter === 'available' && (occupiedToday || maintenance)) return false;
     if (operationalFilter === 'occupied' && !occupiedToday) return false;
     if (operationalFilter === 'arrivals' && !roomReservations.some((r) => String(r.fecha_checkin || '').slice(0, 10) === today)) return false;
-    if (operationalFilter === 'departures' && !roomReservations.some((r) => String(r.fecha_checkout || '').slice(0, 10) === today)) return false;
+    if (operationalFilter === 'departures' && !roomReservations.some((r) => departsTodayOrOverdue(r, today))) return false;
     if (operationalFilter === 'balance' && !roomReservations.some((r) => Number(r.saldo_pendiente || 0) > 0)) return false;
     if (operationalFilter === 'pending' && !roomReservations.some((r) => r.estado === 'Pendiente')) return false;
     if (operationalFilter === 'maintenance' && !maintenance) return false;
@@ -1075,11 +1072,7 @@ export default function Reservas() {
                           return rows.map((h: any) => {
                             const activa = reservas.find((r: any) => {
                               const rid = r.habitacion_id || r.habitaciones?.id;
-                              if (rid !== h.id) return false;
-                              if (['Cancelada', 'NoShow'].includes(r.estado)) return false;
-                              const ci = (r.fecha_checkin || '').substring(0, 10);
-                              const co = (r.fecha_checkout || '').substring(0, 10);
-                              return ci <= hoy && hoy < co;
+                              return rid === h.id && occupiesNight(r, hoy, hoy);
                             });
                             const est = getEstadoConfig(activa?.estado || h.estado_habitacion || 'Libre');
                             const cliente = activa

@@ -508,3 +508,35 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- 10. Mantenimiento: cerrar un reporte no libera la habitación si quedan
+--     otros reportes abiertos.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.vulo_release_room_after_maintenance()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE v_resolved boolean;
+BEGIN
+  v_resolved := NEW.estado IN ('Completada','Completado','Resuelto','Cerrado');
+  IF v_resolved AND OLD.estado IS DISTINCT FROM NEW.estado AND NEW.habitacion_id IS NOT NULL THEN
+    NEW.fecha_completado := COALESCE(NEW.fecha_completado, now());
+    IF EXISTS (
+      SELECT 1 FROM public.tareas_mantenimiento t
+      WHERE t.habitacion_id = NEW.habitacion_id AND t.id <> NEW.id
+        AND COALESCE(t.estado, 'Pendiente') NOT IN ('Completada','Completado','Resuelto','Cerrado','Cancelada','Cancelado')
+    ) THEN
+      RETURN NEW;
+    END IF;
+    UPDATE public.habitaciones h SET estado_mantenimiento='OK',
+      estado_habitacion=CASE WHEN h.estado_habitacion IN ('FueraDeServicio','Mantenimiento','Bloqueada')
+        AND NOT EXISTS(SELECT 1 FROM public.reservas r WHERE r.habitacion_id=h.id
+          AND r.estado IN ('CheckIn','Hospedado') AND COALESCE(r.checkin_realizado,false)
+          AND NOT COALESCE(r.checkout_realizado,false)) THEN 'Disponible' ELSE h.estado_habitacion END,
+      fuera_servicio_motivo=NULL,fuera_servicio_desde=NULL,fuera_servicio_hasta=NULL
+    WHERE h.id=NEW.habitacion_id AND h.hotel_id=NEW.hotel_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+NOTIFY pgrst, 'reload schema';

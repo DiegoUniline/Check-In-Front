@@ -121,7 +121,8 @@ export function RecepcionGrid({
 
   const items: HabitacionStatus[] = useMemo(() => {
     return habitaciones.map((hab) => {
-      if (hab.estado_mantenimiento && hab.estado_mantenimiento !== 'OK') {
+      if ((hab.estado_mantenimiento && hab.estado_mantenimiento !== 'OK')
+        || ['Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(String(hab.estado_habitacion || ''))) {
         return { habitacion: hab, estado: 'mantenimiento' };
       }
       const ocupada = reservas.find((r) => {

@@ -419,6 +419,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     monto: subtotal * ((imp.tasa || 0) / 100),
   }));
   const totalImpuestos = impuestosCalculados.reduce((s, i) => s + i.monto, 0);
+  // Al guardar, el impuesto se separa: la parte del hospedaje queda en la reserva
+  // (se recalcula si cambian las fechas) y la de cada cargo queda en su cargo.
+  const tasaImpuestos = formData.impuestos.reduce((s, imp) => s + (Number(imp.tasa) || 0), 0);
+  const impuestoCargo = (monto: number) => Math.round(monto * tasaImpuestos) / 100;
+  const impuestosCargos = formData.cargos.reduce((s, c) => s + impuestoCargo(c.total), 0);
+  const impuestosHospedaje = Math.max(0, totalImpuestos - impuestosCargos);
   const totalBruto = subtotal + totalImpuestos;
 
   let descuentoMonto = 0;
@@ -617,7 +623,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         descuento: descuentoMonto,
         descuento_tipo: formData.descuentoTipo === 'none' ? '' : formData.descuentoTipo,
         descuento_valor: formData.descuentoTipo === 'none' ? 0 : Number(formData.descuentoValor) || 0,
-        total_impuestos: totalImpuestos,
+        total_impuestos: impuestosHospedaje,
         solicitudes_especiales: formData.solicitudesEspeciales,
         notas: notasCombinadas || null,
         notas_internas: formData.notasInternas || null,
@@ -632,7 +638,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           concepto: cargo.concepto_nombre,
           cantidad: cargo.cantidad,
           precio_unitario: cargo.precio_unitario,
-          impuesto: cargo.impuesto,
+          impuesto: cargo.impuesto + impuestoCargo(cargo.total),
           notas: cargo.notas,
         })),
         pagos: formData.pagos.map((pago) => ({

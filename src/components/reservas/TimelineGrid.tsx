@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/dateFormat';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { todayLocal } from '@/lib/api';
+import { occupiesNight } from '@/lib/stayOccupancy';
 
 export type TimelineReservationAction =
   | 'view'
@@ -345,7 +346,7 @@ export function TimelineGrid({
       if (other.id === reserva.id || other.habitacion_id !== room.id) return false;
       if (['Cancelada', 'NoShow', 'CheckOut'].includes(String(other.estado || ''))) return false;
       const otherCheckin = String(other.fecha_checkin || '').slice(0, 10);
-      const otherCheckout = effectiveCheckoutDate(otherCheckin, String(other.fecha_checkout || '').slice(0, 10));
+      const otherCheckout = occupancyCheckoutDate(other, todayKey);
       return checkin < otherCheckout && nextCheckout > otherCheckin;
     });
   };
@@ -452,10 +453,7 @@ export function TimelineGrid({
           {roomGroups.map((group) => {
             const collapsed = groupBy !== 'none' && collapsedGroupKeys.has(group.key);
             const occupiedToday = group.rooms.filter((room) => reservas.some((reservation) => (
-              reservation.habitacion_id === room.id
-              && !['CheckOut', 'Cancelada', 'NoShow'].includes(String(reservation.estado || ''))
-              && String(reservation.fecha_checkin || '').slice(0, 10) <= todayKey
-              && String(reservation.fecha_checkout || '').slice(0, 10) > todayKey
+              reservation.habitacion_id === room.id && occupiesNight(reservation, todayKey, todayKey)
             ))).length;
             return (
               <div key={group.key}>
