@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowRight,
-  Banknote,
   BedDouble,
   CalendarCheck2,
   CalendarPlus,
   CheckCircle2,
+  FileText,
+  Globe,
   CircleDollarSign,
   Clock3,
   DoorOpen,
@@ -26,7 +27,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/useAuth';
 import { useShift } from '@/contexts/useShift';
-import api, { type OperationalAlert, type OperationalControl } from '@/lib/api';
+import api, { todayLocal, type OperationalAlert, type OperationalControl } from '@/lib/api';
+import { isInHouseStay, occupiesNight } from '@/lib/stayOccupancy';
 import { formatCurrency, useCurrency } from '@/lib/currency';
 import { canAccess } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
@@ -40,17 +42,6 @@ type ShiftSummary = {
   movimientos: any[];
 };
 
-type WorkItem = {
-  id: string;
-  title: string;
-  detail: string;
-  meta: string;
-  action: string;
-  actionLabel: string;
-  priority: 'critical' | 'warning' | 'scheduled';
-  order: number;
-  icon: typeof AlertTriangle;
-};
 
 const EMPTY_SHIFT_SUMMARY: ShiftSummary = {
   efectivo: 0,
@@ -106,23 +97,6 @@ const shiftDuration = (startedAt?: string | null, now = Date.now()) => {
   return `${hours} h ${remaining} min en operación`;
 };
 
-const toneByPriority = {
-  critical: {
-    icon: 'bg-red-50 text-red-600 ring-red-100',
-    badge: 'border-red-200 bg-red-50 text-red-700',
-    label: 'Ahora',
-  },
-  warning: {
-    icon: 'bg-amber-50 text-amber-600 ring-amber-100',
-    badge: 'border-amber-200 bg-amber-50 text-amber-700',
-    label: 'Atención',
-  },
-  scheduled: {
-    icon: 'bg-[#10233F]/5 text-[#10233F] ring-[#10233F]/10',
-    badge: 'border-[#10233F]/10 bg-[#10233F]/5 text-[#10233F]',
-    label: 'Hoy',
-  },
-};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -139,6 +113,7 @@ export default function Dashboard() {
   const [checkouts, setCheckouts] = useState<any[]>([]);
   const [sales, setSales] = useState({ total: 0, count: 0 });
   const [control, setControl] = useState<OperationalControl | null>(null);
+  const [webPendientes, setWebPendientes] = useState(0);
   const [shiftSummary, setShiftSummary] = useState<ShiftSummary>(EMPTY_SHIFT_SUMMARY);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -154,6 +129,7 @@ export default function Dashboard() {
         api.getHabitaciones(),
         api.getReservas(),
         api.getOperationalControl(),
+        api.getReservasOnlinePendientes(),
       ]);
 
       const [statsResult, checkinsResult, checkoutsResult, salesResult, roomsResult, reservationsResult, controlResult] = results;
@@ -169,6 +145,8 @@ export default function Dashboard() {
       if (roomsResult.status === 'fulfilled') setRooms(Array.isArray(roomsResult.value) ? roomsResult.value : []);
       if (reservationsResult.status === 'fulfilled') setReservations(Array.isArray(reservationsResult.value) ? reservationsResult.value : []);
       if (controlResult.status === 'fulfilled') setControl(controlResult.value || null);
+      const webResult = results[7];
+      if (webResult?.status === 'fulfilled') setWebPendientes(Array.isArray(webResult.value) ? webResult.value.length : 0);
 
       if (openShift?.id) {
         try {
@@ -221,7 +199,6 @@ export default function Dashboard() {
     year: 'numeric',
   }).format(new Date()), []);
 
-  const operatorName = `${user?.nombre || ''} ${user?.apellidoPaterno || ''}`.trim() || user?.email || 'Equipo VULO';
   const firstName = user?.nombre?.trim().split(/\s+/)[0] || 'equipo';
   const isManager = canAccess('reportes', user?.rol);
   const readOnly = shiftRequired && !openShift && viewOnlyMode;
@@ -251,351 +228,273 @@ export default function Dashboard() {
     return sum + Math.max(0, Number(reservation.saldo_pendiente || 0));
   }, 0), [reservations]);
 
-  const workItems = useMemo<WorkItem[]>(() => {
-    const alerts: WorkItem[] = (control?.alerts || [])
-      .filter((alert: OperationalAlert) => alert.id !== 'shift')
-      .map((alert: OperationalAlert) => ({
-        id: `alert-${alert.id}`,
-        title: alert.title,
-        detail: alert.detail,
-        meta: `${alert.count} ${alert.count === 1 ? 'caso' : 'casos'}`,
-        action: alert.action,
-        actionLabel: alert.actionLabel,
-        priority: alert.priority === 'critical' ? 'critical' : 'warning',
-        order: alert.priority === 'critical' ? 0 : 10,
-        icon: alert.priority === 'critical' ? AlertTriangle : ShieldCheck,
-      }));
-
-    const departures: WorkItem[] = checkouts.map((reservation, index) => ({
-      id: `checkout-${reservation.id}`,
-      title: getGuestName(reservation),
-      detail: `Salida · Habitación ${getRoomNumber(reservation)}`,
-      meta: formatTime(reservation.hora_checkout || reservation.hora_salida),
-      action: `/checkout/${reservation.id}`,
-      actionLabel: 'Completar salida',
-      priority: 'scheduled',
-      order: 20 + index,
-      icon: LogOut,
-    }));
-
-    const arrivals: WorkItem[] = checkins.map((reservation, index) => ({
-      id: `checkin-${reservation.id}`,
-      title: getGuestName(reservation),
-      detail: `Llegada · Habitación ${getRoomNumber(reservation)}`,
-      meta: formatTime(reservation.horaLlegada || reservation.hora_llegada),
-      action: `/checkin/${reservation.id}`,
-      actionLabel: 'Recibir huésped',
-      priority: 'scheduled',
-      order: 30 + index,
-      icon: LogIn,
-    }));
-
-    return [...alerts, ...departures, ...arrivals]
-      .sort((a, b) => a.order - b.order)
-      .slice(0, 9);
-  }, [checkins, checkouts, control?.alerts]);
 
   const totalShiftIncome = shiftSummary.efectivo + shiftSummary.tarjeta + shiftSummary.transferencia + shiftSummary.otros;
   const expectedCash = Number(openShift?.fondo_inicial || 0) + shiftSummary.efectivo - shiftSummary.egresosEfectivo;
   const attentionCount = (control?.criticalCount || 0) + (control?.warningCount || 0);
   const occupancy = roomSummary.total ? Math.round((roomSummary.occupied / roomSummary.total) * 100) : 0;
 
+  const todayKey = todayLocal();
+
+  const roomTiles = useMemo(() => {
+    return [...rooms]
+      .sort((a, b) => String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true }))
+      .map((room) => {
+        const maintenance = String(room.estado_mantenimiento || 'OK').toLowerCase() !== 'ok'
+          || ['Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(String(room.estado_habitacion || ''));
+        const stay = reservations.find((r) => (r.habitacion_id || r.habitaciones?.id) === room.id && occupiesNight(r, todayKey, todayKey));
+        const clean = ['limpia', 'lista'].some((v) => String(room.estado_limpieza || 'Limpia').toLowerCase().includes(v));
+        const status: 'mantenimiento' | 'ocupada' | 'llega' | 'sucia' | 'libre' = maintenance
+          ? 'mantenimiento'
+          : stay && isInHouseStay(stay) ? 'ocupada'
+          : stay ? 'llega'
+          : !clean ? 'sucia' : 'libre';
+        return { room, status, stay };
+      });
+  }, [rooms, reservations, todayKey]);
+
+  const tileTone: Record<string, string> = {
+    libre: 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100',
+    ocupada: 'border-[#10233F] bg-[#10233F] text-white hover:bg-[#10233F]/90',
+    llega: 'border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100',
+    sucia: 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100',
+    mantenimiento: 'border-zinc-300 bg-zinc-100 text-zinc-500 hover:bg-zinc-200',
+  };
+  const tileLabel: Record<string, string> = { libre: 'Libre', ocupada: 'Ocupada', llega: 'Llega hoy', sucia: 'Por limpiar', mantenimiento: 'Mantenimiento' };
+
+  const inHouse = useMemo(() => reservations.filter((r) => isInHouseStay(r)).length, [reservations]);
+
+  const nextDays = useMemo(() => {
+    const total = rooms.length || 1;
+    const base = new Date(`${todayKey}T12:00:00`);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const rooms = new Set(reservations.filter((r) => occupiesNight(r, key, todayKey)).map((r) => r.habitacion_id || r.habitaciones?.id));
+      const pct = Math.min(100, Math.round((rooms.size / total) * 100));
+      return {
+        key,
+        label: i === 0 ? 'Hoy' : new Intl.DateTimeFormat('es-MX', { weekday: 'short' }).format(d).replace('.', ''),
+        day: d.getDate(),
+        count: rooms.size,
+        pct,
+      };
+    });
+  }, [reservations, rooms.length, todayKey]);
+
+  const facturasPendientes = useMemo(() => reservations.filter((r) => r.requiere_factura && (r.factura_estado || 'Pendiente') === 'Pendiente' && r.estado !== 'Cancelada').length, [reservations]);
+
+  const pendientes = [
+    { label: 'Reservas web por confirmar', count: webPendientes, icon: Globe, to: '/reservas-online', tone: 'text-blue-600' },
+    { label: 'Facturas pendientes', count: facturasPendientes, icon: FileText, to: '/facturacion', tone: 'text-amber-600' },
+    { label: 'Habitaciones en mantenimiento', count: roomSummary.maintenance, icon: Wrench, to: '/mantenimiento', tone: 'text-zinc-600' },
+    { label: 'Habitaciones por limpiar', count: roomSummary.cleaning, icon: Sparkles, to: '/limpieza', tone: 'text-sky-600' },
+    ...(control?.alerts || []).filter((a: OperationalAlert) => a.id !== 'shift' && a.id !== 'balances').map((a: OperationalAlert) => ({
+      label: a.title, count: a.count, icon: a.priority === 'critical' ? AlertTriangle : ShieldCheck, to: a.action, tone: a.priority === 'critical' ? 'text-red-600' : 'text-amber-600',
+    })),
+  ];
+  const pendientesActivos = pendientes.filter((p) => p.count > 0);
+
   if (loading) {
     return (
-      <MainLayout title="Inicio" subtitle="Preparando el turno">
-        <div className="mx-auto max-w-[1600px] animate-pulse space-y-4">
-          <div className="h-36 rounded-3xl bg-muted" />
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {[0, 1, 2, 3].map((item) => <div key={item} className="h-24 rounded-2xl bg-muted" />)}
-          </div>
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="h-[420px] rounded-3xl bg-muted" />
-            <div className="h-[420px] rounded-3xl bg-muted" />
-          </div>
+      <MainLayout title="Inicio" subtitle="Preparando el turno" fullWidth>
+        <div className="animate-pulse space-y-3 p-1">
+          <div className="h-12 rounded-lg bg-muted" />
+          <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-6">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-16 rounded-lg bg-muted" />)}</div>
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]">{[0, 1, 2].map((i) => <div key={i} className="h-72 rounded-lg bg-muted" />)}</div>
         </div>
       </MainLayout>
     );
   }
 
+  const kpis = [
+    { label: 'Llegadas hoy', value: checkins.length, icon: LogIn, tone: 'text-emerald-600', to: '/reservas/checkin' },
+    { label: 'Salidas hoy', value: checkouts.length, icon: LogOut, tone: 'text-orange-600', to: '/reservas/checkout' },
+    { label: 'Hospedados', value: inHouse, icon: BedDouble, tone: 'text-[#10233F]', to: '/reservas' },
+    { label: 'Listas para vender', value: `${roomSummary.ready}/${roomSummary.total}`, icon: CheckCircle2, tone: 'text-emerald-600', to: '/habitaciones' },
+    { label: 'Ocupación', value: `${occupancy}%`, icon: CalendarCheck2, tone: 'text-sky-600', to: '/reservas' },
+    { label: 'Saldo por cobrar', value: formatCurrency(pendingBalance), icon: CircleDollarSign, tone: 'text-red-600', to: '/reservas?focus=balances' },
+  ];
+
+  const StayList = ({ title, icon: Icon, items, kind }: { title: string; icon: typeof LogIn; items: any[]; kind: 'in' | 'out' }) => (
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
+      <div className="flex items-center justify-between border-b px-3 py-2">
+        <p className="flex items-center gap-2 text-sm font-semibold text-[#10233F]"><Icon className={cn('h-4 w-4', kind === 'in' ? 'text-emerald-600' : 'text-orange-600')} />{title}<span className="rounded bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">{items.length}</span></p>
+        <Link to={kind === 'in' ? '/reservas/checkin' : '/reservas/checkout'} className="text-[11px] font-medium text-muted-foreground hover:text-[#10233F]">Ver todas</Link>
+      </div>
+      {items.length === 0 ? (
+        <p className="px-3 py-8 text-center text-xs text-muted-foreground">{kind === 'in' ? 'Sin llegadas pendientes hoy' : 'Sin salidas pendientes hoy'}</p>
+      ) : (
+        <div className="max-h-[320px] divide-y overflow-y-auto">
+          {items.map((r) => {
+            const saldo = Math.max(0, Number(r.saldo_pendiente || 0));
+            return (
+              <div key={r.id} className="flex items-center gap-3 px-3 py-2">
+                <span className="flex h-8 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold tabular-nums">{getRoomNumber(r)}</span>
+                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => navigate(`/reservas/detalle/${r.id}`)}>
+                  <p className="truncate text-sm font-medium">{getGuestName(r)}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {kind === 'in' ? formatTime(r.horaLlegada || r.hora_llegada) : formatTime(r.hora_checkout || r.hora_salida)}
+                    {saldo > 0 ? <span className="text-red-600"> · saldo {formatCurrency(saldo)}</span> : ' · sin saldo'}
+                  </p>
+                </button>
+                {!readOnly && (
+                  <Button size="sm" className={cn('h-7 shrink-0 px-2.5 text-xs', kind === 'in' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-[#10233F] hover:bg-[#10233F]/90')} onClick={() => navigate(kind === 'in' ? `/checkin/${r.id}` : `/checkout/${r.id}`)}>
+                    {kind === 'in' ? 'Check-in' : 'Check-out'}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <MainLayout title="Inicio" subtitle="Tu operación de hoy" fullWidth>
-      <div className="mx-auto max-w-[1600px] space-y-4 pb-8 lg:space-y-5">
-        <section className={cn(
-          'relative overflow-hidden rounded-3xl border px-5 py-5 shadow-sm sm:px-6 lg:px-7',
-          readOnly
-            ? 'border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white text-[#10233F]'
-            : 'border-[#10233F] bg-[#10233F] text-white',
-        )}>
-          {!readOnly && <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-orange-500/15 blur-3xl" />}
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <div className={cn('mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em]', readOnly ? 'text-amber-700' : 'text-white/60')}>
-                <CalendarCheck2 className="h-4 w-4" />
-                <span className="capitalize">{dateLabel}</span>
-              </div>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Buen día, {firstName}</h1>
-              <p className={cn('mt-1.5 max-w-2xl text-sm', readOnly ? 'text-slate-600' : 'text-white/65')}>
-                {readOnly
-                  ? 'Estás revisando el hotel sin turno. Puedes consultar información, pero no registrar operaciones.'
-                  : attentionCount
-                    ? `Hay ${attentionCount} ${attentionCount === 1 ? 'situación que requiere' : 'situaciones que requieren'} seguimiento.`
-                    : 'La operación está bajo control. Revisa los siguientes movimientos del día.'}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className={cn('flex min-w-[230px] items-center gap-3 rounded-2xl border px-4 py-3', readOnly ? 'border-amber-200 bg-white' : 'border-white/10 bg-white/[0.07]')}>
-                <span className={cn('flex h-10 w-10 items-center justify-center rounded-xl', readOnly ? 'bg-amber-100 text-amber-700' : 'bg-emerald-400/15 text-emerald-300')}>
-                  {readOnly ? <Eye className="h-5 w-5" /> : <Clock3 className="h-5 w-5" />}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{readOnly ? 'Modo sólo consulta' : openShift ? 'Turno abierto' : 'Operación disponible'}</p>
-                  <p className={cn('truncate text-xs', readOnly ? 'text-slate-500' : 'text-white/55')}>
-                    {readOnly ? 'Abre turno para operar' : openShift ? shiftDuration(openShift.abierto_at, now) : operatorName}
-                  </p>
-                </div>
-              </div>
-              <Button asChild className={cn('h-11 rounded-xl px-4 font-semibold', readOnly ? 'bg-[#10233F] text-white hover:bg-[#10233F]/90' : 'bg-white text-[#10233F] hover:bg-white/90')}>
-                <Link to="/turnos">{readOnly ? 'Abrir turno' : 'Ver mi turno'}<ArrowRight className="ml-2 h-4 w-4" /></Link>
-              </Button>
-            </div>
+      <div className="space-y-3 pb-8">
+        {/* Barra superior */}
+        <section className={cn('flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2', readOnly ? 'border-amber-200 bg-amber-50' : 'bg-card')}>
+          <div className="mr-auto min-w-0">
+            <p className="text-sm font-semibold text-[#10233F]">Buen día, {firstName}</p>
+            <p className="text-[11px] capitalize text-muted-foreground">{dateLabel}</p>
           </div>
+          <Link to="/turnos" className={cn('flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium', readOnly ? 'border-amber-300 bg-white text-amber-800' : openShift ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'bg-muted')}>
+            {readOnly ? <Eye className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
+            {readOnly ? 'Sólo consulta · abrir turno' : openShift ? `Turno abierto · ${shiftDuration(openShift.abierto_at, now).replace(' en operación', '')}` : 'Sin turno'}
+          </Link>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}><Search className="h-3.5 w-3.5" />Buscar</Button>
+          {!readOnly && <>
+            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs"><Link to="/reservas/checkout"><LogOut className="h-3.5 w-3.5" />Check-out</Link></Button>
+            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs"><Link to="/reservas/nueva?origin=Recepcion"><LogIn className="h-3.5 w-3.5" />Entrada hoy</Link></Button>
+            <Button asChild size="sm" className="h-8 gap-1.5 bg-[#10233F] text-xs hover:bg-[#10233F]/90"><Link to="/reservas/nueva"><CalendarPlus className="h-3.5 w-3.5" />Nueva reserva</Link></Button>
+          </>}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void load()} disabled={refreshing} aria-label="Actualizar" title={updatedAt ? `Actualizado ${new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit' }).format(updatedAt)}` : 'Actualizar'}>
+            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+          </Button>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              label: 'Llegadas por recibir',
-              value: checkins.length,
-              detail: checkins.length ? 'Programadas para hoy' : 'Sin llegadas pendientes',
-              icon: LogIn,
-              tone: 'bg-emerald-50 text-emerald-700',
-              action: '/reservas/checkin',
-            },
-            {
-              label: 'Salidas por completar',
-              value: checkouts.length,
-              detail: checkouts.length ? 'Revisar folio y saldo' : 'Sin salidas pendientes',
-              icon: LogOut,
-              tone: 'bg-orange-50 text-orange-700',
-              action: '/reservas/checkout',
-            },
-            {
-              label: 'Habitaciones listas',
-              value: `${roomSummary.ready}/${roomSummary.total}`,
-              detail: roomSummary.cleaning ? `${roomSummary.cleaning} requieren limpieza` : 'Inventario listo para vender',
-              icon: BedDouble,
-              tone: 'bg-blue-50 text-blue-700',
-              action: '/habitaciones',
-            },
-            {
-              label: 'Saldo por cobrar',
-              value: formatCurrency(pendingBalance),
-              detail: control?.alerts.find((alert) => alert.id === 'balances')?.count
-                ? `${control.alerts.find((alert) => alert.id === 'balances')?.count} reservas activas`
-                : 'Sin saldos pendientes',
-              icon: CircleDollarSign,
-              tone: 'bg-red-50 text-red-700',
-              action: '/reservas?focus=balances',
-            },
-          ].map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              data-shift-readonly-allow="true"
-              onClick={() => navigate(item.action)}
-              className="group flex min-h-24 items-center gap-4 rounded-2xl border bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#10233F]/20 hover:shadow-md"
-            >
-              <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl', item.tone)}><item.icon className="h-5 w-5" /></span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-xs font-medium text-muted-foreground">{item.label}</span>
-                <span className={cn('mt-0.5 block font-semibold tracking-tight text-foreground', item.label === 'Saldo por cobrar' ? 'text-xl' : 'text-2xl')}>{item.value}</span>
-                <span className="mt-0.5 block truncate text-xs text-muted-foreground">{item.detail}</span>
+        {/* Indicadores */}
+        <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          {kpis.map((k) => (
+            <button key={k.label} type="button" data-shift-readonly-allow="true" onClick={() => navigate(k.to)} className="flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5 text-left transition hover:border-[#10233F]/30">
+              <k.icon className={cn('h-4 w-4 shrink-0', k.tone)} />
+              <span className="min-w-0">
+                <span className="block truncate text-[11px] text-muted-foreground">{k.label}</span>
+                <span className="block truncate text-lg font-semibold leading-tight tabular-nums">{k.value}</span>
               </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition group-hover:translate-x-0.5 group-hover:text-[#10233F]" />
             </button>
           ))}
         </section>
 
-        <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_370px]">
-          <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
-            <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold tracking-tight text-[#10233F]">Qué sigue</h2>
-                  {attentionCount > 0 && <Badge className="border-red-200 bg-red-50 text-red-700 hover:bg-red-50">{attentionCount} por atender</Badge>}
-                </div>
-                <p className="mt-0.5 text-sm text-muted-foreground">Prioridades y movimientos de hoy, ordenados para actuar.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {updatedAt && (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span>
-                    Actualizado {new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit' }).format(updatedAt)}
-                  </span>
-                )}
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => void load()} disabled={refreshing} aria-label="Actualizar inicio">
-                  <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-                </Button>
-              </div>
-            </div>
+        {/* Llegadas, salidas y turno */}
+        <section className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]">
+          <StayList title="Llegan hoy" icon={LogIn} items={checkins} kind="in" />
+          <StayList title="Salen hoy" icon={LogOut} items={checkouts} kind="out" />
 
-            {!workItems.length ? (
-              <div className="flex min-h-80 flex-col items-center justify-center px-6 py-12 text-center">
-                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-7 w-7" /></span>
-                <h3 className="mt-4 font-semibold text-[#10233F]">Todo está bajo control</h3>
-                <p className="mt-1 max-w-sm text-sm text-muted-foreground">No hay alertas, llegadas ni salidas pendientes para este momento.</p>
-                {!readOnly && (
-                  <Button asChild className="mt-5 rounded-xl bg-[#10233F] hover:bg-[#10233F]/90">
-                    <Link to="/reservas/nueva"><CalendarPlus className="mr-2 h-4 w-4" />Nueva reserva</Link>
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="divide-y">
-                {workItems.map((item) => {
-                  const tone = toneByPriority[item.priority];
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => navigate(item.action)}
-                      className="group flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 sm:gap-4 sm:px-6"
-                    >
-                      <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1', tone.icon)}><item.icon className="h-[18px] w-[18px]" /></span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="truncate text-sm font-semibold text-[#10233F]">{item.title}</span>
-                          <Badge variant="outline" className={cn('h-5 px-1.5 text-[10px] font-semibold', tone.badge)}>{tone.label}</Badge>
-                        </span>
-                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{item.detail}</span>
-                      </span>
-                      <span className="hidden shrink-0 text-right sm:block">
-                        <span className="block text-xs font-semibold text-foreground">{item.meta}</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">{item.actionLabel}</span>
-                      </span>
-                      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition group-hover:translate-x-0.5 group-hover:text-[#10233F]" />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-slate-50/70 px-5 py-3 sm:px-6">
-              <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))} className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-[#10233F]">
-                <Search className="h-3.5 w-3.5" />Buscar huésped, reserva o habitación
-              </button>
-              <Link to="/reservas" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#10233F] hover:underline">Abrir recepción<ArrowRight className="h-3.5 w-3.5" /></Link>
-            </div>
-          </div>
-
-          <aside className="overflow-hidden rounded-3xl border border-[#10233F]/10 bg-[#10233F] text-white shadow-lg shadow-[#10233F]/10 xl:sticky xl:top-4">
-            <div className="border-b border-white/10 px-5 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium text-white/55">Mi turno y caja</p>
-                  <h2 className="mt-0.5 text-lg font-semibold">{openShift ? operatorName : 'Sin turno abierto'}</h2>
-                </div>
-                <span className={cn('flex h-10 w-10 items-center justify-center rounded-2xl', openShift ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/10 text-white/70')}><WalletCards className="h-5 w-5" /></span>
-              </div>
-              <p className="mt-2 text-xs text-white/55">{openShift ? shiftDuration(openShift.abierto_at, now) : 'Consulta disponible; las operaciones requieren apertura.'}</p>
-            </div>
-
-            {openShift ? (
-              <div className="p-5">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                  <p className="text-xs text-white/55">Efectivo esperado en caja</p>
-                  <p className="mt-1 text-3xl font-semibold tracking-tight">{formatCurrency(expectedCash)}</p>
-                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/10 pt-3 text-xs">
-                    <div><p className="text-white/45">Fondo</p><p className="mt-0.5 font-semibold">{formatCurrency(openShift.fondo_inicial || 0)}</p></div>
-                    <div><p className="text-white/45">Efectivo</p><p className="mt-0.5 font-semibold text-emerald-300">+{formatCurrency(shiftSummary.efectivo)}</p></div>
-                    <div><p className="text-white/45">Egresos</p><p className="mt-0.5 font-semibold text-red-300">-{formatCurrency(shiftSummary.egresosEfectivo)}</p></div>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-2.5 text-sm">
-                  <div className="flex items-center justify-between"><span className="text-white/55">Ingresos del turno</span><span className="font-semibold">{formatCurrency(totalShiftIncome)}</span></div>
-                  <div className="flex items-center justify-between"><span className="text-white/55">Tarjeta</span><span>{formatCurrency(shiftSummary.tarjeta)}</span></div>
-                  <div className="flex items-center justify-between"><span className="text-white/55">Transferencia</span><span>{formatCurrency(shiftSummary.transferencia)}</span></div>
-                  <div className="flex items-center justify-between"><span className="text-white/55">Movimientos</span><span>{shiftSummary.movimientos.length}</span></div>
-                </div>
-
-                <Button asChild className="mt-5 h-11 w-full rounded-xl bg-white font-semibold text-[#10233F] hover:bg-white/90">
-                  <Link to="/turnos">Revisar y cerrar turno<ArrowRight className="ml-2 h-4 w-4" /></Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="p-5">
-                <div className="rounded-2xl border border-dashed border-white/20 bg-white/[0.04] p-5 text-center">
-                  <Eye className="mx-auto h-7 w-7 text-white/60" />
-                  <p className="mt-3 text-sm font-semibold">El hotel está en modo consulta</p>
-                  <p className="mt-1 text-xs leading-relaxed text-white/50">Abre tu turno para crear reservas, cobrar, editar o registrar movimientos.</p>
-                </div>
-                <Button asChild className="mt-4 h-11 w-full rounded-xl bg-white font-semibold text-[#10233F] hover:bg-white/90">
-                  <Link to="/turnos">Abrir turno ahora<ArrowRight className="ml-2 h-4 w-4" /></Link>
-                </Button>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between border-t border-white/10 px-5 py-3 text-xs">
-              <span className="text-white/50">Cierre operativo de hoy</span>
-              <span className={cn('font-semibold', control?.dayClosure?.estado === 'Cerrado' ? 'text-emerald-300' : 'text-amber-300')}>
-                {control?.dayClosure?.estado === 'Cerrado' ? 'Completado' : 'Pendiente'}
+          <aside className="rounded-lg border bg-card">
+            <div className="flex items-center justify-between border-b px-3 py-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#10233F]"><WalletCards className="h-4 w-4" />Mi turno y caja</p>
+              <span className={cn('text-[11px] font-medium', control?.dayClosure?.estado === 'Cerrado' ? 'text-emerald-600' : 'text-amber-600')}>
+                Cierre del día: {control?.dayClosure?.estado === 'Cerrado' ? 'hecho' : 'pendiente'}
               </span>
             </div>
+            {openShift ? (
+              <div className="space-y-2 p-3 text-sm">
+                <div className="rounded-md bg-[#10233F] p-3 text-white">
+                  <p className="text-[11px] text-white/60">Efectivo esperado en caja</p>
+                  <p className="text-2xl font-semibold tabular-nums">{formatCurrency(expectedCash)}</p>
+                  <p className="mt-1 text-[11px] text-white/60">Fondo {formatCurrency(openShift.fondo_inicial || 0)} · <span className="text-emerald-300">+{formatCurrency(shiftSummary.efectivo)}</span> · <span className="text-red-300">−{formatCurrency(shiftSummary.egresosEfectivo)}</span></p>
+                </div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Ingresos del turno</span><span className="font-semibold tabular-nums">{formatCurrency(totalShiftIncome)}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground">Tarjeta</span><span className="tabular-nums">{formatCurrency(shiftSummary.tarjeta)}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground">Transferencia</span><span className="tabular-nums">{formatCurrency(shiftSummary.transferencia)}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-muted-foreground">Movimientos</span><span className="tabular-nums">{shiftSummary.movimientos.length}</span></div>
+                <Button asChild size="sm" variant="outline" className="mt-1 h-8 w-full text-xs"><Link to="/turnos">Revisar y cerrar turno<ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link></Button>
+              </div>
+            ) : (
+              <div className="p-3 text-center">
+                <p className="text-xs text-muted-foreground">Abre tu turno para cobrar, reservar y registrar movimientos.</p>
+                <Button asChild size="sm" className="mt-2 h-8 w-full bg-[#10233F] text-xs hover:bg-[#10233F]/90"><Link to="/turnos">Abrir turno<ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link></Button>
+              </div>
+            )}
+            {isManager && (
+              <div className="grid grid-cols-2 gap-2 border-t p-3 text-xs">
+                <div><p className="text-muted-foreground">Ventas POS hoy</p><p className="font-semibold tabular-nums">{formatCurrency(sales.total)}</p></div>
+                <div><p className="text-muted-foreground">Operaciones POS</p><p className="font-semibold tabular-nums">{sales.count}</p></div>
+              </div>
+            )}
           </aside>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border bg-card shadow-sm">
-          <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#10233F]/5 text-[#10233F]"><DoorOpen className="h-5 w-5" /></span>
-              <div>
-                <h2 className="text-sm font-semibold text-[#10233F]">Estado de habitaciones</h2>
-                <p className="text-xs text-muted-foreground">Disponibilidad operativa en este momento.</p>
+        {/* Habitaciones, próximos días y pendientes */}
+        <section className="grid items-start gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_320px]">
+          <div className="rounded-lg border bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#10233F]"><DoorOpen className="h-4 w-4" />Habitaciones ahora</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                {Object.entries(tileLabel).map(([k, label]) => (
+                  <span key={k} className="flex items-center gap-1"><span className={cn('h-2.5 w-2.5 rounded-sm border', tileTone[k].split(' hover:')[0])} />{label}</span>
+                ))}
               </div>
             </div>
-            <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4 lg:max-w-3xl">
-              {[
-                { label: 'Listas', value: roomSummary.ready, icon: CheckCircle2, color: 'text-emerald-600' },
-                { label: 'Ocupadas', value: roomSummary.occupied, icon: BedDouble, color: 'text-[#10233F]' },
-                { label: 'Por limpiar', value: roomSummary.cleaning, icon: Sparkles, color: 'text-blue-600' },
-                { label: 'Mantenimiento', value: roomSummary.maintenance, icon: Wrench, color: 'text-orange-600' },
-              ].map((item) => (
-                <button key={item.label} type="button" data-shift-readonly-allow="true" onClick={() => navigate('/habitaciones')} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-left transition hover:bg-slate-100">
-                  <item.icon className={cn('h-4 w-4', item.color)} />
-                  <span><strong className="mr-1 text-sm text-foreground">{item.value}</strong><span className="text-xs text-muted-foreground">{item.label}</span></span>
+            <div className="grid max-h-[300px] grid-cols-[repeat(auto-fill,minmax(52px,1fr))] gap-1.5 overflow-y-auto p-3">
+              {roomTiles.map(({ room, status, stay }) => (
+                <button
+                  key={room.id}
+                  type="button"
+                  data-shift-readonly-allow="true"
+                  title={`Hab. ${room.numero} · ${room.tipo_nombre || ''} · ${tileLabel[status]}${stay ? ` · ${getGuestName(stay)}` : ''}`}
+                  onClick={() => navigate(stay ? `/reservas/detalle/${stay.id}` : '/habitaciones')}
+                  className={cn('h-10 rounded-md border text-xs font-semibold tabular-nums transition', tileTone[status])}
+                >
+                  {room.numero}
                 </button>
               ))}
             </div>
-            <Button asChild variant="outline" className="h-10 shrink-0 rounded-xl"><Link to="/habitaciones">Ver habitaciones<ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          </div>
+
+          <div className="rounded-lg border bg-card">
+            <div className="border-b px-3 py-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#10233F]"><CalendarCheck2 className="h-4 w-4" />Ocupación próximos 7 días</p>
+            </div>
+            <div className="flex h-[196px] items-end gap-2 px-3 pb-3 pt-4">
+              {nextDays.map((d) => (
+                <button key={d.key} type="button" data-shift-readonly-allow="true" onClick={() => navigate('/reservas')} className="group flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${d.count} habitaciones ocupadas`}>
+                  <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">{d.pct}%</span>
+                  <span className="flex w-full flex-1 items-end rounded-sm bg-muted">
+                    <span className={cn('w-full rounded-sm transition-all group-hover:opacity-80', d.pct >= 80 ? 'bg-emerald-600' : d.pct >= 40 ? 'bg-[#10233F]' : 'bg-[#10233F]/50')} style={{ height: `${Math.max(d.pct, 2)}%` }} />
+                  </span>
+                  <span className="text-[10px] capitalize text-muted-foreground">{d.label}</span>
+                  <span className="text-[11px] font-semibold tabular-nums">{d.day}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-card">
+            <div className="flex items-center justify-between border-b px-3 py-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#10233F]"><AlertTriangle className="h-4 w-4" />Pendientes</p>
+              {attentionCount > 0 && <Badge className="border-red-200 bg-red-50 text-[10px] text-red-700 hover:bg-red-50">{attentionCount} por atender</Badge>}
+            </div>
+            {pendientesActivos.length === 0 ? (
+              <p className="flex items-center justify-center gap-2 px-3 py-8 text-xs text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Todo al día</p>
+            ) : (
+              <div className="divide-y">
+                {pendientesActivos.map((p) => (
+                  <button key={p.label} type="button" data-shift-readonly-allow="true" onClick={() => navigate(p.to)} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-muted/50">
+                    <p.icon className={cn('h-4 w-4 shrink-0', p.tone)} />
+                    <span className="min-w-0 flex-1 truncate">{p.label}</span>
+                    <span className="rounded bg-muted px-1.5 text-xs font-semibold tabular-nums">{p.count}</span>
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </section>
-
-        {isManager && (
-          <section className="rounded-3xl border bg-card p-5 shadow-sm sm:px-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Lectura gerencial</p>
-                <h2 className="mt-1 text-base font-semibold text-[#10233F]">Resultados de hoy</h2>
-              </div>
-              <div className="grid flex-1 gap-3 sm:grid-cols-3 lg:max-w-3xl">
-                <div className="rounded-2xl bg-slate-50 px-4 py-3"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><BedDouble className="h-3.5 w-3.5" />Ocupación actual</p><p className="mt-1 text-xl font-semibold text-[#10233F]">{occupancy}%</p></div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Banknote className="h-3.5 w-3.5" />Ventas POS</p><p className="mt-1 text-xl font-semibold text-[#10233F]">{formatCurrency(sales.total)}</p></div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><WalletCards className="h-3.5 w-3.5" />Operaciones POS</p><p className="mt-1 text-xl font-semibold text-[#10233F]">{sales.count}</p></div>
-              </div>
-              <Button asChild variant="outline" className="h-10 shrink-0 rounded-xl"><Link to="/reportes">Ver reportes<ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
-            </div>
-          </section>
-        )}
-
-        <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 sm:hidden">
-          {!readOnly && (
-            <Button asChild className="h-12 rounded-md bg-[#10233F] px-5 font-semibold text-white shadow-xl hover:bg-[#10233F]/90">
-              <Link to="/reservas/nueva"><CalendarPlus className="mr-2 h-4 w-4" />Nueva reserva</Link>
-            </Button>
-          )}
-        </div>
       </div>
     </MainLayout>
   );
