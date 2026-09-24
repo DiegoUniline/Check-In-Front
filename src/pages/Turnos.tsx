@@ -235,7 +235,13 @@ export default function Turnos() {
     setCloseDialog(true);
     setReportLoading(true);
     try {
-      setCloseReport(await api.getShiftCloseReport(turno.id, turno.abierto_at));
+      // Se recalcula la caja al abrir el cierre: pudo haber cobros desde que se cargó la pantalla.
+      const [report, freshSummary] = await Promise.all([
+        api.getShiftCloseReport(turno.id, turno.abierto_at),
+        api.getShiftFinancialSummary(turno.id, turno.abierto_at),
+      ]);
+      setSummary(freshSummary);
+      setCloseReport(report);
     } catch (error:any) {
       toast({ title: 'No se pudo preparar el reporte', description: error?.message, variant: 'destructive' });
       setCloseReport(null);

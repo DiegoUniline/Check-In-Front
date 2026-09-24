@@ -1,4 +1,4 @@
-import api from '@/lib/api';
+import api, { hotelDayBounds } from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -29,10 +29,13 @@ if (!root[PATCH_KEY]) {
       .from('pagos')
       .select('*')
       .eq('hotel_id', hotelId)
-      .order('fecha', { ascending: false });
+      .order('created_at', { ascending: false });
 
-    if (params?.fecha_desde) query = query.gte('fecha', params.fecha_desde);
-    if (params?.fecha_hasta) query = query.lt('fecha', nextDate(params.fecha_hasta));
+    // Los pagos cancelados no son ingreso; se consultan sólo si se piden.
+    if (params?.incluir_cancelados !== 'true') query = query.neq('estado', 'Cancelado');
+    // Rango por hora local del hotel (un pago a las 20:00 no cae en el día siguiente).
+    if (params?.fecha_desde) query = query.gte('created_at', hotelDayBounds(params.fecha_desde)[0]);
+    if (params?.fecha_hasta) query = query.lt('created_at', hotelDayBounds(params.fecha_hasta)[1]);
     if (params?.reserva_id) query = query.eq('reserva_id', params.reserva_id);
     if (params?.metodo_pago) query = query.eq('metodo_pago', params.metodo_pago);
 

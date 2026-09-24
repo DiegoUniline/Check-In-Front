@@ -441,3 +441,70 @@ BEGIN
   RETURN false;
 END;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- 9. Día cerrado según la zona horaria del hotel (antes usaba UTC: un pago a
+--    las 20:00 quedaba en el día siguiente y el candado protegía otro día).
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.vulo_movement_hotel_date(p_row jsonb, p_hotel_id uuid)
+RETURNS date
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_tz text;
+  v_raw text := NULLIF(COALESCE(p_row->>'fecha', p_row->>'created_at'), '');
+BEGIN
+  SELECT COALESCE(timezone, 'America/Mexico_City') INTO v_tz FROM public.hotels WHERE id = p_hotel_id;
+  v_tz := COALESCE(v_tz, 'America/Mexico_City');
+  IF v_raw IS NULL THEN RETURN (now() AT TIME ZONE v_tz)::date; END IF;
+  -- Fecha sin hora: ya es el día del hotel.
+  IF length(v_raw) <= 10 THEN RETURN v_raw::date; END IF;
+  RETURN (v_raw::timestamptz AT TIME ZONE v_tz)::date;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.vulo_prevent_closed_day_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_hotel_id uuid;
+  v_fecha date;
+  v_old_fecha date;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    v_hotel_id := OLD.hotel_id;
+    v_fecha := public.vulo_movement_hotel_date(to_jsonb(OLD), v_hotel_id);
+  ELSE
+    v_hotel_id := NEW.hotel_id;
+    v_fecha := public.vulo_movement_hotel_date(to_jsonb(NEW), v_hotel_id);
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.cierres_diarios c
+    WHERE c.hotel_id = v_hotel_id AND c.fecha_operativa = v_fecha AND c.estado = 'Cerrado'
+  ) THEN
+    RAISE EXCEPTION 'El día operativo % está cerrado. Reábralo antes de modificar movimientos.', v_fecha
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  IF TG_OP = 'UPDATE' THEN
+    v_old_fecha := public.vulo_movement_hotel_date(to_jsonb(OLD), OLD.hotel_id);
+    IF EXISTS (
+      SELECT 1 FROM public.cierres_diarios c
+      WHERE c.hotel_id = OLD.hotel_id AND c.fecha_operativa = v_old_fecha AND c.estado = 'Cerrado'
+    ) THEN
+      RAISE EXCEPTION 'El día operativo % está cerrado. Reábralo antes de modificar movimientos.', v_old_fecha
+        USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
+END;
+$$;

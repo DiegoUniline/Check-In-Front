@@ -98,6 +98,13 @@ export const hotelLocalToIso = (local: string): string => {
   return `${y}-${mo}-${d}T${h}:${mi}:00${offset}`;
 };
 
+// Límites [inicio, fin) de uno o varios días del hotel como marcas de tiempo con
+// zona, para filtrar columnas timestamptz (created_at) sin corrimiento UTC.
+export const hotelDayBounds = (desde: string, hasta: string = desde): [string, string] => [
+  hotelLocalToIso(`${desde.slice(0, 10)}T00:00`),
+  hotelLocalToIso(`${addCalendarDays(hasta.slice(0, 10), 1)}T00:00`),
+];
+
 // Fecha "hoy" YYYY-MM-DD en la zona horaria del hotel (no en UTC ni en la del navegador).
 export const todayLocal = (): string => {
   try {
@@ -391,9 +398,12 @@ class ApiClient {
   getDashboardCheckinsHoy = () => this.getCheckinsHoy();
   getDashboardCheckoutsHoy = () => this.getCheckoutsHoy();
   getDashboardVentasHoy = async (): Promise<any> => {
-    const today = todayLocal();
-    const tomorrow = addCalendarDays(today, 1);
-    const { data } = await supabase.from('ventas').select('total').eq('hotel_id', this.hid()).gte('fecha', today).lt('fecha', tomorrow);
+    // Ventas de mostrador vigentes del día del hotel (las cargadas a habitación
+    // forman parte de la cuenta de la reserva).
+    const [inicio, fin] = hotelDayBounds(todayLocal());
+    const { data } = await (supabase as any).from('ventas').select('total').eq('hotel_id', this.hid())
+      .neq('estado', 'Cancelada').is('reserva_id', null)
+      .gte('created_at', inicio).lt('created_at', fin);
     const total = (data || []).reduce((s: number, v: any) => s + Number(v.total || 0), 0);
     return { total, count: (data || []).length };
   };
@@ -706,11 +716,16 @@ class ApiClient {
     const [reservasR, habitacionesR, turnosR, bitacoraR, pagosR, gastosR, ventasR, cierreR] = await Promise.all([
       supabase.from('reservas').select('*').eq('hotel_id', hotelId),
       supabase.from('habitaciones').select('id,numero,estado_habitacion').eq('hotel_id', hotelId),
-      operationalDb.from('turnos_operativos').select('id').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
+      // Sólo cuentan las cajas abiertas antes de terminar el día auditado.
+      operationalDb.from('turnos_operativos').select('id').eq('hotel_id', hotelId).eq('estado', 'Abierto').lt('abierto_at', hotelDayBounds(date)[1]),
       operationalDb.from('bitacora_operativa').select('id,categoria,prioridad').eq('hotel_id', hotelId).eq('estado', 'Abierto'),
-      supabase.from('pagos').select('monto').eq('hotel_id', hotelId).eq('fecha', date),
-      supabase.from('gastos').select('monto').eq('hotel_id', hotelId).eq('fecha', date),
-      supabase.from('ventas').select('total').eq('hotel_id', hotelId).eq('fecha', date),
+      // Sólo movimientos vigentes, por hora local del hotel.
+      supabase.from('pagos').select('monto').eq('hotel_id', hotelId).neq('estado', 'Cancelado')
+        .gte('created_at', hotelDayBounds(date)[0]).lt('created_at', hotelDayBounds(date)[1]),
+      supabase.from('gastos').select('monto').eq('hotel_id', hotelId).gte('fecha', date).lt('fecha', addCalendarDays(date, 1)),
+      // Ventas de mostrador (las cargadas a habitación ya son cargos del folio).
+      (supabase as any).from('ventas').select('total').eq('hotel_id', hotelId).neq('estado', 'Cancelada').is('reserva_id', null)
+        .gte('created_at', hotelDayBounds(date)[0]).lt('created_at', hotelDayBounds(date)[1]),
       operationalDb.from('cierres_diarios').select('*').eq('hotel_id', hotelId).eq('fecha_operativa', date).maybeSingle(),
     ]);
     const reservas = reservasR.data || [];
@@ -753,7 +768,8 @@ class ApiClient {
   };
 
   closeOperationalDay = async (payload: { fecha_operativa: string; checklist: unknown; resumen: unknown; observaciones?: string; cerrado_por?: string; cerrado_por_nombre?: string }): Promise<any> => {
-    const { data, error } = await operationalDb.from('cierres_diarios').upsert({ ...payload, hotel_id: this.hid(), estado: 'Cerrado', cerrado_at: new Date().toISOString(), reabierto_at: null, motivo_reapertura: null }, { onConflict: 'hotel_id,fecha_operativa' }).select().single();
+    // Se conserva el registro de una reapertura previa (quién, cuándo y por qué).
+    const { data, error } = await operationalDb.from('cierres_diarios').upsert({ ...payload, hotel_id: this.hid(), estado: 'Cerrado', cerrado_at: new Date().toISOString() }, { onConflict: 'hotel_id,fecha_operativa' }).select().single();
     if (error) {
       if (!this.isMissingOperationalTable(error)) throw error;
       const closures = this.readOperationalFallback<any[]>('cierres', []);

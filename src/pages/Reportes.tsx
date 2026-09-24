@@ -59,7 +59,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
 import {
   exportarCorteCaja,
   exportarReporteIngresos,
@@ -86,13 +86,16 @@ type Filtros = {
   origenes: string[];
 };
 
+// Los rangos rápidos usan el día del hotel, no el de la computadora.
+const hoyHotel = () => parseISO(todayLocal());
+
 const PRESETS = [
-  { id: '7d', label: 'Últimos 7 días', fn: () => ({ desde: subDays(new Date(), 6), hasta: new Date() }) },
-  { id: '30d', label: 'Últimos 30 días', fn: () => ({ desde: subDays(new Date(), 29), hasta: new Date() }) },
-  { id: 'mes', label: 'Este mes', fn: () => ({ desde: startOfMonth(new Date()), hasta: new Date() }) },
-  { id: '3m', label: 'Últimos 3 meses', fn: () => ({ desde: subMonths(new Date(), 3), hasta: new Date() }) },
-  { id: '12m', label: 'Últimos 12 meses', fn: () => ({ desde: subMonths(new Date(), 12), hasta: new Date() }) },
-  { id: 'ytd', label: 'Año actual', fn: () => ({ desde: new Date(new Date().getFullYear(), 0, 1), hasta: new Date() }) },
+  { id: '7d', label: 'Últimos 7 días', fn: () => ({ desde: subDays(hoyHotel(), 6), hasta: hoyHotel() }) },
+  { id: '30d', label: 'Últimos 30 días', fn: () => ({ desde: subDays(hoyHotel(), 29), hasta: hoyHotel() }) },
+  { id: 'mes', label: 'Este mes', fn: () => ({ desde: startOfMonth(hoyHotel()), hasta: hoyHotel() }) },
+  { id: '3m', label: 'Últimos 3 meses', fn: () => ({ desde: subMonths(hoyHotel(), 3), hasta: hoyHotel() }) },
+  { id: '12m', label: 'Últimos 12 meses', fn: () => ({ desde: subMonths(hoyHotel(), 12), hasta: hoyHotel() }) },
+  { id: 'ytd', label: 'Año actual', fn: () => ({ desde: new Date(hoyHotel().getFullYear(), 0, 1), hasta: hoyHotel() }) },
 ];
 
 const asLocalDay = (value: unknown): Date | null => {
@@ -253,7 +256,7 @@ export default function Reportes() {
         buckets[key] = { label: format(d, 'dd MMM', { locale: es }), ingresos: 0, gastos: 0, reservas: 0 };
       }
       pagosFiltrados.forEach((p) => {
-        const d = asLocalDay(p.fecha || p.created_at);
+        const d = asLocalDay(p.created_at || p.fecha);
         if (!d) return;
         const key = format(d, 'yyyy-MM-dd');
         if (buckets[key]) buckets[key].ingresos += Number(p.monto) || 0;
@@ -286,7 +289,7 @@ export default function Reportes() {
       });
     }
     const idx = (d: Date) => buckets.findIndex((b) => b.key === `${d.getFullYear()}-${d.getMonth()}`);
-    pagosFiltrados.forEach((p) => { const d = asLocalDay(p.fecha || p.created_at); if (d) { const i = idx(d); if (i >= 0) buckets[i].ingresos += Number(p.monto) || 0; } });
+    pagosFiltrados.forEach((p) => { const d = asLocalDay(p.created_at || p.fecha); if (d) { const i = idx(d); if (i >= 0) buckets[i].ingresos += Number(p.monto) || 0; } });
     gastos.forEach((g) => { const d = asLocalDay(g.fecha || g.created_at); if (d) { const i = idx(d); if (i >= 0) buckets[i].gastos += Number(g.monto) || 0; } });
     reservasFiltradas.forEach((r) => { const d = asLocalDay(r.fecha_checkin); if (d) { const i = idx(d); if (i >= 0) buckets[i].reservas += 1; } });
     return buckets;
