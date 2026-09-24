@@ -4,7 +4,8 @@ import {
   MoreVertical, Eye, Edit, Award, RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { DatosFiscalesFields, datosFiscalesDe, datosFiscalesVacios, regimenNombre, validarDatosFiscales, type DatosFiscales } from '@/components/clientes/DatosFiscalesFields';
+import { regimenNombre } from '@/components/clientes/DatosFiscalesFields';
+import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
 import { ExportButton } from '@/components/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,21 +71,6 @@ interface Cliente {
   created_at?: string;
 }
 
-const clienteInicial = {
-  tipo_cliente: 'Persona',
-  nombre: '',
-  apellido_paterno: '',
-  apellido_materno: '',
-  email: '',
-  telefono: '',
-  tipo_documento: 'INE',
-  numero_documento: '',
-  nacionalidad: 'Mexicana',
-  direccion: '',
-  es_vip: false,
-  notas: '',
-  descuento_id: '',
-};
 
 type ClienteFiltro = 'all' | 'vip' | 'nuevos' | 'frecuentes';
 
@@ -95,18 +81,11 @@ export default function Clientes() {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState(clienteInicial);
-  const [saving, setSaving] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [phoneCountry, setPhoneCountry] = useState<string>(DEFAULT_COUNTRY);
-  const [phoneLocal, setPhoneLocal] = useState<string>('');
   const [historial, setHistorial] = useState<any[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
-  const [fiscal, setFiscal] = useState<DatosFiscales>(datosFiscalesVacios);
-  const [csfFile, setCsfFile] = useState<File | null>(null);
   const [descuentosCat, setDescuentosCat] = useState<any[]>([]);
 
   const isVipValue = (value: unknown) => value === true || value === 1 || value === '1' || value === 'true';
@@ -171,98 +150,13 @@ export default function Clientes() {
   };
 
   const handleNuevoCliente = () => {
-    setFormData(clienteInicial);
-    setFiscal(datosFiscalesVacios);
-    setCsfFile(null);
-    setPhoneCountry(DEFAULT_COUNTRY);
-    setPhoneLocal('');
     setSelectedCliente(null);
-    setIsEditing(false);
     setIsFormOpen(true);
   };
 
   const handleEditarCliente = (cliente: Cliente) => {
-    const esVip = isVipValue((cliente as any).es_vip);
-    const sp = splitPhone(cliente.telefono);
-    setPhoneCountry(sp.country);
-    setPhoneLocal(sp.local);
-    setFormData({
-      tipo_cliente: cliente.tipo_cliente || 'Persona',
-      nombre: cliente.nombre || '',
-      apellido_paterno: sanitizeApellidoParaNoVip(cliente.apellido_paterno || '', esVip),
-      apellido_materno: sanitizeApellidoParaNoVip(cliente.apellido_materno || '', esVip),
-      email: cliente.email || '',
-      telefono: cliente.telefono || '',
-      tipo_documento: cliente.tipo_documento || 'INE',
-      numero_documento: cliente.numero_documento || '',
-      nacionalidad: cliente.nacionalidad || 'Mexicana',
-      direccion: '',
-      es_vip: esVip,
-      notas: cliente.notas || '',
-      descuento_id: (cliente as any).descuento_id || '',
-    });
-    setFiscal(datosFiscalesDe(cliente));
-    setCsfFile(null);
     setSelectedCliente(cliente);
-    setIsEditing(true);
     setIsFormOpen(true);
-  };
-
-  const handleGuardar = async () => {
-    if (!formData.nombre.trim() || !formData.apellido_paterno.trim()) {
-      toast({ title: 'Faltan datos', description: 'Nombre y apellido son requeridos', variant: 'destructive' });
-      return;
-    }
-
-    const errorFiscal = validarDatosFiscales(fiscal);
-    if (errorFiscal) {
-      toast({ title: 'Datos fiscales', description: errorFiscal, variant: 'destructive' });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { direccion: _direccion, descuento_id: _descuentoId, ...rest } = formData as any;
-      const tieneFiscal = Boolean(fiscal.rfc.trim() || fiscal.razon_social.trim());
-      const original = (selectedCliente || {}) as Record<string, unknown>;
-      // Sólo se envían columnas con valor o que ya existen en el registro,
-      // así el alta no falla si todavía no se corre el SQL de datos fiscales.
-      const fiscalPayload = Object.fromEntries(
-        Object.entries({ ...fiscal, uso_cfdi: tieneFiscal ? fiscal.uso_cfdi : '', descuento_id: formData.descuento_id })
-          .map(([k, v]) => [k, String(v || '').trim() || null] as const)
-          .filter(([k, v]) => v !== null || k in original),
-      );
-      const telefonoNormalizado = joinPhone(phoneCountry, phoneLocal);
-      const payload = {
-        ...rest,
-        telefono: telefonoNormalizado || null,
-        ...fiscalPayload,
-        apellido_paterno: sanitizeApellidoParaNoVip(formData.apellido_paterno, Boolean(formData.es_vip)),
-        apellido_materno: sanitizeApellidoParaNoVip(formData.apellido_materno, Boolean(formData.es_vip)),
-      };
-      let clienteId = selectedCliente?.id;
-      if (isEditing && selectedCliente) {
-        await api.updateCliente(selectedCliente.id, payload);
-        toast({ title: 'Cliente actualizado' });
-      } else {
-        const creado = await api.createCliente(payload);
-        clienteId = creado?.id;
-        toast({ title: 'Cliente creado' });
-      }
-      if (csfFile && clienteId) {
-        try {
-          await api.subirCsfCliente(clienteId, csfFile);
-        } catch (err: any) {
-          toast({ title: 'Se guardó el cliente, pero no la constancia', description: err.message, variant: 'destructive' });
-        }
-      }
-      setIsFormOpen(false);
-      await cargarClientes();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
   };
 
   const stats = {
@@ -640,61 +534,12 @@ export default function Clientes() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? `Editar ${selectedCliente ? nombreCompleto(selectedCliente) : 'cliente'}` : 'Nuevo cliente'}</DialogTitle>
-            <DialogDescription>{isEditing ? 'Actualiza los datos del huésped o empresa.' : 'Registra los datos esenciales; puedes completar el resto después.'}</DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-3 py-1 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Tipo de cliente</Label>
-              <Select value={formData.tipo_cliente} onValueChange={(v) => setFormData({ ...formData, tipo_cliente: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Persona">Persona</SelectItem><SelectItem value="Empresa">Empresa</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="font-medium">Cliente VIP</Label><p className="text-[11px] text-muted-foreground">Destácalo en reservas y recepción.</p></div>
-              <Switch checked={Boolean(formData.es_vip)} onCheckedChange={(v) => setFormData({ ...formData, es_vip: v })} />
-            </div>
-
-            <div className="space-y-1.5"><Label>Nombre *</Label><Input autoFocus value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Nombre" /></div>
-            <div className="space-y-1.5"><Label>Apellido paterno *</Label><Input value={formData.apellido_paterno} onChange={(e) => setFormData({ ...formData, apellido_paterno: e.target.value })} placeholder="Apellido paterno" /></div>
-            <div className="space-y-1.5"><Label>Apellido materno</Label><Input value={formData.apellido_materno} onChange={(e) => setFormData({ ...formData, apellido_materno: e.target.value })} placeholder="Apellido materno" /></div>
-            <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="correo@ejemplo.com" /></div>
-
-            <div className="space-y-1.5 sm:col-span-2"><Label>Teléfono</Label><PhoneInput country={phoneCountry} localPhone={phoneLocal} onCountryChange={setPhoneCountry} onLocalPhoneChange={setPhoneLocal} /></div>
-
-            <div className="space-y-1.5"><Label>Tipo de documento</Label><Select value={formData.tipo_documento} onValueChange={(v) => setFormData({ ...formData, tipo_documento: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="INE">INE</SelectItem><SelectItem value="Pasaporte">Pasaporte</SelectItem><SelectItem value="Licencia">Licencia</SelectItem><SelectItem value="Otro">Otro</SelectItem></SelectContent></Select></div>
-            <div className="space-y-1.5"><Label>Número de documento</Label><Input value={formData.numero_documento} onChange={(e) => setFormData({ ...formData, numero_documento: e.target.value })} placeholder="Identificación" /></div>
-            <div className="space-y-1.5 sm:col-span-2"><Label>Nacionalidad</Label><Input value={formData.nacionalidad} onChange={(e) => setFormData({ ...formData, nacionalidad: e.target.value })} placeholder="Mexicana" /></div>
-            <div className="space-y-1.5 sm:col-span-2"><Label>Notas / preferencias</Label><Textarea className="min-h-24" value={formData.notas} onChange={(e) => setFormData({ ...formData, notas: e.target.value })} placeholder="Alergias, preferencias, solicitudes especiales..." /></div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Descuento del cliente</Label>
-              <Select value={formData.descuento_id || 'none'} onValueChange={(v) => setFormData({ ...formData, descuento_id: v === 'none' ? '' : v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin descuento</SelectItem>
-                  {descuentosCat.filter((d) => d.activo || d.id === formData.descuento_id).map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.nombre} · {d.tipo === 'Porcentaje' ? `${Number(d.valor)}%` : formatCurrency(Number(d.valor))}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground">Se aplica solo al elegir a este cliente en una reservación. Los descuentos se administran en Catálogos › Descuentos.</p>
-            </div>
-            <div className="sm:col-span-2">
-              <DatosFiscalesFields value={fiscal} onChange={setFiscal} onCsfFile={setCsfFile} csfPath={(selectedCliente as any)?.csf_path} emailSugerido={formData.email} />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFormOpen(false)} disabled={saving}>Cancelar</Button>
-            <Button onClick={handleGuardar} disabled={saving}>{saving ? 'Guardando...' : (isEditing ? 'Guardar cambios' : 'Crear cliente')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClienteFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        cliente={selectedCliente}
+        onSaved={() => void cargarClientes()}
+      />
     </MainLayout>
   );
 }

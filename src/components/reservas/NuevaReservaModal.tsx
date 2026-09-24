@@ -1,3 +1,4 @@
+import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
 import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -210,6 +211,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const formDataRef = useRef(formData);
   formDataRef.current = formData;
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
+  const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [origen, setOrigen] = useState<'Reserva' | 'Recepcion'>('Reserva');
   const [roomConflict, setRoomConflict] = useState('');
@@ -374,12 +376,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
   const handleSelectCliente = (cliente: any) => {
     const descuento = cliente?.descuento_id ? descuentosCat.find((d) => d.id === cliente.descuento_id) : null;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       clienteId: cliente.id,
       clienteData: cliente,
       ...(descuento ? { descuentoId: descuento.id, descuentoTipo: descuento.tipo, descuentoValor: Number(descuento.valor) } : {}),
-    });
+    }));
     if (descuento) toast({ title: `Descuento del cliente aplicado`, description: descuento.nombre });
   };
 
@@ -1010,6 +1012,16 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         {/* COLUMNA 2 — Huésped, cargos, notas e impuestos */}
         <div className="min-w-0 space-y-5 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
           <FormSection fieldKey="guest" icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
+            <ClienteFormDialog
+              open={clienteDialogOpen}
+              onOpenChange={setClienteDialogOpen}
+              requireTelefono
+              onSaved={(nuevo) => {
+                setClientes((prev) => [nuevo, ...prev.filter((c) => c.id !== nuevo.id)]);
+                setCrearNuevoCliente(false);
+                handleSelectCliente(nuevo);
+              }}
+            />
             {!crearNuevoCliente ? (
               <div className="space-y-2">
                 <div className="flex gap-2">
@@ -1032,7 +1044,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   {formData.clienteData ? (
                     <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
                   ) : (
-                    <Button type="button" variant="outline" className="h-9 shrink-0 px-2.5 text-xs" onClick={() => setCrearNuevoCliente(true)}><UserPlus className="mr-1 h-3.5 w-3.5" />Nuevo</Button>
+                    <Button type="button" variant="outline" className="h-9 shrink-0 px-2.5 text-xs" onClick={() => setClienteDialogOpen(true)}><UserPlus className="mr-1 h-3.5 w-3.5" />Nuevo</Button>
                   )}
                 </div>
                 {formData.clienteData && (
