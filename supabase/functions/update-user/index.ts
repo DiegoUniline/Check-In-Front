@@ -43,7 +43,10 @@ Deno.serve(async (req) => {
       const accessError = await targetAccessError(admin, caller, id);
       if (accessError) return json({ error: accessError }, 403);
     }
-    if (id === caller.id && rol) return json({ error: 'No puedes cambiar tu propio rol' }, 403);
+    const requestedRole = rol ? normalizeRole(rol) : null;
+    if (id === caller.id && requestedRole && !caller.roles.includes(requestedRole)) {
+      return json({ error: 'No puedes cambiar tu propio rol' }, 403);
+    }
     if (id === caller.id && activo === false) return json({ error: 'No puedes desactivar tu propio usuario' }, 400);
 
     // 1. Actualizar profile
@@ -73,7 +76,7 @@ Deno.serve(async (req) => {
     }
 
     // 3. Actualizar rol si se envía
-    if (rol) {
+    if (rol && !(id === caller.id && requestedRole && caller.roles.includes(requestedRole))) {
       const rolNorm = normalizeRole(rol);
       if (!rolNorm) return json({ error: `Rol inválido: ${rol}` }, 400);
       const roleError = roleAssignmentError(caller, rolNorm);
