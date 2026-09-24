@@ -79,6 +79,25 @@ const calendarWeekday = (ymd: string): number => {
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 };
 
+// Convierte una fecha/hora local del hotel ('YYYY-MM-DDTHH:mm') a ISO con el
+// desfase de la zona del hotel, sin depender de la zona de la computadora.
+export const hotelLocalToIso = (local: string): string => {
+  const match = String(local || '').match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if (!match) return new Date(local).toISOString();
+  const [, y, mo, d, h, mi] = match;
+  const guess = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi)));
+  let offset = '+00:00';
+  try {
+    const name = new Intl.DateTimeFormat('en-US', { timeZone: HOTEL_TZ, timeZoneName: 'longOffset' })
+      .formatToParts(guess).find((part) => part.type === 'timeZoneName')?.value || 'GMT';
+    const m = name.match(/GMT([+-]\d{2}):?(\d{2})?/);
+    if (m) offset = `${m[1]}:${m[2] || '00'}`;
+  } catch {
+    return new Date(local).toISOString();
+  }
+  return `${y}-${mo}-${d}T${h}:${mi}:00${offset}`;
+};
+
 // Fecha "hoy" YYYY-MM-DD en la zona horaria del hotel (no en UTC ni en la del navegador).
 export const todayLocal = (): string => {
   try {
@@ -1483,9 +1502,10 @@ class ApiClient {
     return r;
   };
   devolverEntregable = async (id: string, data?: any): Promise<any> => {
-    const { data: r, error } = await operationalDb.rpc('vulo_return_deliverable', {
+    const { data: r, error } = await operationalDb.rpc('vulo_return_deliverable_charge', {
       p_assignment_id: id,
       p_cantidad_devuelta: Number(data?.cantidad_devuelta ?? 0),
+      p_crear_cargo: Boolean(data?.crear_cargo),
     });
     if (error) throw error;
     return r;

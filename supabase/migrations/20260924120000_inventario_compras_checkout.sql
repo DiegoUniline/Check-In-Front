@@ -361,3 +361,83 @@ $$;
 
 REVOKE ALL ON FUNCTION public.complete_reservation_checkout(uuid, jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.complete_reservation_checkout(uuid, jsonb) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 7. Devolución de entregables con cargo por faltantes
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.vulo_return_deliverable_charge(
+  p_assignment_id uuid,
+  p_cantidad_devuelta numeric,
+  p_crear_cargo boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_assignment jsonb;
+  v_row public.entregables_reserva%ROWTYPE;
+  v_reserva public.reservas%ROWTYPE;
+  v_nombre text;
+  v_charge public.cargos%ROWTYPE;
+BEGIN
+  v_assignment := public.vulo_return_deliverable(p_assignment_id, p_cantidad_devuelta);
+  SELECT * INTO v_row FROM public.entregables_reserva WHERE id = p_assignment_id;
+
+  IF p_crear_cargo AND COALESCE(v_row.costo_faltante, 0) > 0 THEN
+    SELECT * INTO v_reserva FROM public.reservas WHERE id = v_row.reserva_id;
+    SELECT nombre INTO v_nombre FROM public.entregables WHERE id = v_row.entregable_id;
+    INSERT INTO public.cargos(hotel_id, reserva_id, habitacion_id, concepto, cantidad, precio_unitario, impuesto, notas)
+    VALUES (
+      v_reserva.hotel_id, v_reserva.id, v_reserva.habitacion_id,
+      'Faltante: ' || COALESCE(v_nombre, 'entregable'),
+      1, v_row.costo_faltante, 0,
+      'Devueltos ' || p_cantidad_devuelta || ' de ' || COALESCE(v_row.cantidad, 1)
+    ) RETURNING * INTO v_charge;
+    RETURN v_assignment || jsonb_build_object('cargo', to_jsonb(v_charge));
+  END IF;
+  RETURN v_assignment;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.vulo_return_deliverable_charge(uuid, numeric, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.vulo_return_deliverable_charge(uuid, numeric, boolean) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 8. Corrección de reserva desde el detalle: también para recepción
+--    (cambia fechas/habitación con las mismas validaciones que modify_dates).
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.vulo_operation_allowed(p_operacion text)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_role text := COALESCE(public.vulo_current_role(), '');
+  v_override boolean;
+  v_key text := 'reservas.operacion.' || lower(p_operacion);
+BEGIN
+  IF v_role IN ('SuperAdmin', 'Admin') THEN RETURN true; END IF;
+
+  SELECT permitido INTO v_override
+  FROM public.permisos_hotel
+  WHERE hotel_id = public.vulo_current_hotel_id()
+    AND rol = v_role AND modulo = v_key
+  LIMIT 1;
+  IF FOUND THEN RETURN COALESCE(v_override, false); END IF;
+
+  IF v_role = 'Gerente' THEN RETURN true; END IF;
+  IF v_role = 'Recepcion' THEN
+    RETURN lower(p_operacion) = ANY (ARRAY[
+      'extend_stay','early_departure','modify_dates','room_change',
+      'late_checkout','early_checkin','add_guest','remove_guest',
+      'add_charge','partial_payment','no_show','consecutive_reservation',
+      'correction_note','split_account','move_to_account','reservation_correction'
+    ]);
+  END IF;
+  RETURN false;
+END;
+$$;

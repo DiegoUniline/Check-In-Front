@@ -51,6 +51,7 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
 
   const totalPagado = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
   const saldo = Math.max(0, total - totalPagado);
+  const excedente = Math.max(0, totalPagado - total);
 
   const setMontoMetodo = (nombre: string, valor: string) => {
     const monto = parseFloat(valor) || 0;
@@ -135,6 +136,11 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
             {formatCurrency(saldo)}
           </span>
         </div>
+        {excedente > 0.009 && (
+          <p className="text-xs font-medium text-destructive">
+            Los pagos superan el saldo por {formatCurrency(excedente)}. Ajusta los montos.
+          </p>
+        )}
       </div>
     </div>
   );

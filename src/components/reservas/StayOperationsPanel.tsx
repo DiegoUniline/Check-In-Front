@@ -5,7 +5,7 @@ import {
   Receipt, RefreshCcw, Search, ShieldAlert, Split, UserMinus, UserPlus, Wrench,
   XCircle,
 } from 'lucide-react';
-import api, { todayLocal } from '@/lib/api';
+import api, { hotelLocalToIso, todayLocal } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { canAccess } from '@/lib/permissions';
 import { useAuth } from '@/contexts/useAuth';
@@ -273,8 +273,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     const checkin = dateOnly(payload.new_checkin || reserva.fecha_checkin);
     const checkout = dateOnly(payload.new_checkout || reserva.fecha_checkout);
     const originalCheckout = dateOnly(reserva.fecha_checkout);
-    if (!checkin || !checkout || checkout <= checkin) {
-      setDateAvailability({ status: 'invalid', message: 'La salida debe ser posterior a la entrada.' });
+    // Se permiten estancias del día (entrada y salida la misma fecha).
+    if (!checkin || !checkout || checkout < checkin) {
+      setDateAvailability({ status: 'invalid', message: 'La salida no puede ser anterior a la entrada.' });
       return;
     }
     if (selected.id === 'extend_stay' && checkout <= originalCheckout) {
@@ -319,9 +320,10 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       return;
     }
     const reopening = selected.id === 'reopen_checkout';
-    const checkin = reopening || isActiveStay ? todayLocal() : dateOnly(reserva.fecha_checkin);
+    // El early check-in mueve la entrada a hoy: la habitación se valida desde hoy.
+    const checkin = reopening || isActiveStay || selected.id === 'early_checkin' ? todayLocal() : dateOnly(reserva.fecha_checkin);
     const checkout = reopening ? dateOnly(payload.new_checkout) : dateOnly(reserva.fecha_checkout);
-    if (!checkin || !checkout || checkout <= checkin) {
+    if (!checkin || !checkout || checkout < checkin) {
       setCheckingRooms(false);
       setAvailableRooms([]);
       setRoomAvailabilityError('La estancia no tiene un rango de fechas válido para buscar habitaciones.');
@@ -412,7 +414,10 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       toast({ title: 'Revisa la disponibilidad', description: dateAvailability.message, variant: 'destructive' });
       return;
     }
-    if (ROOM_OPERATIONS.includes(selected.id) && !payload.new_room_id) {
+    const roomRequired = ROOM_OPERATIONS.includes(selected.id)
+      && !(selected.id === 'room_out_of_service'
+        && !['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'].includes(String(reserva.estado || '')));
+    if (roomRequired && !payload.new_room_id) {
       toast({ title: 'Selecciona una habitación disponible', description: 'Usa la búsqueda y los filtros para elegir una opción.', variant: 'destructive' });
       return;
     }
@@ -436,9 +441,13 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     setProcessing(true);
     try {
       const normalizedPayload = { ...payload };
+      // Horas capturadas en la hora local del hotel.
       for (const key of ['late_until', 'blocked_until']) {
-        if (normalizedPayload[key]) normalizedPayload[key] = new Date(normalizedPayload[key]).toISOString();
+        if (normalizedPayload[key]) normalizedPayload[key] = hotelLocalToIso(normalizedPayload[key]);
       }
+      // La tarifa sólo viaja en operaciones de tarifa; en un cambio de habitación
+      // de recepción el servidor la rechazaría.
+      if (!['category_change', 'rate_change'].includes(selected.id)) delete normalizedPayload.new_rate;
       await api.applyStayOperation(
         reserva.id,
         selected.id,
@@ -677,7 +686,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       case 'early_departure':
         return <div className="space-y-3"><Field label="Nueva fecha de salida"><Input type="date" min={isActiveStay ? todayLocal() : shiftDate(reserva.fecha_checkin, 1)} max={shiftDate(reserva.fecha_checkout, -1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{availabilityNotice()}{financialImpactNotice()}</div>;
       case 'modify_dates':
-        return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Nueva entrada"><Input type="date" max={shiftDate(payload.new_checkout, -1)} value={payload.new_checkin || ''} onChange={(e) => set('new_checkin', e.target.value)} /></Field><Field label="Nueva salida"><Input type="date" min={shiftDate(payload.new_checkin, 1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field></div>{availabilityNotice()}{financialImpactNotice()}</div>;
+        return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Nueva entrada"><Input type="date" max={payload.new_checkout || undefined} value={payload.new_checkin || ''} onChange={(e) => set('new_checkin', e.target.value)} /></Field><Field label="Nueva salida"><Input type="date" min={payload.new_checkin || undefined} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field></div>{availabilityNotice()}{financialImpactNotice()}</div>;
       case 'room_change': return roomSelect();
       case 'category_change': return <div className="space-y-3">{roomSelect('Nueva habitación / categoría')}<div className="grid gap-3 sm:grid-cols-2"><Field label="Tipo de cambio"><Select value={payload.change_type || 'Upgrade'} onValueChange={(v) => { setPayload((current) => { const room = availableRooms.find((item) => item.id === current.new_room_id); return { ...current, change_type: v, new_rate: v === 'Cortesia' ? '0' : String(money(room?.precio_base ?? room?.tipos_habitacion?.precio_base ?? reserva.tarifa_noche)) }; }); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Upgrade">Upgrade</SelectItem><SelectItem value="Downgrade">Downgrade</SelectItem><SelectItem value="Cortesia">Cortesía</SelectItem><SelectItem value="CambioConCosto">Cambio con costo</SelectItem></SelectContent></Select></Field><Field label="Tarifa resultante por noche"><MoneyInput value={payload.new_rate || ''} onChange={(value) => set('new_rate', value)} /><p className="mt-1 text-xs text-muted-foreground">Se propone automáticamente la tarifa base de la categoría. Sólo gerencia puede modificarla.</p></Field></div>{financialImpactNotice()}</div>;
       case 'late_checkout': return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Salida autorizada"><Input type="datetime-local" value={payload.late_until || ''} onChange={(e) => set('late_until', e.target.value)} /></Field><Field label="Cargo adicional"><MoneyInput value={payload.charge_amount || ''} onChange={(value) => set('charge_amount', value)} /></Field></div>{financialImpactNotice()}</div>;
