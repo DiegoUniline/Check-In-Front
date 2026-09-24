@@ -43,10 +43,10 @@ const clean = (v: unknown): ImpuestoDefault[] | null => {
 };
 
 // Guarda en la base; si falla, avisa (el caché local ya quedó actualizado).
-const persist = async (table: 'hotels' | 'tipos_habitacion' | 'habitaciones', id: string, list: ImpuestoDefault[] | null) => {
+const persist = async (table: 'hotels' | 'tipos_habitacion' | 'habitaciones', id: string, list: ImpuestoDefault[] | null, silent = false) => {
   if (!id || id === 'default') return;
   const { error } = await (supabase as any).from(table).update({ impuestos_default: list }).eq('id', id);
-  if (error) {
+  if (error && !silent) {
     const missing = /impuestos_default|schema cache/i.test(error.message || '');
     window.dispatchEvent(new CustomEvent('vulo:impuestos-default-error', {
       detail: missing ? 'Falta correr el SQL de impuestos por defecto en Supabase.' : error.message,
@@ -96,7 +96,7 @@ export const syncImpuestosDefault = (): Promise<void> => {
       const db = clean(value);
       if (db !== null) { write(key, db); return; }
       const local = read(key);
-      if (local !== null) void persist(table, id, local);
+      if (local !== null) void persist(table, id, local, true);
     };
     if (hotelRes.data) apply('hotels', `impuestos_default:hotel:${hotelId}`, hotelId, hotelRes.data.impuestos_default);
     (tiposRes.data || []).forEach((t: any) => apply('tipos_habitacion', `impuestos_default:tipo:${t.id}`, t.id, t.impuestos_default));

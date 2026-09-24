@@ -110,6 +110,7 @@ export const VIEWS: ViewDef[] = [
   { key: 'reservas.operacion.reopen_checkout', label: 'Reabrir check-out', group: 'Acciones · Estancias', parent: 'reservas' },
   { key: 'reservas.operacion.consecutive_reservation', label: 'Enlazar reserva consecutiva', group: 'Acciones · Estancias', parent: 'reservas' },
   { key: 'reservas.operacion.correction_note', label: 'Registrar corrección operativa', group: 'Acciones · Estancias', parent: 'reservas' },
+  { key: 'reservas.operacion.reservation_correction', label: 'Corregir datos de la reservación', group: 'Acciones · Estancias', parent: 'reservas' },
 ];
 
 export type PermissionMatrix = Record<string, RoleId[]>;
@@ -193,6 +194,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   'reservas.operacion.reopen_checkout': ['Admin', 'Gerente'],
   'reservas.operacion.consecutive_reservation': ['Admin', 'Gerente', 'Recepcion'],
   'reservas.operacion.correction_note': ['Admin', 'Gerente', 'Recepcion'],
+  'reservas.operacion.reservation_correction': ['Admin', 'Gerente', 'Recepcion'],
 };
 
 // La matriz vive en la base (permisos_hotel). Aquí sólo se guarda en memoria
