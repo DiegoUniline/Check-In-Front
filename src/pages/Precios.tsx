@@ -151,13 +151,13 @@ export default function Precios() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.7, ease, delay: i * 0.08 }}
-              className={`flex flex-col rounded-[22px] border p-8 ${p.highlighted ? 'text-white' : 'border-slate-200 bg-white text-slate-900'}`}
+              className={`flex flex-col rounded-[8px] border p-8 ${p.highlighted ? 'text-white' : 'border-slate-200 bg-white text-slate-900'}`}
               style={p.highlighted ? { background: NAVY, borderColor: NAVY } : undefined}
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-[22px] font-bold tracking-tight">{p.name}</h2>
                 {p.highlighted && (
-                  <span className="rounded-full px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-white" style={{ background: ORANGE }}>
+                  <span className="rounded-md px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-white" style={{ background: ORANGE }}>
                     Popular
                   </span>
                 )}
@@ -229,7 +229,7 @@ export default function Precios() {
               Sobre precios y contrato.
             </h2>
           </div>
-          <div className="mt-10 divide-y divide-slate-200 rounded-[20px] border border-slate-200 bg-white">
+          <div className="mt-10 divide-y divide-slate-200 rounded-[8px] border border-slate-200 bg-white">
             {faq.map((it) => (
               <div key={it.q} className="px-6 py-5">
                 <div className="text-[16px] font-semibold text-slate-900">{it.q}</div>

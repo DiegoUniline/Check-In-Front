@@ -173,7 +173,7 @@ export const PhotoFrame = forwardRef<HTMLDivElement, PhotoFrameProps>(
     },
     ref,
   ) {
-    const radius = { md: "rounded-2xl", lg: "rounded-[22px]", xl: "rounded-[28px]" }[rounded];
+    const radius = { md: "rounded-2xl", lg: "rounded-[8px]", xl: "rounded-[8px]" }[rounded];
     return (
       <div
         ref={ref}
@@ -211,7 +211,7 @@ export function ScreenshotFrame({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[22px] border border-border/70 bg-card shadow-[0_30px_80px_-40px_rgba(15,23,42,0.35)]",
+        "overflow-hidden rounded-[8px] border border-border/70 bg-card shadow-[0_30px_80px_-40px_rgba(15,23,42,0.35)]",
         className,
       )}
     >

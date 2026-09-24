@@ -105,9 +105,9 @@ export default function Ayuda() {
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
           {canales.map((c) => {
             const Inner = (
-              <div className="h-full rounded-[18px] border border-slate-200 bg-white p-6 transition-shadow hover:shadow-[0_10px_40px_rgba(15,23,42,.08)]">
+              <div className="h-full rounded-[8px] border border-slate-200 bg-white p-6 transition-shadow hover:shadow-[0_10px_40px_rgba(15,23,42,.08)]">
                 <div
-                  className="flex h-11 w-11 items-center justify-center rounded-[14px]"
+                  className="flex h-11 w-11 items-center justify-center rounded-[8px]"
                   style={{ background: 'rgba(249,115,22,.10)' }}
                 >
                   <c.icon className="h-5 w-5" style={{ color: ORANGE }} strokeWidth={1.6} />
@@ -143,7 +143,7 @@ export default function Ayuda() {
         </h2>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {temas.map((t) => (
-            <div key={t.t} className="rounded-[18px] border border-slate-200 bg-white p-6">
+            <div key={t.t} className="rounded-[8px] border border-slate-200 bg-white p-6">
               <div className="flex items-start gap-4">
                 <t.icon className="mt-0.5 h-5 w-5 shrink-0" style={{ color: ORANGE }} strokeWidth={1.6} />
                 <div>
@@ -170,7 +170,7 @@ export default function Ayuda() {
             <Link
               key={l.to}
               to={l.to}
-              className="rounded-[18px] border border-slate-200 bg-white p-6 transition-shadow hover:shadow-[0_10px_40px_rgba(15,23,42,.08)]"
+              className="rounded-[8px] border border-slate-200 bg-white p-6 transition-shadow hover:shadow-[0_10px_40px_rgba(15,23,42,.08)]"
             >
               <l.icon className="h-5 w-5" style={{ color: ORANGE }} strokeWidth={1.6} />
               <div className="mt-4 text-[16px] font-semibold" style={{ color: NAVY }}>
@@ -183,7 +183,7 @@ export default function Ayuda() {
       </section>
 
       <section className="mx-auto max-w-[1180px] px-6 pb-24 lg:px-10">
-        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-8 md:p-10">
+        <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-8 md:p-10">
           <div className="grid gap-8 md:grid-cols-2">
             <div>
               <div className="text-[13px] font-medium uppercase tracking-[0.12em] text-slate-400">
@@ -215,7 +215,7 @@ export default function Ayuda() {
                 href={WA}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-5 inline-flex h-[52px] items-center justify-center rounded-full px-7 text-[15px] font-medium text-white"
+                className="mt-5 inline-flex h-[52px] items-center justify-center rounded-md px-7 text-[15px] font-medium text-white"
                 style={{ background: ORANGE }}
               >
                 Escribir por WhatsApp

@@ -332,7 +332,7 @@ export default function PublicHotel() {
             </div>
           </div>
           {hotel.telefono && (
-            <a href={`tel:${hotel.telefono}`} className="hidden items-center gap-2 rounded-full border border-white/20 bg-black/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white hover:text-stone-950 sm:flex">
+            <a href={`tel:${hotel.telefono}`} className="hidden items-center gap-2 rounded-md border border-white/20 bg-black/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white hover:text-stone-950 sm:flex">
               <Phone className="h-4 w-4" /> Contactar
             </a>
           )}
@@ -340,7 +340,7 @@ export default function PublicHotel() {
 
         <div className="relative z-[1] mx-auto flex max-w-7xl items-center px-5 pb-28 pt-16 sm:px-8 md:pt-24 lg:px-10">
           <div className="max-w-3xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-medium backdrop-blur-md">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-medium backdrop-blur-md">
               <ShieldCheck className="h-4 w-4 text-emerald-300" /> Reserva directa con el hotel
             </div>
             {hotel.estrellas ? (
@@ -357,7 +357,7 @@ export default function PublicHotel() {
               {hotel.descripcion_publica || `Descubre una estancia cómoda y reserva directamente en ${hotel.nombre}.`}
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Button onClick={() => document.getElementById('buscar-estancia')?.scrollIntoView({ behavior: 'smooth' })} className="h-12 rounded-full bg-white px-6 font-semibold text-stone-950 shadow-xl hover:bg-stone-100">
+              <Button onClick={() => document.getElementById('buscar-estancia')?.scrollIntoView({ behavior: 'smooth' })} className="h-12 rounded-md bg-white px-6 font-semibold text-stone-950 shadow-xl hover:bg-stone-100">
                 Consultar disponibilidad <ArrowDown className="ml-2 h-4 w-4" />
               </Button>
               {locationLabel && (
@@ -370,13 +370,13 @@ export default function PublicHotel() {
 
       {/* Filtros */}
       <section id="buscar-estancia" className="relative z-10 mx-auto -mt-14 max-w-7xl scroll-mt-5 px-4 sm:px-8 lg:px-10">
-        <div className="rounded-[28px] border border-white/70 bg-white/95 p-3 shadow-[0_24px_70px_-28px_rgba(28,25,23,.42)] backdrop-blur-xl md:p-4">
+        <div className="rounded-[8px] border border-white/70 bg-white/95 p-3 shadow-[0_24px_70px_-28px_rgba(28,25,23,.42)] backdrop-blur-xl md:p-4">
           <div className="mb-3 flex items-center justify-between px-2 pt-1 md:hidden">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[.18em] text-emerald-700">Tu estancia</p>
               <p className="font-serif text-xl">Encuentra tu habitación</p>
             </div>
-            {ns > 0 && <Badge className="rounded-full bg-stone-900 px-3 text-white hover:bg-stone-900">{ns} {ns === 1 ? 'noche' : 'noches'}</Badge>}
+            {ns > 0 && <Badge className="rounded-md bg-stone-900 px-3 text-white hover:bg-stone-900">{ns} {ns === 1 ? 'noche' : 'noches'}</Badge>}
           </div>
           <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
           <div className="rounded-2xl bg-stone-50 px-4 py-3 md:col-span-3">
@@ -467,7 +467,7 @@ export default function PublicHotel() {
             <h2 className="font-serif text-3xl font-light tracking-tight md:text-5xl">Elige cómo quieres descansar</h2>
             <p className="mt-2 max-w-2xl text-sm text-stone-500 md:text-base">Compara espacios, amenidades y tarifas. Tu solicitud se envía directamente al hotel.</p>
           </div>
-          <span className="w-fit rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-600 shadow-sm ring-1 ring-stone-200">
+          <span className="w-fit rounded-md bg-white px-4 py-2 text-sm font-medium text-stone-600 shadow-sm ring-1 ring-stone-200">
             <span className="font-bold text-emerald-700">{disponiblesCount}</span> disponible{disponiblesCount !== 1 ? 's' : ''}
           </span>
         </div>
@@ -494,7 +494,7 @@ export default function PublicHotel() {
             const extraPorNoche = personasExtra * (Number(t.precio_persona_extra) || 0);
             const total = (precio + extraPorNoche) * Math.max(1, ns || 1);
             return (
-              <Card key={h.id} className="group flex flex-col overflow-hidden rounded-[28px] border border-stone-200/80 bg-white shadow-[0_18px_55px_-38px_rgba(28,25,23,.7)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_28px_70px_-35px_rgba(28,25,23,.45)]">
+              <Card key={h.id} className="group flex flex-col overflow-hidden rounded-[8px] border border-stone-200/80 bg-white shadow-[0_18px_55px_-38px_rgba(28,25,23,.7)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_28px_70px_-35px_rgba(28,25,23,.45)]">
                 <div className="relative aspect-[16/10] cursor-pointer overflow-hidden bg-gradient-to-br from-stone-100 to-stone-200" onClick={() => openBooking(h)}>
                   {fotoActual ? (
                     <img src={fotoActual} alt={`${t.nombre} ${h.numero}`} className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-[1.045]" />
@@ -511,14 +511,14 @@ export default function PublicHotel() {
                         className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-md backdrop-blur transition hover:bg-white">
                         <ChevronRight className="h-5 w-5" />
                       </button>
-                      <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-stone-950/65 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
+                      <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-md bg-stone-950/65 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
                         <Images className="h-3.5 w-3.5" />{fotos.length}
                       </div>
                     </>
                   )}
                   {range?.from && range?.to && !disponible && (
                     <div className="absolute inset-0 flex items-center justify-center bg-stone-950/55 backdrop-blur-[1px]">
-                      <Badge className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-stone-900 shadow-xl hover:bg-white">No disponible en estas fechas</Badge>
+                      <Badge className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-stone-900 shadow-xl hover:bg-white">No disponible en estas fechas</Badge>
                     </div>
                   )}
                 </div>
@@ -534,16 +534,16 @@ export default function PublicHotel() {
                   {t.descripcion && <p className="line-clamp-2 text-sm leading-relaxed text-stone-600">{t.descripcion}</p>}
 
                   <ul className="flex flex-wrap gap-2 text-xs font-medium text-stone-600">
-                    <li className="flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1.5"><Users className="h-3.5 w-3.5 text-emerald-700" />Hasta {t.capacidad_maxima} {t.capacidad_maxima === 1 ? 'persona' : 'personas'}</li>
-                    <li className="flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1.5"><BedDouble className="h-3.5 w-3.5 text-emerald-700" />{t.capacidad_adultos} adulto{t.capacidad_adultos !== 1 ? 's' : ''}{t.capacidad_ninos > 0 ? ` + ${t.capacidad_ninos} niño${t.capacidad_ninos !== 1 ? 's' : ''}` : ''}</li>
+                    <li className="flex items-center gap-1.5 rounded-md bg-stone-100 px-3 py-1.5"><Users className="h-3.5 w-3.5 text-emerald-700" />Hasta {t.capacidad_maxima} {t.capacidad_maxima === 1 ? 'persona' : 'personas'}</li>
+                    <li className="flex items-center gap-1.5 rounded-md bg-stone-100 px-3 py-1.5"><BedDouble className="h-3.5 w-3.5 text-emerald-700" />{t.capacidad_adultos} adulto{t.capacidad_adultos !== 1 ? 's' : ''}{t.capacidad_ninos > 0 ? ` + ${t.capacidad_ninos} niño${t.capacidad_ninos !== 1 ? 's' : ''}` : ''}</li>
                     {(t.amenidades || []).slice(0, 3).map((a) => {
                       const Icon = amenityIcon(a);
                       return (
-                        <li key={a} className="flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1.5"><Icon className="h-3.5 w-3.5 text-emerald-700" />{a}</li>
+                        <li key={a} className="flex items-center gap-1.5 rounded-md bg-stone-100 px-3 py-1.5"><Icon className="h-3.5 w-3.5 text-emerald-700" />{a}</li>
                       );
                     })}
                     {(t.amenidades?.length || 0) > 3 && (
-                      <li className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-800">+{(t.amenidades!.length - 3)} más</li>
+                      <li className="rounded-md bg-emerald-50 px-3 py-1.5 text-emerald-800">+{(t.amenidades!.length - 3)} más</li>
                     )}
                   </ul>
 
@@ -555,7 +555,7 @@ export default function PublicHotel() {
                     </div>
                     <Button
                       onClick={() => openBooking(h)}
-                      className={cn("h-12 shrink-0 rounded-full px-5 font-semibold text-white", disponible ? "bg-stone-900 hover:bg-emerald-800" : "bg-stone-500 hover:bg-stone-600")}
+                      className={cn("h-12 shrink-0 rounded-md px-5 font-semibold text-white", disponible ? "bg-stone-900 hover:bg-emerald-800" : "bg-stone-500 hover:bg-stone-600")}
                     >
                       {disponible ? <BookOpenCheck className="mr-2 h-4 w-4" /> : <CalendarCheck className="mr-2 h-4 w-4" />}
                       {disponible ? 'Elegir' : 'Cambiar fechas'}
@@ -592,7 +592,7 @@ export default function PublicHotel() {
 
       {/* Modal de reserva con calendario */}
       <Dialog open={!!bookingHab} onOpenChange={(o) => !o && setBookingHab(null)}>
-        <DialogContent className="max-h-[94vh] w-[calc(100%-1.25rem)] max-w-4xl overflow-y-auto rounded-[28px] border-0 bg-white p-0 text-stone-900 shadow-2xl sm:w-full">
+        <DialogContent className="max-h-[94vh] w-[calc(100%-1.25rem)] max-w-4xl overflow-y-auto rounded-[8px] border-0 bg-white p-0 text-stone-900 shadow-2xl sm:w-full">
           {bookingHab && (() => {
             const t = bookingHab.tipo_habitacion_id ? tipoMap[bookingHab.tipo_habitacion_id] : null;
             if (!t) return null;
@@ -698,7 +698,7 @@ export default function PublicHotel() {
 
                 <DialogFooter className="border-t border-stone-100 bg-stone-50 px-5 py-4 sm:px-7">
                   <Button variant="ghost" onClick={() => setBookingHab(null)} disabled={submitting} className="rounded-full">Cancelar</Button>
-                  <Button onClick={handleBookSubmit} disabled={submitting || nsBooking < 1 || !disponible} className="h-12 rounded-full bg-stone-900 px-6 font-semibold text-white hover:bg-emerald-800">
+                  <Button onClick={handleBookSubmit} disabled={submitting || nsBooking < 1 || !disponible} className="h-12 rounded-md bg-stone-900 px-6 font-semibold text-white hover:bg-emerald-800">
                     {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Enviar solicitud de reserva
                   </Button>
@@ -711,7 +711,7 @@ export default function PublicHotel() {
 
       {/* Confirmación */}
       <Dialog open={!!confirmacion} onOpenChange={(o) => !o && setConfirmacion(null)}>
-        <DialogContent className="w-[calc(100%-1.25rem)] max-w-md overflow-hidden rounded-[28px] border-0 bg-white p-0 text-stone-900 shadow-2xl sm:w-full">
+        <DialogContent className="w-[calc(100%-1.25rem)] max-w-md overflow-hidden rounded-[8px] border-0 bg-white p-0 text-stone-900 shadow-2xl sm:w-full">
           <div className="bg-[#17201d] px-6 pb-6 pt-8 text-center text-white">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-400/15 ring-1 ring-emerald-300/30">
               <CheckCircle2 className="h-7 w-7 text-emerald-300" />

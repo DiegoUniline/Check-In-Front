@@ -166,7 +166,7 @@ export default function Pricing() {
               key={p.id}
               delay={i * 0.06}
               className={cn(
-                "flex flex-col rounded-[26px] border p-8 transition-all md:p-9",
+                "flex flex-col rounded-[8px] border p-8 transition-all md:p-9",
                 p.featured
                   ? "border-foreground bg-foreground text-background shadow-[0_40px_100px_-40px_rgba(15,23,42,0.55)]"
                   : "border-border/70 bg-card",
@@ -194,7 +194,7 @@ export default function Pricing() {
               <Link
                 to="/contact"
                 className={cn(
-                  "mt-10 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[14.5px] font-medium transition-transform hover:scale-[1.02]",
+                  "mt-10 inline-flex items-center justify-center gap-2 rounded-md px-6 py-3.5 text-[14.5px] font-medium transition-transform hover:scale-[1.02]",
                   p.featured
                     ? "bg-background text-foreground"
                     : "bg-foreground text-background",
@@ -216,7 +216,7 @@ export default function Pricing() {
           </DisplayHeading>
         </Reveal>
 
-        <Reveal className="mt-14 overflow-hidden rounded-[24px] border border-border/70">
+        <Reveal className="mt-14 overflow-hidden rounded-[8px] border border-border/70">
           <div className="grid grid-cols-[1.4fr_repeat(3,1fr)] bg-secondary/60 text-[12.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             <div className="px-6 py-4">Función</div>
             <div className="px-6 py-4 text-center">Starter</div>
@@ -277,7 +277,7 @@ export default function Pricing() {
           <DisplayHeading size="lg">
             ¿Listo para ver VULO con tus datos?
           </DisplayHeading>
-          <Link to="/contact" className="mt-10 inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-4 text-[15px] font-medium text-background">
+          <Link to="/contact" className="mt-10 inline-flex items-center gap-2 rounded-md bg-foreground px-7 py-4 text-[15px] font-medium text-background">
             Agendar una demo <ArrowRight className="h-4 w-4" />
           </Link>
         </Reveal>

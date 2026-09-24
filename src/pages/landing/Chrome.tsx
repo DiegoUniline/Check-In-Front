@@ -58,7 +58,7 @@ export function LandingNav() {
           <Button
             asChild
             size="sm"
-            className="h-9 sm:h-10 rounded-full px-4 sm:px-5 text-[13px] sm:text-[14px] font-medium text-white shadow-none hover:opacity-95"
+            className="h-9 sm:h-10 rounded-md px-4 sm:px-5 text-[13px] sm:text-[14px] font-medium text-white shadow-none hover:opacity-95"
             style={{ background: NAVY }}
           >
             <Link to="/contacto">Agendar demo</Link>

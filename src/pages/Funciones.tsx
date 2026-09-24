@@ -155,15 +155,15 @@ export default function Funciones() {
                   {g.subtitle}
                 </p>
               </div>
-              <div className="grid gap-px overflow-hidden rounded-[20px] border border-slate-200 bg-slate-200 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-px overflow-hidden rounded-[8px] border border-slate-200 bg-slate-200 md:grid-cols-2 lg:grid-cols-3">
                 {g.items.map((it) => (
                   <div key={it.t} className="flex flex-col gap-3 bg-white p-6 transition hover:bg-slate-50 md:p-7">
                     <div className="flex items-center justify-between">
-                      <div className="inline-flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: '#FFF3EB' }}>
+                      <div className="inline-flex h-10 w-10 items-center justify-center rounded-[8px]" style={{ background: '#FFF3EB' }}>
                         <it.icon className="h-5 w-5" style={{ color: ORANGE }} strokeWidth={1.75} />
                       </div>
                       {it.tag && (
-                        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: ORANGE }}>
+                        <span className="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: ORANGE }}>
                           {it.tag}
                         </span>
                       )}
@@ -190,7 +190,7 @@ export default function Funciones() {
             Te mostramos VULO con tus datos, sin compromiso.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild size="lg" className="h-[52px] rounded-full px-8 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
+            <Button asChild size="lg" className="h-[52px] rounded-md px-8 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
               <Link to="/contacto">Agendar una demo <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
             <Link to="/precios" className="text-[15px] font-medium text-white/80 hover:text-white">

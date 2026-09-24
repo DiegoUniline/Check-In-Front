@@ -894,7 +894,7 @@ export default function Reservas() {
                         <PopoverTrigger asChild>
                           <Button variant="outline" size="sm" className={cn('h-8 shrink-0 gap-1.5 px-2.5 text-xs', calendarFilterCount > 0 && 'border-[#10233F]/30 bg-[#10233F]/[0.04] text-[#10233F]')}>
                             <SlidersHorizontal className="h-3.5 w-3.5" />Filtros
-                            {calendarFilterCount > 0 && <Badge className="h-4 min-w-4 rounded-full bg-[#10233F] px-1 text-[9px] text-white">{calendarFilterCount}</Badge>}
+                            {calendarFilterCount > 0 && <Badge className="h-4 min-w-4 rounded-md bg-[#10233F] px-1 text-[9px] text-white">{calendarFilterCount}</Badge>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="z-[90] w-[min(420px,calc(100vw-1rem))] space-y-3 p-3" align="end">
@@ -1146,7 +1146,7 @@ export default function Reservas() {
                     <SlidersHorizontal className="h-4 w-4" />
                     <span className="hidden sm:inline">Filtros</span>
                     {activeFilterCount > 0 && (
-                      <Badge variant="default" className="h-5 min-w-[20px] px-1.5 text-[10px] rounded-full">
+                      <Badge variant="default" className="h-5 min-w-[20px] px-1.5 text-[10px] rounded-md">
                         {activeFilterCount}
                       </Badge>
                     )}

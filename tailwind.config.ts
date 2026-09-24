@@ -89,11 +89,15 @@ export default {
           reserved: "hsl(var(--status-reserved))",
         },
       },
+      // Redondeo sutil en todo el sistema.
       borderRadius: {
-        xl: "1.5rem",
+        "3xl": "8px",
+        "2xl": "8px",
+        xl: "6px",
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 3px)",
-        sm: "calc(var(--radius) - 6px)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+        DEFAULT: "4px",
       },
       boxShadow: {
         soft: "0 10px 40px rgba(15, 23, 42, 0.08)",

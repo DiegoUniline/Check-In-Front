@@ -44,7 +44,7 @@ export default function Empresa() {
             className="relative mx-auto flex aspect-square w-full max-w-[420px] items-center justify-center"
           >
             <div className="absolute inset-6 rounded-full" style={{ background: `radial-gradient(closest-side, ${ORANGE}22, transparent 70%)` }} />
-            <div className="absolute inset-0 rounded-[32px] border border-slate-100 bg-slate-50/60" />
+            <div className="absolute inset-0 rounded-[8px] border border-slate-100 bg-slate-50/60" />
             <motion.img
               src={foxIsotype}
               alt="Isotipo VULO"
@@ -52,7 +52,7 @@ export default function Empresa() {
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
             />
-            <span className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium tracking-wide text-slate-600">
+            <span className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium tracking-wide text-slate-600">
               Hecho en México
             </span>
           </motion.div>
@@ -65,9 +65,9 @@ export default function Empresa() {
           <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[1fr_1.35fr] lg:items-start">
             <div>
               <SectionTag>Nuestro sueño</SectionTag>
-              <div className="relative inline-flex h-32 w-32 items-center justify-center rounded-[24px]" style={{ background: NAVY }}>
+              <div className="relative inline-flex h-32 w-32 items-center justify-center rounded-[8px]" style={{ background: NAVY }}>
                 <img src={foxIsotype} alt="" className="h-[70%] w-[70%] object-contain" />
-                <div className="absolute -bottom-2 -right-2 inline-flex h-10 w-10 items-center justify-center rounded-[12px] border-4 border-slate-50" style={{ background: ORANGE }}>
+                <div className="absolute -bottom-2 -right-2 inline-flex h-10 w-10 items-center justify-center rounded-[8px] border-4 border-slate-50" style={{ background: ORANGE }}>
                   <Moon className="h-4 w-4 text-white" strokeWidth={2} />
                 </div>
               </div>
@@ -103,7 +103,7 @@ export default function Empresa() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.7, ease, delay: i * 0.06 }}
-                className="group relative overflow-hidden rounded-[20px] border border-slate-200 bg-white p-7"
+                className="group relative overflow-hidden rounded-[8px] border border-slate-200 bg-white p-7"
               >
                 <img
                   src={foxIsotype}
@@ -111,7 +111,7 @@ export default function Empresa() {
                   aria-hidden
                   className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 object-contain opacity-[0.06] transition-opacity duration-500 group-hover:opacity-[0.12]"
                 />
-                <div className="relative mb-4 inline-flex h-11 w-11 items-center justify-center rounded-[12px]" style={{ background: NAVY }}>
+                <div className="relative mb-4 inline-flex h-11 w-11 items-center justify-center rounded-[8px]" style={{ background: NAVY }}>
                   <p.icon className="h-5 w-5 text-white" strokeWidth={1.75} />
                 </div>
                 <h3 className="relative text-[18px] font-semibold tracking-tight text-slate-900">{p.t}</h3>
@@ -124,7 +124,7 @@ export default function Empresa() {
 
       <section className="border-t border-slate-100 bg-white py-24">
         <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
-          <div className="relative overflow-hidden grid gap-10 rounded-[24px] p-10 lg:grid-cols-[1.2fr_1fr] lg:items-center" style={{ background: NAVY }}>
+          <div className="relative overflow-hidden grid gap-10 rounded-[8px] p-10 lg:grid-cols-[1.2fr_1fr] lg:items-center" style={{ background: NAVY }}>
             <img
               src={foxIsotype}
               alt=""
@@ -147,10 +147,10 @@ export default function Empresa() {
               </div>
             </div>
             <div className="relative flex flex-wrap gap-3 lg:justify-end">
-              <Button asChild size="lg" className="h-[52px] rounded-full px-7 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
+              <Button asChild size="lg" className="h-[52px] rounded-md px-7 text-[15px] font-medium text-white shadow-none hover:opacity-95" style={{ background: ORANGE }}>
                 <Link to="/contacto">Hablemos <ArrowRight className="ml-1 h-4 w-4" /></Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="h-[52px] rounded-full border-white/25 bg-transparent px-6 text-[15px] font-medium text-white hover:bg-white/10 hover:text-white">
+              <Button asChild size="lg" variant="outline" className="h-[52px] rounded-md border-white/25 bg-transparent px-6 text-[15px] font-medium text-white hover:bg-white/10 hover:text-white">
                 <Link to="/funciones">Ver funciones</Link>
               </Button>
             </div>

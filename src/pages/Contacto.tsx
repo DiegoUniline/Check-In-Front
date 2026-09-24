@@ -51,7 +51,7 @@ export default function Contacto() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, ease }}
-            className="rounded-[22px] border border-slate-200 bg-white p-8 md:p-10"
+            className="rounded-[8px] border border-slate-200 bg-white p-8 md:p-10"
           >
             {!sent ? (
               <>
@@ -106,24 +106,24 @@ export default function Contacto() {
 
           {/* Info */}
           <div className="flex flex-col gap-4">
-            <a href={WA} target="_blank" rel="noreferrer" className="group rounded-[20px] border border-slate-200 bg-white p-6 transition hover:border-slate-300">
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: '#FFF3EB' }}>
+            <a href={WA} target="_blank" rel="noreferrer" className="group rounded-[8px] border border-slate-200 bg-white p-6 transition hover:border-slate-300">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-[8px]" style={{ background: '#FFF3EB' }}>
                 <MessageSquare className="h-5 w-5" style={{ color: ORANGE }} strokeWidth={1.75} />
               </div>
               <div className="text-[13px] font-semibold uppercase tracking-wider text-slate-500">WhatsApp</div>
               <div className="mt-1 text-[20px] font-semibold text-slate-900 group-hover:opacity-80">317 103 5768</div>
               <p className="mt-1 text-[13.5px] text-slate-500">Respuesta rápida, con humano real.</p>
             </a>
-            <div className="rounded-[20px] p-6 text-white" style={{ background: NAVY }}>
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-[10px] bg-white/10">
+            <div className="rounded-[8px] p-6 text-white" style={{ background: NAVY }}>
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-[8px] bg-white/10">
                 <MapPin className="h-5 w-5 text-white" strokeWidth={1.75} />
               </div>
               <div className="text-[13px] font-semibold uppercase tracking-wider text-white/60">Ubicación</div>
               <div className="mt-1 text-[17px] font-semibold">Autlán de Navarro, Jalisco</div>
               <p className="mt-1 text-[13.5px] text-white/70">México</p>
             </div>
-            <div className="rounded-[20px] border border-slate-200 bg-white p-6">
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-[10px] bg-slate-100">
+            <div className="rounded-[8px] border border-slate-200 bg-white p-6">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-[8px] bg-slate-100">
                 <Phone className="h-5 w-5 text-slate-700" strokeWidth={1.75} />
               </div>
               <div className="text-[13px] font-semibold uppercase tracking-wider text-slate-500">Horario</div>

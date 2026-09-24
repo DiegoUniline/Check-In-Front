@@ -81,7 +81,7 @@ export function SiteNav() {
                   to={n.to}
                   className={({ isActive }) =>
                     cn(
-                      "rounded-full px-4 py-2 text-[14px] font-medium transition-colors",
+                      "rounded-md px-4 py-2 text-[14px] font-medium transition-colors",
                       isActive
                         ? "text-foreground"
                         : "text-muted-foreground hover:text-foreground",
@@ -97,7 +97,7 @@ export function SiteNav() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 6 }}
                       transition={{ duration: 0.18, ease: "easeOut" }}
-                      className="absolute left-1/2 top-full mt-3 w-[860px] -translate-x-1/2 rounded-[22px] border border-border/70 bg-background/95 p-6 shadow-[0_30px_60px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl"
+                      className="absolute left-1/2 top-full mt-3 w-[860px] -translate-x-1/2 rounded-[8px] border border-border/70 bg-background/95 p-6 shadow-[0_30px_60px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl"
                     >
                       <div className="grid grid-cols-5 gap-6">
                         {MEGA.map((col) => (
@@ -141,7 +141,7 @@ export function SiteNav() {
                 to={n.to}
                 className={({ isActive }) =>
                   cn(
-                    "rounded-full px-4 py-2 text-[14px] font-medium transition-colors",
+                    "rounded-md px-4 py-2 text-[14px] font-medium transition-colors",
                     isActive
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground",
@@ -157,13 +157,13 @@ export function SiteNav() {
         <div className="hidden items-center gap-2 md:flex">
           <Link
             to="/login"
-            className="rounded-full px-4 py-2 text-[14px] font-medium text-foreground/80 transition-colors hover:text-foreground"
+            className="rounded-md px-4 py-2 text-[14px] font-medium text-foreground/80 transition-colors hover:text-foreground"
           >
             Iniciar sesión
           </Link>
           <Link
             to="/signup"
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-[14px] font-medium text-background transition-transform hover:scale-[1.02]"
+            className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-5 py-2.5 text-[14px] font-medium text-background transition-transform hover:scale-[1.02]"
           >
             Comenzar
             <ArrowUpRight className="h-3.5 w-3.5" />
@@ -202,13 +202,13 @@ export function SiteNav() {
               <div className="mt-2 flex gap-2 border-t border-border/60 pt-4">
                 <Link
                   to="/login"
-                  className="flex-1 rounded-full border border-border px-4 py-3 text-center text-sm font-medium"
+                  className="flex-1 rounded-md border border-border px-4 py-3 text-center text-sm font-medium"
                 >
                   Iniciar sesión
                 </Link>
                 <Link
                   to="/signup"
-                  className="flex-1 rounded-full bg-foreground px-4 py-3 text-center text-sm font-medium text-background"
+                  className="flex-1 rounded-md bg-foreground px-4 py-3 text-center text-sm font-medium text-background"
                 >
                   Comenzar
                 </Link>

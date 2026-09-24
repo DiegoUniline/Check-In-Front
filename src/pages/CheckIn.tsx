@@ -309,11 +309,11 @@ export default function CheckIn() {
             Llegadas de hoy
           </Button>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="h-7 rounded-full px-3 text-xs font-medium">
+            <Badge variant="outline" className="h-7 rounded-md px-3 text-xs font-medium">
               {noches} {noches === 1 ? 'noche' : 'noches'}
             </Badge>
             {formData.habitacionId && (
-              <Badge className="h-7 rounded-full px-3 text-xs font-medium">
+              <Badge className="h-7 rounded-md px-3 text-xs font-medium">
                 Hab. {selectedHabitacion?.numero || reserva.habitacion?.numero || reserva.habitacion_numero}
               </Badge>
             )}

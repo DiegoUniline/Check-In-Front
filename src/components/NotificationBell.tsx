@@ -71,7 +71,7 @@ export function NotificationBell() {
         <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
           <Bell className="h-5 w-5" />
           {noLeidas > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 px-1 items-center justify-center rounded-md bg-destructive text-[10px] font-medium text-destructive-foreground">
               {noLeidas > 9 ? '9+' : noLeidas}
             </span>
           )}

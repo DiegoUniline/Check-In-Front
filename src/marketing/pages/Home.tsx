@@ -76,13 +76,13 @@ export default function Home() {
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link
                 to="/contact"
-                className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-[15px] font-medium text-background transition-transform hover:scale-[1.02]"
+                className="inline-flex items-center gap-2 rounded-md bg-foreground px-6 py-3.5 text-[15px] font-medium text-background transition-transform hover:scale-[1.02]"
               >
                 Agendar demo <ArrowUpRight className="h-4 w-4" />
               </Link>
               <Link
                 to="/features"
-                className="inline-flex items-center gap-1.5 rounded-full px-4 py-3.5 text-[15px] font-medium text-foreground/80 hover:text-foreground"
+                className="inline-flex items-center gap-1.5 rounded-md px-4 py-3.5 text-[15px] font-medium text-foreground/80 hover:text-foreground"
               >
                 Ver el producto <ArrowRight className="h-4 w-4" />
               </Link>
@@ -118,7 +118,7 @@ export default function Home() {
           </Lede>
         </Reveal>
 
-        <div className="mt-16 grid gap-px overflow-hidden rounded-[22px] border border-border/70 bg-border/70 md:grid-cols-2">
+        <div className="mt-16 grid gap-px overflow-hidden rounded-[8px] border border-border/70 bg-border/70 md:grid-cols-2">
           {DOLORES.map((d, i) => (
             <Reveal key={i} delay={i * 0.04} className="bg-background p-8 md:p-10">
               <div className="flex items-start gap-3">
@@ -186,7 +186,7 @@ export default function Home() {
         </Reveal>
 
         <div className="mt-14 grid gap-6 md:grid-cols-2 lg:gap-8">
-          <Reveal className="rounded-[22px] border border-border/70 bg-secondary/40 p-8 md:p-10">
+          <Reveal className="rounded-[8px] border border-border/70 bg-secondary/40 p-8 md:p-10">
             <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Antes</div>
             <ul className="mt-6 space-y-4 text-[15px] leading-[1.55] text-foreground/75">
               {[
@@ -203,7 +203,7 @@ export default function Home() {
               ))}
             </ul>
           </Reveal>
-          <Reveal delay={0.08} className="rounded-[22px] border border-foreground bg-foreground p-8 text-background md:p-10">
+          <Reveal delay={0.08} className="rounded-[8px] border border-foreground bg-foreground p-8 text-background md:p-10">
             <div className="text-xs font-medium uppercase tracking-[0.18em] text-accent">Con VULO</div>
             <ul className="mt-6 space-y-4 text-[15px] leading-[1.55] text-background/85">
               {[
@@ -258,7 +258,7 @@ export default function Home() {
           </Lede>
           <Link
             to="/contact"
-            className="mt-10 inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-4 text-[15px] font-medium text-background transition-transform hover:scale-[1.02]"
+            className="mt-10 inline-flex items-center gap-2 rounded-md bg-foreground px-7 py-4 text-[15px] font-medium text-background transition-transform hover:scale-[1.02]"
           >
             Agendar demo <ArrowUpRight className="h-4 w-4" />
           </Link>

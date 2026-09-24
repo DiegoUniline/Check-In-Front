@@ -215,7 +215,7 @@ export default function CheckOut() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Salidas de hoy
           </Button>
-          <Badge variant="outline" className="h-7 rounded-full px-3 text-xs font-medium">
+          <Badge variant="outline" className="h-7 rounded-md px-3 text-xs font-medium">
             Habitación {habitacion}
           </Badge>
         </div>

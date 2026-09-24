@@ -58,7 +58,7 @@ export function SiteFooter() {
             <div className="mt-6 flex items-center gap-3">
               <select
                 aria-label="Idioma"
-                className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground/70"
+                className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground/70"
                 defaultValue="es-MX"
               >
                 <option value="es-MX">Español · MX</option>

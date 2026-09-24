@@ -731,7 +731,7 @@ export function TimelineGrid({
 
       {draggedReservation && (
         <div className={cn(
-          'pointer-events-none absolute bottom-11 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-xs font-semibold shadow-xl',
+          'pointer-events-none absolute bottom-11 left-1/2 z-50 -translate-x-1/2 rounded-md px-4 py-2 text-xs font-semibold shadow-xl',
           !dropTarget ? 'bg-[#10233F] text-white' : dropTarget.valid ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white',
         )}>
           {!dropTarget ? 'Suelta sobre otra habitación' : dropTarget.valid ? 'Habitación disponible · suelta para continuar' : 'Habitación no disponible para estas fechas'}

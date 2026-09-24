@@ -75,7 +75,7 @@ export default function Login() {
       <Card className="relative w-full max-w-md shadow-lg">
         <Link
           to="/"
-          className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+          className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Inicio

@@ -130,7 +130,7 @@ export function AlertaSuscripcion() {
           <div className={`bg-gradient-to-r ${getColorBg()} p-6 text-white text-center`}>
             <div className="text-5xl mb-3">{getEmoji()}</div>
             <h2 className="text-xl font-black">{getTitulo()}</h2>
-            <div className="mt-3 bg-white/20 rounded-full px-4 py-1.5 inline-block">
+            <div className="mt-3 bg-white/20 rounded-md px-4 py-1.5 inline-block">
               <span className="text-sm font-bold">
                 {dias === 0 ? 'Último día' : dias === 1 ? 'Vence mañana' : `${dias} días restantes`}
               </span>

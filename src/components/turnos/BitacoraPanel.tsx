@@ -172,7 +172,7 @@ export function BitacoraPanel({ turnoId }: Props) {
               key={f.k}
               onClick={() => setFiltro(f.k as any)}
               className={cn(
-                'h-8 px-3 rounded-full text-sm border transition',
+                'h-8 px-3 rounded-md text-sm border transition',
                 filtro === f.k
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-white border-slate-200 hover:bg-slate-50',

@@ -368,7 +368,7 @@ export default function AdminPlataforma() {
             )}
           </td>
           <td className="p-4 text-center">
-            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">
+            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md text-xs font-bold">
               {hotelesCliente.length} Hoteles
             </span>
           </td>

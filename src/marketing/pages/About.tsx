@@ -202,7 +202,7 @@ export default function About() {
           <Lede className="mt-6 text-center">
             Nos gustaría escuchar cómo opera tu hotel hoy.
           </Lede>
-          <Link to="/contact" className="mt-10 inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-4 text-[15px] font-medium text-background">
+          <Link to="/contact" className="mt-10 inline-flex items-center gap-2 rounded-md bg-foreground px-7 py-4 text-[15px] font-medium text-background">
             Hablar con el equipo <ArrowRight className="h-4 w-4" />
           </Link>
         </Reveal>

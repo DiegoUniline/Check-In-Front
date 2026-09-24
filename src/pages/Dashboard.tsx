@@ -591,7 +591,7 @@ export default function Dashboard() {
 
         <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 sm:hidden">
           {!readOnly && (
-            <Button asChild className="h-12 rounded-full bg-[#10233F] px-5 font-semibold text-white shadow-xl hover:bg-[#10233F]/90">
+            <Button asChild className="h-12 rounded-md bg-[#10233F] px-5 font-semibold text-white shadow-xl hover:bg-[#10233F]/90">
               <Link to="/reservas/nueva"><CalendarPlus className="mr-2 h-4 w-4" />Nueva reserva</Link>
             </Button>
           )}

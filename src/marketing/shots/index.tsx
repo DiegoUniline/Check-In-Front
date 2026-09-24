@@ -38,7 +38,7 @@ export function ShotReservasTimeline() {
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="hidden sm:inline">Hotel Aurora · Ciudad</span>
-          <span className="rounded-full border border-border px-2 py-0.5">Semana</span>
+          <span className="rounded-md border border-border px-2 py-0.5">Semana</span>
         </div>
       </div>
 
@@ -67,7 +67,7 @@ export function ShotReservasTimeline() {
                 ))}
                 <div
                   className={cn(
-                    "absolute top-1.5 flex h-8 items-center gap-2 rounded-full px-3 text-[11px] font-medium text-primary-foreground",
+                    "absolute top-1.5 flex h-8 items-center gap-2 rounded-md px-3 text-[11px] font-medium text-primary-foreground",
                     r.color,
                   )}
                   style={{
@@ -99,7 +99,7 @@ export function ShotWhatsAppCRM() {
   return (
     <div className="grid grid-cols-[220px_1fr] bg-background">
       <aside className="border-r border-border/60 bg-secondary/30 p-3">
-        <div className="mb-3 flex items-center gap-2 rounded-full bg-background px-3 py-2 text-xs text-muted-foreground">
+        <div className="mb-3 flex items-center gap-2 rounded-md bg-background px-3 py-2 text-xs text-muted-foreground">
           <Search className="h-3.5 w-3.5" /> Buscar
         </div>
         {[
@@ -127,7 +127,7 @@ export function ShotWhatsAppCRM() {
               <div className="flex items-center gap-1.5">
                 <p className="truncate text-[11.5px] text-muted-foreground">{c.msg}</p>
                 {c.unread ? (
-                  <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-semibold text-accent-foreground">
+                  <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-accent px-1 text-[9px] font-semibold text-accent-foreground">
                     {c.unread}
                   </span>
                 ) : null}
@@ -148,8 +148,8 @@ export function ShotWhatsAppCRM() {
             </div>
           </div>
           <div className="hidden items-center gap-2 md:flex">
-            <span className="rounded-full border border-border px-2.5 py-1 text-[10px] font-medium text-foreground/70">VIP</span>
-            <span className="rounded-full border border-border px-2.5 py-1 text-[10px] font-medium text-foreground/70">Recurrente</span>
+            <span className="rounded-md border border-border px-2.5 py-1 text-[10px] font-medium text-foreground/70">VIP</span>
+            <span className="rounded-md border border-border px-2.5 py-1 text-[10px] font-medium text-foreground/70">Recurrente</span>
           </div>
         </div>
         <div className="flex-1 space-y-3 bg-secondary/30 p-5">
@@ -169,12 +169,12 @@ export function ShotWhatsAppCRM() {
               <br />¿Bloqueo la reserva?
             </div>
           </div>
-          <div className="mx-auto flex max-w-fit items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-[10px] text-muted-foreground">
+          <div className="mx-auto flex max-w-fit items-center gap-1.5 rounded-md bg-background/80 px-3 py-1 text-[10px] text-muted-foreground">
             <Sparkles className="h-3 w-3 text-accent" /> Respuesta sugerida por IA
           </div>
         </div>
         <div className="flex items-center gap-2 border-t border-border/60 bg-background px-5 py-3">
-          <div className="flex flex-1 items-center rounded-full border border-border bg-secondary/40 px-3 py-2 text-[12px] text-muted-foreground">
+          <div className="flex flex-1 items-center rounded-md border border-border bg-secondary/40 px-3 py-2 text-[12px] text-muted-foreground">
             Escribir mensaje…
           </div>
           <button className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -216,7 +216,7 @@ export function ShotHousekeeping() {
             </div>
             <div>
               <span className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium",
+                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium",
                 r.status === "Limpia" && "bg-success/10 text-success",
                 r.status === "En proceso" && "bg-info/10 text-info",
                 r.status === "Sucia" && "bg-warning/15 text-warning-foreground",
@@ -351,7 +351,7 @@ export function ShotPOS() {
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <UtensilsCrossed className="h-4 w-4 text-primary" /> Restaurante · Mesa 7
           </div>
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+          <span className="rounded-md bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
             Cargar a Suite 305
           </span>
         </div>
@@ -444,7 +444,7 @@ export function ShotCheckIn() {
     <div className={cn(pad, "bg-background")}>
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold text-foreground">Check-in · RES-2026-2042</div>
-        <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[11px] font-medium text-accent">Paso 3 de 4</span>
+        <span className="rounded-md bg-accent/10 px-2.5 py-1 text-[11px] font-medium text-accent">Paso 3 de 4</span>
       </div>
       <div className="mt-5 grid grid-cols-2 gap-4 text-[12.5px]">
         <div>
@@ -468,7 +468,7 @@ export function ShotCheckIn() {
         <span className="inline-flex items-center gap-2 text-[11px] text-muted-foreground">
           <Clock className="h-3.5 w-3.5" /> Tiempo promedio: 3m 40s
         </span>
-        <button className="rounded-full bg-primary px-4 py-2 text-[12px] font-medium text-primary-foreground">
+        <button className="rounded-md bg-primary px-4 py-2 text-[12px] font-medium text-primary-foreground">
           Finalizar check-in
         </button>
       </div>
@@ -507,7 +507,7 @@ export function ShotMultiHotel() {
             </div>
             <div className="text-right tabular-nums text-foreground">{h.rev}</div>
             <div className="text-right">
-              <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
                 Ver <ArrowUpRight className="h-2.5 w-2.5" />
               </span>
             </div>

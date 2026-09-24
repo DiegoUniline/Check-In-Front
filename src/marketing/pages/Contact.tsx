@@ -100,7 +100,7 @@ export default function Contact() {
           <Reveal delay={0.1}>
             <form
               onSubmit={onSubmit}
-              className="rounded-[28px] border border-border/70 bg-card p-6 md:p-8"
+              className="rounded-[8px] border border-border/70 bg-card p-6 md:p-8"
             >
               <div className="flex flex-wrap gap-2">
                 {motivos.map((m) => (
@@ -109,7 +109,7 @@ export default function Contact() {
                     key={m.id}
                     onClick={() => setMotivo(m.id)}
                     className={cn(
-                      "rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
+                      "rounded-md border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
                       motivo === m.id
                         ? "border-foreground bg-foreground text-background"
                         : "border-border/70 bg-transparent text-foreground/70 hover:text-foreground",
@@ -143,7 +143,7 @@ export default function Contact() {
               <button
                 type="submit"
                 disabled={sending}
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-6 py-4 text-[15px] font-medium text-background transition-transform hover:scale-[1.01] disabled:opacity-60"
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-foreground px-6 py-4 text-[15px] font-medium text-background transition-transform hover:scale-[1.01] disabled:opacity-60"
               >
                 {sending ? "Enviando…" : "Enviar mensaje"} <ArrowRight className="h-4 w-4" />
               </button>
@@ -162,7 +162,7 @@ export default function Contact() {
             Cerca del mar, cerca del huésped.
           </DisplayHeading>
         </Reveal>
-        <Reveal delay={0.08} className="mt-10 overflow-hidden rounded-[28px] border border-border/70">
+        <Reveal delay={0.08} className="mt-10 overflow-hidden rounded-[8px] border border-border/70">
           <div className="relative aspect-[16/7]">
             <PhotoFrame
               photo="city"
