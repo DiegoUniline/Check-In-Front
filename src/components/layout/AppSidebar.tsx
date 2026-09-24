@@ -31,8 +31,9 @@ import {
   ClipboardCheck,
   X,
   FileText,
+  Search,
 } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
@@ -113,6 +114,8 @@ const adminSaaSItem = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [menuQuery, setMenuQuery] = useState('');
   const { state, isMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const { user } = useAuth();
   // El drawer móvil siempre debe mostrar etiquetas, aunque el usuario haya
@@ -237,6 +240,22 @@ export function AppSidebar() {
     { key: 'admin', label: 'Administración', icon: Settings, items: adminNavItems, defaultOpen: false },
   ];
 
+  const normalizar = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const q = normalizar(menuQuery);
+  const searchable = [
+    ...(user?.email === 'diego.leon@uniline.mx' ? adminSaaSItem.map((item) => ({ ...item, group: 'Administración maestro' })) : []),
+    ...mainNavItems.map((item) => ({ ...item, group: 'Principal' })),
+    ...groups.flatMap((g) => g.items.map((item) => ({ ...item, group: g.label }))),
+  ].filter((item: any) => !item.viewKey || canAccess(item.viewKey, user?.rol));
+  const resultados = q
+    ? searchable.filter((item: any) => normalizar(`${item.title} ${item.group}`).includes(q))
+    : [];
+  const irA = (url: string) => {
+    setMenuQuery('');
+    navigate(url);
+    if (isMobile) setOpenMobile(false);
+  };
+
   return (
     <Sidebar collapsible="icon" className="border-r border-brand-navy/15 bg-white shadow-[4px_0_18px_rgba(16,35,63,0.06)]">
       <SidebarHeader className="border-b border-brand-navy/10 px-3 py-4">
@@ -265,6 +284,54 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent ref={contentRef} className="px-2 py-3 group-data-[collapsible=icon]:px-1">
+        {!collapsed && (
+          <div className="relative px-1 pb-2">
+            <Search className="pointer-events-none absolute left-3.5 top-[9px] h-3.5 w-3.5 text-brand-navy/45" />
+            <input
+              type="text"
+              value={menuQuery}
+              onChange={(e) => setMenuQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && resultados[0]) { e.preventDefault(); irA(resultados[0].url); }
+                if (e.key === 'Escape') setMenuQuery('');
+              }}
+              placeholder="Buscar en el menú…"
+              aria-label="Buscar en el menú"
+              className="h-8 w-full rounded-md border border-brand-navy/15 bg-white pl-8 pr-7 text-xs text-brand-navy outline-none placeholder:text-brand-navy/40 focus:border-brand-navy/40"
+            />
+            {menuQuery && (
+              <button type="button" onClick={() => setMenuQuery('')} className="absolute right-2.5 top-[7px] rounded p-0.5 text-brand-navy/50 hover:text-brand-navy" aria-label="Limpiar búsqueda">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {!collapsed && q ? (
+          <SidebarGroup className="pt-0">
+            {resultados.length === 0 ? (
+              <p className="px-3 py-4 text-center text-xs text-brand-navy/50">Sin resultados para "{menuQuery}"</p>
+            ) : (
+              <SidebarMenu className="gap-0.5">
+                {resultados.map((item: any) => (
+                  <SidebarMenuItem key={`${item.group}-${item.url}`}>
+                    <button
+                      type="button"
+                      onClick={() => irA(item.url)}
+                      className="flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-left text-brand-navy/85 hover:bg-brand-navy/[0.05] hover:text-brand-navy"
+                    >
+                      <item.icon className="h-[18px] w-[18px] shrink-0 text-brand-navy" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm">{item.title}</span>
+                        <span className="block truncate text-[10px] text-brand-navy/50">{item.group}</span>
+                      </span>
+                    </button>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            )}
+          </SidebarGroup>
+        ) : (<>
         {user?.email === 'diego.leon@uniline.mx' && (
           <SidebarGroup className="pb-1">
             {!collapsed && <SidebarGroupLabel className="px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-navy">Administración maestro</SidebarGroupLabel>}
@@ -322,6 +389,7 @@ export function AppSidebar() {
             </SidebarGroup>
           );
         })}
+        </>)}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-brand-navy/10 p-3">
