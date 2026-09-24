@@ -7,7 +7,7 @@ import {
   CalendarDays, BedDouble, Users, RefreshCw, Calendar,
   LogIn, LogOut, Clock, ArrowRight, X, Eye, History, SlidersHorizontal,
   CheckCircle, XCircle, AlertCircle, Wrench, DollarSign, Maximize2, Minimize2,
-  Layers3, Wifi
+  Layers3, Wifi, LayoutGrid, List
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -579,6 +579,26 @@ export default function Reservas() {
         )}
       </div>
 
+      <div className="grid grid-cols-3 gap-0.5 rounded-md bg-muted p-0.5">
+        {([
+          { key: 'timeline', label: 'Calendario', Icon: CalendarDays },
+          { key: 'card', label: 'Card', Icon: LayoutGrid },
+          { key: 'tabla', label: 'Tabla', Icon: List },
+        ] as { key: ReservasSubView; label: string; Icon: typeof CalendarDays }[]).map(({ key, label, Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setReservasSubView(key)}
+            className={cn(
+              'flex h-7 items-center justify-center gap-1 rounded text-[11px] transition-colors',
+              reservasSubView === key ? 'bg-background font-medium text-foreground shadow-sm ring-1 ring-[#10233F]/30' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Icon className="h-3 w-3" />{label}
+          </button>
+        ))}
+      </div>
+
       <div>
         <p className="mb-1 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Estado de hoy</p>
         <div className="space-y-0.5">
@@ -795,7 +815,7 @@ export default function Reservas() {
           <TabsContent value="timeline" className={cn(isCalendarWorkspace ? 'mt-0 flex min-h-0 flex-1 flex-col' : 'space-y-3 mt-3')}>
             {/* En Card y Tabla el selector conserva su lugar; en Calendario forma parte de la barra operativa. */}
             <div className={cn('flex items-center justify-between gap-2 flex-wrap', isCalendarWorkspace && 'hidden')}>
-              <div className="grid w-full grid-cols-3 rounded-xl bg-muted p-1 sm:inline-flex sm:w-auto">
+              <div className="grid w-full grid-cols-3 rounded-xl bg-muted p-1 sm:inline-flex sm:w-auto lg:hidden">
                 {([
                   { key: 'timeline', label: 'Calendario' },
                   { key: 'card', label: 'Card' },
@@ -894,7 +914,7 @@ export default function Reservas() {
                 <Card className="shrink-0 overflow-visible shadow-sm">
                   <CardContent className="p-2">
                     <div className="flex flex-wrap items-center gap-1.5 xl:flex-nowrap">
-                      <div className="inline-flex h-8 shrink-0 items-center rounded-lg bg-muted p-0.5">
+                      <div className="inline-flex h-8 shrink-0 items-center rounded-lg bg-muted p-0.5 lg:hidden">
                         {([
                           { key: 'timeline', label: 'Calendario' },
                           { key: 'card', label: 'Card' },
@@ -914,7 +934,7 @@ export default function Reservas() {
                         ))}
                       </div>
 
-                      <span className="mx-0.5 hidden h-6 w-px shrink-0 bg-border sm:block" />
+                      <span className="mx-0.5 hidden h-6 w-px shrink-0 bg-border sm:block lg:hidden" />
 
                       <div className="flex shrink-0 items-center gap-1">
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navegarFecha('prev')} aria-label="Periodo anterior">
