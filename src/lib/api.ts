@@ -208,7 +208,7 @@ class ApiClient {
     if (error) throw new Error(error.message);
     const { data: profile } = await supabase.from('profiles').select('*, hotels(nombre)').eq('id', data.user.id).maybeSingle();
     if (profile && (profile as any).activo === false) {
-      await supabase.auth.signOut().catch(() => {});
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       throw new Error('Tu usuario está desactivado. Contacta al administrador del hotel.');
     }
     const hotelId = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
@@ -237,7 +237,9 @@ class ApiClient {
   }
 
   async logout() {
-    await supabase.auth.signOut().catch(() => {});
+    // scope 'local': cierra sólo este equipo. El valor por defecto ('global')
+    // revocaba la sesión en todos los dispositivos del usuario.
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     this.setHotelId(null);
     this._demoMode = false;
   }

@@ -1,6 +1,8 @@
 import { clearOfflineCache } from '@/lib/offlineCache';
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, useRef, ReactNode } from 'react';
+import { isAuthRetryableFetchError, type Session } from '@supabase/supabase-js';
 import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { AuthContext, User } from './auth-context';
 import { savePermissions, resetPermissions, PermissionMatrix } from '@/lib/permissions';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
@@ -16,10 +18,84 @@ async function syncPermisosFromBD() {
   }
 }
 
+const readCachedUser = (): User | null => {
+  try {
+    const raw = localStorage.getItem('user');
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed?.id ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearLocalSessionData = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('demoMode');
+  api.setHotelId(null);
+};
+
+/**
+ * Lee perfil, hotel y rol del usuario de la sesión. Lanza si la red falla:
+ * quien llama decide conservar la sesión, nunca cerrarla por un error.
+ */
+async function hydrateFromSession(session: Session): Promise<User> {
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*, hotels!profiles_hotel_id_fkey(nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale)')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  if (profileError) throw profileError;
+
+  const activeHotelId = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
+  api.setHotelId(activeHotelId);
+  let hotel: any = (profile as any)?.hotels;
+  if (activeHotelId && activeHotelId !== profile?.hotel_id) {
+    const { data: hActivo } = await supabase
+      .from('hotels')
+      .select('nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale')
+      .eq('id', activeHotelId)
+      .maybeSingle();
+    if (hActivo) hotel = hActivo;
+  }
+  if (hotel?.timezone) (await import('@/lib/api')).setHotelTimezone(hotel.timezone);
+  if (hotel) {
+    const { setHotelCurrency } = await import('@/lib/currency');
+    setHotelCurrency({ codigo: hotel.moneda_codigo, simbolo: hotel.moneda_simbolo, locale: hotel.moneda_locale });
+  }
+
+  const { data: roleRow, error: roleError } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', session.user.id)
+    .order('role', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (roleError) throw roleError;
+
+  const hydrated: User = {
+    id: session.user.id,
+    email: session.user.email || '',
+    nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
+    apellidoPaterno: profile?.apellido_paterno || '',
+    rol: (roleRow?.role as string) || 'Recepcion',
+    hotelNombre: hotel?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
+  };
+  localStorage.setItem('user', JSON.stringify(hydrated));
+  localStorage.setItem('token', session.access_token);
+  localStorage.removeItem('demoMode');
+  return hydrated;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [permisosVersion, setPermisosVersion] = useState(0);
+  const userRef = useRef<User | null>(null);
+  userRef.current = user;
+  // Cierre voluntario en curso: evita rehidratar mientras se sale.
+  const loggingOutRef = useRef(false);
+
   const recargarPermisos = async () => {
     await syncPermisosFromBD();
     setPermisosVersion((v) => v + 1);
@@ -27,117 +103,123 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Si un administrador cambia permisos, se aplican sin volver a iniciar sesión.
   useRealtimeSync('permisos_hotel', () => void recargarPermisos(), { enabled: Boolean(user) });
 
-useEffect(() => {
-    const bootstrapAuth = async () => {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-      const isDemoMode = localStorage.getItem('demoMode') === 'true';
+  const endSession = () => {
+    setUser(null);
+    clearLocalSessionData();
+    clearOfflineCache();
+    resetPermissions();
+  };
 
-      if (isDemoMode && storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
+  /** Rehidrata; si falla por red se conserva el usuario actual. */
+  const tryHydrate = async (session: Session) => {
+    try {
+      const hydrated = await hydrateFromSession(session);
+      setUser(hydrated);
+      await recargarPermisos();
+      return true;
+    } catch (error) {
+      console.warn('[auth] no se pudo actualizar el perfil; se conserva la sesión', error);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      // Modo demo: sesión local sin Supabase.
+      if (localStorage.getItem('demoMode') === 'true') {
+        const cached = readCachedUser();
+        if (cached) {
           api.setDemoMode(true);
-        } catch (e) {
-          localStorage.removeItem('user');
+          setUser(cached);
+        } else {
           localStorage.removeItem('demoMode');
-        } finally {
-          setIsLoading(false);
         }
+        setIsLoading(false);
         return;
       }
 
-      if (token && storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-          api.setDemoMode(false);
+      const cached = readCachedUser();
+      if (cached) setUser(cached);
 
-          const { supabase } = await import('@/integrations/supabase/client');
-          const { data: { session } } = await supabase.auth.getSession();
+      // La fuente de verdad es la sesión de Supabase (se renueva sola con el
+      // refresh token). Sólo se considera cerrada si Supabase lo confirma.
+      const { data, error } = await supabase.auth.getSession();
+      if (cancelled) return;
 
-          if (!session?.user) {
-            api.setHotelId(null);
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
-            return;
-          }
-
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*, hotels!profiles_hotel_id_fkey(nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale)')
-            .eq('id', session.user.id)
-            .maybeSingle();
-
-          const activeHotelId = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
-          if (activeHotelId) api.setHotelId(activeHotelId);
-          else api.setHotelId(null);
-          let h0: any = (profile as any)?.hotels;
-          if (activeHotelId && activeHotelId !== profile?.hotel_id) {
-            const { data: hActivo } = await supabase
-              .from('hotels')
-              .select('nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale')
-              .eq('id', activeHotelId)
-              .maybeSingle();
-            if (hActivo) h0 = hActivo;
-          }
-          const tz = h0?.timezone;
-          if (tz) (await import('@/lib/api')).setHotelTimezone(tz);
-          if (h0) {
-            const { setHotelCurrency } = await import('@/lib/currency');
-            setHotelCurrency({ codigo: h0.moneda_codigo, simbolo: h0.moneda_simbolo, locale: h0.moneda_locale });
-          }
-
-          const { data: roleRow } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .order('role', { ascending: true })
-            .limit(1)
-            .maybeSingle();
-
-          const hydratedUser: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
-            apellidoPaterno: profile?.apellido_paterno || '',
-            rol: (roleRow?.role as string) || 'Recepcion',
-            hotelNombre: h0?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
-          };
-
-          setUser(hydratedUser);
-          localStorage.setItem('user', JSON.stringify(hydratedUser));
-          localStorage.setItem('token', session.access_token);
-          localStorage.removeItem('demoMode');
-          await recargarPermisos();
-        } catch (e) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          api.setHotelId(null);
-          setUser(null);
-        } finally {
+      if (error) {
+        const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        if (isAuthRetryableFetchError(error) || offline) {
+          // Sin conexión o servidor caído: la sesión sigue; se renovará al volver la red.
+          console.warn('[auth] no se pudo validar la sesión; se conserva', error);
+          if (cached) await recargarPermisos();
           setIsLoading(false);
-        }
-        return;
-      }
-
-      // Fallback: si hay sesión activa en Supabase aunque no haya token/user en localStorage
-      try {
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          localStorage.setItem('token', session.access_token);
-          localStorage.setItem('user', JSON.stringify({ id: session.user.id, email: session.user.email }));
-          // Re-ejecuta bootstrap para hidratar perfil completo
-          void bootstrapAuth();
           return;
         }
-      } catch (e) {
-        console.error('bootstrapAuth session fallback failed:', e);
+        // El servidor rechazó la sesión (revocada o vencida de verdad).
+        endSession();
+        setIsLoading(false);
+        return;
       }
-      setIsLoading(false);
+
+      if (!data.session) {
+        if (cached) endSession();
+        setIsLoading(false);
+        return;
+      }
+
+      const ok = await tryHydrate(data.session);
+      if (!ok) {
+        if (!cached) {
+          // Sin copia local ni perfil: se usa lo mínimo de la sesión para no sacar al usuario.
+          setUser({
+            id: data.session.user.id,
+            email: data.session.user.email || '',
+            nombre: data.session.user.email?.split('@')[0] || '',
+            rol: 'Recepcion',
+          });
+        }
+        await recargarPermisos();
+      }
+      if (!cancelled) setIsLoading(false);
     };
 
-    void bootstrapAuth();
+    void bootstrap();
+
+    // Cambios de sesión: otra pestaña, renovación del token o cierre real.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED' && session) {
+        localStorage.setItem('token', session.access_token);
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
+        if (localStorage.getItem('demoMode') === 'true') return;
+        // Supabase sólo emite SIGNED_OUT cuando la sesión terminó de verdad:
+        // botón de salir (aquí o en otra pestaña) o revocación en el servidor.
+        endSession();
+        return;
+      }
+      if (event === 'SIGNED_IN' && session && !userRef.current && !loggingOutRef.current) {
+        // Inicio de sesión en otra pestaña: se aplica aquí sin recargar.
+        setTimeout(() => { void tryHydrate(session); }, 0);
+      }
+    });
+
+    // Al volver la conexión se rehidrata sin cerrar nada.
+    const onOnline = () => {
+      if (!userRef.current || localStorage.getItem('demoMode') === 'true') return;
+      void supabase.auth.getSession().then(({ data }) => {
+        if (data.session) void tryHydrate(data.session);
+      });
+    };
+    window.addEventListener('online', onOnline);
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+      window.removeEventListener('online', onOnline);
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -161,71 +243,21 @@ useEffect(() => {
   };
 
   const logout = () => {
-    setUser(null);
-    api.logout();
+    loggingOutRef.current = true;
+    endSession();
     api.setDemoMode(false);
-    localStorage.removeItem('user');
-    localStorage.removeItem('demoMode');
-    // En equipos compartidos no deben quedar datos de huéspedes ni permisos de otro hotel.
-    clearOfflineCache();
-    resetPermissions();
+    // Cierra sólo en este equipo; los demás dispositivos siguen conectados.
+    void api.logout().finally(() => { loggingOutRef.current = false; });
   };
 
   const refreshUser = async () => {
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        api.setHotelId(null);
-        setUser(null);
-        return;
-      }
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*, hotels!profiles_hotel_id_fkey(nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale)')
-        .eq('id', session.user.id)
-        .maybeSingle();
-      const activeHotelId2 = (profile as any)?.hotel_activo_id || profile?.hotel_id || null;
-      if (activeHotelId2) api.setHotelId(activeHotelId2);
-      else api.setHotelId(null);
-      let h2: any = (profile as any)?.hotels;
-      if (activeHotelId2 && activeHotelId2 !== profile?.hotel_id) {
-        const { data: hActivo2 } = await supabase
-          .from('hotels')
-          .select('nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale')
-          .eq('id', activeHotelId2)
-          .maybeSingle();
-        if (hActivo2) h2 = hActivo2;
-      }
-      const tz2 = h2?.timezone;
-      if (tz2) (await import('@/lib/api')).setHotelTimezone(tz2);
-      if (h2) {
-        const { setHotelCurrency } = await import('@/lib/currency');
-        setHotelCurrency({ codigo: h2.moneda_codigo, simbolo: h2.moneda_simbolo, locale: h2.moneda_locale });
-      }
-      const { data: roleRow } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .order('role', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      const u: User = {
-        id: session.user.id,
-        email: session.user.email || '',
-        nombre: profile?.nombre || session.user.email?.split('@')[0] || '',
-        apellidoPaterno: profile?.apellido_paterno || '',
-        rol: (roleRow?.role as string) || 'Recepcion',
-        hotelNombre: h2?.nombre || (session.user.user_metadata?.hotel_nombre as string) || 'Hotel',
-      };
-      setUser(u);
-      localStorage.setItem('user', JSON.stringify(u));
-      localStorage.setItem('token', session.access_token);
-      localStorage.removeItem('demoMode');
-      await recargarPermisos();
-    } catch (e) {
-      console.error('refreshUser error', e);
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return;
+    if (!data.session) {
+      endSession();
+      return;
     }
+    await tryHydrate(data.session);
   };
 
   return (
