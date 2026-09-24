@@ -4,7 +4,7 @@ import { crearNotificacion } from '@/lib/notificaciones';
 import { setHotelCurrency, formatCurrency } from '@/lib/currency';
 import { withOfflineCache } from '@/lib/offlineCache';
 import { assertShiftWriteAllowed } from '@/lib/shiftAccess';
-import { occupiesNight } from '@/lib/stayOccupancy';
+import { occupancyEnd, occupiesNight } from '@/lib/stayOccupancy';
 import { formatDate as formatDateOnly } from '@/lib/dateFormat';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
@@ -924,7 +924,7 @@ class ApiClient {
     if (habError) throw habError;
     let conflictsQuery = supabase
       .from('reservas')
-      .select('habitacion_id, fecha_checkin, fecha_checkout')
+      .select('habitacion_id, fecha_checkin, fecha_checkout, estado, checkin_realizado, checkout_realizado')
       .eq('hotel_id', this.hid())
       .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
       .lt('fecha_checkin', effectiveCheckout);
@@ -934,10 +934,8 @@ class ApiClient {
     const ocupadasIds = new Set((ocupadas || [])
       .filter((reservation: any) => {
         const reservationCheckin = String(reservation.fecha_checkin || '').slice(0, 10);
-        const reservationCheckoutRaw = String(reservation.fecha_checkout || '').slice(0, 10);
-        const reservationCheckout = reservationCheckoutRaw <= reservationCheckin
-          ? addCalendarDays(reservationCheckin, 1)
-          : reservationCheckoutRaw;
+        // Un huésped hospedado con salida vencida sigue ocupando hasta que sale.
+        const reservationCheckout = occupancyEnd(reservation, todayLocal());
         return reservationCheckin < effectiveCheckout && reservationCheckout > checkin;
       })
       .map((reservation: any) => reservation.habitacion_id));
@@ -1475,11 +1473,14 @@ class ApiClient {
     // Si aún no se corre el SQL de datos fiscales, se muestra lo básico.
     if (error && /column|does not exist|schema cache/i.test(error.message || '')) ({ data, error } = await query(base));
     if (error) throw error;
-    return (data || []).map((r: any) => ({
-      ...r,
-      cliente_nombre: r.clientes ? [r.clientes.nombre, r.clientes.apellido_paterno, r.clientes.apellido_materno].filter(Boolean).join(' ') : '',
-      habitacion_numero: r.habitaciones?.numero,
-    }));
+    return (data || [])
+      // Una reserva cancelada o no-show no se factura si la factura seguía pendiente.
+      .filter((r: any) => !(['Cancelada', 'NoShow'].includes(String(r.estado || '')) && (r.factura_estado || 'Pendiente') === 'Pendiente'))
+      .map((r: any) => ({
+        ...r,
+        cliente_nombre: r.clientes ? [r.clientes.nombre, r.clientes.apellido_paterno, r.clientes.apellido_materno].filter(Boolean).join(' ') : '',
+        habitacion_numero: r.habitaciones?.numero,
+      }));
   };
   setRequiereFactura = async (id: string, requiere: boolean): Promise<any> => {
     const { data, error } = await (supabase as any).from('reservas')
@@ -1753,10 +1754,14 @@ class ApiClient {
           patch.estado_limpieza = 'Sucia';
         }
         if (Object.keys(patch).length) {
-          await supabase.from('habitaciones').update(patch).eq('id', r.habitacion_id);
+          const { error: roomError } = await supabase.from('habitaciones').update(patch).eq('id', r.habitacion_id).eq('hotel_id', this.hid());
+          if (roomError) throw roomError;
         }
       }
-    } catch { /* noop */ }
+    } catch (roomErr: any) {
+      // La tarea sí cambió; se avisa que la habitación no se actualizó.
+      throw new Error(`La tarea se actualizó, pero la habitación no: ${roomErr?.message || 'error desconocido'}`);
+    }
     try {
       const prefix = 'hospedapp:cache:';
       Object.keys(localStorage).filter(k => k.startsWith(prefix) && (k.includes(':tareas_limpieza:') || k.includes(':habitaciones:'))).forEach(k => localStorage.removeItem(k));

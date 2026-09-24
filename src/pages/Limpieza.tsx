@@ -106,12 +106,18 @@ export default function Limpieza() {
   const cambiarEstadoBulk = async (estado: string) => {
     try {
       const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.updateEstadoLimpieza(id, estado)));
-      toast({ title: 'Estado actualizado', description: `${ids.length} tarea(s) → ${estado}` });
+      const results = await Promise.allSettled(ids.map(id => api.updateEstadoLimpieza(id, estado)));
+      const fallidas = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
+      if (fallidas.length) {
+        toast({ title: `${ids.length - fallidas.length} de ${ids.length} actualizadas`, description: fallidas[0].reason?.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Estado actualizado', description: `${ids.length} tarea(s) → ${estado}` });
+      }
       dt.clearSelection();
-      await cargarDatos();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      await cargarDatos();
     }
   };
 
@@ -164,9 +170,10 @@ export default function Limpieza() {
         title: 'Estado actualizado',
         description: `Habitación ${getHabitacionNumero(tarea)} · ${nuevoEstado}`,
       });
-      cargarDatos();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      cargarDatos();
     }
   };
 

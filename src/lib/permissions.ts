@@ -225,3 +225,9 @@ export function canAccess(viewKey: string, role: string | undefined): boolean {
   if (!allowed) return false;
   return allowed.includes(role as RoleId);
 }
+
+/** Primera pantalla que el rol puede abrir (para no redirigir a una vista prohibida). */
+export function firstAllowedPath(role: string | undefined): string | null {
+  const view = VIEWS.find((v) => v.path && !v.path.includes(':') && canAccess(v.key, role));
+  return view?.path || null;
+}

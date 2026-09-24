@@ -182,18 +182,18 @@ export default function Turnos() {
   }, [loading, location.state, turno]);
 
   const efectivoEsperado = useMemo(
-    () => Number(turno?.fondo_inicial || 0) + summary.efectivo - summary.egresosEfectivo,
+    () => Math.round((Number(turno?.fondo_inicial || 0) + summary.efectivo - summary.egresosEfectivo) * 100) / 100,
     [turno?.fondo_inicial, summary.efectivo, summary.egresosEfectivo],
   );
   const contado = Number(fondoContado || 0);
-  const diferencia = contado - efectivoEsperado;
+  const diferencia = Math.round((contado - efectivoEsperado) * 100) / 100;
   const hasCashCount = fondoContado.trim() !== '' && Number.isFinite(contado) && contado >= 0;
   const openingAmount = Number(fondoInicial || 0);
   const validOpeningAmount = Number.isFinite(openingAmount) && openingAmount >= 0;
   const operatorName = `${user?.nombre || ''} ${user?.apellidoPaterno || ''}`.trim() || user?.email || 'Usuario';
   const totalIngresos = summary.efectivo + summary.tarjeta + summary.transferencia + summary.otros;
   const cajaConciliada = hasCashCount && Math.abs(diferencia) < 0.01;
-  const motivoDiferenciaCompleto = Math.abs(diferencia) < 0.01 || Boolean(motivoDiferencia.trim());
+  const motivoDiferenciaCompleto = Math.abs(diferencia) < 0.01 || motivoDiferencia.trim().length >= 3;
   const cierreListo = hasCashCount && cashConfirmed && motivoDiferenciaCompleto && !reportLoading && Boolean(closeReport);
   const deliveryUser = usuarios.find((member) => member.id === entregaA);
 
@@ -264,7 +264,7 @@ export default function Turnos() {
       toast({ title: 'Confirma que contaste físicamente la caja', variant: 'destructive' });
       return;
     }
-    if (Math.abs(diferencia) > 0.009 && !motivoDiferencia.trim()) {
+    if (Math.abs(diferencia) >= 0.01 && motivoDiferencia.trim().length < 3) {
       toast({ title: 'Explica la diferencia de caja', variant: 'destructive' });
       return;
     }
@@ -311,9 +311,9 @@ export default function Turnos() {
         ...(closedShift || {}),
         estado: 'Cerrado',
         cerrado_at: closedShift?.cerrado_at || new Date().toISOString(),
-        efectivo_esperado: efectivoEsperado,
-        efectivo_contado: contado,
-        diferencia,
+        efectivo_esperado: closedShift?.efectivo_esperado ?? efectivoEsperado,
+        efectivo_contado: closedShift?.efectivo_contado ?? contado,
+        diferencia: closedShift?.diferencia ?? diferencia,
         entrega_a: deliveryUser ? `${deliveryUser.nombre || ''} ${deliveryUser.apellido_paterno || ''}`.trim() : closedShift?.entrega_a || null,
         pendientes_entrega: pendientesEntrega.trim() || closedShift?.pendientes_entrega || null,
         motivo_diferencia: motivoDiferencia.trim() || closedShift?.motivo_diferencia || null,

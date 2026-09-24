@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/useAuth';
-import { canAccess } from '@/lib/permissions';
+import { canAccess, firstAllowedPath } from '@/lib/permissions';
 import { useShift } from '@/contexts/useShift';
 
 interface ProtectedRouteProps {
@@ -41,7 +41,16 @@ export function ProtectedRoute({ children, viewKey, requireShift = true }: Prote
   }
 
   if (viewKey && !canAccess(viewKey, user?.rol)) {
-    return <Navigate to="/dashboard" replace />;
+    const target = firstAllowedPath(user?.rol);
+    if (target && target !== location.pathname) return <Navigate to={target} replace />;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center">
+        <div>
+          <p className="text-lg font-semibold text-[#10233F]">Sin acceso</p>
+          <p className="mt-1 text-sm text-muted-foreground">Tu rol no tiene pantallas asignadas. Pide a un administrador que revise tus permisos.</p>
+        </div>
+      </div>
+    );
   }
 
   if (requireShift && shiftRequired && shiftLoading) {

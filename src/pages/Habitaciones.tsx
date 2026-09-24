@@ -153,8 +153,10 @@ export default function Habitaciones() {
       matchEstado = !esLimpia(h) && mantOk(h);
     } else if (filterEstado === 'Mantenimiento') {
       matchEstado = !mantOk(h);
+    } else if (filterEstado === 'Disponible') {
+      matchEstado = h.estado_habitacion === 'Disponible' && esLimpia(h) && mantOk(h);
     } else if (filterEstado !== 'all') {
-      matchEstado = h.estado_habitacion === filterEstado && esLimpia(h) && mantOk(h);
+      matchEstado = h.estado_habitacion === filterEstado;
     }
     return matchSearch && matchPiso && matchTipo && matchEstado;
   });
@@ -397,7 +399,7 @@ export default function Habitaciones() {
   };
 
   const roomStats = [
-    { label: 'Disponibles', filter: 'Disponible', count: habitaciones.filter(h => h.estado_habitacion === 'Disponible' && String(h.estado_limpieza || '').toLowerCase() === 'limpia' && String(h.estado_mantenimiento || 'OK').toLowerCase() === 'ok').length, className: 'text-success' },
+    { label: 'Disponibles', filter: 'Disponible', count: habitaciones.filter(h => h.estado_habitacion === 'Disponible' && esLimpia(h) && mantOk(h)).length, className: 'text-success' },
     { label: 'Ocupadas', filter: 'Ocupada', count: habitaciones.filter(h => h.estado_habitacion === 'Ocupada').length, className: 'text-warning' },
     { label: 'Reservadas', filter: 'Reservada', count: habitaciones.filter(h => h.estado_habitacion === 'Reservada').length, className: 'text-primary' },
     { label: 'Limpieza', filter: 'Limpieza', count: habitaciones.filter(h => !esLimpia(h) && mantOk(h)).length, className: 'text-info' },

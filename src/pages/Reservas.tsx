@@ -202,7 +202,9 @@ export default function Reservas() {
   const [filtroTipo, setFiltroTipo] = useState<string>(savedView.filtroTipo || 'all');
   const [filtroPiso, setFiltroPiso] = useState<string>(savedView.filtroPiso || 'all');
   const [busqueda, setBusqueda] = useState(savedView.busqueda || '');
-  const [operationalFilter, setOperationalFilter] = useState<OperationalFilter>(savedView.operationalFilter || 'all');
+  const [operationalFilter, setOperationalFilter] = useState<OperationalFilter>(
+    new URLSearchParams(window.location.search).get('focus') === 'balances' ? 'balance' : (savedView.operationalFilter || 'all'),
+  );
   const [focusReservationId, setFocusReservationId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [calendarFiltersOpen, setCalendarFiltersOpen] = useState(false);
@@ -229,7 +231,8 @@ export default function Reservas() {
   const ayerISO = format(subDays(parseISO(hoyISO), 1), 'yyyy-MM-dd');
   const [desdeCheckin, setDesdeCheckin] = useState(() => navigationFrom ?? (navigationFocus === 'overdue' ? '' : hoyISO));
   const [hastaCheckin, setHastaCheckin] = useState(() => navigationTo ?? (navigationFocus === 'overdue' ? ayerISO : hoyISO));
-  const [desdeCheckout, setDesdeCheckout] = useState(() => navigationFrom ?? (navigationFocus === 'overdue' ? '' : hoyISO));
+  // Salidas: por defecto incluye las vencidas (misma regla que el contador).
+  const [desdeCheckout, setDesdeCheckout] = useState(() => navigationFrom ?? '');
   const [hastaCheckout, setHastaCheckout] = useState(() => navigationTo ?? hoyISO);
   const [busquedaHistorico, setBusquedaHistorico] = useState('');
   const [estadoHistorico, setEstadoHistorico] = useState<string>('todos');
@@ -1717,7 +1720,7 @@ function CheckInOutPanel({
       };
   const titulo = esCheckin ? 'Check-In pendientes' : 'Check-Out pendientes';
   const subtitulo = esCheckin
-    ? 'Reservas pendientes de check-in (incluye atrasadas)'
+    ? 'Reservas pendientes de check-in en el rango elegido'
     : 'Huéspedes pendientes de check-out (incluye atrasados)';
   const ctaLabel = esCheckin ? 'Iniciar Check-In' : 'Iniciar Check-Out';
   const emptyText = esCheckin
@@ -1774,7 +1777,7 @@ function CheckInOutPanel({
                 Personas
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={() => onRefresh()} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>

@@ -46,6 +46,7 @@ export default function Mantenimiento() {
   const [filterEmpleado, setFilterEmpleado] = useState('all');
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
+  const [creandoTicket, setCreandoTicket] = useState(false);
 
   const [formData, setFormData] = useState({
     habitacion_id: '',
@@ -80,8 +81,17 @@ export default function Mantenimiento() {
   }, []);
 
   const filteredTickets = tickets.filter(t => {
-    const matchEstado = filterEstado === 'all' || t.estado === filterEstado;
-    const matchPrioridad = filterPrioridad === 'all' || t.prioridad === filterPrioridad;
+    // Los mosaicos agrupan estados equivalentes; el filtro usa los mismos grupos.
+    const estadoGrupos: Record<string, string[]> = {
+      Pendiente: ['Abierto', 'Pendiente'],
+      EnProceso: ['EnProceso', 'En Proceso'],
+      Completada: ['Resuelto', 'Completada', 'Completado', 'Cerrado'],
+    };
+    const prioridadGrupos: Record<string, string[]> = { Urgente: ['Crítica', 'Urgente'] };
+    const matchEstado = filterEstado === 'all' || (estadoGrupos[filterEstado] || [filterEstado]).includes(t.estado);
+    const matchPrioridad = filterPrioridad === 'all' || (prioridadGrupos[filterPrioridad] || [filterPrioridad]).includes(t.prioridad);
+    const abierto = !['Resuelto', 'Completada', 'Completado', 'Cerrado'].includes(t.estado);
+    if (filterPrioridad === 'Urgente' && filterEstado === 'all' && !abierto) return false;
     const asignadoId = t.asignado_a || t.empleado_id || '';
     const matchEmpleado = filterEmpleado === 'all'
       || (filterEmpleado === 'sin_asignar' && !asignadoId && !t.asignado_nombre && !t.asignado)
@@ -178,11 +188,13 @@ export default function Mantenimiento() {
   };
 
   const handleCreateTicket = async () => {
+    if (creandoTicket) return;
     if (!formData.habitacion_id || !formData.titulo || !formData.descripcion) {
       toast({ title: 'Faltan datos', description: 'Completa habitación, título y descripción.', variant: 'destructive' });
       return;
     }
 
+    setCreandoTicket(true);
     try {
       const empleadoSeleccionado = empleados.find(e => e.id === formData.asignado_a);
       await api.createTareaMantenimiento({
@@ -201,6 +213,8 @@ export default function Mantenimiento() {
       cargarDatos();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setCreandoTicket(false);
     }
   };
 
@@ -239,7 +253,7 @@ export default function Mantenimiento() {
               <Wrench className="h-4 w-4 text-info" />
               <div><p className="text-lg font-bold tabular-nums">{stats.enProceso}</p><p className="text-[11px] text-muted-foreground">En proceso</p></div>
             </button>
-            <button type="button" onClick={() => setFilterPrioridad('Urgente')} className="flex items-center gap-2 p-3 text-left transition hover:bg-muted/40">
+            <button type="button" onClick={() => { setFilterPrioridad('Urgente'); setFilterEstado('all'); }} className="flex items-center gap-2 p-3 text-left transition hover:bg-muted/40">
               <AlertTriangle className="h-4 w-4 text-destructive" />
               <div><p className="text-lg font-bold tabular-nums">{stats.criticos}</p><p className="text-[11px] text-muted-foreground">Críticos</p></div>
             </button>
@@ -366,7 +380,7 @@ export default function Mantenimiento() {
                   <Label>Descripción *</Label>
                   <Textarea className="min-h-24" placeholder="Qué ocurre, dónde y cualquier detalle útil..." value={formData.descripcion} onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })} />
                 </div>
-                <Button className="w-full" onClick={handleCreateTicket}>Crear ticket</Button>
+                <Button className="w-full" onClick={handleCreateTicket} disabled={creandoTicket}>{creandoTicket ? 'Creando…' : 'Crear ticket'}</Button>
               </div>
             </DialogContent>
           </Dialog>

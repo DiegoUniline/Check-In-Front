@@ -66,14 +66,18 @@ export default function ReservaDetalle() {
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const requestRef = useRef(0);
   const load = async (silent = false) => {
     if (!id) return;
+    const requestId = ++requestRef.current;
     if (!silent) setLoading(true);
     try {
       const [reservationData, roomData] = await Promise.all([
         api.getReserva(id),
         api.getHabitaciones(),
       ]);
+      // Una respuesta vieja (otra reservación o recarga anterior) no pisa la actual.
+      if (requestId !== requestRef.current) return;
       if (!reservationData) throw new Error('La reservación no existe o no pertenece al hotel activo');
       setReserva(reservationData);
       setRooms(roomData || []);
@@ -114,7 +118,7 @@ export default function ReservaDetalle() {
     </MainLayout>;
   }
 
-  const activeStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && !reserva.checkout_realizado;
+  const activeStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && Boolean(reserva.checkin_realizado) && !reserva.checkout_realizado;
   const canCheckin = ['Pendiente', 'Confirmada'].includes(String(reserva.estado || '')) && !reserva.checkin_realizado;
   const canEditStay = canAccess('reservas.operacion.modify_dates', user?.rol)
     && !['Cancelada', 'NoShow', 'CheckOut'].includes(String(reserva.estado || ''));

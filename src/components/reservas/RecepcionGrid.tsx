@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   BedDouble, User, Clock, AlertCircle, LayoutGrid, List,
@@ -17,6 +17,7 @@ import {
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
 import { todayLocal } from '@/lib/api';
+import { isInHouseStay, occupiesNight } from '@/lib/stayOccupancy';
 
 interface RecepcionGridProps {
   habitaciones: any[];
@@ -29,10 +30,6 @@ interface RecepcionGridProps {
 }
 
 type EstadoCard = 'libre' | 'reservada' | 'ocupada' | 'mantenimiento';
-
-const effectiveCheckoutDate = (checkin: string, checkout: string) => (
-  checkout <= checkin ? format(addDays(parseISO(checkin), 1), 'yyyy-MM-dd') : checkout
-);
 
 interface HabitacionStatus {
   habitacion: any;
@@ -124,27 +121,17 @@ export function RecepcionGrid({
 
   const items: HabitacionStatus[] = useMemo(() => {
     return habitaciones.map((hab) => {
-      if ((hab.estado_mantenimiento && hab.estado_mantenimiento !== 'OK')
+      if (String(hab.estado_mantenimiento || 'OK').toLowerCase() !== 'ok'
         || ['Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(String(hab.estado_habitacion || ''))) {
         return { habitacion: hab, estado: 'mantenimiento' };
       }
-      const ocupada = reservas.find((r) => {
-        if (r.habitacion_id !== hab.id) return false;
-        if (!['CheckIn', 'Hospedado'].includes(r.estado)) return false;
-        if (!r.fecha_checkin || !r.fecha_checkout) return false;
-        const checkin = r.fecha_checkin.substring(0, 10);
-        const checkout = effectiveCheckoutDate(checkin, r.fecha_checkout.substring(0, 10));
-        // Un huésped con salida vencida que no ha hecho check-out sigue en la habitación.
-        if (r.checkin_realizado && !r.checkout_realizado) return todayStr >= checkin;
-        return todayStr >= checkin && todayStr < checkout;
-      });
+      const deLaHab = reservas.filter((r) => (r.habitacion_id || r.habitaciones?.id) === hab.id);
+      // Hospedado hoy (incluye salida vencida sin check-out).
+      const ocupada = deLaHab.find((r) => isInHouseStay(r) && occupiesNight(r, todayStr, todayStr));
       if (ocupada) return { habitacion: hab, estado: 'ocupada', reservaActiva: ocupada };
 
-      const reservada = reservas.find((r) => {
-        if (r.habitacion_id !== hab.id) return false;
-        if (!['Pendiente', 'Confirmada'].includes(r.estado)) return false;
-        return r.fecha_checkin?.substring(0, 10) === todayStr;
-      });
+      // Reservada para esta noche y aún sin llegada (incluye la que empezó ayer).
+      const reservada = deLaHab.find((r) => ['Pendiente', 'Confirmada'].includes(r.estado) && occupiesNight(r, todayStr, todayStr));
       if (reservada) return { habitacion: hab, estado: 'reservada', reservaActiva: reservada };
 
       return { habitacion: hab, estado: 'libre' };

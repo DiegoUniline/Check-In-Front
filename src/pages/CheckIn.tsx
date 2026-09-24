@@ -162,6 +162,23 @@ export default function CheckIn() {
           })),
       );
 
+      // Guarda en el cliente los datos capturados en el registro.
+      const clienteId = reserva?.cliente_id || reserva?.cliente?.id || reserva?.clientes?.id;
+      if (clienteId) {
+        const cambios = Object.fromEntries(Object.entries({
+          nombre: formData.nombre.trim(),
+          apellido_paterno: formData.apellidoPaterno.trim(),
+          numero_documento: formData.documento.trim(),
+          nacionalidad: formData.nacionalidad.trim(),
+          email: formData.email.trim(),
+        }).filter(([, v]) => v));
+        if (Object.keys(cambios).length) {
+          await api.updateCliente(clienteId, cambios).catch((err: any) => {
+            toast({ title: 'Check-in hecho, pero no se actualizó el cliente', description: err?.message, variant: 'destructive' });
+          });
+        }
+      }
+
       // Entregables marcados en la lista (llaves, controles, toallas…).
       const fallidos: string[] = [];
       for (const [entregableId, cantidad] of Object.entries(entregablesSeleccionados)) {

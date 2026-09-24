@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode, useRef } from 'react';
 import api from '@/lib/api';
 import { useAuth } from '@/contexts/useAuth';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
@@ -40,13 +40,18 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     setShiftViewOnlyActive(true);
   }, [viewOnlyStorageKey]);
 
+  const loadedOnceRef = useRef(false);
+  useEffect(() => { loadedOnceRef.current = false; }, [user?.id]);
+
   const refreshShift = useCallback(async () => {
     if (!isAuthenticated || !user?.id || !shiftRequired) {
       setOpenShift(null);
       setLoading(false);
       return null;
     }
-    setLoading(true);
+    // Sólo la primera carga muestra el indicador: refrescos posteriores (p. ej.
+    // otro usuario abrió turno) no deben desmontar la pantalla actual.
+    if (!loadedOnceRef.current) setLoading(true);
     try {
       const current = await api.getOpenShift(user.id);
       setOpenShift(current);
@@ -60,6 +65,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       setOpenShift(null);
       return null;
     } finally {
+      loadedOnceRef.current = true;
       setLoading(false);
     }
   }, [isAuthenticated, shiftRequired, user?.id, viewOnlyStorageKey]);

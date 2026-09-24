@@ -344,7 +344,9 @@ export function TimelineGrid({
     const maintenance = String(room.estado_mantenimiento || 'OK').toLowerCase();
     if (maintenance !== 'ok' || String(room.estado_habitacion || '').toLowerCase().includes('mantenimiento')) return false;
     const activeStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && !reserva.checkout_realizado;
-    if (activeStay) {
+    // Para un cambio de habitación la nueva debe estar lista; para ajustar la
+    // salida en su propia habitación (ocupada por el mismo huésped) no aplica.
+    if (activeStay && room.id !== (reserva.habitacion_id || reserva.habitaciones?.id)) {
       const cleaning = String(room.estado_limpieza || 'Limpia').toLowerCase();
       if (String(room.estado_habitacion || '') !== 'Disponible' || (!cleaning.includes('limpia') && !cleaning.includes('lista'))) return false;
     }

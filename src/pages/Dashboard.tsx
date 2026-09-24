@@ -208,12 +208,15 @@ export default function Dashboard() {
     };
   }, [load]);
 
+  // Fecha del hotel (no del dispositivo); se recalcula cada minuto.
   const dateLabel = useMemo(() => new Intl.DateTimeFormat('es-MX', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(new Date()), []);
+    timeZone: 'UTC',
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }).format(new Date(`${todayLocal()}T12:00:00Z`)), [now]);
 
   const firstName = user?.nombre?.trim().split(/\s+/)[0] || 'equipo';
   const isManager = canAccess('reportes', user?.rol);
