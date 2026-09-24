@@ -145,6 +145,7 @@ interface FormData {
   notasInternas: string;
   descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
   descuentoValor: number;
+  descuentoId: string;
   impuestos: ImpuestoTemp[];
   entregablesSeleccionados: string[];
   entregablesCantidad: Record<string, number>;
@@ -195,6 +196,7 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => {
     notasInternas: '',
     descuentoTipo: 'none',
     descuentoValor: 0,
+    descuentoId: '',
     impuestos: [],
     entregablesSeleccionados: [],
     entregablesCantidad: {},
@@ -217,6 +219,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const [tiposHabitacion, setTiposHabitacion] = useState<any[]>([]);
   const [habitacionesDisponibles, setHabitacionesDisponibles] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
+  const [descuentosCat, setDescuentosCat] = useState<any[]>([]);
   const [entregables, setEntregables] = useState<any[]>([]);
   const [conceptosCargo, setConceptosCargo] = useState<any[]>([]);
 
@@ -306,6 +309,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         api.getClientes?.() || Promise.resolve([]),
         api.getMetodosPago({ soloActivos: true }).catch(() => []),
       ]);
+      api.getDescuentos(true).then(setDescuentosCat).catch(() => setDescuentosCat([]));
       setTiposHabitacion(tiposData);
       setEntregables(entregablesData);
       setConceptosCargo(conceptosData);
@@ -369,7 +373,14 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   }, [open, origen, formData.fechaCheckin, formData.fechaCheckout]);
 
   const handleSelectCliente = (cliente: any) => {
-    setFormData({ ...formData, clienteId: cliente.id, clienteData: cliente });
+    const descuento = cliente?.descuento_id ? descuentosCat.find((d) => d.id === cliente.descuento_id) : null;
+    setFormData({
+      ...formData,
+      clienteId: cliente.id,
+      clienteData: cliente,
+      ...(descuento ? { descuentoId: descuento.id, descuentoTipo: descuento.tipo, descuentoValor: Number(descuento.valor) } : {}),
+    });
+    if (descuento) toast({ title: `Descuento del cliente aplicado`, description: descuento.nombre });
   };
 
   const handleSelectRoom = (habitacion: any) => {
@@ -683,6 +694,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         })),
         checkin: origen === 'Recepcion',
       });
+      const descuentoCat = descuentosCat.find((d) => d.id === formData.descuentoId);
+      if (descuentoCat && descuentoMonto > 0 && reserva?.id) {
+        await api.setDescuentoReserva(reserva.id, { id: descuentoCat.id, nombre: descuentoCat.nombre }).catch(() => undefined);
+      }
       if (requiereFactura && reserva?.id) {
         try {
           await api.setRequiereFactura(reserva.id, true);
@@ -815,7 +830,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 data-step-focus={value === 'Reserva' ? 'dates' : undefined}
               onClick={() => handleOrigenChange(value)}
               className={cn(
-                'flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
+                'flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors',
                 origen === value ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
               )}
             >
@@ -882,7 +897,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   type="button"
                   onClick={() => setFormData({ ...formData, fechaCheckout: addDays(formData.fechaCheckin, n) })}
                   className={cn(
-                    'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                    'rounded-md border px-2.5 py-1 text-[11px] transition-colors',
                     stayDayDifference === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40',
                   )}
                 >
@@ -1240,8 +1255,27 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
               <div className="space-y-1.5 rounded-lg bg-white/10 p-2.5">
                 <Label className="flex items-center gap-1.5 text-[11px] text-white/80"><Percent className="h-3 w-3" />Descuento</Label>
+                {descuentosCat.length > 0 && (
+                  <Select
+                    value={formData.descuentoId || 'manual'}
+                    onValueChange={(v) => {
+                      const d = descuentosCat.find((x) => x.id === v);
+                      setFormData(d
+                        ? { ...formData, descuentoId: d.id, descuentoTipo: d.tipo, descuentoValor: Number(d.valor) }
+                        : { ...formData, descuentoId: '', descuentoTipo: 'none', descuentoValor: 0 });
+                    }}
+                  >
+                    <SelectTrigger className="h-9 border-input bg-background text-xs text-foreground"><SelectValue placeholder="Del catálogo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual / sin catálogo</SelectItem>
+                      {descuentosCat.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>{d.nombre} · {d.tipo === 'Porcentaje' ? `${Number(d.valor)}%` : fmt(Number(d.valor))}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <div className="flex gap-1.5">
-                  <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}>
+                  <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoId: '', descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}>
                     <SelectTrigger className="h-9 w-28 border-input bg-background text-xs text-foreground"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Ninguno</SelectItem>
@@ -1254,7 +1288,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       {formData.descuentoTipo === 'Porcentaje'
                         ? <Percent className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                         : <DollarSign className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />}
-                      <Input type="number" className="h-9 border-input bg-background pl-8 text-xs text-foreground" value={formData.descuentoValor} onChange={(e) => setFormData({ ...formData, descuentoValor: parseFloat(e.target.value) || 0 })} />
+                      <Input type="number" className="h-9 border-input bg-background pl-8 text-xs text-foreground" value={formData.descuentoValor} onFocus={(e) => e.currentTarget.select()} onChange={(e) => setFormData({ ...formData, descuentoId: '', descuentoValor: parseFloat(e.target.value) || 0 })} />
                     </div>
                   )}
                 </div>
@@ -1329,7 +1363,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   <p className="mb-1.5 text-[10px] font-medium text-white/70">Falta para continuar</p>
                   <div className="flex flex-wrap gap-1">
                     {validationIssues.map((issue) => (
-                      <button key={`${issue.key}-${issue.label}`} type="button" onClick={() => focusReservationField(issue.key)} className="rounded-full bg-white/10 px-2 py-1 text-[10px] text-white transition-colors hover:bg-white/20">
+                      <button key={`${issue.key}-${issue.label}`} type="button" onClick={() => focusReservationField(issue.key)} className="rounded-md bg-white/10 px-2 py-1 text-[10px] text-white transition-colors hover:bg-white/20">
                         {issue.label}
                       </button>
                     ))}

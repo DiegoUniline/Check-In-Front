@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw, Globe, GlobeLock } from 'lucide-react';
+import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw, Globe, GlobeLock, Percent } from 'lucide-react';
+import { DescuentosCatalogo } from '@/components/catalogos/DescuentosCatalogo';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -514,7 +515,15 @@ export default function Catalogos() {
             <CreditCard className="h-4 w-4 mr-2" />
             Métodos de Pago
           </TabsTrigger>
+          <TabsTrigger value="descuentos">
+            <Percent className="h-4 w-4 mr-2" />
+            Descuentos
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="descuentos">
+          <DescuentosCatalogo />
+        </TabsContent>
 
         {/* TAB: Tipos de Habitación */}
         <TabsContent value="tipos-habitacion">

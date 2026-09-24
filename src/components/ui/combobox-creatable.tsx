@@ -55,6 +55,13 @@ export function ComboboxCreatable({
   const [isCreating, setIsCreating] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const justSelectedRef = React.useRef(false);
+  const pointerRef = React.useRef(false);
+  const closedAtRef = React.useRef(0);
+
+  const changeOpen = (next: boolean) => {
+    if (!next) closedAtRef.current = Date.now();
+    setOpen(next);
+  };
 
   const focusNextField = () => {
     const trigger = triggerRef.current;
@@ -75,7 +82,7 @@ export function ComboboxCreatable({
   const handleSelect = (newValue: string) => {
     justSelectedRef.current = true;
     onValueChange(newValue);
-    setOpen(false);
+    changeOpen(false);
     setSearch("");
     setTimeout(() => {
       focusNextField();
@@ -116,7 +123,7 @@ export function ComboboxCreatable({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger asChild>
         <Button
           ref={triggerRef}
@@ -125,8 +132,16 @@ export function ComboboxCreatable({
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
           disabled={disabled}
+          onPointerDown={() => {
+            // El clic ya abre/cierra; el foco no debe volver a abrirlo.
+            pointerRef.current = true;
+            window.setTimeout(() => { pointerRef.current = false; }, 300);
+          }}
           onFocus={() => {
-            if (autoOpenOnFocus && !open && !justSelectedRef.current) setOpen(true);
+            if (!autoOpenOnFocus || open || justSelectedRef.current || pointerRef.current) return;
+            // Al cerrar, el foco regresa al botón: no reabrir.
+            if (Date.now() - closedAtRef.current < 400) return;
+            setOpen(true);
           }}
         >
           {selectedOption ? selectedOption.label : placeholder}

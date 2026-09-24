@@ -4,6 +4,7 @@ import {
   MoreVertical, Eye, Edit, Award, RotateCcw
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { DatosFiscalesFields, datosFiscalesDe, datosFiscalesVacios, regimenNombre, validarDatosFiscales, type DatosFiscales } from '@/components/clientes/DatosFiscalesFields';
 import { ExportButton } from '@/components/ExportButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,7 +82,8 @@ const clienteInicial = {
   nacionalidad: 'Mexicana',
   direccion: '',
   es_vip: false,
-  notas: ''
+  notas: '',
+  descuento_id: '',
 };
 
 type ClienteFiltro = 'all' | 'vip' | 'nuevos' | 'frecuentes';
@@ -103,6 +105,9 @@ export default function Clientes() {
   const [historial, setHistorial] = useState<any[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
+  const [fiscal, setFiscal] = useState<DatosFiscales>(datosFiscalesVacios);
+  const [csfFile, setCsfFile] = useState<File | null>(null);
+  const [descuentosCat, setDescuentosCat] = useState<any[]>([]);
 
   const isVipValue = (value: unknown) => value === true || value === 1 || value === '1' || value === 'true';
 
@@ -138,6 +143,7 @@ export default function Clientes() {
 
   useEffect(() => {
     cargarClientes();
+    api.getDescuentos().then(setDescuentosCat).catch(() => setDescuentosCat([]));
   }, []);
 
   const cargarClientes = async () => {
@@ -166,6 +172,8 @@ export default function Clientes() {
 
   const handleNuevoCliente = () => {
     setFormData(clienteInicial);
+    setFiscal(datosFiscalesVacios);
+    setCsfFile(null);
     setPhoneCountry(DEFAULT_COUNTRY);
     setPhoneLocal('');
     setSelectedCliente(null);
@@ -190,8 +198,11 @@ export default function Clientes() {
       nacionalidad: cliente.nacionalidad || 'Mexicana',
       direccion: '',
       es_vip: esVip,
-      notas: cliente.notas || ''
+      notas: cliente.notas || '',
+      descuento_id: (cliente as any).descuento_id || '',
     });
+    setFiscal(datosFiscalesDe(cliente));
+    setCsfFile(null);
     setSelectedCliente(cliente);
     setIsEditing(true);
     setIsFormOpen(true);
@@ -203,22 +214,47 @@ export default function Clientes() {
       return;
     }
 
+    const errorFiscal = validarDatosFiscales(fiscal);
+    if (errorFiscal) {
+      toast({ title: 'Datos fiscales', description: errorFiscal, variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
-      const { direccion: _direccion, ...rest } = formData as any;
+      const { direccion: _direccion, descuento_id: _descuentoId, ...rest } = formData as any;
+      const tieneFiscal = Boolean(fiscal.rfc.trim() || fiscal.razon_social.trim());
+      const original = (selectedCliente || {}) as Record<string, unknown>;
+      // Sólo se envían columnas con valor o que ya existen en el registro,
+      // así el alta no falla si todavía no se corre el SQL de datos fiscales.
+      const fiscalPayload = Object.fromEntries(
+        Object.entries({ ...fiscal, uso_cfdi: tieneFiscal ? fiscal.uso_cfdi : '', descuento_id: formData.descuento_id })
+          .map(([k, v]) => [k, String(v || '').trim() || null] as const)
+          .filter(([k, v]) => v !== null || k in original),
+      );
       const telefonoNormalizado = joinPhone(phoneCountry, phoneLocal);
       const payload = {
         ...rest,
         telefono: telefonoNormalizado || null,
+        ...fiscalPayload,
         apellido_paterno: sanitizeApellidoParaNoVip(formData.apellido_paterno, Boolean(formData.es_vip)),
         apellido_materno: sanitizeApellidoParaNoVip(formData.apellido_materno, Boolean(formData.es_vip)),
       };
+      let clienteId = selectedCliente?.id;
       if (isEditing && selectedCliente) {
         await api.updateCliente(selectedCliente.id, payload);
         toast({ title: 'Cliente actualizado' });
       } else {
-        await api.createCliente(payload);
+        const creado = await api.createCliente(payload);
+        clienteId = creado?.id;
         toast({ title: 'Cliente creado' });
+      }
+      if (csfFile && clienteId) {
+        try {
+          await api.subirCsfCliente(clienteId, csfFile);
+        } catch (err: any) {
+          toast({ title: 'Se guardó el cliente, pero no la constancia', description: err.message, variant: 'destructive' });
+        }
       }
       setIsFormOpen(false);
       await cargarClientes();
@@ -549,6 +585,16 @@ export default function Clientes() {
                 <div><p className="text-[11px] text-muted-foreground">Nacionalidad</p><p className="truncate font-medium">{selectedCliente?.nacionalidad || '-'}</p></div>
                 <div><p className="text-[11px] text-muted-foreground">Documento</p><p className="truncate font-medium">{selectedCliente?.tipo_documento || '-'} {selectedCliente?.numero_documento || ''}</p></div>
                 <div><p className="text-[11px] text-muted-foreground">Lealtad</p><Badge className={cn('mt-0.5 text-[10px]', getLoyaltyColor(selectedCliente?.nivel_lealtad))}>{selectedCliente?.nivel_lealtad || 'Bronce'}</Badge></div>
+                <div><p className="text-[11px] text-muted-foreground">Descuento</p><p className="truncate font-medium">{descuentosCat.find((d) => d.id === (selectedCliente as any)?.descuento_id)?.nombre || '-'}</p></div>
+                <div><p className="text-[11px] text-muted-foreground">RFC</p><p className="truncate font-medium">{(selectedCliente as any)?.rfc || '-'}</p></div>
+                {(selectedCliente as any)?.razon_social && (
+                  <div className="col-span-2 rounded-md bg-muted/30 p-2 text-xs">
+                    <p className="font-medium">{(selectedCliente as any).razon_social}</p>
+                    <p className="text-muted-foreground">
+                      {[regimenNombre((selectedCliente as any).regimen_fiscal), (selectedCliente as any).codigo_postal_fiscal ? `C.P. ${(selectedCliente as any).codigo_postal_fiscal}` : '', (selectedCliente as any).uso_cfdi ? `Uso ${(selectedCliente as any).uso_cfdi}` : '', (selectedCliente as any).email_facturacion].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                )}
               </div>
               {(() => {
                 const validas = historial.filter((r: any) => r.estado !== 'Cancelada');
@@ -625,6 +671,22 @@ export default function Clientes() {
             <div className="space-y-1.5"><Label>Número de documento</Label><Input value={formData.numero_documento} onChange={(e) => setFormData({ ...formData, numero_documento: e.target.value })} placeholder="Identificación" /></div>
             <div className="space-y-1.5 sm:col-span-2"><Label>Nacionalidad</Label><Input value={formData.nacionalidad} onChange={(e) => setFormData({ ...formData, nacionalidad: e.target.value })} placeholder="Mexicana" /></div>
             <div className="space-y-1.5 sm:col-span-2"><Label>Notas / preferencias</Label><Textarea className="min-h-24" value={formData.notas} onChange={(e) => setFormData({ ...formData, notas: e.target.value })} placeholder="Alergias, preferencias, solicitudes especiales..." /></div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Descuento del cliente</Label>
+              <Select value={formData.descuento_id || 'none'} onValueChange={(v) => setFormData({ ...formData, descuento_id: v === 'none' ? '' : v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin descuento</SelectItem>
+                  {descuentosCat.filter((d) => d.activo || d.id === formData.descuento_id).map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.nombre} · {d.tipo === 'Porcentaje' ? `${Number(d.valor)}%` : formatCurrency(Number(d.valor))}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Se aplica solo al elegir a este cliente en una reservación. Los descuentos se administran en Catálogos › Descuentos.</p>
+            </div>
+            <div className="sm:col-span-2">
+              <DatosFiscalesFields value={fiscal} onChange={setFiscal} onCsfFile={setCsfFile} csfPath={(selectedCliente as any)?.csf_path} emailSugerido={formData.email} />
+            </div>
           </div>
 
           <DialogFooter>

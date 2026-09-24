@@ -1451,11 +1451,15 @@ class ApiClient {
 
   // ------- Facturación de reservas -------
   getFacturacion = async (): Promise<any[]> => {
-    const { data, error } = await (supabase as any).from('reservas')
-      .select('*, clientes(nombre, apellido_paterno, apellido_materno, email, telefono, tipo_documento, numero_documento), habitaciones(numero)')
+    const query = (clienteCols: string) => (supabase as any).from('reservas')
+      .select(`*, clientes(${clienteCols}), habitaciones(numero)`)
       .eq('hotel_id', this.hid())
       .eq('requiere_factura', true)
       .order('fecha_checkin', { ascending: false });
+    const base = 'nombre, apellido_paterno, apellido_materno, email, telefono, tipo_documento, numero_documento';
+    let { data, error } = await query(`${base}, rfc, razon_social, regimen_fiscal, codigo_postal_fiscal, uso_cfdi, email_facturacion, csf_path`);
+    // Si aún no se corre el SQL de datos fiscales, se muestra lo básico.
+    if (error && /column|does not exist|schema cache/i.test(error.message || '')) ({ data, error } = await query(base));
     if (error) throw error;
     return (data || []).map((r: any) => ({
       ...r,
@@ -1569,6 +1573,48 @@ class ApiClient {
   };
 
   // ------- Entregables -------
+  // ------- Descuentos -------
+  getDescuentos = async (soloActivos = false): Promise<any[]> => {
+    let q = (supabase as any).from('descuentos').select('*').eq('hotel_id', this.hid()).order('nombre');
+    if (soloActivos) q = q.eq('activo', true);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  };
+  createDescuento = async (data: { nombre: string; tipo: 'Porcentaje' | 'Monto'; valor: number; descripcion?: string; activo?: boolean }): Promise<any> => {
+    const { data: r, error } = await (supabase as any).from('descuentos').insert({ ...data, hotel_id: this.hid() }).select().single();
+    if (error) throw error; return r;
+  };
+  updateDescuento = async (id: string, data: Record<string, any>): Promise<any> => {
+    const { data: r, error } = await (supabase as any).from('descuentos').update(data).eq('id', id).eq('hotel_id', this.hid()).select().single();
+    if (error) throw error; return r;
+  };
+  deleteDescuento = async (id: string): Promise<any> => {
+    const { error } = await (supabase as any).from('descuentos').delete().eq('id', id).eq('hotel_id', this.hid());
+    if (error) throw error; return { ok: true };
+  };
+  setDescuentoReserva = async (id: string, descuento: { id: string; nombre: string } | null): Promise<any> => {
+    const { error } = await (supabase as any).from('reservas')
+      .update({ descuento_id: descuento?.id ?? null, descuento_nombre: descuento?.nombre ?? null })
+      .eq('id', id).eq('hotel_id', this.hid());
+    if (error) throw error; return { ok: true };
+  };
+
+  // ------- Constancia de situación fiscal -------
+  subirCsfCliente = async (clienteId: string, file: File): Promise<string> => {
+    const path = `${this.hid()}/${clienteId}.pdf`;
+    const { error } = await supabase.storage.from('clientes-csf').upload(path, file, { upsert: true, contentType: 'application/pdf' });
+    if (error) throw error;
+    const { error: e2 } = await (supabase as any).from('clientes').update({ csf_path: path }).eq('id', clienteId).eq('hotel_id', this.hid());
+    if (e2) throw e2;
+    return path;
+  };
+  urlCsfCliente = async (path: string): Promise<string> => {
+    const { data, error } = await supabase.storage.from('clientes-csf').createSignedUrl(path, 300);
+    if (error) throw error;
+    return data.signedUrl;
+  };
+
   getEntregables = async (): Promise<any> => { const { data } = await supabase.from('entregables').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
   createEntregable = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('entregables').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
   updateEntregable = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('entregables').update(data).eq('id', id).select().single(); if (error) throw error; return r; };

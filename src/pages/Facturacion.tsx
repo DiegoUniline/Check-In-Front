@@ -63,9 +63,17 @@ export default function Facturacion() {
     const q = query.trim().toLowerCase();
     return rows
       .filter((r) => (r.factura_estado || 'Pendiente') === tab)
-      .filter((r) => !q || [r.numero_reserva, r.cliente_nombre, r.clientes?.numero_documento, r.factura_folio, r.habitacion_numero]
+      .filter((r) => !q || [r.numero_reserva, r.cliente_nombre, r.clientes?.numero_documento, r.clientes?.rfc, r.clientes?.razon_social, r.factura_folio, r.habitacion_numero]
         .some((v) => String(v || '').toLowerCase().includes(q)));
   }, [rows, tab, query]);
+
+  const verCsf = async (path: string) => {
+    try {
+      window.open(await api.urlCsfCliente(path), '_blank', 'noopener');
+    } catch (error: any) {
+      toast({ title: 'No se pudo abrir la constancia', description: error.message, variant: 'destructive' });
+    }
+  };
 
   const openChange = (row: any, estado: EstadoFactura) => {
     setFolio(row.factura_folio || '');
@@ -98,7 +106,7 @@ export default function Facturacion() {
                 {ESTADOS.map((e) => (
                   <TabsTrigger key={e.id} value={e.id} className="gap-1.5">
                     {e.label}
-                    <span className="rounded-full bg-background px-1.5 text-[10px] font-semibold tabular-nums">{counts[e.id] || 0}</span>
+                    <span className="rounded-md bg-background px-1.5 text-[10px] font-semibold tabular-nums">{counts[e.id] || 0}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -120,7 +128,7 @@ export default function Facturacion() {
             <TableHeader>
               <TableRow>
                 <TableHead>Reserva</TableHead>
-                <TableHead>Huésped / RFC</TableHead>
+                <TableHead>Huésped / datos fiscales</TableHead>
                 <TableHead>Estancia</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Estado</TableHead>
@@ -151,10 +159,19 @@ export default function Facturacion() {
                     </TableCell>
                     <TableCell>
                       <p className="max-w-[200px] truncate text-sm font-medium">{r.cliente_nombre || '—'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {r.clientes?.numero_documento ? `${r.clientes?.tipo_documento || 'Doc'}: ${r.clientes.numero_documento}` : 'Sin RFC capturado'}
-                        {r.clientes?.email ? ` · ${r.clientes.email}` : ''}
-                      </p>
+                      {r.clientes?.rfc ? (
+                        <div className="text-xs text-muted-foreground">
+                          <p className="font-mono text-foreground">{r.clientes.rfc}</p>
+                          <p className="max-w-[240px] truncate">{r.clientes.razon_social || '—'}</p>
+                          <p>{[r.clientes.regimen_fiscal && `Rég. ${r.clientes.regimen_fiscal}`, r.clientes.codigo_postal_fiscal && `C.P. ${r.clientes.codigo_postal_fiscal}`, r.clientes.uso_cfdi && `Uso ${r.clientes.uso_cfdi}`].filter(Boolean).join(' · ')}</p>
+                          {(r.clientes.email_facturacion || r.clientes.email) && <p className="truncate">{r.clientes.email_facturacion || r.clientes.email}</p>}
+                          {r.clientes.csf_path && (
+                            <button className="text-primary hover:underline" onClick={() => void verCsf(r.clientes.csf_path)}>Ver CSF</button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-amber-700">Sin datos fiscales · captúralos en Clientes</p>
+                      )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-sm">{formatDate(r.fecha_checkin)} → {formatDate(r.fecha_checkout)}</TableCell>
                     <TableCell className="text-right text-sm font-semibold tabular-nums">{formatCurrency(Number(r.total || 0))}</TableCell>
