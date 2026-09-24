@@ -70,12 +70,18 @@ export function PoliticasReservaPanel() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Form>(vacio);
   const [saving, setSaving] = useState(false);
+  const [faltaSql, setFaltaSql] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
       setRows(await api.getPoliticasReserva());
+      setFaltaSql(false);
     } catch (error: any) {
+      if (/politicas_reserva|does not exist|schema cache|42P01|PGRST205/i.test(`${error?.message || ''} ${error?.code || ''}`)) {
+        setFaltaSql(true);
+        return;
+      }
       toast({ title: 'No se pudieron cargar las políticas', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -167,7 +173,13 @@ export function PoliticasReservaPanel() {
         <Button size="sm" onClick={() => abrir()}><Plus className="mr-1.5 h-3.5 w-3.5" />Nueva política</Button>
       </div>
 
-      {loading ? (
+      {faltaSql ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Falta activar las políticas en la base de datos. Corre en Supabase › SQL Editor el archivo
+          <code className="mx-1 rounded bg-white px-1 text-xs">supabase/sql_manual/SQL_2026-09-24_pagina_publica_politicas.sql</code>
+          y vuelve a abrir esta pantalla.
+        </div>
+      ) : loading ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
       ) : rows.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">

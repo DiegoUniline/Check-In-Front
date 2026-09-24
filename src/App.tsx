@@ -46,6 +46,7 @@ import Permisos from "./pages/Permisos";
 import Auditoria from "./pages/Auditoria";
 import AdminPlataforma from "./pages/AdminPlataforma";
 import ReservasOnline from "./pages/ReservasOnline";
+import PoliticasReserva from "./pages/PoliticasReserva";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -159,6 +160,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="reservas">
           <Reservas />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/politicas-reserva"
+      element={
+        <ProtectedRoute viewKey="reservas">
+          <PoliticasReserva />
         </ProtectedRoute>
       }
     />

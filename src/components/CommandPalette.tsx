@@ -46,6 +46,7 @@ const VIEWS: ViewItem[] = [
   { label: 'Reservas - Calendario', path: '/reservas/calendario', icon: CalendarDays },
   { label: 'Reservas - Lista', path: '/reservas/lista', icon: CalendarDays },
   { label: 'Reservas Online', path: '/reservas-online', icon: Globe },
+  { label: 'Políticas de reserva', path: '/politicas-reserva', icon: ShieldCheck },
   { label: 'Habitaciones', path: '/habitaciones', icon: BedDouble, keywords: 'cuartos rooms' },
   { label: 'Clientes', path: '/clientes', icon: Users, keywords: 'huespedes' },
   { label: 'Limpieza', path: '/limpieza', icon: Sparkles, keywords: 'housekeeping' },
