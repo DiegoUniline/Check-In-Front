@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale';
 import {
   CalendarDays, BedDouble, Check, ChevronLeft, CalendarPlus, UserPlus, Clock, Percent,
   DollarSign, Plus, Minus, Trash2, Receipt, Phone, Mail, CreditCard, X, ArrowLeft,
-  Users, StickyNote, AlertTriangle, RefreshCw,
+  Users, StickyNote, AlertTriangle, RefreshCw, Pencil,
 } from 'lucide-react';
 import {
   Dialog,
@@ -212,6 +212,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   formDataRef.current = formData;
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
+  const [clienteEditando, setClienteEditando] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [origen, setOrigen] = useState<'Reserva' | 'Recepcion'>('Reserva');
   const [roomConflict, setRoomConflict] = useState('');
@@ -1014,12 +1015,18 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           <FormSection fieldKey="guest" icon={UserPlus} title="Huésped" hint="Busca existente o captura uno nuevo.">
             <ClienteFormDialog
               open={clienteDialogOpen}
-              onOpenChange={setClienteDialogOpen}
+              onOpenChange={(v) => { setClienteDialogOpen(v); if (!v) setClienteEditando(null); }}
+              cliente={clienteEditando}
               requireTelefono
-              onSaved={(nuevo) => {
-                setClientes((prev) => [nuevo, ...prev.filter((c) => c.id !== nuevo.id)]);
+              onSaved={(guardado) => {
+                setClientes((prev) => [guardado, ...prev.filter((c) => c.id !== guardado.id)]);
                 setCrearNuevoCliente(false);
-                handleSelectCliente(nuevo);
+                const antes = clienteEditando;
+                if (!antes || (guardado.descuento_id && guardado.descuento_id !== antes.descuento_id)) {
+                  handleSelectCliente(guardado);
+                } else {
+                  setFormData((prev) => ({ ...prev, clienteId: guardado.id, clienteData: guardado }));
+                }
               }}
             />
             {!crearNuevoCliente ? (
@@ -1042,9 +1049,12 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     className="h-9 min-w-0 flex-1 justify-start overflow-hidden px-2.5 text-left text-xs font-normal"
                   />
                   {formData.clienteData ? (
-                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleClearCliente} aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
+                    <>
+                      <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Editar huésped" aria-label="Editar huésped" onClick={() => { setClienteEditando(formData.clienteData); setClienteDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleClearCliente} title="Quitar huésped" aria-label="Quitar huésped"><X className="h-4 w-4" /></Button>
+                    </>
                   ) : (
-                    <Button type="button" variant="outline" className="h-9 shrink-0 px-2.5 text-xs" onClick={() => setClienteDialogOpen(true)}><UserPlus className="mr-1 h-3.5 w-3.5" />Nuevo</Button>
+                    <Button type="button" variant="outline" className="h-9 shrink-0 px-2.5 text-xs" onClick={() => { setClienteEditando(null); setClienteDialogOpen(true); }}><UserPlus className="mr-1 h-3.5 w-3.5" />Nuevo</Button>
                   )}
                 </div>
                 {formData.clienteData && (
