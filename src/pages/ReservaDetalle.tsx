@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, BedDouble, CalendarDays, Clock3, DoorOpen, Ellipsis, FileText, History,
-  LogOut, Mail, Pencil, Phone, RefreshCw, Users, WalletCards,
+  LogOut, Mail, Pencil, Phone, Printer, RefreshCw, Users, WalletCards,
 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { imprimirComprobanteReserva, imprimirRegistroRecepcion } from '@/lib/pdfExport';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/currency';
@@ -49,6 +51,15 @@ export default function ReservaDetalle() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const imprimir = async (tipo: 'registro' | 'comprobante') => {
+    if (!id) return;
+    try {
+      if (tipo === 'registro') await imprimirRegistroRecepcion(id);
+      else await imprimirComprobanteReserva(id);
+    } catch (error: any) {
+      toast({ title: 'No se pudo generar el PDF', description: error?.message, variant: 'destructive' });
+    }
+  };
   const { user } = useAuth();
   const operationsRef = useRef<StayOperationsPanelHandle>(null);
   const [reserva, setReserva] = useState<any>(null);
@@ -155,6 +166,15 @@ export default function ReservaDetalle() {
             {canEditStay && <Button variant="outline" size="toolbar" onClick={() => operationsRef.current?.openOperation('modify_dates')}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />Editar
             </Button>}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="toolbar"><Printer className="mr-1.5 h-3.5 w-3.5" />PDF</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => void imprimir('registro')}>Tarjeta de registro (recepción)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void imprimir('comprobante')}>Comprobante de reservación</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" size="toolbar" onClick={() => operationsRef.current?.openMoreOperations()}>
               <Ellipsis className="mr-1.5 h-4 w-4" />Más
             </Button>
@@ -228,6 +248,7 @@ export default function ReservaDetalle() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-white p-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:hidden">
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" size="toolbar" className="w-full" onClick={() => operationsRef.current?.openMoreOperations()}>Más operaciones</Button>
+          <Button variant="outline" size="toolbar" className="w-full" onClick={() => void imprimir('registro')}><Printer className="mr-1.5 h-3.5 w-3.5" />Registro PDF</Button>
           {canCheckin
             ? <Button size="toolbar" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>Check-in</Button>
             : activeStay

@@ -1,3 +1,4 @@
+import { imprimirRegistroRecepcion } from '@/lib/pdfExport';
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
 import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
@@ -707,6 +708,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         } catch (err: any) {
           toast({ title: 'La reserva se creó, pero no se marcó la factura', description: err.message, variant: 'destructive' });
         }
+      }
+      if (origen === 'Recepcion' && reserva?.id) {
+        // Tarjeta de registro de la recepción.
+        imprimirRegistroRecepcion(reserva.id).catch((err) => console.warn('No se pudo generar el PDF de registro:', err));
       }
       if (origen === 'Recepcion' && roomIsDirty(freshRoom)) {
         toast({ title: 'Habitación pendiente de limpieza', description: `Se registró la entrada en la #${freshRoom.numero}; avisa a limpieza.` });

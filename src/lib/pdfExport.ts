@@ -1179,3 +1179,41 @@ export function exportarCorteCaja(opts: CommonCtx & {
     ],
   });
 }
+
+/** Descarga la tarjeta de registro (recepción) de una reservación por id. */
+export async function imprimirRegistroRecepcion(reservaId: string): Promise<void> {
+  const { default: api } = await import('./api');
+  const det: any = await api.getReserva(reservaId);
+  const cli = det.cliente || det.clientes || {};
+  await exportarRegistroHuesped({
+    hotel: det.hotel?.nombre,
+    hotelDireccion: det.hotel?.direccion,
+    hotelTelefono: det.hotel?.telefono,
+    hotelEmail: det.hotel?.email,
+    hotelCiudad: det.hotel?.ciudad,
+    hotelLogoUrl: det.hotel?.logo_url,
+    currency: det.hotel?.moneda_codigo || det.hotel?.moneda || defaultCurrency(),
+    reserva: det,
+    cliente: cli,
+    firmaDataUrl: det.firma_digital || null,
+    aceptaTerminos: !!det.acepta_terminos,
+  });
+}
+
+/** Descarga el comprobante de una reservación por id. */
+export async function imprimirComprobanteReserva(reservaId: string): Promise<void> {
+  const { default: api } = await import('./api');
+  const det: any = await api.getReserva(reservaId);
+  const cli = det.cliente || det.clientes || {};
+  await exportarComprobanteReserva({
+    hotel: det.hotel?.nombre,
+    hotelDireccion: det.hotel?.direccion,
+    hotelTelefono: det.hotel?.telefono,
+    hotelEmail: det.hotel?.email,
+    hotelCiudad: det.hotel?.ciudad,
+    hotelLogoUrl: det.hotel?.logo_url,
+    currency: det.hotel?.moneda_codigo || det.hotel?.moneda || defaultCurrency(),
+    reserva: det,
+    cliente: cli,
+  });
+}
