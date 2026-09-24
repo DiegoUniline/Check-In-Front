@@ -147,6 +147,7 @@ interface FormData {
   descuentoValor: number;
   impuestos: ImpuestoTemp[];
   entregablesSeleccionados: string[];
+  entregablesCantidad: Record<string, number>;
   cargos: CargoTemp[];
   pagos: PagoTemp[];
 }
@@ -196,6 +197,7 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => {
     descuentoValor: 0,
     impuestos: [],
     entregablesSeleccionados: [],
+    entregablesCantidad: {},
     cargos: [],
     pagos: [],
   };
@@ -203,9 +205,12 @@ const createInitialFormData = (preload?: ReservationPreload): FormData => {
 
 export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, pageMode = false }: NuevaReservaModalProps) {
   const [formData, setFormData] = useState<FormData>(createInitialFormData());
+  const formDataRef = useRef(formData);
+  formDataRef.current = formData;
   const [crearNuevoCliente, setCrearNuevoCliente] = useState(false);
   const [loading, setLoading] = useState(false);
   const [origen, setOrigen] = useState<'Reserva' | 'Recepcion'>('Reserva');
+  const [roomConflict, setRoomConflict] = useState('');
   const [requiereFactura, setRequiereFactura] = useState(false);
   const { toast } = useToast();
 
@@ -326,11 +331,20 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       });
       setHabitacionesDisponibles(availableRooms);
       setAvailabilityStatus('ready');
-      setFormData((prev) => (
-        prev.habitacionId && !availableRooms.some((room) => room.id === prev.habitacionId)
-          ? { ...prev, habitacionId: '' }
-          : prev
-      ));
+      // La habitación elegida (p. ej. la que se arrastró en el calendario) no se
+      // quita en silencio: se conserva y se explica por qué no está libre.
+      const chosen = formDataRef.current.habitacionId;
+      if (chosen && !availableRooms.some((room) => room.id === chosen)) {
+        void api.explicarHabitacionNoDisponible(
+          chosen,
+          format(formDataRef.current.fechaCheckin, 'yyyy-MM-dd'),
+          format(formDataRef.current.fechaCheckout, 'yyyy-MM-dd'),
+        ).then((reason: string) => {
+          if (requestId === availabilityRequestRef.current) setRoomConflict(reason);
+        }).catch(() => setRoomConflict('La habitación no está libre en esas fechas.'));
+      } else {
+        setRoomConflict('');
+      }
     };
     try {
       const checkin = format(formData.fechaCheckin, 'yyyy-MM-dd');
@@ -665,7 +679,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         })),
         entregables: formData.entregablesSeleccionados.map((entregableId) => ({
           entregable_id: entregableId,
-          cantidad: 1,
+          cantidad: Math.max(1, Math.floor(Number(formData.entregablesCantidad[entregableId] || 1))),
         })),
         checkin: origen === 'Recepcion',
       });
@@ -728,6 +742,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     }));
   };
 
+  const setCantidadEntregable = (id: string, cantidad: number) => {
+    setFormData(prev => ({
+      ...prev,
+      entregablesCantidad: { ...prev.entregablesCantidad, [id]: Math.max(1, Math.min(99, Math.floor(cantidad || 1))) },
+    }));
+  };
+
   const handleSurfaceKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.defaultPrevented || event.nativeEvent.isComposing) return;
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -742,6 +763,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       ? { key: 'room', label: 'Reintenta disponibilidad' }
       : !formData.habitacionId ? { key: 'room', label: 'Elige habitación' } : null,
     capacityError ? { key: 'occupancy', label: 'Corrige la ocupación' } : null,
+    roomConflict && formData.habitacionId ? { key: 'room', label: 'La habitación no está libre' } : null,
     !formData.clienteId && !nuevoClienteValido ? { key: 'guest', label: 'Completa el huésped' } : null,
   ].filter((issue): issue is { key: string; label: string } => Boolean(issue));
   const puedeGuardar = !loading && availabilityStatus === 'ready' && validationIssues.length === 0;
@@ -891,6 +913,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </FormSection>
 
           <FormSection fieldKey="room" icon={BedDouble} title="Habitación" hint={mostrarSelectorHabitacion ? `${habitacionesCompatibles.length} compatibles y libres en el rango.` : 'Habitación asignada a esta reserva.'}>
+            {roomConflict && formData.habitacionId && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-800">
+                Hab. #{selectedHabitacion?.numero || ''}: {roomConflict} Cambia las fechas o elige otra habitación.
+              </div>
+            )}
             {!mostrarSelectorHabitacion && selectedHabitacion ? (
               <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-2.5">
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
@@ -926,7 +953,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     </Button>
                   ) : (
                     <ComboboxCreatable
-                      options={habitacionesCompatibles.map((hab) => {
+                      options={[
+                        ...(roomConflict && selectedHabitacion && !habitacionesCompatibles.some((hab) => hab.id === selectedHabitacion.id) ? [selectedHabitacion] : []),
+                        ...habitacionesCompatibles,
+                      ].map((hab) => {
                         const type = tipoDeHabitacion(hab);
                         const floor = hab.piso ? ` · Piso ${hab.piso}` : '';
                         return { value: hab.id, label: `#${hab.numero} · ${type?.nombre || hab.tipo_nombre || 'Sin categoría'}${floor} · ${fmt(rateOf(hab))}/noche${roomIsDirty(hab) ? ' · Pendiente de limpieza' : ''}` };
@@ -934,7 +964,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       value={formData.habitacionId}
                       onValueChange={(value) => {
                         const room = habitacionesDisponibles.find((item) => item.id === value);
-                        if (room) { handleSelectRoom(room); setMostrarSelectorHabitacion(false); }
+                        if (room) { handleSelectRoom(room); setMostrarSelectorHabitacion(false); setRoomConflict(''); }
                       }}
                       placeholder={habitacionesCompatibles.length ? 'Buscar y elegir habitación…' : 'Sin habitaciones compatibles'}
                       searchPlaceholder="Número, categoría, piso o precio…"
@@ -1109,6 +1139,21 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                             {Number(ent.costo_reposicion) > 0 ? ` · Reposición ${fmt(Number(ent.costo_reposicion))}` : ''}
                           </span>
                         </span>
+                        {activo && (
+                          <span className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+                            <button type="button" className="h-6 w-6 rounded border text-xs hover:bg-muted" onClick={() => setCantidadEntregable(ent.id, (formData.entregablesCantidad[ent.id] || 1) - 1)}>−</button>
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              className="h-6 w-10 rounded border bg-background text-center text-xs tabular-nums"
+                              value={formData.entregablesCantidad[ent.id] || 1}
+                              onFocus={(e) => e.currentTarget.select()}
+                              onChange={(e) => setCantidadEntregable(ent.id, Number(e.target.value))}
+                            />
+                            <button type="button" className="h-6 w-6 rounded border text-xs hover:bg-muted" onClick={() => setCantidadEntregable(ent.id, (formData.entregablesCantidad[ent.id] || 1) + 1)}>+</button>
+                          </span>
+                        )}
                       </label>
                     );
                   })}

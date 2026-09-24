@@ -5,6 +5,7 @@ import { setHotelCurrency, formatCurrency } from '@/lib/currency';
 import { withOfflineCache } from '@/lib/offlineCache';
 import { assertShiftWriteAllowed } from '@/lib/shiftAccess';
 import { occupiesNight } from '@/lib/stayOccupancy';
+import { formatDate as formatDateOnly } from '@/lib/dateFormat';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const operationalDb = supabase as any;
@@ -1417,6 +1418,37 @@ class ApiClient {
     });
     return r;
   };
+  // Explica por qué una habitación no aparece libre en un rango de fechas.
+  explicarHabitacionNoDisponible = async (habitacionId: string, checkin: string, checkout: string): Promise<string> => {
+    const hotelId = this.hid();
+    const end = checkout <= checkin ? addCalendarDays(checkin, 1) : checkout;
+    const [{ data: hab }, { data: reservas }] = await Promise.all([
+      supabase.from('habitaciones').select('numero, estado_habitacion, estado_mantenimiento').eq('id', habitacionId).eq('hotel_id', hotelId).maybeSingle(),
+      (supabase as any).from('reservas')
+        .select('numero_reserva, fecha_checkin, fecha_checkout, estado, origen, checkin_realizado, checkout_realizado, clientes(nombre, apellido_paterno)')
+        .eq('hotel_id', hotelId).eq('habitacion_id', habitacionId)
+        .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
+        .lt('fecha_checkin', end),
+    ]);
+    if (hab && (['Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(String((hab as any).estado_habitacion))
+      || String((hab as any).estado_mantenimiento || 'OK').toLowerCase() !== 'ok')) {
+      return `Está en mantenimiento o bloqueada (${(hab as any).estado_habitacion}).`;
+    }
+    const today = todayLocal();
+    const conflicto = (reservas || []).find((r: any) => {
+      const ci = String(r.fecha_checkin).slice(0, 10);
+      return ci < end && occupiesNight({ ...r }, ci, today) && (
+        occupiesNight(r, checkin, today) || (ci >= checkin && ci < end)
+      );
+    });
+    if (!conflicto) return 'No está libre en esas fechas.';
+    const huesped = [conflicto.clientes?.nombre, conflicto.clientes?.apellido_paterno].filter(Boolean).join(' ') || 'otro huésped';
+    const vencida = conflicto.checkin_realizado && !conflicto.checkout_realizado && String(conflicto.fecha_checkout).slice(0, 10) <= today;
+    if (vencida) return `${huesped} sigue hospedado (su salida era el ${formatDateOnly(conflicto.fecha_checkout)}); registra su check-out primero.`;
+    const web = conflicto.origen === 'Web' && conflicto.estado === 'Pendiente' ? ' (reserva en línea por aprobar)' : '';
+    return `Tiene la reserva ${conflicto.numero_reserva || ''} de ${huesped}${web} del ${formatDateOnly(conflicto.fecha_checkin)} al ${formatDateOnly(conflicto.fecha_checkout)}.`;
+  };
+
   // ------- Facturación de reservas -------
   getFacturacion = async (): Promise<any[]> => {
     const { data, error } = await (supabase as any).from('reservas')
