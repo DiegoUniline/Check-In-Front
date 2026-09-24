@@ -941,7 +941,8 @@ class ApiClient {
         return reservationCheckin < effectiveCheckout && reservationCheckout > checkin;
       })
       .map((reservation: any) => reservation.habitacion_id));
-    return (habs || []).filter((h: any) => !ocupadasIds.has(h.id));
+    return (habs || []).filter((h: any) => !ocupadasIds.has(h.id)
+      && String(h.estado_mantenimiento || 'OK').toLowerCase() === 'ok');
   };
   createHabitacion = async (data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('habitaciones').insert({ ...data, hotel_id: this.hid() }).select().single();
@@ -1743,6 +1744,54 @@ class ApiClient {
   getTareasMantenimientoPendientes = async (): Promise<any> => {
     const { data } = await supabase.from('tareas_mantenimiento').select('*, habitaciones(numero)').eq('hotel_id', this.hid()).not('estado', 'in', '(Completada,Completado,Resuelto,Cerrado)');
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
+  };
+  /** Reporta una falla: crea el ticket y, si se pide, deja la habitación fuera de venta. */
+  reportarFallaHabitacion = async (hab: { id: string; estado_habitacion?: string }, data: { titulo: string; descripcion: string; categoria?: string; prioridad?: string; bloquear: boolean }): Promise<any> => {
+    const ticket = await this.createTareaMantenimiento({
+      habitacion_id: hab.id,
+      titulo: data.titulo,
+      descripcion: data.descripcion,
+      categoria: data.categoria || 'General',
+      prioridad: data.prioridad || 'Normal',
+      estado: 'Pendiente',
+      fecha_reporte: new Date().toISOString(),
+    });
+    if (data.bloquear) {
+      const ocupada = String(hab.estado_habitacion || '') === 'Ocupada';
+      const { error } = await supabase.from('habitaciones')
+        .update({ estado_mantenimiento: 'Pendiente', ...(ocupada ? {} : { estado_habitacion: 'Mantenimiento' }) })
+        .eq('id', hab.id).eq('hotel_id', this.hid());
+      if (error) throw error;
+    }
+    return ticket;
+  };
+  /** Cierra los reportes abiertos de la habitación y la deja disponible. */
+  liberarHabitacion = async (habId: string, cerrarReportes: boolean): Promise<{ cerrados: number }> => {
+    let cerrados = 0;
+    if (cerrarReportes) {
+      const { data: abiertos, error } = await supabase.from('tareas_mantenimiento').select('id')
+        .eq('hotel_id', this.hid()).eq('habitacion_id', habId)
+        .not('estado', 'in', '(Completada,Completado,Resuelto,Cerrado,Cancelada,Cancelado)');
+      if (error) throw error;
+      for (const t of abiertos || []) {
+        const { error: e } = await supabase.from('tareas_mantenimiento').update({ estado: 'Completada' }).eq('id', (t as any).id);
+        if (e) throw e;
+        cerrados += 1;
+      }
+    }
+    const { data: hab } = await supabase.from('habitaciones').select('estado_habitacion').eq('id', habId).maybeSingle();
+    const ocupada = String((hab as any)?.estado_habitacion || '') === 'Ocupada';
+    const { error } = await supabase.from('habitaciones')
+      .update({ estado_mantenimiento: 'OK', fuera_servicio_motivo: null, fuera_servicio_desde: null, fuera_servicio_hasta: null, ...(ocupada ? {} : { estado_habitacion: 'Disponible' }) } as any)
+      .eq('id', habId).eq('hotel_id', this.hid());
+    if (error) throw error;
+    return { cerrados };
+  };
+  contarReportesAbiertos = async (habId: string): Promise<number> => {
+    const { count } = await supabase.from('tareas_mantenimiento').select('id', { count: 'exact', head: true })
+      .eq('hotel_id', this.hid()).eq('habitacion_id', habId)
+      .not('estado', 'in', '(Completada,Completado,Resuelto,Cerrado,Cancelada,Cancelado)');
+    return count || 0;
   };
   createTareaMantenimiento = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('tareas_mantenimiento').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
   updateTareaMantenimiento = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('tareas_mantenimiento').update(data).eq('id', id).select().single(); if (error) throw error; return r; };

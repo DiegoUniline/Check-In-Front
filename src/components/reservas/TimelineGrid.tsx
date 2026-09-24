@@ -269,8 +269,15 @@ export function TimelineGrid({
     return Math.max(0, Math.min(days.length - 1, index));
   };
 
+  const roomBlocked = (room: any) => {
+    const maintenance = String(room?.estado_mantenimiento || 'OK').toLowerCase();
+    const state = String(room?.estado_habitacion || '').toLowerCase();
+    return maintenance !== 'ok' || state.includes('mantenimiento') || state.includes('fuera') || state.includes('bloquead');
+  };
+
   const handleRowMouseDown = (habitacionId: string, event: React.MouseEvent<HTMLElement>) => {
     if (!canCreate || event.button !== 0) return;
+    if (roomBlocked(habitaciones.find((h) => h.id === habitacionId))) return;
     if ((event.target as HTMLElement).closest('[data-reservation-id]')) return;
     const dayIndex = dayIndexFromPointer(event);
     if (getReservationForCell(habitacionId, dayIndex)) return;
@@ -543,11 +550,19 @@ export function TimelineGrid({
                 </span>
               </div>
                   <div
-                    className={cn("relative flex flex-shrink-0", cellHeight, isDragging && dragStart?.roomId === hab.id && 'select-none')}
+                    className={cn("relative flex flex-shrink-0", cellHeight, isDragging && dragStart?.roomId === hab.id && 'select-none', canCreate && roomBlocked(hab) && 'cursor-not-allowed')}
                     style={{ width: `${days.length * cellWidthPx}px` }}
+                    title={roomBlocked(hab) ? 'En mantenimiento: no se puede reservar' : undefined}
                     onMouseDown={canCreate ? (event) => handleRowMouseDown(hab.id, event) : undefined}
                     onMouseMove={canCreate ? (event) => handleRowMouseMove(hab.id, event) : undefined}
                   >
+                    {roomBlocked(hab) && (
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 z-[1]"
+                        style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(113,113,122,0.12) 0 6px, transparent 6px 12px)' }}
+                      />
+                    )}
                     {isDragging && dragStart?.roomId === hab.id && dragEnd !== null && (() => {
                       const lo = Math.min(dragStart.dayIndex, dragEnd);
                       const hi = Math.max(dragStart.dayIndex, dragEnd);

@@ -66,7 +66,11 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { MultiImageUpload } from '@/components/ui/multi-image-upload';
 import api from '@/lib/api';
+import { ReportarFallaDialog } from '@/components/mantenimiento/ReportarFallaDialog';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
+
+const esLimpia = (h: any) => ['limpia', 'lista'].some((v) => String(h?.estado_limpieza || 'Limpia').toLowerCase().includes(v));
+const mantOk = (h: any) => String(h?.estado_mantenimiento || 'OK').toLowerCase() === 'ok';
 
 export default function Habitaciones() {
   const { toast } = useToast();
@@ -100,6 +104,7 @@ export default function Habitaciones() {
   const [formImpuestos, setFormImpuestos] = useState<ImpuestoDefault[]>([]);
   const [usarImpuestosTipo, setUsarImpuestosTipo] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [fallaHab, setFallaHab] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
@@ -145,11 +150,11 @@ export default function Habitaciones() {
     const matchTipo = filterTipo === 'all' || h.tipo_habitacion_id === filterTipo;
     let matchEstado = true;
     if (filterEstado === 'Limpieza') {
-      matchEstado = h.estado_limpieza !== 'Limpia' && h.estado_mantenimiento === 'OK';
+      matchEstado = !esLimpia(h) && mantOk(h);
     } else if (filterEstado === 'Mantenimiento') {
-      matchEstado = h.estado_mantenimiento !== 'OK';
+      matchEstado = !mantOk(h);
     } else if (filterEstado !== 'all') {
-      matchEstado = h.estado_habitacion === filterEstado && h.estado_limpieza === 'Limpia' && h.estado_mantenimiento === 'OK';
+      matchEstado = h.estado_habitacion === filterEstado && esLimpia(h) && mantOk(h);
     }
     return matchSearch && matchPiso && matchTipo && matchEstado;
   });
@@ -202,7 +207,15 @@ export default function Habitaciones() {
     setEliminandoBulk(true);
     try {
       const ids = Array.from(dt.selected);
-      await Promise.all(ids.map(id => api.updateHabitacion(id, { estado_habitacion: nuevo })));
+      if (nuevo === 'Disponible') {
+        const bloqueadas = habitaciones.filter((h) => ids.includes(h.id) && enMantenimiento(h));
+        if (bloqueadas.length && !window.confirm(`${bloqueadas.length} habitación(es) están en mantenimiento. ¿Resolver sus reportes abiertos y dejarlas disponibles?`)) return;
+        for (const h of bloqueadas) await api.liberarHabitacion(h.id, true);
+        const resto = ids.filter((id) => !bloqueadas.some((h) => h.id === id));
+        await Promise.all(resto.map(id => api.updateHabitacion(id, { estado_habitacion: nuevo })));
+      } else {
+        await Promise.all(ids.map(id => api.updateHabitacion(id, { estado_habitacion: nuevo })));
+      }
       toast({ title: 'Estado actualizado', description: `${ids.length} habitación(es) → ${nuevo}` });
       dt.clearSelection();
       await cargarDatos();
@@ -247,8 +260,8 @@ export default function Habitaciones() {
   };
 
   const getStatusColor = (hab: any) => {
-    if (hab.estado_mantenimiento !== 'OK') return 'border-destructive/50 bg-destructive/[0.03]';
-    if (hab.estado_limpieza !== 'Limpia') return 'border-info/50 bg-info/[0.03]';
+    if (!mantOk(hab)) return 'border-destructive/50 bg-destructive/[0.03]';
+    if (!esLimpia(hab)) return 'border-info/50 bg-info/[0.03]';
     switch (hab.estado_habitacion) {
       case 'Disponible': return 'border-success/50 bg-success/[0.03]';
       case 'Ocupada': return 'border-warning/50 bg-warning/[0.03]';
@@ -259,8 +272,9 @@ export default function Habitaciones() {
   };
 
   const getStatusBadge = (hab: any) => {
-    if (hab.estado_mantenimiento !== 'OK') return <Badge variant="destructive">Mantenimiento</Badge>;
-    if (hab.estado_limpieza !== 'Limpia') return <Badge className="bg-info">Limpieza</Badge>;
+    if (String(hab.estado_mantenimiento || 'OK').toLowerCase() !== 'ok' || hab.estado_habitacion === 'Mantenimiento' || hab.estado_habitacion === 'FueraDeServicio') return <Badge variant="destructive">Mantenimiento</Badge>;
+    const limpieza = String(hab.estado_limpieza || 'Limpia').toLowerCase();
+    if (!limpieza.includes('limpia') && !limpieza.includes('lista')) return <Badge className="bg-info">Limpieza</Badge>;
     switch (hab.estado_habitacion) {
       case 'Disponible': return <Badge className="bg-success">Disponible</Badge>;
       case 'Ocupada': return <Badge className="bg-warning text-warning-foreground">Ocupada</Badge>;
@@ -270,19 +284,31 @@ export default function Habitaciones() {
     }
   };
 
+  const enMantenimiento = (hab: any) =>
+    String(hab.estado_mantenimiento || 'OK').toLowerCase() !== 'ok'
+    || ['Mantenimiento', 'FueraDeServicio'].includes(String(hab.estado_habitacion || ''));
+
   const handleChangeStatus = async (hab: any, newStatus: string) => {
+    if (newStatus === 'Mantenimiento') {
+      setFallaHab(hab);
+      return;
+    }
     try {
       if (newStatus === 'Limpieza') {
         await api.updateEstadoHabitacion(hab.id, { estado_limpieza: 'Sucia' });
-      } else if (newStatus === 'Mantenimiento') {
-        await api.updateEstadoHabitacion(hab.id, { estado_mantenimiento: 'Pendiente' });
+        toast({ title: 'Estado actualizado', description: `Habitación ${hab.numero} pasa a limpieza` });
+      } else if (newStatus === 'Disponible' && enMantenimiento(hab)) {
+        const abiertos = await api.contarReportesAbiertos(hab.id);
+        if (abiertos > 0 && !window.confirm(`La habitación ${hab.numero} tiene ${abiertos} reporte(s) de mantenimiento abierto(s). ¿Marcarlos como resueltos y dejarla disponible?`)) return;
+        const { cerrados } = await api.liberarHabitacion(hab.id, abiertos > 0);
+        toast({ title: 'Habitación disponible', description: `Habitación ${hab.numero}${cerrados ? ` · ${cerrados} reporte(s) resuelto(s)` : ''}` });
       } else {
         await api.updateEstadoHabitacion(hab.id, { estado_habitacion: newStatus });
+        toast({ title: 'Estado actualizado', description: `Habitación ${hab.numero} actualizada` });
       }
-      toast({ title: 'Estado actualizado', description: `Habitación ${hab.numero} actualizada` });
       cargarDatos();
-    } catch (error) {
-      toast({ title: 'Error', description: 'No se pudo actualizar el estado', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error?.message || 'No se pudo actualizar el estado', variant: 'destructive' });
     }
   };
 
@@ -371,11 +397,11 @@ export default function Habitaciones() {
   };
 
   const roomStats = [
-    { label: 'Disponibles', filter: 'Disponible', count: habitaciones.filter(h => h.estado_habitacion === 'Disponible' && h.estado_limpieza === 'Limpia' && h.estado_mantenimiento === 'OK').length, className: 'text-success' },
+    { label: 'Disponibles', filter: 'Disponible', count: habitaciones.filter(h => h.estado_habitacion === 'Disponible' && String(h.estado_limpieza || '').toLowerCase() === 'limpia' && String(h.estado_mantenimiento || 'OK').toLowerCase() === 'ok').length, className: 'text-success' },
     { label: 'Ocupadas', filter: 'Ocupada', count: habitaciones.filter(h => h.estado_habitacion === 'Ocupada').length, className: 'text-warning' },
     { label: 'Reservadas', filter: 'Reservada', count: habitaciones.filter(h => h.estado_habitacion === 'Reservada').length, className: 'text-primary' },
-    { label: 'Limpieza', filter: 'Limpieza', count: habitaciones.filter(h => h.estado_limpieza !== 'Limpia' && h.estado_mantenimiento === 'OK').length, className: 'text-info' },
-    { label: 'Mantenimiento', filter: 'Mantenimiento', count: habitaciones.filter(h => h.estado_mantenimiento !== 'OK').length, className: 'text-destructive' },
+    { label: 'Limpieza', filter: 'Limpieza', count: habitaciones.filter(h => !esLimpia(h) && mantOk(h)).length, className: 'text-info' },
+    { label: 'Mantenimiento', filter: 'Mantenimiento', count: habitaciones.filter(h => !mantOk(h)).length, className: 'text-destructive' },
   ];
 
   if (loading) {
@@ -517,8 +543,8 @@ export default function Habitaciones() {
                   <TableCell><div className="flex flex-col"><span className="font-medium">{hab.tipo_nombre}</span><span className="text-[11px] text-muted-foreground">{hab.tipo_codigo}</span></div></TableCell>
                   <TableCell>{hab.piso}</TableCell>
                   <TableCell>{getStatusBadge(hab)}</TableCell>
-                  <TableCell><Badge variant={hab.estado_limpieza === 'Limpia' ? 'secondary' : 'outline'}>{hab.estado_limpieza}</Badge></TableCell>
-                  <TableCell><Badge variant={hab.estado_mantenimiento === 'OK' ? 'secondary' : 'destructive'}>{hab.estado_mantenimiento}</Badge></TableCell>
+                  <TableCell><Badge variant={esLimpia(hab) ? 'secondary' : 'outline'}>{hab.estado_limpieza}</Badge></TableCell>
+                  <TableCell><Badge variant={mantOk(hab) ? 'secondary' : 'destructive'}>{hab.estado_mantenimiento}</Badge></TableCell>
                   <TableCell className="text-center"><div className="flex items-center justify-center gap-2"><Switch checked={!hab.excluida_publica} onCheckedChange={() => toggleWebSingle(hab)} aria-label="Publicada en la web" />{hab.excluida_publica ? <GlobeLock className="h-3.5 w-3.5 text-muted-foreground" /> : <Globe className="h-3.5 w-3.5 text-success" />}</div></TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -577,8 +603,8 @@ export default function Habitaciones() {
                     <span className="text-[10px] text-muted-foreground">Piso {hab.piso ?? '—'}</span>
                   </div>
                   <div className="mt-2 flex items-center justify-between border-t pt-2 text-[10px] text-muted-foreground">
-                    <span>{hab.estado_limpieza === 'Limpia' ? 'Limpia' : hab.estado_limpieza}</span>
-                    <span>{hab.estado_mantenimiento === 'OK' ? 'Sin fallas' : hab.estado_mantenimiento}</span>
+                    <span>{esLimpia(hab) ? 'Limpia' : hab.estado_limpieza}</span>
+                    <span>{mantOk(hab) ? 'Sin fallas' : hab.estado_mantenimiento}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -674,6 +700,7 @@ export default function Habitaciones() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ReportarFallaDialog habitacion={fallaHab} onOpenChange={(v) => { if (!v) setFallaHab(null); }} onSaved={() => void cargarDatos()} />
     </MainLayout>
   );
 }
