@@ -581,7 +581,7 @@ export default function Reservas() {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-0.5 rounded-md bg-muted p-0.5">
+      <div className="grid grid-cols-[1.25fr_1fr_1fr] gap-0.5 rounded-md bg-muted p-0.5">
         {([
           { key: 'timeline', label: 'Calendario', Icon: CalendarDays },
           { key: 'card', label: 'Card', Icon: LayoutGrid },
@@ -592,7 +592,7 @@ export default function Reservas() {
             type="button"
             onClick={() => setReservasSubView(key)}
             className={cn(
-              'flex h-7 items-center justify-center gap-1 rounded text-[11px] transition-colors',
+              'flex h-7 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded px-1 text-[11px] transition-colors',
               reservasSubView === key ? 'bg-background font-medium text-foreground shadow-sm ring-1 ring-[#10233F]/30' : 'text-muted-foreground hover:text-foreground',
             )}
           >
@@ -853,7 +853,7 @@ export default function Reservas() {
               isCalendarWorkspace && calendarFocusMode && 'fixed inset-0 z-40 bg-background p-2 sm:p-3',
             )}>
               <aside className={cn(
-                'hidden w-[210px] shrink-0 overflow-y-auto rounded-lg border bg-card p-2.5 lg:block',
+                'hidden w-[240px] shrink-0 overflow-y-auto rounded-lg border bg-card p-2.5 lg:block',
                 isRecepcionWorkspace ? 'self-stretch' : 'sticky top-2 max-h-[calc(100vh-6rem)] self-start',
               )}>
                 {filtrosPanel}
