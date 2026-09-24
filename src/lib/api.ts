@@ -1605,48 +1605,48 @@ class ApiClient {
   getCategorias = async (): Promise<any> => { const { data } = await supabase.from('categorias_producto').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
   createCategoria = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('categorias_producto').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
   getProductos = async (params?: Record<string, string>): Promise<any> => {
-    let q = supabase.from('productos').select('*').eq('hotel_id', this.hid()).order('nombre');
+    let q = supabase.from('productos').select('*, categorias_producto(nombre)').eq('hotel_id', this.hid()).order('nombre');
     if (params?.categoria) q = q.eq('categoria', params.categoria);
-    const { data } = await q;
-    return data || [];
+    const { data, error } = await q;
+    if (error) throw error;
+    // El formulario guarda categoria_id; las vistas agrupan por nombre.
+    return (data || []).map((p: any) => ({
+      ...p,
+      categoria_nombre: p.categorias_producto?.nombre || p.categoria || null,
+    }));
   };
   getProducto = async (id: string): Promise<any> => { const { data } = await supabase.from('productos').select('*').eq('id', id).maybeSingle(); return data; };
   createProducto = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('productos').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
   updateProducto = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('productos').update(data).eq('id', id).select().single(); if (error) throw error; return r; };
   deleteProducto = async (id: string): Promise<any> => { const { error } = await supabase.from('productos').delete().eq('id', id); if (error) throw error; return { ok: true }; };
+  // Transacción única en la base: sin pérdidas por ventas simultáneas ni stock negativo.
   movimientoInventario = async (id: string, data: any): Promise<any> => {
-    const { data: prod } = await supabase.from('productos').select('stock_actual').eq('id', id).maybeSingle();
-    const stockAnterior = Number(prod?.stock_actual || 0);
-    const cantidad = Number(data.cantidad || 0);
-    const tipo = String(data.tipo || '').toLowerCase();
-    const stockNuevo = tipo === 'salida' ? stockAnterior - cantidad : stockAnterior + cantidad;
-    await supabase.from('productos').update({ stock_actual: stockNuevo }).eq('id', id);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: m, error } = await supabase.from('movimientos_inventario').insert({
-      producto_id: id,
-      ...data,
-      stock_anterior: stockAnterior,
-      stock_nuevo: stockNuevo,
-      usuario_id: user?.id ?? null,
-    }).select().single();
-    if (error) throw error; return m;
+    const { data: m, error } = await operationalDb.rpc('vulo_inventory_move', {
+      p_producto_id: id,
+      p_tipo: data.tipo,
+      p_cantidad: Number(data.cantidad || 0),
+      p_motivo: data.motivo || null,
+      p_referencia: data.referencia || null,
+      p_absoluto: false,
+    });
+    if (error) throw error;
+    return m;
   };
   getMovimientosProducto = async (id: string): Promise<any> => { const { data } = await supabase.from('movimientos_inventario').select('*').eq('producto_id', id).order('created_at', { ascending: false }); return data || []; };
   // Lista todos los movimientos del hotel actual (a través de productos)
   getMovimientosInventario = async (limit = 200): Promise<any[]> => {
-    const { data: prods } = await supabase.from('productos').select('id, nombre, codigo').eq('hotel_id', this.hid());
-    const ids = (prods || []).map((p: any) => p.id);
-    if (!ids.length) return [];
-    const map: Record<string, any> = {};
-    (prods || []).forEach((p: any) => { map[p.id] = p; });
-    const { data, error } = await supabase
+    // Unión con productos (en lugar de enviar todos los ids en la URL, que
+    // falla con catálogos grandes).
+    const { data, error } = await (supabase as any)
       .from('movimientos_inventario')
-      .select('*')
-      .in('producto_id', ids)
+      .select('*, productos!inner(nombre, codigo, hotel_id)')
+      .eq('productos.hotel_id', this.hid())
       .order('created_at', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    const userIds = Array.from(new Set((data || []).map((m: any) => m.usuario_id).filter(Boolean)));
+    const map: Record<string, any> = {};
+    (data || []).forEach((m: any) => { if (m.productos) map[m.producto_id] = m.productos; });
+    const userIds: string[] = Array.from(new Set<string>((data || []).map((m: any) => m.usuario_id).filter(Boolean)));
     const users: Record<string, string> = {};
     if (userIds.length) {
       const { data: profs } = await supabase.from('profiles').select('id, nombre, email').in('id', userIds);
@@ -1661,22 +1661,14 @@ class ApiClient {
   };
   // Ajusta el stock a un valor absoluto y registra el movimiento
   ajustarStockAbsoluto = async (productoId: string, stockReal: number, motivo?: string): Promise<any> => {
-    const { data: prod } = await supabase.from('productos').select('stock_actual').eq('id', productoId).maybeSingle();
-    const anterior = Number(prod?.stock_actual || 0);
-    const nuevo = Number(stockReal) || 0;
-    const diff = nuevo - anterior;
-    if (diff === 0) return null;
-    await supabase.from('productos').update({ stock_actual: nuevo }).eq('id', productoId);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: m, error } = await supabase.from('movimientos_inventario').insert({
-      producto_id: productoId,
-      tipo: diff > 0 ? 'Entrada' : 'Salida',
-      cantidad: Math.abs(diff),
-      stock_anterior: anterior,
-      stock_nuevo: nuevo,
-      motivo: motivo || 'Ajuste de stock',
-      usuario_id: user?.id ?? null,
-    }).select().single();
+    const { data: m, error } = await operationalDb.rpc('vulo_inventory_move', {
+      p_producto_id: productoId,
+      p_tipo: 'Ajuste',
+      p_cantidad: Math.max(0, Number(stockReal) || 0),
+      p_motivo: motivo || 'Ajuste de stock',
+      p_referencia: null,
+      p_absoluto: true,
+    });
     if (error) throw error;
     return m;
   };
@@ -1715,7 +1707,7 @@ class ApiClient {
   getCompras = async (params?: Record<string, string>): Promise<any> => {
     let q = supabase.from('compras').select('*').eq('hotel_id', this.hid()).order('fecha', { ascending: false });
     if (params?.fecha_desde) q = q.gte('fecha', params.fecha_desde);
-    if (params?.fecha_hasta) q = q.lte('fecha', params.fecha_hasta);
+    if (params?.fecha_hasta) q = q.lt('fecha', addCalendarDays(params.fecha_hasta, 1));
     const { data, error } = await q;
     if (error) throw error;
     return data || [];
@@ -1868,8 +1860,8 @@ class ApiClient {
     const items = detalles ?? detalle ?? [];
     const { data: result, error } = await operationalDb.rpc('vulo_register_sale', {
       p_items: (items as any[]).map((item) => ({
-        product_id: item.product_id || null,
-        concept_id: item.concept_id || null,
+        product_id: item.product_id || item.producto_id || null,
+        concept_id: item.concept_id || item.concepto_id || null,
         quantity: Number(item.cantidad ?? item.quantity ?? 0),
       })),
       p_metodo_pago: header.metodo_pago || 'Efectivo',

@@ -195,6 +195,7 @@ export default function Gastos() {
         descripcion,
         metodo_pago: formData.metodo_pago,
         proveedor: formData.proveedor || null,
+        proveedor_id: formData.proveedor_id || null,
         factura: formData.factura.trim() || null,
         notas: formData.notas.trim() || null,
         // Fecha del hotel, no UTC. Evita que un gasto nocturno caiga en el día siguiente.

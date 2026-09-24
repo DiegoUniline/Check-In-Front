@@ -205,7 +205,7 @@ export default function Reservas() {
   const [calendarFocusMode, setCalendarFocusMode] = useState(false);
   const [roomGrouping, setRoomGrouping] = useState<TimelineRoomGrouping>(savedView.roomGrouping || 'smart');
   const [realtimeNotice, setRealtimeNotice] = useState<RealtimeNotice | null>(null);
-  const realtimeNoticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const realtimeNoticeTimer = useRef<number | null>(null);
 
   const validViews = ['recepcion', 'checkin', 'checkout', 'timeline', 'historico'] as const;
   type Vista = typeof validViews[number];

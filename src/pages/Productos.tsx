@@ -123,7 +123,7 @@ export default function Productos() {
     return matchSearch && matchCategory;
   });
 
-  const lowStock = productos.filter(p => (p.stock_actual || 0) < (p.stock_minimo || 20));
+  const lowStock = productos.filter(p => (p.stock_actual || 0) < (p.stock_minimo ?? 0));
   const totalValue = productos.reduce((sum, p) => sum + ((p.precio_venta || 0) * (p.stock_actual || 0)), 0);
 
   // ===== DataTable: selección, sort y filtros por columna =====
@@ -209,15 +209,16 @@ export default function Productos() {
         nombre: formData.nombre,
         categoria_id: formData.categoria_id || null,
         precio_venta: parseFloat(formData.precio_venta),
-        stock_actual: parseInt(formData.stock_actual) || 0,
-        stock_minimo: parseInt(formData.stock_minimo) || 10,
+        stock_minimo: Number.isFinite(parseInt(formData.stock_minimo)) ? parseInt(formData.stock_minimo) : 10,
       };
 
       if (editingProduct) {
+        // El stock sólo cambia con movimientos de inventario (entrada/salida/ajuste);
+        // editar el producto no debe sobrescribirlo con un valor viejo.
         await api.updateProducto(editingProduct.id, data);
         toast({ title: 'Producto actualizado' });
       } else {
-        await api.createProducto(data);
+        await api.createProducto({ ...data, stock_actual: parseInt(formData.stock_actual) || 0 });
         toast({ title: 'Producto creado' });
       }
 
