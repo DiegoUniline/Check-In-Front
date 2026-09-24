@@ -130,6 +130,8 @@ export function RecepcionGrid({
         if (!r.fecha_checkin || !r.fecha_checkout) return false;
         const checkin = r.fecha_checkin.substring(0, 10);
         const checkout = effectiveCheckoutDate(checkin, r.fecha_checkout.substring(0, 10));
+        // Un huésped con salida vencida que no ha hecho check-out sigue en la habitación.
+        if (r.checkin_realizado && !r.checkout_realizado) return todayStr >= checkin;
         return todayStr >= checkin && todayStr < checkout;
       });
       if (ocupada) return { habitacion: hab, estado: 'ocupada', reservaActiva: ocupada };

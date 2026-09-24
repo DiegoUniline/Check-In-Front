@@ -13,6 +13,7 @@ import { getEstadoConfig } from './estadoConfig';
 import { formatDate } from '@/lib/dateFormat';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { todayLocal } from '@/lib/api';
 
 export type TimelineReservationAction =
   | 'view'
@@ -31,6 +32,20 @@ const COLLAPSED_GROUPS_KEY = 'vulo:timeline:collapsed-groups';
 const effectiveCheckoutDate = (checkin: string, checkout: string) => (
   checkout <= checkin ? format(addDays(parseISO(checkin), 1), 'yyyy-MM-dd') : checkout
 );
+
+const isInHouseStay = (reserva: any) => ['CheckIn', 'Hospedado'].includes(String(reserva?.estado || ''))
+  && Boolean(reserva?.checkin_realizado)
+  && !reserva?.checkout_realizado;
+
+// Día hasta el que la habitación queda ocupada. Un huésped con salida vencida
+// que todavía no hace check-out sigue ocupando la habitación hoy.
+const occupancyCheckoutDate = (reserva: any, todayKey: string) => {
+  const checkin = String(reserva.fecha_checkin || '').slice(0, 10);
+  const checkout = effectiveCheckoutDate(checkin, String(reserva.fecha_checkout || '').slice(0, 10));
+  if (!isInHouseStay(reserva)) return checkout;
+  const tomorrow = format(addDays(parseISO(todayKey), 1), 'yyyy-MM-dd');
+  return checkout < tomorrow ? tomorrow : checkout;
+};
 
 interface TimelineBarGeometry {
   left: number;
@@ -151,8 +166,11 @@ export function TimelineGrid({
   });
 
   const days = useMemo(() => {
-    return Array.from({ length: daysToShow }, (_, i) => addDays(startDate, i));
+    return Array.from({ length: daysToShow }, (_, i) => addDays(startOfDay(startDate), i));
   }, [startDate, daysToShow]);
+  // "Hoy" en la zona horaria del hotel, no la del navegador.
+  const todayKey = todayLocal();
+  const today = parseISO(todayKey);
 
   const roomGroups = useMemo(() => {
     if (groupBy === 'none') return [{ key: 'all', label: '', rooms: habitaciones }];
@@ -210,65 +228,88 @@ export function TimelineGrid({
     );
   };
 
+  // Una celda representa la noche que inicia ese día.
   const getReservationForCell = (habitacionId: string, dayIndex: number) => {
     const roomReservas = getReservasForRoom(habitacionId);
     const currentDay = days[dayIndex];
+    if (!currentDay) return undefined;
     const currentDateStr = format(currentDay, 'yyyy-MM-dd');
 
     return roomReservas.find(r => {
       if (!r.fecha_checkin || !r.fecha_checkout) return false;
       const checkinStr = r.fecha_checkin.substring(0, 10);
-      const checkoutStr = effectiveCheckoutDate(checkinStr, r.fecha_checkout.substring(0, 10));
+      const checkoutStr = occupancyCheckoutDate(r, todayKey);
       return currentDateStr >= checkinStr && currentDateStr < checkoutStr;
     });
   };
 
-  const handleMouseDown = (habitacionId: string, dayIndex: number) => {
-    if (!canCreate) return;
+  // Selección: primera celda = entrada, última celda = salida. La celda de
+  // salida puede coincidir con la llegada de otra reserva (el día de salida
+  // queda libre). Un clic sin arrastrar reserva una noche.
+  const clampSelectionEnd = (roomId: string, start: number, candidate: number) => {
+    if (candidate >= start) {
+      let end = candidate;
+      for (let i = start; i < candidate; i++) {
+        if (getReservationForCell(roomId, i)) { end = i; break; }
+      }
+      return Math.max(start, end);
+    }
+    let end = candidate;
+    for (let i = start - 1; i >= candidate; i--) {
+      if (getReservationForCell(roomId, i)) { end = i + 1; break; }
+    }
+    return Math.min(start, end);
+  };
+
+  const dayIndexFromPointer = (event: React.MouseEvent<HTMLElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const index = Math.floor((event.clientX - rect.left) / cellWidthPx);
+    return Math.max(0, Math.min(days.length - 1, index));
+  };
+
+  const handleRowMouseDown = (habitacionId: string, event: React.MouseEvent<HTMLElement>) => {
+    if (!canCreate || event.button !== 0) return;
+    if ((event.target as HTMLElement).closest('[data-reservation-id]')) return;
+    const dayIndex = dayIndexFromPointer(event);
     if (getReservationForCell(habitacionId, dayIndex)) return;
+    event.preventDefault();
     setDragStart({ roomId: habitacionId, dayIndex });
     setDragEnd(dayIndex);
     setIsDragging(true);
   };
 
-  const handleMouseEnter = (habitacionId: string, dayIndex: number) => {
-    if (!canCreate) return;
-    if (!isDragging || !dragStart || dragStart.roomId !== habitacionId) return;
-    if (getReservationForCell(habitacionId, dayIndex)) return;
-    setDragEnd(dayIndex);
+  const handleRowMouseMove = (habitacionId: string, event: React.MouseEvent<HTMLElement>) => {
+    if (!canCreate || !isDragging || !dragStart || dragStart.roomId !== habitacionId) return;
+    const next = clampSelectionEnd(habitacionId, dragStart.dayIndex, dayIndexFromPointer(event));
+    if (next !== dragEnd) setDragEnd(next);
   };
 
-  const handleMouseUp = () => {
-    if (!canCreate) return;
-    if (!isDragging || !dragStart || dragEnd === null) {
+  useEffect(() => {
+    if (!isDragging) return;
+    const finish = () => {
+      if (dragStart && dragEnd !== null) {
+        const startIdx = Math.min(dragStart.dayIndex, dragEnd);
+        const endIdx = Math.max(dragStart.dayIndex, dragEnd);
+        const lastNight = endIdx > startIdx ? endIdx - 1 : startIdx;
+        let hasConflict = false;
+        for (let i = startIdx; i <= lastNight; i++) {
+          if (getReservationForCell(dragStart.roomId, i)) { hasConflict = true; break; }
+        }
+        const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
+        const fechaCheckin = days[startIdx];
+        const fechaCheckout = endIdx > startIdx ? days[endIdx] : addDays(days[startIdx], 1);
+        if (!hasConflict && habitacion && fechaCheckin && fechaCheckout) {
+          onCreateReservation?.(habitacion, fechaCheckin, fechaCheckout);
+        }
+      }
       setIsDragging(false);
       setDragStart(null);
       setDragEnd(null);
-      return;
-    }
-
-    const startIdx = Math.min(dragStart.dayIndex, dragEnd);
-    const endIdx = Math.max(dragStart.dayIndex, dragEnd);
-    
-    let hasConflict = false;
-    for (let i = startIdx; i <= endIdx; i++) {
-      if (getReservationForCell(dragStart.roomId, i)) {
-        hasConflict = true;
-        break;
-      }
-    }
-
-    if (!hasConflict) {
-      const habitacion = habitaciones.find(h => h.id === dragStart.roomId);
-      const fechaCheckin = days[startIdx];
-      const fechaCheckout = days[endIdx];
-      onCreateReservation?.(habitacion, fechaCheckin, fechaCheckout);
-    }
-
-    setIsDragging(false);
-    setDragStart(null);
-    setDragEnd(null);
-  };
+    };
+    document.addEventListener('mouseup', finish);
+    return () => document.removeEventListener('mouseup', finish);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDragging, dragStart, dragEnd]);
 
   const isCellInDragSelection = (habitacionId: string, dayIndex: number) => {
     if (!isDragging || !dragStart || dragEnd === null || dragStart.roomId !== habitacionId) {
@@ -279,7 +320,6 @@ export function TimelineGrid({
     return dayIndex >= start && dayIndex <= end;
   };
 
-  const today = startOfDay(new Date());
   const isCompact = daysToShow > 14;
   const cellWidth = isCompact ? 'w-10' : daysToShow > 7 ? 'w-16' : 'w-20';
   const cellWidthPx = isCompact ? 40 : daysToShow > 7 ? 64 : 80;
@@ -411,7 +451,6 @@ export function TimelineGrid({
           {/* Grupos y filas por habitación */}
           {roomGroups.map((group) => {
             const collapsed = groupBy !== 'none' && collapsedGroupKeys.has(group.key);
-            const todayKey = format(today, 'yyyy-MM-dd');
             const occupiedToday = group.rooms.filter((room) => reservas.some((reservation) => (
               reservation.habitacion_id === room.id
               && !['CheckOut', 'Cancelada', 'NoShow'].includes(String(reservation.estado || ''))
@@ -453,9 +492,13 @@ export function TimelineGrid({
             const dropActive = dropTarget?.roomId === hab.id;
             const roomReservationBars = getReservasForRoom(hab.id)
               .map((reserva) => {
+                const occupancyCheckout = occupancyCheckoutDate(reserva, todayKey);
                 const checkoutPreview = resizePreview?.reservationId === reserva.id
                   ? resizePreview.checkout
-                  : undefined;
+                  : occupancyCheckout !== String(reserva.fecha_checkout || '').slice(0, 10)
+                    && isInHouseStay(reserva)
+                    ? occupancyCheckout
+                    : undefined;
                 return {
                   reserva,
                   geometry: getTimelineBarGeometry(
@@ -501,9 +544,24 @@ export function TimelineGrid({
                 </span>
               </div>
                   <div
-                    className={cn("relative flex flex-shrink-0", cellHeight)}
+                    className={cn("relative flex flex-shrink-0", cellHeight, isDragging && dragStart?.roomId === hab.id && 'select-none')}
                     style={{ width: `${days.length * cellWidthPx}px` }}
+                    onMouseDown={canCreate ? (event) => handleRowMouseDown(hab.id, event) : undefined}
+                    onMouseMove={canCreate ? (event) => handleRowMouseMove(hab.id, event) : undefined}
                   >
+                    {isDragging && dragStart?.roomId === hab.id && dragEnd !== null && (() => {
+                      const lo = Math.min(dragStart.dayIndex, dragEnd);
+                      const hi = Math.max(dragStart.dayIndex, dragEnd);
+                      const inDay = days[lo];
+                      const outDay = hi > lo ? days[hi] : addDays(days[lo], 1);
+                      const nights = Math.max(1, differenceInCalendarDays(outDay, inDay));
+                      return <div
+                        className="pointer-events-none absolute inset-y-0.5 z-40 flex items-center overflow-hidden whitespace-nowrap rounded-md bg-[#10233F]/90 px-2 text-[10px] font-semibold text-white shadow"
+                        style={{ left: `${lo * cellWidthPx}px`, minWidth: `${(hi - lo + 1) * cellWidthPx}px` }}
+                      >
+                        {formatDate(inDay)} → {formatDate(outDay)} · {nights} noche{nights === 1 ? '' : 's'}
+                      </div>;
+                    })()}
                     {/* La cuadrícula siempre conserva celdas completas. Las reservas viven encima
                         con geometría de media jornada: salida a la izquierda, entrada a la derecha. */}
                     {days.map((day, dayIndex) => {
@@ -519,9 +577,6 @@ export function TimelineGrid({
                             isSelecting && "bg-primary/20",
                             isToday && "border-l-2 border-l-[#10233F] bg-[#10233F]/[0.03]"
                           )}
-                          onMouseDown={canCreate ? () => handleMouseDown(hab.id, dayIndex) : undefined}
-                          onMouseEnter={canCreate ? () => handleMouseEnter(hab.id, dayIndex) : undefined}
-                          onMouseUp={canCreate ? handleMouseUp : undefined}
                         />
                       );
                     })}

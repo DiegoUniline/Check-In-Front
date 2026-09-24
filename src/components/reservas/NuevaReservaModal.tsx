@@ -153,6 +153,17 @@ interface FormData {
 
 const hotelToday = () => parseISO(todayLocal());
 
+// La ocupación real se valida contra reservas (disponibilidad). Para una entrada
+// inmediata sólo se descartan habitaciones en mantenimiento; una habitación
+// sucia se permite y se señala para que limpieza la atienda.
+const roomReadyForArrival = (room: any) => {
+  const maintenance = String(room?.estado_mantenimiento || 'OK').toLowerCase();
+  const state = String(room?.estado_habitacion || 'Disponible');
+  return maintenance === 'ok' && !['Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(state);
+};
+const roomIsDirty = (room: any) => !['limpia', 'lista', 'inspeccionada']
+  .includes(String(room?.estado_limpieza || 'Limpia').toLowerCase());
+
 const createInitialFormData = (preload?: ReservationPreload): FormData => {
   const today = hotelToday();
   return {
@@ -303,9 +314,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       if (requestId !== availabilityRequestRef.current) return;
       const availableRooms = (Array.isArray(rooms) ? rooms : []).filter((room: any) => {
         if (origen !== 'Recepcion') return true;
-        const cleaning = String(room.estado_limpieza || 'Limpia').toLowerCase();
-        const maintenance = String(room.estado_mantenimiento || 'OK').toLowerCase();
-        return room.estado_habitacion === 'Disponible' && cleaning === 'limpia' && maintenance === 'ok';
+        return roomReadyForArrival(room);
       });
       setHabitacionesDisponibles(availableRooms);
       setAvailabilityStatus('ready');
@@ -424,11 +433,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   const adultosTotales = formData.adultos;
   const tipoDeHabitacion = (room: any) => room?.tipos_habitacion
     || tiposHabitacion.find((item) => item.id === (room?.tipo_habitacion_id || room?.tipo_id));
-  const roomReadyForArrival = (room: any) => {
-    const cleaning = String(room?.estado_limpieza || 'Limpia').toLowerCase();
-    const maintenance = String(room?.estado_mantenimiento || 'OK').toLowerCase();
-    return room?.estado_habitacion === 'Disponible' && cleaning === 'limpia' && maintenance === 'ok';
-  };
   const roomFitsOccupancy = (room: any) => {
     const type = tipoDeHabitacion(room);
     if (!type) return true;
@@ -587,7 +591,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
       }
       if (origen === 'Recepcion' && !roomReadyForArrival(freshRoom)) {
         void buscarHabitaciones();
-        toast({ title: 'La habitación ya no está lista', description: 'Revisa limpieza o mantenimiento y elige una habitación disponible.', variant: 'destructive' });
+        toast({ title: 'La habitación está en mantenimiento', description: 'Elige otra habitación disponible.', variant: 'destructive' });
         return;
       }
       if (!roomFitsOccupancy(freshRoom)) {
@@ -642,6 +646,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         })),
         checkin: origen === 'Recepcion',
       });
+      if (origen === 'Recepcion' && roomIsDirty(freshRoom)) {
+        toast({ title: 'Habitación pendiente de limpieza', description: `Se registró la entrada en la #${freshRoom.numero}; avisa a limpieza.` });
+      }
 
       toast({
         title: origen === 'Recepcion' ? '✅ Check-in completado' : '✅ Reserva creada',
@@ -792,7 +799,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d > formData.fechaCheckout ? d : formData.fechaCheckout })} disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))} />
+                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d > formData.fechaCheckout ? d : formData.fechaCheckout })} disabled={(d) => d < hotelToday()} />
                   </PopoverContent>
                 </Popover>
               </Field>
@@ -892,7 +899,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                       options={habitacionesCompatibles.map((hab) => {
                         const type = tipoDeHabitacion(hab);
                         const floor = hab.piso ? ` · Piso ${hab.piso}` : '';
-                        return { value: hab.id, label: `#${hab.numero} · ${type?.nombre || hab.tipo_nombre || 'Sin categoría'}${floor} · ${fmt(rateOf(hab))}/noche` };
+                        return { value: hab.id, label: `#${hab.numero} · ${type?.nombre || hab.tipo_nombre || 'Sin categoría'}${floor} · ${fmt(rateOf(hab))}/noche${roomIsDirty(hab) ? ' · Pendiente de limpieza' : ''}` };
                       })}
                       value={formData.habitacionId}
                       onValueChange={(value) => {

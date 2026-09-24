@@ -178,15 +178,21 @@ export default function HistorialReservas() {
     if (seleccionadas.size === 0) return;
     setEliminando(true);
     try {
-      const ids = Array.from(seleccionadas);
-      // Limpiar dependencias primero (cargos / pagos asociados)
-      await supabase.from('cargos').delete().in('reserva_id', ids);
-      await supabase.from('pagos').delete().in('reserva_id', ids);
-      const { error } = await supabase.from('reservas').delete().in('id', ids);
-      if (error) throw error;
+      // Las reservas nunca se borran: se cancelan para conservar quién,
+      // cuándo y por qué. Sólo aplica a reservas que aún no inician.
+      const ids = reservas
+        .filter((r: any) => seleccionadas.has(r.id) && ['Pendiente', 'Confirmada'].includes(r.estado) && !r.checkin_realizado)
+        .map((r: any) => r.id);
+      const omitidas = seleccionadas.size - ids.length;
+      if (ids.length > 0) {
+        const { error } = await supabase.from('reservas')
+          .update({ estado: 'Cancelada', motivo_cancelacion: 'Cancelación desde historial de reservas' } as any)
+          .in('id', ids);
+        if (error) throw error;
+      }
       toast({
-        title: 'Reservas eliminadas',
-        description: `Se eliminaron ${ids.length} reserva(s).`,
+        title: 'Reservas canceladas',
+        description: `Se cancelaron ${ids.length} reserva(s).${omitidas > 0 ? ` ${omitidas} no se modificaron porque ya iniciaron, terminaron o estaban canceladas.` : ''}`,
       });
       limpiarSeleccion();
       setConfirmarBorrado(false);
@@ -479,7 +485,7 @@ export default function HistorialReservas() {
                   size="sm"
                   onClick={() => setConfirmarBorrado(true)}
                 >
-                  <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                  <Trash2 className="h-4 w-4 mr-1" /> Cancelar reservas
                 </Button>
               </div>
             </div>
@@ -519,6 +525,7 @@ export default function HistorialReservas() {
                       <TableHead>Total</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Origen</TableHead>
+                      <TableHead className="whitespace-nowrap">Creada por</TableHead>
                       <TableHead className="text-right w-[60px]">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -567,6 +574,13 @@ export default function HistorialReservas() {
                         </TableCell>
                         <TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
                         <TableCell>{getOrigenBadge(reserva.origen)}</TableCell>
+                        <TableCell className="text-xs">
+                          <p className="max-w-[140px] truncate">{reserva.creado_por_nombre || '—'}</p>
+                          {reserva.created_at && <p className="whitespace-nowrap text-muted-foreground">{formatDateTime(reserva.created_at)}</p>}
+                          {['Cancelada', 'NoShow'].includes(reserva.estado) && reserva.cancelada_por_nombre && (
+                            <p className="max-w-[140px] truncate text-red-700">Canceló: {reserva.cancelada_por_nombre}</p>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -636,7 +650,7 @@ export default function HistorialReservas() {
                     ))}
                     {reservasPaginadas.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center text-muted-foreground py-12">
+                        <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
                           No se encontraron reservas
                         </TableCell>
                       </TableRow>
@@ -1007,6 +1021,7 @@ export default function HistorialReservas() {
                             <TableHead>Fecha</TableHead>
                             <TableHead>Concepto</TableHead>
                             <TableHead>Cant.</TableHead>
+                            <TableHead>Registró</TableHead>
                             <TableHead className="text-right">Total</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1015,10 +1030,16 @@ export default function HistorialReservas() {
                             detalleCompleto.cargos.map((cargo: any, idx: number) => (
                               <TableRow key={idx}>
                                 <TableCell className="whitespace-nowrap">
-                                  {cargo.fecha ? formatDateTime(cargo.fecha) : '-'}
+                                  {cargo.created_at || cargo.fecha ? formatDateTime(cargo.created_at || cargo.fecha) : '-'}
                                 </TableCell>
-                                <TableCell>{cargo.concepto}</TableCell>
+                                <TableCell>
+                                  <span className={cargo.estado === 'Cancelado' ? 'line-through text-muted-foreground' : ''}>{cargo.concepto}</span>
+                                  {cargo.estado === 'Cancelado' && (
+                                    <p className="text-[10px] text-red-700">Cancelado{cargo.cancelado_por_nombre ? ` por ${cargo.cancelado_por_nombre}` : ''}{cargo.cancelado_at ? ` · ${formatDateTime(cargo.cancelado_at)}` : ''}</p>
+                                  )}
+                                </TableCell>
                                 <TableCell>{cargo.cantidad}</TableCell>
+                                <TableCell className="text-xs">{cargo.created_by_nombre || '—'}</TableCell>
                                 <TableCell className="text-right font-medium">
                                   {formatCurrency(safeNumber(cargo.total))}
                                 </TableCell>
@@ -1026,7 +1047,7 @@ export default function HistorialReservas() {
                             ))
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                 No hay cargos extra registrados
                               </TableCell>
                             </TableRow>
@@ -1057,6 +1078,7 @@ export default function HistorialReservas() {
                             <TableHead>Fecha</TableHead>
                             <TableHead>Método</TableHead>
                             <TableHead>Referencia</TableHead>
+                            <TableHead>Registró</TableHead>
                             <TableHead className="text-right">Monto</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1065,17 +1087,21 @@ export default function HistorialReservas() {
                             detalleCompleto.pagos.map((pago: any, idx: number) => (
                               <TableRow key={idx}>
                                 <TableCell className="whitespace-nowrap">
-                                  {pago.fecha ? formatDateTime(pago.fecha) : '-'}
+                                  {pago.created_at || pago.fecha ? formatDateTime(pago.created_at || pago.fecha) : '-'}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     <Wallet className="h-3 w-3 text-muted-foreground" />
-                                    {pago.metodo_pago}
+                                    <span className={pago.estado === 'Cancelado' ? 'line-through text-muted-foreground' : ''}>{pago.metodo_pago}</span>
                                   </div>
+                                  {pago.estado === 'Cancelado' && (
+                                    <p className="text-[10px] text-red-700">Cancelado{pago.cancelado_por_nombre ? ` por ${pago.cancelado_por_nombre}` : ''}{pago.cancelado_at ? ` · ${formatDateTime(pago.cancelado_at)}` : ''}</p>
+                                  )}
                                 </TableCell>
                                 <TableCell className="font-mono text-xs text-muted-foreground">
                                   {pago.referencia || '-'}
                                 </TableCell>
+                                <TableCell className="text-xs">{pago.created_by_nombre || '—'}</TableCell>
                                 <TableCell className="text-right font-medium text-green-600">
                                   {formatCurrency(safeNumber(pago.monto))}
                                 </TableCell>
@@ -1083,7 +1109,7 @@ export default function HistorialReservas() {
                             ))
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                 No hay pagos registrados
                               </TableCell>
                             </TableRow>
@@ -1104,19 +1130,19 @@ export default function HistorialReservas() {
       <AlertDialog open={confirmarBorrado} onOpenChange={setConfirmarBorrado}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar {seleccionadas.size} reserva(s)?</AlertDialogTitle>
+            <AlertDialogTitle>¿Cancelar {seleccionadas.size} reserva(s)?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminarán también los cargos y pagos asociados a estas reservas.
+              Las reservas pendientes o confirmadas quedarán canceladas con tu usuario, fecha y hora. No se borra ningún registro, pago ni cargo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={eliminando}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={eliminando}>Volver</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); eliminarSeleccionadas(); }}
               disabled={eliminando}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {eliminando ? 'Eliminando...' : 'Eliminar'}
+              {eliminando ? 'Cancelando...' : 'Cancelar reservas'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

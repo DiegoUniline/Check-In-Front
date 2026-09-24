@@ -19,24 +19,9 @@ if (!root[PATCH_KEY]) {
   const originalGetHabitaciones = client.getHabitaciones.bind(client);
   const originalGetDashboardStats = client.getDashboardStats.bind(client);
 
+  // El saldo se recalcula en el servidor (excluye pagos y cargos cancelados).
   const recalcularSaldoReserva = async (reservaId: string) => {
-    const hotelId = client.getHotelId?.();
-    const [{ data: reserva, error: reservaError }, { data: pagos, error: pagosError }] = await Promise.all([
-      db.from('reservas').select('total').eq('id', reservaId).eq('hotel_id', hotelId).maybeSingle(),
-      db.from('pagos').select('monto').eq('reserva_id', reservaId).eq('hotel_id', hotelId),
-    ]);
-    if (reservaError) throw reservaError;
-    if (pagosError) throw pagosError;
-    if (!reserva) return;
-
-    const totalReserva = Number(reserva.total || 0);
-    const totalPagado = (pagos || []).reduce((sum: number, p: any) => sum + (Number(p.monto) || 0), 0);
-
-    const { error } = await db
-      .from('reservas')
-      .update({ total_pagado: totalPagado, saldo_pendiente: Math.max(0, totalReserva - totalPagado) })
-      .eq('id', reservaId)
-      .eq('hotel_id', hotelId);
+    const { error } = await db.rpc('recalculate_reservation_financials', { p_reserva_id: reservaId });
     if (error) throw error;
   };
 

@@ -10,6 +10,12 @@ function toDate(input: unknown): Date | null {
     return isNaN(d.getTime()) ? null : d;
   }
   if (typeof input === 'string') {
+    // Marcas de tiempo con zona (p. ej. '2026-09-24T18:03:12+00:00' de Supabase):
+    // se convierten a la hora local; antes se mostraba la hora UTC.
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}(:?\d{2})?)$/i.test(input.trim())) {
+      const zoned = new Date(input.trim().replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00'));
+      if (!isNaN(zoned.getTime())) return zoned;
+    }
     // Soporta 'YYYY-MM-DD' evitando corrimiento por timezone.
     const m = input.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
     if (m) {
