@@ -237,6 +237,8 @@ export default function Reservas() {
   const [filtros, setFiltros] = useState<ReservasFilters>(savedView.filtros || defaultFilters);
   const activeFilterCount = countActiveFilters(filtros);
   const isCalendarWorkspace = tabActiva === 'timeline' && reservasSubView === 'timeline';
+  // Calendario, Card y Tabla comparten el mismo espacio de trabajo a pantalla completa.
+  const isRecepcionWorkspace = tabActiva === 'timeline';
 
   const daysToShow = viewMode === 'Dia' ? 7 : viewMode === 'Semana' ? 14 : 31;
 
@@ -652,16 +654,16 @@ export default function Reservas() {
   );
 
   return (
-    <MainLayout title="Recepción" subtitle="Gestión de reservas" fitViewport={isCalendarWorkspace} fullWidth={isCalendarWorkspace}>
+    <MainLayout title="Recepción" subtitle="Gestión de reservas" fitViewport={isRecepcionWorkspace} fullWidth={isRecepcionWorkspace}>
       <div
         className={cn(
-          isCalendarWorkspace
+          isRecepcionWorkspace
             ? 'flex h-full min-h-0 flex-col gap-2 p-2 sm:p-3'
             : 'space-y-3',
         )}
-        style={isCalendarWorkspace ? undefined : { paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4rem))' }}
+        style={isRecepcionWorkspace ? undefined : { paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 4rem))' }}
       >
-        <div className={cn('grid grid-cols-2 gap-2 sm:hidden', isCalendarWorkspace && 'hidden')}>
+        <div className={cn('grid grid-cols-2 gap-2 sm:hidden', isRecepcionWorkspace && 'hidden')}>
           <Button
             className="col-span-2 h-12 justify-center text-sm font-semibold shadow-sm"
             disabled={viewOnlyMode}
@@ -684,7 +686,7 @@ export default function Reservas() {
         </div>
 
         {/* KPI compactos, mobile-first */}
-        {!isCalendarWorkspace && !(tabActiva === 'timeline' && reservasSubView === 'card') && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {!isRecepcionWorkspace && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Card className="p-3">
             <div className="flex items-center gap-2 min-w-0">
               <div className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
@@ -750,7 +752,7 @@ export default function Reservas() {
         </div>}
 
         {/* Vistas seleccionables desde el sidebar */}
-        <Tabs value={tabActiva} className={cn(isCalendarWorkspace && 'flex min-h-0 flex-1 flex-col')}>
+        <Tabs value={tabActiva} className={cn(isRecepcionWorkspace && 'flex min-h-0 flex-1 flex-col')}>
 
           {/* TAB RECEPCIÓN: Cards por habitación */}
           <TabsContent value="recepcion" className="space-y-3 mt-3">
@@ -812,9 +814,9 @@ export default function Reservas() {
           </TabsContent>
 
           {/* TAB RESERVAS: Timeline existente */}
-          <TabsContent value="timeline" className={cn(isCalendarWorkspace ? 'mt-0 flex min-h-0 flex-1 flex-col' : 'space-y-3 mt-3')}>
+          <TabsContent value="timeline" className={cn(isRecepcionWorkspace ? 'mt-0 flex min-h-0 flex-1 flex-col gap-2' : 'space-y-3 mt-3')}>
             {/* En Card y Tabla el selector conserva su lugar; en Calendario forma parte de la barra operativa. */}
-            <div className={cn('flex items-center justify-between gap-2 flex-wrap', isCalendarWorkspace && 'hidden')}>
+            <div className={cn('flex shrink-0 items-center justify-between gap-2 flex-wrap', isCalendarWorkspace && 'hidden')}>
               <div className="grid w-full grid-cols-3 rounded-xl bg-muted p-1 sm:inline-flex sm:w-auto lg:hidden">
                 {([
                   { key: 'timeline', label: 'Calendario' },
@@ -832,7 +834,7 @@ export default function Reservas() {
                   </Button>
                 ))}
               </div>
-              {reservasSubView === 'card' && (
+              {reservasSubView !== 'timeline' && (
                 <div className="flex h-9 flex-1 items-center gap-1 overflow-x-auto rounded-md border bg-card px-2 text-xs">
                   <span className="flex shrink-0 items-center gap-1.5 px-2"><BedDouble className="h-3.5 w-3.5 text-[#10233F]" /><strong className="tabular-nums">{habitacionesOcupadas}/{totalHabitaciones}</strong><span className="text-muted-foreground">ocupadas</span></span>
                   <span className="h-4 w-px shrink-0 bg-border" />
@@ -846,16 +848,16 @@ export default function Reservas() {
 
             <div className={cn(
               'flex gap-3',
-              isCalendarWorkspace && 'min-h-0 flex-1',
+              isRecepcionWorkspace && 'min-h-0 flex-1',
               isCalendarWorkspace && calendarFocusMode && 'fixed inset-0 z-40 bg-background p-2 sm:p-3',
             )}>
               <aside className={cn(
                 'hidden w-[210px] shrink-0 overflow-y-auto rounded-lg border bg-card p-2.5 lg:block',
-                isCalendarWorkspace ? 'self-stretch' : 'sticky top-2 max-h-[calc(100vh-6rem)] self-start',
+                isRecepcionWorkspace ? 'self-stretch' : 'sticky top-2 max-h-[calc(100vh-6rem)] self-start',
               )}>
                 {filtrosPanel}
               </aside>
-              <div className={cn('min-w-0 flex-1', isCalendarWorkspace ? 'flex min-h-0 flex-col' : 'space-y-3')}>
+              <div className={cn('min-w-0 flex-1', isRecepcionWorkspace ? cn('flex min-h-0 flex-col', !isCalendarWorkspace && 'gap-2 overflow-y-auto pr-1') : 'space-y-3')}>
                 {!isCalendarWorkspace && (
                   <details className="rounded-lg border bg-card p-2.5 lg:hidden">
                     <summary className="cursor-pointer text-xs font-medium">Filtros y búsqueda{hayFiltrosPanel ? ' · activos' : ''}</summary>
@@ -1191,7 +1193,15 @@ export default function Reservas() {
                               const rid = r.habitacion_id || r.habitaciones?.id;
                               return rid === h.id && occupiesNight(r, hoy, hoy);
                             });
-                            const est = getEstadoConfig(activa?.estado || h.estado_habitacion || 'Libre');
+                            const enMant = String(h.estado_mantenimiento || 'OK').toLowerCase() !== 'ok' || ['Mantenimiento', 'FueraDeServicio'].includes(String(h.estado_habitacion || ''));
+                            const limpia = ['limpia', 'lista'].some((v) => String(h.estado_limpieza || 'Limpia').toLowerCase().includes(v));
+                            const est = activa
+                              ? getEstadoConfig(activa.estado)
+                              : enMant
+                                ? getEstadoConfig('Mantenimiento')
+                                : !limpia
+                                  ? getEstadoConfig('Limpieza')
+                                  : { label: 'Disponible', badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200' };
                             const cliente = activa
                               ? (activa.clientes
                                   ? `${activa.clientes.nombre || ''} ${activa.clientes.apellido_paterno || ''}`.trim()
