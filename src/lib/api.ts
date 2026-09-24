@@ -1281,6 +1281,19 @@ class ApiClient {
     const { data: r, error } = await supabase.from('reservas').update(data).eq('id', id).select().single();
     if (error) throw error; return r;
   };
+  cambiarImportePago = async (reservaId: string, paymentId: string, amount: number, reason: string): Promise<any> => {
+    const { data, error } = await (operationalDb as any).rpc('vulo_change_payment_amount', {
+      p_reserva_id: reservaId, p_payment_id: paymentId, p_amount: amount, p_reason: reason,
+    });
+    if (error) {
+      if (error.code === 'PGRST202' || /vulo_change_payment_amount|schema cache/i.test(error.message || '')) {
+        throw new Error('Falta correr el SQL de corrección de pagos en Supabase.');
+      }
+      throw error;
+    }
+    window.dispatchEvent(new CustomEvent('data:changed'));
+    return data;
+  };
   applyStayOperation = async (id: string, operation: string, payload: Record<string, any> = {}, reason = ''): Promise<any> => {
     if (operation === 'add_charge' && Array.isArray(payload.items)) {
       const { data, error } = await operationalDb.rpc('vulo_register_sale', {

@@ -224,7 +224,25 @@ export default function ReservaDetalle() {
                 {reserva.notas_internas && <NoteRow label="Nota interna" text={reserva.notas_internas} divided={Boolean(reserva.solicitudes_especiales)} />}
               </section>}
 
-              <ReservationLedger embedded rows={ledger} />
+              <ReservationLedger
+                embedded
+                rows={ledger}
+                canUse={(op) => canAccess(`reservas.operacion.${op}`, user?.rol)}
+                onAction={(op, movementId) => {
+                  if (op.includes('charge')) {
+                    const charge = (reserva.cargos || []).find((item: any) => item.id === movementId);
+                    operationsRef.current?.openOperation(op, {
+                      charge_id: movementId,
+                      concept: charge?.concepto || '',
+                      amount: String(charge?.precio_unitario || ''),
+                      quantity: String(charge?.cantidad || 1),
+                      tax: String(charge?.impuesto || 0),
+                    });
+                  } else {
+                    operationsRef.current?.openOperation(op, { payment_id: movementId });
+                  }
+                }}
+              />
 
               <ReservationTrail reserva={reserva} />
 
@@ -356,7 +374,30 @@ function DataPoint({ label, value }: { label: string; value: string }) {
   </div>;
 }
 
-function ReservationLedger({ rows, embedded = false }: { rows: ReservationLedgerRow[]; embedded?: boolean }) {
+const MOVEMENT_ACTIONS: Record<'payment' | 'charge', { active: [string, string][]; cancelled: [string, string][] }> = {
+  payment: {
+    active: [['payment_amount_change', 'Corregir importe'], ['payment_method_change', 'Corregir forma de pago'], ['cancel_payment', 'Cancelar pago']],
+    cancelled: [['restore_payment', 'Reactivar pago']],
+  },
+  charge: {
+    active: [['update_charge', 'Corregir cargo'], ['transfer_charge', 'Trasladar a otro folio'], ['cancel_charge', 'Cancelar cargo']],
+    cancelled: [['restore_charge', 'Reactivar cargo']],
+  },
+};
+
+function ReservationLedger({ rows, embedded = false, onAction, canUse }: {
+  rows: ReservationLedgerRow[];
+  embedded?: boolean;
+  onAction?: (operation: string, movementId: string) => void;
+  canUse?: (operation: string) => boolean;
+}) {
+  const actionsFor = (row: ReservationLedgerRow) => {
+    const [kind, movementId] = String(row.id).split(':');
+    if ((kind !== 'payment' && kind !== 'charge') || !movementId || !onAction) return null;
+    const list = MOVEMENT_ACTIONS[kind][row.cancelled ? 'cancelled' : 'active'].filter(([op]) => !canUse || canUse(op));
+    if (!list.length) return null;
+    return { movementId, list, danger: (op: string) => op.startsWith('cancel_') };
+  };
   return <section id="cuenta" className={cn(
     'scroll-mt-24 overflow-hidden bg-white',
     embedded ? 'border-b border-slate-200' : 'rounded-[8px] border border-slate-200',
@@ -381,11 +422,12 @@ function ReservationLedger({ rows, embedded = false }: { rows: ReservationLedger
             <TableHead className="h-9 w-28 px-3 text-right text-[11px]">Cargo</TableHead>
             <TableHead className="h-9 w-28 px-3 text-right text-[11px]">Pago</TableHead>
             <TableHead className="h-9 w-28 px-3 text-right text-[11px]">Saldo</TableHead>
+            {onAction && <TableHead className="h-9 w-10 px-1" />}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0
-            ? <TableRow><TableCell colSpan={6} className="h-10 px-2 py-1.5 text-center text-xs text-muted-foreground">Sin movimientos financieros.</TableCell></TableRow>
+            ? <TableRow><TableCell colSpan={onAction ? 7 : 6} className="h-10 px-2 py-1.5 text-center text-xs text-muted-foreground">Sin movimientos financieros.</TableCell></TableRow>
             : rows.map((row) => <TableRow key={row.id} className={cn(row.cancelled && 'opacity-45')}>
               <TableCell className="px-3 py-2 whitespace-nowrap text-[11px] text-muted-foreground">{movementDate(row.at)}</TableCell>
               <TableCell className="px-3 py-2">
@@ -401,6 +443,22 @@ function ReservationLedger({ rows, embedded = false }: { rows: ReservationLedger
               <TableCell className="px-3 py-2 text-right text-[13px] tabular-nums">{row.charge ? formatCurrency(row.charge) : '—'}</TableCell>
               <TableCell className="px-3 py-2 text-right text-[13px] font-medium tabular-nums text-emerald-700">{row.payment ? formatCurrency(row.payment) : '—'}</TableCell>
               <TableCell className="px-3 py-2 text-right text-[13px] font-semibold tabular-nums">{formatCurrency(row.balance)}</TableCell>
+              {onAction && <TableCell className="px-1 py-1 text-right">{(() => {
+                const actions = actionsFor(row);
+                if (!actions) return null;
+                return <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Acciones del movimiento">
+                      <Ellipsis className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {actions.list.map(([op, label]) => (
+                      <DropdownMenuItem key={op} className={cn(actions.danger(op) && 'text-red-700 focus:text-red-700')} onClick={() => onAction?.(op, actions.movementId)}>{label}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>;
+              })()}</TableCell>}
             </TableRow>)}
         </TableBody>
       </Table>

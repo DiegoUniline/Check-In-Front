@@ -39,7 +39,7 @@ type Props = {
 type Operation = { id: string; label: string; detail: string; icon: any; sensitive?: boolean };
 
 export type StayOperationsPanelHandle = {
-  openOperation: (operationId: string) => void;
+  openOperation: (operationId: string, prefill?: Record<string, any>) => void;
   openMoreOperations: () => void;
 };
 
@@ -68,6 +68,7 @@ const groups: { title: string; operations: Operation[] }[] = [
     { id: 'transfer_charge', label: 'Trasladar cargo', detail: 'Mueve un consumo a otro folio.', icon: ArrowLeftRight, sensitive: true },
     { id: 'partial_payment', label: 'Pago parcial', detail: 'Registra un abono al saldo.', icon: BadgeDollarSign },
     { id: 'payment_method_change', label: 'Corregir forma de pago', detail: 'Conserva el importe y audita el cambio.', icon: BadgeDollarSign, sensitive: true },
+    { id: 'payment_amount_change', label: 'Corregir importe de pago', detail: 'Cambia el monto con motivo y auditoría.', icon: BadgeDollarSign, sensitive: true },
     { id: 'cancel_payment', label: 'Cancelar pago', detail: 'Anula un pago sin eliminar su historia.', icon: BadgeDollarSign, sensitive: true },
     { id: 'restore_payment', label: 'Restaurar pago', detail: 'Reactiva un pago si no genera sobrepago.', icon: RefreshCcw, sensitive: true },
     { id: 'split_account', label: 'Dividir cuenta', detail: 'Crea subcuenta y asigna movimientos.', icon: Split },
@@ -374,14 +375,18 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     });
   };
 
-  const openOperationById = (operationId: string) => {
+  const openOperationById = (operationId: string, prefill?: Record<string, any>) => {
     const operation = groups.flatMap((group) => group.operations)
       .find((item) => item.id === operationId);
     if (!operation) return;
     const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
     const applies = operationApplies(operation.id);
-    if (!allowed || !applies) return;
+    if (!allowed || !applies) {
+      toast({ title: 'No disponible', description: allowed ? 'Esta operación no aplica al estado actual de la reservación.' : 'Tu rol no tiene permiso para esta operación.', variant: 'destructive' });
+      return;
+    }
     openOperation(operation);
+    if (prefill) setPayload((current) => ({ ...current, ...prefill }));
   };
 
   useImperativeHandle(ref, () => ({
@@ -448,6 +453,17 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       // La tarifa sólo viaja en operaciones de tarifa; en un cambio de habitación
       // de recepción el servidor la rechazaría.
       if (!['category_change', 'rate_change'].includes(selected.id)) delete normalizedPayload.new_rate;
+      if (selected.id === 'payment_amount_change') {
+        const nuevo = Number(payload.amount);
+        if (!payload.payment_id) throw new Error('Selecciona el pago');
+        if (!Number.isFinite(nuevo) || nuevo <= 0) throw new Error('Escribe el importe correcto');
+        await api.cambiarImportePago(reserva.id, payload.payment_id, nuevo, reason.trim());
+        toast({ title: 'Importe corregido', description: 'El saldo se recalculó y quedó en el historial.' });
+        setSelected(null);
+        await onUpdate?.();
+        await load();
+        return;
+      }
       await api.applyStayOperation(
         reserva.id,
         selected.id,
@@ -702,6 +718,10 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       case 'transfer_charge': return <div className="space-y-3">{chargeSelect()}{reservationSelect('target_reservation_id','Folio destino')}</div>;
       case 'partial_payment': return <div className="space-y-4">{financialImpactNotice('payment')}<div className="grid gap-3 sm:grid-cols-2"><Field label="Importe del abono"><MoneyInput value={payload.amount || ''} onChange={(value) => set('amount', value)} autoFocus /></Field><PaymentMethod payload={payload} set={set} /><Field label="Referencia"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field>{accountSelect()}</div></div>;
       case 'payment_method_change': return <div className="space-y-3">{paymentSelect()}<PaymentMethod payload={payload} set={set} /><Field label="Nueva referencia (opcional)"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field></div>;
+      case 'payment_amount_change': {
+        const actual = activePayments.find((p: any) => p.id === payload.payment_id);
+        return <div className="space-y-3">{paymentSelect()}<Field label={actual ? `Importe correcto (actual ${formatCurrency(actual.monto)})` : 'Importe correcto'}><MoneyInput value={payload.amount || ''} onChange={(value) => set('amount', value)} /></Field></div>;
+      }
       case 'cancel_payment': return paymentSelect();
       case 'restore_payment': return paymentSelect(cancelledPayments);
       case 'split_account': return <div className="space-y-3"><Field label="Nombre de subcuenta"><Input placeholder="Empresa, acompañante…" value={payload.name || ''} onChange={(e) => set('name', e.target.value)} /></Field><Field label="Responsable"><Input value={payload.responsible || ''} onChange={(e) => set('responsible', e.target.value)} /></Field><MovementChecks title="Cargos a separar" items={activeCharges} selected={payload.charge_ids || []} onChange={(ids) => set('charge_ids', ids)} label={(item) => `${item.concepto} · ${formatCurrency(item.total ?? item.subtotal)}`} /><MovementChecks title="Pagos a separar" items={activePayments} selected={payload.payment_ids || []} onChange={(ids) => set('payment_ids', ids)} label={(item) => `${item.metodo_pago} · ${formatCurrency(item.monto)}`} /></div>;
