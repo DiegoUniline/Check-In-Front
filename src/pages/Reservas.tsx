@@ -816,8 +816,8 @@ export default function Reservas() {
           {/* TAB RESERVAS: Timeline existente */}
           <TabsContent value="timeline" className={cn(isRecepcionWorkspace ? 'mt-0 flex min-h-0 flex-1 flex-col gap-2' : 'space-y-3 mt-3')}>
             {/* En Card y Tabla el selector conserva su lugar; en Calendario forma parte de la barra operativa. */}
-            <div className={cn('flex shrink-0 items-center justify-between gap-2 flex-wrap', isCalendarWorkspace && 'hidden')}>
-              <div className="grid w-full grid-cols-3 rounded-xl bg-muted p-1 sm:inline-flex sm:w-auto lg:hidden">
+            <div className={cn('flex shrink-0 items-center justify-between gap-2 flex-wrap', isCalendarWorkspace && calendarFocusMode && 'hidden')}>
+              <div className={cn('grid w-full grid-cols-3 rounded-xl bg-muted p-1 sm:inline-flex sm:w-auto lg:hidden', isCalendarWorkspace && 'hidden')}>
                 {([
                   { key: 'timeline', label: 'Calendario' },
                   { key: 'card', label: 'Card' },
@@ -834,7 +834,7 @@ export default function Reservas() {
                   </Button>
                 ))}
               </div>
-              {reservasSubView !== 'timeline' && (
+              {(
                 <div className="flex h-9 flex-1 items-center gap-1 overflow-x-auto rounded-md border bg-card px-2 text-xs">
                   <span className="flex shrink-0 items-center gap-1.5 px-2"><BedDouble className="h-3.5 w-3.5 text-[#10233F]" /><strong className="tabular-nums">{habitacionesOcupadas}/{totalHabitaciones}</strong><span className="text-muted-foreground">ocupadas</span></span>
                   <span className="h-4 w-px shrink-0 bg-border" />
@@ -842,6 +842,7 @@ export default function Reservas() {
                   <button type="button" className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 hover:bg-orange-50" onClick={() => setModalSalidas(true)}><LogOut className="h-3.5 w-3.5 text-orange-600" /><strong className="tabular-nums text-orange-700">{salidasHoy}</strong><span className="text-muted-foreground">salidas</span></button>
                   <span className="h-4 w-px shrink-0 bg-border" />
                   <span className="flex shrink-0 items-center gap-1.5 px-2"><Calendar className="h-3.5 w-3.5 text-sky-600" /><strong className="tabular-nums text-sky-700">{occupancyPercent}%</strong><span className="text-muted-foreground">ocupación</span></span>
+                  <span className="ml-auto hidden shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground lg:flex"><span className={cn('h-2 w-2 rounded-full', realtimeConnected ? 'animate-pulse bg-emerald-500' : 'bg-amber-400')} />{realtimeConnected ? 'En tiempo real' : 'Conectando…'} · {habitacionesFiltradas.length} habitaciones</span>
                 </div>
               )}
             </div>
@@ -889,27 +890,6 @@ export default function Reservas() {
                       <p className="mt-1 text-[9px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Ahora · sincronizado automáticamente</p>
                     </div>
                     <button type="button" className="rounded p-1 text-muted-foreground hover:bg-muted" onClick={() => setRealtimeNotice(null)} aria-label="Cerrar actualización"><X className="h-3.5 w-3.5" /></button>
-                  </div>
-                )}
-                {!calendarFocusMode && (
-                  <div className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto rounded-xl border bg-card px-2 shadow-sm">
-                    <div className="flex shrink-0 items-center gap-1.5 px-2 text-xs">
-                      <BedDouble className="h-3.5 w-3.5 text-[#10233F]" />
-                      <strong className="tabular-nums">{habitacionesOcupadas}/{totalHabitaciones}</strong>
-                      <span className="text-muted-foreground">ocupadas</span>
-                    </div>
-                    <span className="h-4 w-px shrink-0 bg-border" />
-                    <button type="button" className="flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-emerald-50" onClick={() => setModalLlegadas(true)}>
-                      <LogIn className="h-3.5 w-3.5 text-emerald-600" /><strong className="tabular-nums text-emerald-700">{llegadasHoy}</strong><span className="text-muted-foreground">llegadas</span>
-                    </button>
-                    <button type="button" className="flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-orange-50" onClick={() => setModalSalidas(true)}>
-                      <LogOut className="h-3.5 w-3.5 text-orange-600" /><strong className="tabular-nums text-orange-700">{salidasHoy}</strong><span className="text-muted-foreground">salidas</span>
-                    </button>
-                    <span className="h-4 w-px shrink-0 bg-border" />
-                    <div className="flex shrink-0 items-center gap-1.5 px-2 text-xs">
-                      <Calendar className="h-3.5 w-3.5 text-sky-600" /><strong className="tabular-nums text-sky-700">{occupancyPercent}%</strong><span className="text-muted-foreground">ocupación</span>
-                    </div>
-                    <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-muted-foreground lg:flex"><span className={cn('h-2 w-2 rounded-full', realtimeConnected ? 'animate-pulse bg-emerald-500' : 'bg-amber-400')} />{realtimeConnected ? 'En tiempo real' : 'Conectando…'} · {habitacionesFiltradas.length} habitaciones</span>
                   </div>
                 )}
 
