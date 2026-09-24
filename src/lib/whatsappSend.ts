@@ -18,7 +18,7 @@ export async function enviarWhatsAppReserva(params: {
     const vars: Record<string, string> = {};
     for (const [k, v] of Object.entries(params.vars)) vars[k] = v == null ? '' : String(v);
 
-    const { error } = await supabase.functions.invoke('whatsapp-send', {
+    const { data, error } = await supabase.functions.invoke('whatsapp-send', {
       body: {
         hotel_id: params.hotel_id,
         phone: params.telefono,
@@ -28,7 +28,8 @@ export async function enviarWhatsAppReserva(params: {
         reserva_id: params.reserva_id ?? null,
       },
     });
-    return !error;
+    if (error) return false;
+    return Boolean((data as { ok?: boolean } | null)?.ok);
   } catch (err) {
     console.warn('WhatsApp send failed:', err);
     return false;
