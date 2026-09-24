@@ -1,4 +1,5 @@
 -- SQL COMPLETO (3 partes en orden). Pegar entero en Supabase > SQL Editor > Run.
+-- Tiene 2,200+ líneas. Si al pegar no ves al final la línea 'SQL COMPLETO APLICADO', se copió incompleto.
 -- Se puede correr más de una vez.
 
 -- ===================== 20260924090000_trazabilidad_fechas_checkin.sql =====================
@@ -2211,3 +2212,4 @@ GRANT EXECUTE ON FUNCTION public.create_public_reservation(uuid, jsonb, jsonb) T
 
 NOTIFY pgrst, 'reload schema';
 
+SELECT 'SQL COMPLETO APLICADO' AS resultado;
