@@ -10,6 +10,7 @@ import {
   FileText,
   Globe,
   CircleDollarSign,
+  Copy,
   Clock3,
   DoorOpen,
   Eye,
@@ -114,6 +115,21 @@ export default function Dashboard() {
   const [sales, setSales] = useState({ total: 0, count: 0 });
   const [control, setControl] = useState<OperationalControl | null>(null);
   const [webPendientes, setWebPendientes] = useState(0);
+  const [publicUrl, setPublicUrl] = useState<{ url: string; activo: boolean } | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    api.getHotel().then((h: any) => {
+      if (h?.slug) setPublicUrl({ url: `${window.location.origin}/h/${h.slug}`, activo: Boolean(h.permite_reservas_online) });
+    }).catch(() => undefined);
+  }, []);
+  const copyPublicUrl = async () => {
+    if (!publicUrl) return;
+    try {
+      await navigator.clipboard.writeText(publicUrl.url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch { /* sin portapapeles */ }
+  };
   const [shiftSummary, setShiftSummary] = useState<ShiftSummary>(EMPTY_SHIFT_SUMMARY);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -365,6 +381,15 @@ export default function Dashboard() {
             {readOnly ? <Eye className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
             {readOnly ? 'Sólo consulta · abrir turno' : openShift ? `Turno abierto · ${shiftDuration(openShift.abierto_at, now).replace(' en operación', '')}` : 'Sin turno'}
           </Link>
+          {publicUrl && (
+            <div className={cn('flex h-8 min-w-0 max-w-[340px] items-center gap-1 rounded-md border pl-2 text-xs', publicUrl.activo ? 'bg-card' : 'border-dashed bg-muted/40')} title={publicUrl.activo ? 'Página pública de reservas' : 'Las reservas en línea están desactivadas (Configuración)'}>
+              <Globe className={cn('h-3.5 w-3.5 shrink-0', publicUrl.activo ? 'text-emerald-600' : 'text-muted-foreground')} />
+              <a href={publicUrl.url} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate font-medium text-[#10233F] hover:underline">{publicUrl.url.replace(/^https?:\/\//, '')}</a>
+              <button type="button" data-shift-readonly-allow="true" onClick={() => void copyPublicUrl()} className="flex h-full shrink-0 items-center border-l px-2 text-muted-foreground hover:text-[#10233F]" aria-label="Copiar enlace">
+                {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          )}
           <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}><Search className="h-3.5 w-3.5" />Buscar</Button>
           {!readOnly && <>
             <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs"><Link to="/reservas/checkout"><LogOut className="h-3.5 w-3.5" />Check-out</Link></Button>

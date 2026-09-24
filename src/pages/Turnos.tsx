@@ -24,6 +24,7 @@ import {
   User,
   UsersRound,
   WalletCards,
+  Printer,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ import api from '@/lib/api';
 import { formatCurrency, useCurrency } from '@/lib/currency';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/utils';
+import { imprimirTicketTurno, ticketTurnoHtml } from '@/lib/ticketTurno';
 
 type ShiftSummary = {
   efectivo: number;
@@ -149,6 +151,9 @@ export default function Turnos() {
   const [reportLoading, setReportLoading] = useState(false);
   const [reportDialog, setReportDialog] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [selectedShift, setSelectedShift] = useState<any | null>(null);
+  const [hotelNombre, setHotelNombre] = useState('');
+  useEffect(() => { api.getHotel().then((h: any) => setHotelNombre(h?.nombre || '')).catch(() => undefined); }, []);
   const shiftPromptShown = useRef(false);
 
   const load = useCallback(async () => {
@@ -301,6 +306,18 @@ export default function Turnos() {
           efectivo_contado: contado, diferencia,
         } } : null;
       setSelectedReport(finalReport);
+      setSelectedShift({
+        ...turno,
+        ...(closedShift || {}),
+        estado: 'Cerrado',
+        cerrado_at: closedShift?.cerrado_at || new Date().toISOString(),
+        efectivo_esperado: efectivoEsperado,
+        efectivo_contado: contado,
+        diferencia,
+        entrega_a: deliveryUser ? `${deliveryUser.nombre || ''} ${deliveryUser.apellido_paterno || ''}`.trim() : closedShift?.entrega_a || null,
+        pendientes_entrega: pendientesEntrega.trim() || closedShift?.pendientes_entrega || null,
+        motivo_diferencia: motivoDiferencia.trim() || closedShift?.motivo_diferencia || null,
+      });
       setReportDialog(Boolean(finalReport));
       setFondoContado('');
       setEntregaA('');
@@ -329,9 +346,19 @@ export default function Turnos() {
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setReportDialog(false)} aria-label="Volver a turnos"><ChevronLeft className="h-5 w-5" /></Button>
               <div><p className="font-semibold text-[#10233F]">Reporte de cierre</p><p className="text-xs text-muted-foreground">Todo lo registrado durante el turno, en una sola vista.</p></div>
             </div>
-            <Badge variant="outline" className="w-fit border-emerald-200 bg-emerald-50 text-emerald-800"><ShieldCheck className="mr-1.5 h-3.5 w-3.5" />Turno cerrado y auditado</Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="w-fit border-emerald-200 bg-emerald-50 text-emerald-800"><ShieldCheck className="mr-1.5 h-3.5 w-3.5" />Turno cerrado y auditado</Badge>
+              <Button size="sm" className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => imprimirTicketTurno({ report: selectedReport, turno: selectedShift || {}, hotelNombre })}><Printer className="mr-1.5 h-3.5 w-3.5" />Imprimir ticket</Button>
+            </div>
           </div>
-          <Card className="border-[#10233F]/10 shadow-sm"><CardContent className="p-4 sm:p-6"><ShiftReport report={selectedReport} /></CardContent></Card>
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <Card className="border-[#10233F]/10 shadow-sm"><CardContent className="p-4 sm:p-6"><ShiftReport report={selectedReport} /></CardContent></Card>
+            <div className="rounded-lg border bg-muted/30 p-2 xl:sticky xl:top-2">
+              <p className="mb-2 px-1 text-xs font-semibold text-muted-foreground">Ticket de cierre</p>
+              <iframe title="Ticket de cierre" className="h-[70vh] w-full rounded-md border bg-white" srcDoc={ticketTurnoHtml({ report: selectedReport, turno: selectedShift || {}, hotelNombre })} />
+              <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => imprimirTicketTurno({ report: selectedReport, turno: selectedShift || {}, hotelNombre })}><Printer className="mr-1.5 h-3.5 w-3.5" />Imprimir</Button>
+            </div>
+          </div>
         </div>
       </MainLayout>
     );
@@ -499,7 +526,7 @@ export default function Turnos() {
         <Card className="overflow-hidden border-[#10233F]/10 shadow-sm">
           <CardHeader className="flex-row items-center justify-between border-b bg-slate-50/70 px-4 py-3 sm:px-5"><div><CardTitle className="flex items-center gap-2 text-base text-[#10233F]"><Clock3 className="h-4 w-4" />Turnos anteriores</CardTitle><p className="mt-0.5 text-xs text-muted-foreground">Consulta la conciliación y el reporte guardado de cada entrega.</p></div><ExportButton rows={() => historial} filename="turnos_vulo" sheetName="Turnos" /></CardHeader>
           <CardContent className="overflow-x-auto p-0"><Table><TableHeader><TableRow><TableHead className="pl-5">Apertura</TableHead><TableHead>Usuario</TableHead><TableHead>Fondo</TableHead><TableHead>Contado</TableHead><TableHead>Diferencia</TableHead><TableHead>Entregado a</TableHead><TableHead>Reporte</TableHead><TableHead className="pr-5">Estado</TableHead></TableRow></TableHeader><TableBody>
-            {historial.length === 0 ? <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">El primer turno aparecerá aquí.</TableCell></TableRow> : historial.map((t) => <TableRow key={t.id}><TableCell>{formatDateTime(t.abierto_at)}</TableCell><TableCell>{t.usuario_nombre}</TableCell><TableCell>{formatCurrency(t.fondo_inicial)}</TableCell><TableCell>{t.efectivo_contado == null ? '—' : formatCurrency(t.efectivo_contado)}</TableCell><TableCell className={cn('font-semibold', Number(t.diferencia) ? 'text-red-700' : 'text-emerald-700')}>{t.diferencia == null ? '—' : formatCurrency(t.diferencia)}</TableCell><TableCell>{t.entrega_a || 'Cierre final'}</TableCell><TableCell>{t.reporte_cierre && Object.keys(t.reporte_cierre).length ? <Button variant="outline" size="sm" onClick={() => { setSelectedReport(t.reporte_cierre); setReportDialog(true); }}><FileText className="mr-1.5 h-3.5 w-3.5" />Ver reporte</Button> : <span className="text-muted-foreground">—</span>}</TableCell><TableCell><Badge variant={t.estado === 'Abierto' ? 'default' : 'secondary'}>{t.estado}</Badge></TableCell></TableRow>)}
+            {historial.length === 0 ? <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">El primer turno aparecerá aquí.</TableCell></TableRow> : historial.map((t) => <TableRow key={t.id}><TableCell>{formatDateTime(t.abierto_at)}</TableCell><TableCell>{t.usuario_nombre}</TableCell><TableCell>{formatCurrency(t.fondo_inicial)}</TableCell><TableCell>{t.efectivo_contado == null ? '—' : formatCurrency(t.efectivo_contado)}</TableCell><TableCell className={cn('font-semibold', Number(t.diferencia) ? 'text-red-700' : 'text-emerald-700')}>{t.diferencia == null ? '—' : formatCurrency(t.diferencia)}</TableCell><TableCell>{t.entrega_a || 'Cierre final'}</TableCell><TableCell>{t.reporte_cierre && Object.keys(t.reporte_cierre).length ? <Button variant="outline" size="sm" onClick={() => { setSelectedReport(t.reporte_cierre); setSelectedShift(t); setReportDialog(true); }}><FileText className="mr-1.5 h-3.5 w-3.5" />Ver reporte</Button> : <span className="text-muted-foreground">—</span>}</TableCell><TableCell><Badge variant={t.estado === 'Abierto' ? 'default' : 'secondary'}>{t.estado}</Badge></TableCell></TableRow>)}
           </TableBody></Table></CardContent>
         </Card>
       </div>

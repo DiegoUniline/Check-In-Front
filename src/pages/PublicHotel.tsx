@@ -624,7 +624,7 @@ export default function PublicHotel() {
 
       {/* Modal de reserva con calendario */}
       <Dialog open={!!bookingHab} onOpenChange={(o) => !o && setBookingHab(null)}>
-        <DialogContent className="max-h-[94vh] w-[calc(100%-1.25rem)] max-w-4xl overflow-y-auto rounded-[8px] border-0 bg-white p-0 text-stone-900 shadow-2xl sm:w-full">
+        <DialogContent className="flex max-h-[94vh] w-[calc(100%-1.25rem)] max-w-4xl flex-col gap-0 overflow-y-auto rounded-[8px] border-0 bg-white p-0 text-stone-900 shadow-2xl sm:w-full">
           {bookingHab && (() => {
             const t = bookingHab.tipo_habitacion_id ? tipoMap[bookingHab.tipo_habitacion_id] : null;
             if (!t) return null;
@@ -639,7 +639,7 @@ export default function PublicHotel() {
             const totalEstim = (tarifa + extraPorNoche) * nsBooking;
             return (
               <>
-                <div className="relative aspect-[16/7] min-h-[190px] overflow-hidden bg-stone-100 sm:min-h-0">
+                <div className="relative h-[190px] shrink-0 overflow-hidden bg-stone-100 sm:h-[240px]">
                   {fotos[0] && <img src={fotos[0]} alt={t.nombre} className="h-full w-full object-cover" />}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
