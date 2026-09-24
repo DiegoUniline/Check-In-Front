@@ -166,9 +166,12 @@ const roomIsDirty = (room: any) => !['limpia', 'lista', 'inspeccionada']
 
 const createInitialFormData = (preload?: ReservationPreload): FormData => {
   const today = hotelToday();
+  // Una entrada con fecha pasada se registra hoy.
+  const checkin = preload?.fechaCheckin && preload.fechaCheckin > today ? preload.fechaCheckin : today;
+  const checkoutPreload = preload?.fechaCheckout;
   return {
-    fechaCheckin: preload?.fechaCheckin || today,
-    fechaCheckout: preload?.fechaCheckout || addDays(today, 1),
+    fechaCheckin: checkin,
+    fechaCheckout: checkoutPreload && checkoutPreload > checkin ? checkoutPreload : addDays(checkin, 1),
     horaLlegada: '15:00',
     adultos: 2,
     ninos: 0,
@@ -228,7 +231,10 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     if (open) {
       cargarDatos();
       loadTemporadas().catch(() => {});
-      setOrigen(preload?.origen || 'Reserva');
+      // Si la entrada es hoy, siempre es recepción (check-in inmediato).
+      const entradaHoy = !preload?.fechaCheckin
+        || format(preload.fechaCheckin, 'yyyy-MM-dd') <= todayLocal();
+      setOrigen(entradaHoy ? 'Recepcion' : (preload?.origen || 'Reserva'));
       setCrearNuevoCliente(false);
       setMostrarSelectorHabitacion(!preload?.habitacion?.id);
       setFiltroTipoHabitacion('all');
@@ -464,6 +470,15 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 
   const handleOrigenChange = (nuevoOrigen: 'Reserva' | 'Recepcion') => {
     setOrigen(nuevoOrigen);
+    if (nuevoOrigen === 'Reserva') {
+      // Una reserva futura empieza mañana como mínimo; conserva las noches elegidas.
+      const manana = addDays(hotelToday(), 1);
+      if (format(formData.fechaCheckin, 'yyyy-MM-dd') < format(manana, 'yyyy-MM-dd')) {
+        const nochesActuales = Math.max(0, differenceInCalendarDays(formData.fechaCheckout, formData.fechaCheckin));
+        setFormData({ ...formData, fechaCheckin: manana, fechaCheckout: addDays(manana, Math.max(1, nochesActuales)) });
+      }
+      return;
+    }
     if (nuevoOrigen === 'Recepcion') {
       const hoy = hotelToday();
       const checkoutActual = formData.fechaCheckout;
@@ -805,7 +820,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d > formData.fechaCheckout ? d : formData.fechaCheckout })} disabled={(d) => d < hotelToday()} />
+                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d > formData.fechaCheckout ? d : formData.fechaCheckout })} disabled={(d) => d <= hotelToday()} />
                   </PopoverContent>
                 </Popover>
               </Field>
