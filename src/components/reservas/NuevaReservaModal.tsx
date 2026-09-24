@@ -1077,6 +1077,37 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             )}
           </FormSection>
 
+          {origen === 'Recepcion' && (
+            <FormSection icon={Check} title="Entregables" hint="Marca lo que se entrega al huésped al registrar la entrada.">
+              {entregables.filter((e) => e.activo !== false).length === 0 ? (
+                <p className="text-[11px] text-muted-foreground">No hay entregables en el catálogo (Catálogos › Entregables).</p>
+              ) : (
+                <div className="divide-y rounded-lg border">
+                  {entregables.filter((e) => e.activo !== false).map((ent) => {
+                    const activo = formData.entregablesSeleccionados.includes(ent.id);
+                    return (
+                      <label key={ent.id} className="flex cursor-pointer items-center gap-2.5 px-2.5 py-2 hover:bg-muted/40">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-[#10233F]"
+                          checked={activo}
+                          onChange={() => toggleEntregable(ent.id)}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-medium">{ent.nombre}</span>
+                          <span className="block text-[10px] text-muted-foreground">
+                            {ent.requiere_devolucion ? 'Se devuelve al salir' : 'No requiere devolución'}
+                            {Number(ent.costo_reposicion) > 0 ? ` · Reposición ${fmt(Number(ent.costo_reposicion))}` : ''}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </FormSection>
+          )}
+
         </div>
 
         <div className="border-t border-border pt-4 lg:col-span-2">
@@ -1121,21 +1152,6 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 {formData.impuestos.length === 0 && <p className="text-center text-[10px] text-muted-foreground">Sin impuestos aplicados</p>}
               </div>
             </div>
-            {origen === 'Recepcion' && entregables.length > 0 && (
-              <div className="space-y-1.5">
-                <Label className="text-[11px] font-medium text-muted-foreground">Entregables al huésped</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {entregables.map(ent => {
-                    const activo = formData.entregablesSeleccionados.includes(ent.id);
-                    return (
-                      <button key={ent.id} type="button" onClick={() => toggleEntregable(ent.id)} className={cn('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors', activo ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:border-primary/40')}>
-                        {activo && <Check className="h-3 w-3" />}{ent.nombre}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </FormSection>
         </div>
         </div>

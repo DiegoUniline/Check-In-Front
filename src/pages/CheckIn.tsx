@@ -33,7 +33,6 @@ import { useToast } from '@/hooks/use-toast';
 import api, { todayLocal } from '@/lib/api';
 import { PagosMultiplesGrid, type PagoItem } from '@/components/PagosMultiplesGrid';
 import { formatCurrency } from '@/lib/currency';
-import { SignaturePad } from '@/components/SignaturePad';
 import { exportarRegistroHuesped } from '@/lib/pdfExport';
 import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
 import { formatDate } from '@/lib/dateFormat';
@@ -59,7 +58,9 @@ export default function CheckIn() {
   });
 
   const [pagos, setPagos] = useState<PagoItem[]>([]);
-  const [firma, setFirma] = useState<string | null>(null);
+  const [catalogoEntregables, setCatalogoEntregables] = useState<any[]>([]);
+  const [entregablesAsignados, setEntregablesAsignados] = useState<any[]>([]);
+  const [entregablesSeleccionados, setEntregablesSeleccionados] = useState<Record<string, number>>({});
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   useEffect(() => {
@@ -70,8 +71,14 @@ export default function CheckIn() {
   const cargarDatos = async () => {
     if (!id) return;
     try {
-      const reservaData = await api.getReserva(id);
+      const [reservaData, catalogo, asignados] = await Promise.all([
+        api.getReserva(id),
+        api.getEntregables().catch(() => []),
+        api.getEntregablesReserva(id).catch(() => []),
+      ]);
       setReserva(reservaData);
+      setCatalogoEntregables((Array.isArray(catalogo) ? catalogo : []).filter((e: any) => e.activo !== false));
+      setEntregablesAsignados(Array.isArray(asignados) ? asignados : []);
 
       if (reservaData.fecha_checkin && reservaData.fecha_checkout) {
         // Llegada anticipada: el servidor mueve la entrada a hoy, así que la
@@ -139,14 +146,6 @@ export default function CheckIn() {
       });
       return;
     }
-    if (!firma) {
-      toast({
-        variant: 'destructive',
-        title: 'Falta la firma',
-        description: 'Solicita la firma del huésped para completar el check-in.',
-      });
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -162,6 +161,20 @@ export default function CheckIn() {
             concepto: 'Pago en Check-in',
           })),
       );
+
+      // Entregables marcados en la lista (llaves, controles, toallas…).
+      const fallidos: string[] = [];
+      for (const [entregableId, cantidad] of Object.entries(entregablesSeleccionados)) {
+        if (!cantidad) continue;
+        try {
+          await api.asignarEntregable(id!, { entregable_id: entregableId, cantidad });
+        } catch {
+          fallidos.push(catalogoEntregables.find((e) => e.id === entregableId)?.nombre || 'entregable');
+        }
+      }
+      if (fallidos.length) {
+        toast({ variant: 'destructive', title: 'Algunos entregables no se registraron', description: fallidos.join(', ') });
+      }
 
       try {
         const hab = habitacionesDisponibles.find((h) => h.id === formData.habitacionId);
@@ -185,7 +198,7 @@ export default function CheckIn() {
             numero_documento: formData.documento,
             nacionalidad: formData.nacionalidad,
           },
-          firmaDataUrl: firma,
+          firmaDataUrl: null,
           aceptaTerminos,
         });
       } catch (err) {
@@ -275,13 +288,13 @@ export default function CheckIn() {
   const saldoPrevio = Math.max(0, Number(reserva.saldo_pendiente ?? (total - Number(reserva.total_pagado || 0))) || 0);
   const saldoRestante = Math.max(0, saldoPrevio - totalPagos);
   const identidadLista = Boolean(formData.nombre.trim() && formData.apellidoPaterno.trim());
-  const registroListo = aceptaTerminos && Boolean(firma);
+  const registroListo = aceptaTerminos;
 
   const steps = [
     { label: 'Huésped', icon: User, done: identidadLista },
     { label: 'Habitación', icon: BedDouble, done: Boolean(formData.habitacionId) },
     { label: 'Pago', icon: CircleDollarSign, done: saldoRestante <= 0 },
-    { label: 'Firma', icon: PenLine, done: registroListo },
+    { label: 'Términos', icon: PenLine, done: registroListo },
   ];
 
   return (
@@ -472,8 +485,57 @@ export default function CheckIn() {
             <Card className="border-border/70 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <ClipboardCheck className="h-5 w-5 text-primary" />
+                  Entregables
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {entregablesAsignados.length > 0 && (
+                  <div className="rounded-lg bg-muted/40 p-2.5 text-xs text-muted-foreground">
+                    Ya entregados: {entregablesAsignados.map((e: any) => `${e.nombre || 'Entregable'} ×${e.cantidad || 1}`).join(', ')}
+                  </div>
+                )}
+                {catalogoEntregables.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay entregables en el catálogo. Agrégalos en Catálogos › Entregables.</p>
+                ) : (
+                  <div className="divide-y rounded-xl border">
+                    {catalogoEntregables.map((ent: any) => {
+                      const cantidad = entregablesSeleccionados[ent.id] || 0;
+                      return (
+                        <div key={ent.id} className="flex items-center gap-3 px-3 py-2.5">
+                          <Checkbox
+                            checked={cantidad > 0}
+                            onCheckedChange={(v) => setEntregablesSeleccionados((prev) => ({ ...prev, [ent.id]: v ? Math.max(1, prev[ent.id] || 1) : 0 }))}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{ent.nombre}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {ent.requiere_devolucion ? 'Se devuelve al salir' : 'No requiere devolución'}
+                              {Number(ent.costo_reposicion) > 0 ? ` · Reposición ${formatCurrency(Number(ent.costo_reposicion))}` : ''}
+                              {ent.stock != null ? ` · Disponibles ${ent.stock}` : ''}
+                            </p>
+                          </div>
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-9 w-16 text-center"
+                            value={cantidad || ''}
+                            placeholder="0"
+                            onChange={(e) => setEntregablesSeleccionados((prev) => ({ ...prev, [ent.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                   <PenLine className="h-5 w-5 text-primary" />
-                  Aceptación y firma
+                  Aceptación
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -496,18 +558,6 @@ export default function CheckIn() {
                   </div>
                 </label>
 
-                <div>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <Label>Firma del huésped</Label>
-                    {firma && (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Firma capturada
-                      </span>
-                    )}
-                  </div>
-                  <SignaturePad onChange={setFirma} height={170} />
-                </div>
 
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <FileDown className="h-3.5 w-3.5" />
@@ -557,7 +607,7 @@ export default function CheckIn() {
                   className="h-11 w-full text-sm font-semibold"
                   size="lg"
                   onClick={handleSubmit}
-                  disabled={isSubmitting || !formData.habitacionId || !aceptaTerminos || !firma}
+                  disabled={isSubmitting || !formData.habitacionId || !aceptaTerminos}
                 >
                   {isSubmitting ? (
                     <>
@@ -572,12 +622,12 @@ export default function CheckIn() {
                   )}
                 </Button>
 
-                {(!formData.habitacionId || !aceptaTerminos || !firma) && (
+                {(!formData.habitacionId || !aceptaTerminos) && (
                   <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
                     <div className="flex items-start gap-2">
                       <ClipboardCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       <span>
-                        Para finalizar: asigna habitación, acepta términos y captura la firma.
+                        Para finalizar: asigna habitación y acepta términos.
                       </span>
                     </div>
                   </div>
@@ -603,7 +653,7 @@ export default function CheckIn() {
             <Button
               className="h-11 min-w-[176px] font-semibold"
               onClick={handleSubmit}
-              disabled={isSubmitting || !formData.habitacionId || !aceptaTerminos || !firma}
+              disabled={isSubmitting || !formData.habitacionId || !aceptaTerminos}
             >
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
               Completar check-in
