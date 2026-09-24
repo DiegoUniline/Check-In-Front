@@ -334,6 +334,9 @@ class ApiClient {
 
   private isMissingOperationalTable(error: any): boolean {
     const text = `${error?.code || ''} ${error?.message || ''}`.toLowerCase();
+    // Sesiones demo / sin hotel real: la BD rechaza por RLS; usamos respaldo local.
+    const noRealHotel = !this.getHotelId() || (typeof window !== 'undefined' && localStorage.getItem('demoMode') === 'true');
+    if (noRealHotel && (text.includes('42501') || text.includes('row-level security'))) return true;
     return text.includes('42p01') || text.includes('pgrst205') || text.includes('could not find the table') || text.includes('does not exist');
   }
 
