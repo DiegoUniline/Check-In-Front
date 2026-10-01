@@ -13,6 +13,7 @@ import { Eye, LockKeyhole } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { isAdminPathWithoutShift } from '@/lib/shiftAccess';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -27,7 +28,7 @@ export function MainLayout({ children, title, subtitle, fitViewport = false, ful
   const workspaceMode = fitViewport && fullWidth;
   const { openShift, shiftRequired, viewOnlyMode } = useShift();
   const location = useLocation();
-  const readOnlyActive = shiftRequired && !openShift && viewOnlyMode && location.pathname !== '/turnos';
+  const readOnlyActive = shiftRequired && !openShift && viewOnlyMode && location.pathname !== '/turnos' && !isAdminPathWithoutShift(location.pathname);
 
   // Avisos cuando la configuración no se pudo guardar en la base.
   useEffect(() => {
