@@ -930,7 +930,8 @@ class ApiClient {
         tipo: h.tipos_habitacion?.nombre,
         tipo_nombre: h.tipos_habitacion?.nombre,
         tipo_codigo: h.tipos_habitacion?.codigo,
-        precio_base: h.tipos_habitacion?.precio_base,
+        precio_tipo: h.tipos_habitacion?.precio_base,
+        precio_base: Number(h.precio_noche) > 0 ? Number(h.precio_noche) : h.tipos_habitacion?.precio_base,
       }));
     });
   };
@@ -967,7 +968,8 @@ class ApiClient {
       })
       .map((reservation: any) => reservation.habitacion_id));
     return (habs || []).filter((h: any) => !ocupadasIds.has(h.id)
-      && String(h.estado_mantenimiento || 'OK').toLowerCase() === 'ok');
+      && String(h.estado_mantenimiento || 'OK').toLowerCase() === 'ok')
+      .map((h: any) => (Number(h.precio_noche) > 0 ? { ...h, precio_base: Number(h.precio_noche) } : h));
   };
   createHabitacion = async (data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('habitaciones').insert({ ...data, hotel_id: this.hid() }).select().single();

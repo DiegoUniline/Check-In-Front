@@ -422,7 +422,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     selectedHabitacion?.tipos_habitacion ||
     (selectedHabitacion ? { precio_base: selectedHabitacion.precio_base, nombre: selectedHabitacion.tipo_nombre } : null);
 
-  const tarifaNoche = selectedTipo?.precio_base || 0;
+  const tarifaHabitacion = Number(selectedHabitacion?.precio_noche) > 0 ? Number(selectedHabitacion.precio_noche) : 0;
+  const tarifaNoche = tarifaHabitacion || selectedTipo?.precio_base || 0;
   const tarifasNocturnas = Array.from({ length: noches }, (_, index) => {
     const fecha = format(addDays(formData.fechaCheckin, index), 'yyyy-MM-dd');
     const resolved = resolverPrecioTemporada(
