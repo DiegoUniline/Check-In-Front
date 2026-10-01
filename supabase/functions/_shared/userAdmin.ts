@@ -18,9 +18,18 @@ export type Caller = {
 };
 
 export async function loadCaller(admin: any, jwt: string): Promise<Caller | null> {
-  const { data: userData, error } = await admin.auth.getUser(jwt);
-  if (error || !userData?.user) return null;
-  const user = userData.user;
+  let user: any = null;
+  const { data: userData } = await admin.auth.getUser(jwt).catch(() => ({ data: null }));
+  user = userData?.user ?? null;
+  if (!user) {
+    // Respaldo: validar el token directamente contra el servicio de auth.
+    const url = Deno.env.get('SUPABASE_URL')!;
+    const key = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY') || '';
+    const res = await fetch(`${url}/auth/v1/user`, { headers: { Authorization: `Bearer ${jwt}`, apikey: key } });
+    if (res.ok) user = await res.json();
+    else console.error('loadCaller: token rechazado', res.status, await res.text());
+  }
+  if (!user?.id) return null;
   const [{ data: profile }, { data: roleRows }] = await Promise.all([
     admin.from('profiles').select('hotel_id').eq('id', user.id).maybeSingle(),
     admin.from('user_roles').select('role').eq('user_id', user.id),
