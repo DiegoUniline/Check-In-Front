@@ -1,5 +1,7 @@
 import { Search, Sun, Moon, LogOut, User, Settings, Hotel, Command, Clock3, Eye } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { ProfileDialog } from './ProfileDialog';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,8 @@ export function Header({ title, subtitle }: HeaderProps) {
   const { user, logout } = useAuth();
   const { openShift, shiftRequired, viewOnlyMode } = useShift();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
   const isSuperAdmin = user?.email === 'diego.leon@uniline.mx' || user?.rol === 'SuperAdmin';
 
   const { data: hoteles = [] } = useQuery({
@@ -160,11 +164,11 @@ export function Header({ title, subtitle }: HeaderProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
               <User className="mr-2 h-4 w-4" />
-              <span>Mi perfil</span>
+              <span>Mi perfil y contraseña</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => navigate('/configuracion')}>
               <Settings className="mr-2 h-4 w-4" />
               <span>Configuración</span>
             </DropdownMenuItem>
@@ -175,6 +179,7 @@ export function Header({ title, subtitle }: HeaderProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
       </div>
     </header>
   );
