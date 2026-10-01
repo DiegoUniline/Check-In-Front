@@ -1256,6 +1256,7 @@ export type Database = {
           notas: string | null
           numero: string
           piso: number | null
+          precio_noche: number | null
           tipo_habitacion_id: string | null
           updated_at: string | null
         }
@@ -1275,6 +1276,7 @@ export type Database = {
           notas?: string | null
           numero: string
           piso?: number | null
+          precio_noche?: number | null
           tipo_habitacion_id?: string | null
           updated_at?: string | null
         }
@@ -1294,6 +1296,7 @@ export type Database = {
           notas?: string | null
           numero?: string
           piso?: number | null
+          precio_noche?: number | null
           tipo_habitacion_id?: string | null
           updated_at?: string | null
         }
