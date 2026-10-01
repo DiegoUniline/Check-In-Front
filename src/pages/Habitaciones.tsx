@@ -96,6 +96,7 @@ export default function Habitaciones() {
     tipo_habitacion_id: '',
     numero: '',
     piso: '',
+    precio_noche: '' as string,
     estado_habitacion: 'Disponible',
     estado_limpieza: 'Limpia',
     estado_mantenimiento: 'OK',
@@ -326,6 +327,7 @@ export default function Habitaciones() {
       estado_mantenimiento: 'OK',
       excluida_publica: false,
       fotos: [],
+      precio_noche: '',
     });
     setFormImpuestos([]);
     setUsarImpuestosTipo(true);
@@ -343,6 +345,7 @@ export default function Habitaciones() {
       estado_mantenimiento: hab.estado_mantenimiento || 'OK',
       excluida_publica: !!hab.excluida_publica,
       fotos: Array.isArray(hab.fotos) ? hab.fotos : [],
+      precio_noche: Number(hab.precio_noche) > 0 ? String(hab.precio_noche) : '',
     });
     const impuestos = Array.isArray(hab.impuestos_default) ? hab.impuestos_default : getHabDefault(hab.id);
     setUsarImpuestosTipo(impuestos === null);
@@ -359,7 +362,8 @@ export default function Habitaciones() {
     setIsSaving(true);
     try {
       const pisoNum = parseInt(formData.piso, 10);
-      const data = { ...formData, piso: isNaN(pisoNum) ? null : pisoNum };
+      const precioNum = parseFloat(String(formData.precio_noche ?? ''));
+      const data = { ...formData, piso: isNaN(pisoNum) ? null : pisoNum, precio_noche: precioNum > 0 ? precioNum : null };
       if (editingHab) {
         await api.updateHabitacion(editingHab.id, data);
         setHabDefault(editingHab.id, usarImpuestosTipo ? null : formImpuestos);
@@ -651,6 +655,12 @@ export default function Habitaciones() {
                 searchPlaceholder="Buscar o crear tipo..."
                 createLabel="Crear tipo"
               />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Precio propio por noche (opcional)</Label>
+              <Input type="number" min={0} value={formData.precio_noche ?? ''} onChange={(e) => setFormData({ ...formData, precio_noche: e.target.value })}
+                placeholder={(() => { const t = tiposHabitacion.find((x: any) => x.id === formData.tipo_habitacion_id); return t ? `Vacío = precio del tipo (${formatCurrency(t.precio_base)})` : 'Vacío = precio del tipo'; })()} />
+              <p className="text-[11px] text-muted-foreground">Úsalo cuando esta habitación cobra distinto a su tipo (por piso, vista, etc.).</p>
             </div>
             <div className="grid gap-1.5">
               <Label>Estado</Label>
