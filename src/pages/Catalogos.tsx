@@ -184,7 +184,7 @@ export default function Catalogos() {
 
   const cargarHabsTipo = async (tipoId: string) => {
     setHabsTipo([]); setPreciosPiso({});
-    const { data } = await supabase.from('habitaciones').select('id, numero, piso, precio_noche').eq('tipo_id', tipoId).order('numero');
+    const { data } = await supabase.from('habitaciones').select('id, numero, piso, precio_noche').eq('tipo_habitacion_id', tipoId).order('numero');
     const rows = data || [];
     setHabsTipo(rows);
     const pp: Record<string, string> = {};
