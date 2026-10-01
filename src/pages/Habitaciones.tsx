@@ -96,6 +96,7 @@ export default function Habitaciones() {
     tipo_habitacion_id: '',
     numero: '',
     piso: '',
+    precio_noche: '' as string,
     estado_habitacion: 'Disponible',
     estado_limpieza: 'Limpia',
     estado_mantenimiento: 'OK',
