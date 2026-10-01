@@ -145,7 +145,7 @@ interface FormData {
   };
   solicitudesEspeciales: string;
   notasInternas: string;
-  descuentoTipo: 'none' | 'Monto' | 'Porcentaje';
+  descuentoTipo: 'none' | 'Monto' | 'Porcentaje' | 'PrecioFinal';
   descuentoValor: number;
   descuentoId: string;
   impuestos: ImpuestoTemp[];
@@ -473,6 +473,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
   let descuentoMonto = 0;
   if (formData.descuentoTipo === 'Monto') descuentoMonto = formData.descuentoValor;
   else if (formData.descuentoTipo === 'Porcentaje') descuentoMonto = totalBruto * (formData.descuentoValor / 100);
+  else if (formData.descuentoTipo === 'PrecioFinal') descuentoMonto = Math.max(0, totalBruto - (formData.descuentoValor || 0));
+  descuentoMonto = Math.min(totalBruto, Math.round(descuentoMonto * 100) / 100);
 
   const total = Math.max(0, totalBruto - descuentoMonto);
   const totalPagado = formData.pagos.reduce((sum, p) => sum + p.monto, 0);
@@ -673,8 +675,8 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         personas_extra: formData.personasExtra,
         cargo_persona_extra: formData.cargoPersonaExtra,
         descuento: descuentoMonto,
-        descuento_tipo: formData.descuentoTipo === 'none' ? '' : formData.descuentoTipo,
-        descuento_valor: formData.descuentoTipo === 'none' ? 0 : Number(formData.descuentoValor) || 0,
+        descuento_tipo: formData.descuentoTipo === 'none' ? '' : formData.descuentoTipo === 'PrecioFinal' ? 'Monto' : formData.descuentoTipo,
+        descuento_valor: formData.descuentoTipo === 'none' ? 0 : formData.descuentoTipo === 'PrecioFinal' ? descuentoMonto : Number(formData.descuentoValor) || 0,
         total_impuestos: impuestosHospedaje,
         solicitudes_especiales: formData.solicitudesEspeciales,
         notas: notasCombinadas || null,
@@ -1281,7 +1283,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 {totalPersonaExtra > 0 && <Line label={`Personas extra (${formData.personasExtra})`} value={fmt(totalPersonaExtra)} />}
                 {totalCargosExtras > 0 && <Line label={`Cargos extras (${formData.cargos.length})`} value={fmt(totalCargosExtras)} />}
                 {impuestosCalculados.map((imp) => imp.monto > 0 && <Line key={imp.id} label={`${imp.nombre} (${imp.tasa}%)`} value={fmt(imp.monto)} />)}
-                {descuentoMonto > 0 && <Line accent label={`Descuento${formData.descuentoTipo === 'Porcentaje' ? ` (${formData.descuentoValor}%)` : ''}`} value={`−${fmt(descuentoMonto)}`} />}
+                {descuentoMonto > 0 && <Line accent label={`Descuento${formData.descuentoTipo === 'Porcentaje' ? ` (${formData.descuentoValor}%)` : totalBruto > 0 ? ` (${(descuentoMonto / totalBruto * 100).toFixed(1)}%)` : ''}`} value={`−${fmt(descuentoMonto)}`} />}
               </div>
 
               <Separator className="bg-white/20" />
@@ -1308,12 +1310,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   </Select>
                 )}
                 <div className="flex gap-1.5">
-                  <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoId: '', descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje', descuentoValor: 0 })}>
+                  <Select value={formData.descuentoTipo} onValueChange={(v) => setFormData({ ...formData, descuentoId: '', descuentoTipo: v as 'none' | 'Monto' | 'Porcentaje' | 'PrecioFinal', descuentoValor: v === 'PrecioFinal' ? Math.round(totalBruto * 100) / 100 : 0 })}>
                     <SelectTrigger className="h-9 w-28 border-input bg-background text-xs text-foreground"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Ninguno</SelectItem>
                       <SelectItem value="Monto">Monto</SelectItem>
                       <SelectItem value="Porcentaje">%</SelectItem>
+                      <SelectItem value="PrecioFinal">Precio final</SelectItem>
                     </SelectContent>
                   </Select>
                   {formData.descuentoTipo !== 'none' && (
