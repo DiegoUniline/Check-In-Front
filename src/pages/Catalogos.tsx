@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw, Globe, GlobeLock, Percent } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { DescuentosCatalogo } from '@/components/catalogos/DescuentosCatalogo';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -173,8 +174,32 @@ export default function Catalogos() {
     setModalTipoOpen(true);
   };
 
+  const [habsTipo, setHabsTipo] = useState<any[]>([]);
+  const [preciosPiso, setPreciosPiso] = useState<Record<string, string>>({});
+  const pisosTipo = useMemo(() => {
+    const m = new Map<string, any[]>();
+    habsTipo.forEach((h) => { const k = h.piso == null ? 'sin' : String(h.piso); m.set(k, [...(m.get(k) || []), h]); });
+    return Array.from(m.entries()).sort((a, b) => Number(a[0]) - Number(b[0]));
+  }, [habsTipo]);
+
+  const cargarHabsTipo = async (tipoId: string) => {
+    setHabsTipo([]); setPreciosPiso({});
+    const { data } = await (supabase as any).from('habitaciones').select('id, numero, piso, precio_noche').eq('tipo_habitacion_id', tipoId).order('numero');
+    const rows = data || [];
+    setHabsTipo(rows);
+    const pp: Record<string, string> = {};
+    rows.forEach((h: any) => {
+      const k = h.piso == null ? 'sin' : String(h.piso);
+      const grupo = rows.filter((x: any) => (x.piso == null ? 'sin' : String(x.piso)) === k);
+      const precios = new Set(grupo.map((x: any) => Number(x.precio_noche) || 0));
+      if (precios.size === 1 && Number(h.precio_noche) > 0) pp[k] = String(h.precio_noche);
+    });
+    setPreciosPiso(pp);
+  };
+
   const openEditTipo = (tipo: any) => {
     setEditingTipo(tipo);
+    cargarHabsTipo(tipo.id);
     setFormTipo({
       codigo: tipo.codigo,
       nombre: tipo.nombre,
@@ -224,6 +249,14 @@ export default function Catalogos() {
       if (editingTipo) {
         await api.updateTipoHabitacion(editingTipo.id, data);
         setTipoDefault(editingTipo.id, usarImpuestosHotel ? null : formTipoImpuestos);
+        for (const [k, grupo] of pisosTipo) {
+          if (!(k in preciosPiso)) continue;
+          const v = parseFloat(preciosPiso[k]);
+          const precio = v > 0 && v !== data.precio_base ? v : null;
+          const ids = grupo.map((h: any) => h.id);
+          const { error } = await supabase.from('habitaciones').update({ precio_noche: precio } as any).in('id', ids);
+          if (error) throw error;
+        }
         toast({ title: 'Tipo actualizado', description: `${data.nombre} guardado correctamente` });
       } else {
         const created = await api.createTipoHabitacion(data);
@@ -973,7 +1006,7 @@ export default function Catalogos() {
 
       {/* Modal Tipo Habitación */}
       <Dialog open={modalTipoOpen} onOpenChange={setModalTipoOpen}>
-        <DialogContent className="max-w-lg max-h-[88vh] overflow-y-auto">
+        <DialogContent className="w-[96vw] max-w-[96vw] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTipo ? 'Editar Tipo de Habitación' : 'Nuevo Tipo de Habitación'}</DialogTitle>
           </DialogHeader>
@@ -1059,6 +1092,28 @@ export default function Catalogos() {
                 />
               </div>
             </div>
+            {editingTipo && (
+              <div className="rounded-md border p-3 space-y-3">
+                <div>
+                  <Label className="font-semibold">Precio por piso</Label>
+                  <p className="text-xs text-muted-foreground">Las habitaciones de esta categoría en cada piso cobran este precio. Vacío = precio base.</p>
+                </div>
+                {pisosTipo.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No hay habitaciones asignadas a esta categoría.</p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {pisosTipo.map(([k, grupo]) => (
+                      <div key={k} className="grid gap-1.5">
+                        <Label className="text-xs">{k === 'sin' ? 'Sin piso' : `Piso ${k}`} · {grupo.length} hab. ({grupo.map((h: any) => h.numero).join(', ')})</Label>
+                        <Input type="number" min="0" step="0.01" placeholder={formTipo.precio_base || 'Precio base'}
+                          value={preciosPiso[k] ?? ''}
+                          onChange={(e) => setPreciosPiso({ ...preciosPiso, [k]: e.target.value })} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="grid gap-2">
               <Label>Amenidades (separadas por coma)</Label>
               <Textarea
