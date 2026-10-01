@@ -194,10 +194,21 @@ export default function Catalogos() {
     setModalTipoOpen(true);
   };
 
+  const generarCodigoTipo = (nombre: string, excluirId?: string) => {
+    const palabras = nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+      .split(/[^A-Z0-9]+/).filter((w) => w && !['DE', 'DEL', 'LA', 'EL', 'CON', 'Y', 'EN', 'SIN', 'LOS', 'LAS', 'A'].includes(w));
+    let base = palabras.length === 1 ? palabras[0].slice(0, 3) : palabras.map((w) => w[0]).join('').slice(0, 5);
+    if (!base) return '';
+    const usados = new Set(tiposHabitacion.filter((t: any) => t.id !== excluirId).map((t: any) => String(t.codigo || '').toUpperCase()));
+    let codigo = base; let n = 2;
+    while (usados.has(codigo)) codigo = `${base.slice(0, 4)}${n++}`;
+    return codigo;
+  };
+
   const handleSaveTipo = async () => {
     try {
       const data = {
-        codigo: formTipo.codigo.toUpperCase(),
+        codigo: (formTipo.codigo || generarCodigoTipo(formTipo.nombre, editingTipo?.id)).toUpperCase(),
         nombre: formTipo.nombre,
         descripcion: formTipo.descripcion,
         capacidad_adultos: parseInt(formTipo.capacidad_adultos),
@@ -967,24 +978,24 @@ export default function Catalogos() {
             <DialogTitle>{editingTipo ? 'Editar Tipo de Habitación' : 'Nuevo Tipo de Habitación'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Código *</Label>
-                <Input
-                  value={formTipo.codigo}
-                  onChange={(e) => setFormTipo({ ...formTipo, codigo: e.target.value.toUpperCase() })}
-                  placeholder="Ej: STD, DLX, STE"
-                  maxLength={5}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Nombre *</Label>
-                <Input
-                  value={formTipo.nombre}
-                  onChange={(e) => setFormTipo({ ...formTipo, nombre: e.target.value })}
-                  placeholder="Ej: Estándar, Deluxe, Suite"
-                />
-              </div>
+            <div className="grid gap-2">
+              <Label>Nombre *</Label>
+              <Textarea
+                value={formTipo.nombre}
+                rows={1}
+                className="min-h-10 resize-none"
+                onChange={(e) => {
+                  const nombre = e.target.value.replace(/\n/g, ' ');
+                  const autoAnterior = generarCodigoTipo(formTipo.nombre, editingTipo?.id);
+                  const seguirAuto = !formTipo.codigo || formTipo.codigo === autoAnterior;
+                  setFormTipo({ ...formTipo, nombre, codigo: seguirAuto ? generarCodigoTipo(nombre, editingTipo?.id) : formTipo.codigo });
+                }}
+                onInput={(e) => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = `${t.scrollHeight}px`; }}
+                placeholder="Ej: Doble Individual con Aire Acondicionado"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Código: <span className="font-mono font-semibold text-foreground">{formTipo.codigo || '—'}</span> · se genera solo a partir del nombre.
+              </p>
             </div>
             <div className="grid gap-2">
               <Label>Descripción</Label>
