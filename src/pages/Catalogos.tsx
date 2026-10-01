@@ -1108,7 +1108,7 @@ export default function Catalogos() {
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {pisosTipo.map(([k, grupo]) => (
                       <div key={k} className="grid gap-1.5">
-                        <Label className="text-xs">{k === 'sin' ? 'Sin piso' : k === '0' ? 'Planta baja' : `Piso ${k}`} · {grupo.length ? `${grupo.length} hab.` : 'sin habitaciones de este tipo'}</Label>
+                        <Label className="text-xs">{k === 'sin' ? 'Sin piso' : k === '0' ? 'Planta baja' : `Piso ${k}`}</Label>
                         <Input disabled={grupo.length === 0} title={grupo.map((h: any) => h.numero).join(', ')} type="number" min="0" step="0.01" placeholder={formTipo.precio_base || 'Precio base'}
                           value={preciosPiso[k] ?? ''}
                           onChange={(e) => setPreciosPiso({ ...preciosPiso, [k]: e.target.value })} />
