@@ -17,22 +17,52 @@ export type Caller = {
   isManager: boolean;
 };
 
-export async function loadCaller(admin: any, jwt: string): Promise<Caller | null> {
-  let user: any = null;
-  // 1) Validación local de la firma del token (no depende del servicio de auth).
+function decodePayload(jwt: string): any | null {
   try {
-    const { data: claimsData, error: claimsError } = await admin.auth.getClaims(jwt);
-    const c: any = claimsData?.claims;
-    if (!claimsError && c?.sub && c?.role === 'authenticated') user = { id: c.sub, email: c.email };
-    else if (claimsError) console.error('loadCaller getClaims:', claimsError.message);
+    const part = jwt.split('.')[1];
+    const json = atob(part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '='));
+    return JSON.parse(json);
+  } catch { return null; }
+}
+
+/**
+ * Valida el token contra la base de datos (la API de datos verifica la firma del token).
+ * No depende del servicio de inicio de sesión, que puede tener cortes momentáneos.
+ */
+async function verifyViaDatabase(jwt: string): Promise<{ id: string; email?: string } | null> {
+  const payload = decodePayload(jwt);
+  if (!payload?.sub || payload.role !== 'authenticated') return null;
+  if (payload.exp && payload.exp * 1000 < Date.now()) return null;
+  const url = Deno.env.get('SUPABASE_URL')!;
+  const key = Deno.env.get('SUPABASE_ANON_KEY') || '';
+  try {
+    const res = await fetch(`${url}/rest/v1/profiles?select=id&id=eq.${payload.sub}`, {
+      headers: { Authorization: `Bearer ${jwt}`, apikey: key },
+    });
+    if (!res.ok) {
+      console.error('verifyViaDatabase:', res.status);
+      return null;
+    }
+    const rows = await res.json();
+    if (Array.isArray(rows) && rows[0]?.id === payload.sub) return { id: payload.sub, email: payload.email };
   } catch (e) {
-    console.error('loadCaller getClaims exception:', (e as Error).message);
+    console.error('verifyViaDatabase exception:', (e as Error).message);
   }
-  // 2) Respaldo: consulta al servicio de auth.
-  if (!user) {
+  return null;
+}
+
+export async function loadCaller(admin: any, jwt: string): Promise<Caller | null> {
+  let user: any = await verifyViaDatabase(jwt);
+  // Respaldo: servicio de auth, con reintentos ante cortes momentáneos.
+  for (let i = 0; !user && i < 3; i++) {
     const { data: userData, error } = await admin.auth.getUser(jwt).catch((e: Error) => ({ data: null, error: e }));
     if (userData?.user) user = userData.user;
-    else console.error('loadCaller getUser:', (error as any)?.message);
+    else {
+      console.error(`loadCaller getUser intento ${i + 1}:`, (error as any)?.message);
+      const status = (error as any)?.status;
+      if (status && status < 500) break; // token realmente inválido
+      await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+    }
   }
   if (!user?.id) return null;
   const [{ data: profile }, { data: roleRows }] = await Promise.all([
