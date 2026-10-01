@@ -19,15 +19,20 @@ export type Caller = {
 
 export async function loadCaller(admin: any, jwt: string): Promise<Caller | null> {
   let user: any = null;
-  const { data: userData } = await admin.auth.getUser(jwt).catch(() => ({ data: null }));
-  user = userData?.user ?? null;
+  // 1) Validación local de la firma del token (no depende del servicio de auth).
+  try {
+    const { data: claimsData, error: claimsError } = await admin.auth.getClaims(jwt);
+    const c: any = claimsData?.claims;
+    if (!claimsError && c?.sub && c?.role === 'authenticated') user = { id: c.sub, email: c.email };
+    else if (claimsError) console.error('loadCaller getClaims:', claimsError.message);
+  } catch (e) {
+    console.error('loadCaller getClaims exception:', (e as Error).message);
+  }
+  // 2) Respaldo: consulta al servicio de auth.
   if (!user) {
-    // Respaldo: validar el token directamente contra el servicio de auth.
-    const url = Deno.env.get('SUPABASE_URL')!;
-    const key = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY') || '';
-    const res = await fetch(`${url}/auth/v1/user`, { headers: { Authorization: `Bearer ${jwt}`, apikey: key } });
-    if (res.ok) user = await res.json();
-    else console.error('loadCaller: token rechazado', res.status, await res.text());
+    const { data: userData, error } = await admin.auth.getUser(jwt).catch((e: Error) => ({ data: null, error: e }));
+    if (userData?.user) user = userData.user;
+    else console.error('loadCaller getUser:', (error as any)?.message);
   }
   if (!user?.id) return null;
   const [{ data: profile }, { data: roleRows }] = await Promise.all([
