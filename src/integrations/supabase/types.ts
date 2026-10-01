@@ -443,8 +443,14 @@ export type Database = {
         Row: {
           apellido_materno: string | null
           apellido_paterno: string | null
+          codigo_postal_fiscal: string | null
           created_at: string | null
+          csf_path: string | null
+          datos_fiscales_at: string | null
+          descuento_id: string | null
+          domicilio_fiscal: string | null
           email: string | null
+          email_facturacion: string | null
           es_vip: boolean | null
           hotel_id: string
           id: string
@@ -453,17 +459,27 @@ export type Database = {
           nombre: string
           notas: string | null
           numero_documento: string | null
+          razon_social: string | null
+          regimen_fiscal: string | null
+          rfc: string | null
           telefono: string | null
           tipo_cliente: string | null
           tipo_documento: string | null
           total_estancias: number | null
           updated_at: string | null
+          uso_cfdi: string | null
         }
         Insert: {
           apellido_materno?: string | null
           apellido_paterno?: string | null
+          codigo_postal_fiscal?: string | null
           created_at?: string | null
+          csf_path?: string | null
+          datos_fiscales_at?: string | null
+          descuento_id?: string | null
+          domicilio_fiscal?: string | null
           email?: string | null
+          email_facturacion?: string | null
           es_vip?: boolean | null
           hotel_id: string
           id?: string
@@ -472,17 +488,27 @@ export type Database = {
           nombre: string
           notas?: string | null
           numero_documento?: string | null
+          razon_social?: string | null
+          regimen_fiscal?: string | null
+          rfc?: string | null
           telefono?: string | null
           tipo_cliente?: string | null
           tipo_documento?: string | null
           total_estancias?: number | null
           updated_at?: string | null
+          uso_cfdi?: string | null
         }
         Update: {
           apellido_materno?: string | null
           apellido_paterno?: string | null
+          codigo_postal_fiscal?: string | null
           created_at?: string | null
+          csf_path?: string | null
+          datos_fiscales_at?: string | null
+          descuento_id?: string | null
+          domicilio_fiscal?: string | null
           email?: string | null
+          email_facturacion?: string | null
           es_vip?: boolean | null
           hotel_id?: string
           id?: string
@@ -491,13 +517,24 @@ export type Database = {
           nombre?: string
           notas?: string | null
           numero_documento?: string | null
+          razon_social?: string | null
+          regimen_fiscal?: string | null
+          rfc?: string | null
           telefono?: string | null
           tipo_cliente?: string | null
           tipo_documento?: string | null
           total_estancias?: number | null
           updated_at?: string | null
+          uso_cfdi?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clientes_descuento_id_fkey"
+            columns: ["descuento_id"]
+            isOneToOne: false
+            referencedRelation: "descuentos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clientes_hotel_id_fkey"
             columns: ["hotel_id"]
@@ -687,6 +724,45 @@ export type Database = {
           },
         ]
       }
+      configuracion_hotel: {
+        Row: {
+          clave: string
+          hotel_id: string
+          updated_at: string
+          updated_by: string | null
+          valor: Json
+        }
+        Insert: {
+          clave: string
+          hotel_id: string
+          updated_at?: string
+          updated_by?: string | null
+          valor?: Json
+        }
+        Update: {
+          clave?: string
+          hotel_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          valor?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracion_hotel_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuracion_hotel_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cuentas_estancia: {
         Row: {
           created_at: string
@@ -738,6 +814,57 @@ export type Database = {
             columns: ["reserva_id"]
             isOneToOne: false
             referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      descuentos: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string | null
+          hotel_id: string
+          id: string
+          nombre: string
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          hotel_id: string
+          id?: string
+          nombre: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          hotel_id?: string
+          id?: string
+          nombre?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "descuentos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "descuentos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -1125,6 +1252,7 @@ export type Database = {
           fuera_servicio_motivo: string | null
           hotel_id: string
           id: string
+          impuestos_default: Json | null
           notas: string | null
           numero: string
           piso: number | null
@@ -1143,6 +1271,7 @@ export type Database = {
           fuera_servicio_motivo?: string | null
           hotel_id: string
           id?: string
+          impuestos_default?: Json | null
           notas?: string | null
           numero: string
           piso?: number | null
@@ -1161,6 +1290,7 @@ export type Database = {
           fuera_servicio_motivo?: string | null
           hotel_id?: string
           id?: string
+          impuestos_default?: Json | null
           notas?: string | null
           numero?: string
           piso?: number | null
@@ -1204,6 +1334,7 @@ export type Database = {
           hora_checkin: string | null
           hora_checkout: string | null
           id: string
+          impuestos_default: Json | null
           logo_url: string | null
           moneda_codigo: string
           moneda_locale: string
@@ -1236,6 +1367,7 @@ export type Database = {
           hora_checkin?: string | null
           hora_checkout?: string | null
           id?: string
+          impuestos_default?: Json | null
           logo_url?: string | null
           moneda_codigo?: string
           moneda_locale?: string
@@ -1268,6 +1400,7 @@ export type Database = {
           hora_checkin?: string | null
           hora_checkout?: string | null
           id?: string
+          impuestos_default?: Json | null
           logo_url?: string | null
           moneda_codigo?: string
           moneda_locale?: string
@@ -1554,6 +1687,21 @@ export type Database = {
           },
         ]
       }
+      permisos_default: {
+        Row: {
+          modulo: string
+          rol: string
+        }
+        Insert: {
+          modulo: string
+          rol: string
+        }
+        Update: {
+          modulo?: string
+          rol?: string
+        }
+        Relationships: []
+      }
       permisos_hotel: {
         Row: {
           created_at: string
@@ -1628,6 +1776,75 @@ export type Database = {
           orden?: number
         }
         Relationships: []
+      }
+      politicas_reserva: {
+        Row: {
+          activo: boolean
+          aplica_recepcion: boolean
+          aplica_web: boolean
+          created_at: string
+          dias_llegada_no_permitidos: number[]
+          fecha_fin: string | null
+          fecha_inicio: string | null
+          hotel_id: string
+          id: string
+          max_noches: number | null
+          min_noches: number | null
+          noche_sola_no_permitida: number[]
+          nombre: string
+          notas: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          aplica_recepcion?: boolean
+          aplica_web?: boolean
+          created_at?: string
+          dias_llegada_no_permitidos?: number[]
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          hotel_id: string
+          id?: string
+          max_noches?: number | null
+          min_noches?: number | null
+          noche_sola_no_permitida?: number[]
+          nombre: string
+          notas?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          aplica_recepcion?: boolean
+          aplica_web?: boolean
+          created_at?: string
+          dias_llegada_no_permitidos?: number[]
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          hotel_id?: string
+          id?: string
+          max_noches?: number | null
+          min_noches?: number | null
+          noche_sola_no_permitida?: number[]
+          nombre?: string
+          notas?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "politicas_reserva_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "politicas_reserva_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       productos: {
         Row: {
@@ -1926,10 +2143,20 @@ export type Database = {
           creado_por_nombre: string | null
           created_at: string | null
           descuento: number | null
+          descuento_id: string | null
+          descuento_nombre: string | null
           descuento_tipo: string | null
           descuento_valor: number
           early_checkin_at: string | null
           estado: string | null
+          factura_actualizada_at: string | null
+          factura_actualizada_por: string | null
+          factura_actualizada_por_nombre: string | null
+          factura_enviada_at: string | null
+          factura_estado: string | null
+          factura_folio: string | null
+          factura_notas: string | null
+          factura_realizada_at: string | null
           fecha_checkin: string
           fecha_checkout: string
           habitacion_id: string | null
@@ -1949,6 +2176,7 @@ export type Database = {
           personas_extra: number
           reabierta_at: string | null
           reabierta_por: string | null
+          requiere_factura: boolean
           reserva_anterior_id: string | null
           revisada_at: string | null
           revisada_por: string | null
@@ -1987,10 +2215,20 @@ export type Database = {
           creado_por_nombre?: string | null
           created_at?: string | null
           descuento?: number | null
+          descuento_id?: string | null
+          descuento_nombre?: string | null
           descuento_tipo?: string | null
           descuento_valor?: number
           early_checkin_at?: string | null
           estado?: string | null
+          factura_actualizada_at?: string | null
+          factura_actualizada_por?: string | null
+          factura_actualizada_por_nombre?: string | null
+          factura_enviada_at?: string | null
+          factura_estado?: string | null
+          factura_folio?: string | null
+          factura_notas?: string | null
+          factura_realizada_at?: string | null
           fecha_checkin: string
           fecha_checkout: string
           habitacion_id?: string | null
@@ -2010,6 +2248,7 @@ export type Database = {
           personas_extra?: number
           reabierta_at?: string | null
           reabierta_por?: string | null
+          requiere_factura?: boolean
           reserva_anterior_id?: string | null
           revisada_at?: string | null
           revisada_por?: string | null
@@ -2048,10 +2287,20 @@ export type Database = {
           creado_por_nombre?: string | null
           created_at?: string | null
           descuento?: number | null
+          descuento_id?: string | null
+          descuento_nombre?: string | null
           descuento_tipo?: string | null
           descuento_valor?: number
           early_checkin_at?: string | null
           estado?: string | null
+          factura_actualizada_at?: string | null
+          factura_actualizada_por?: string | null
+          factura_actualizada_por_nombre?: string | null
+          factura_enviada_at?: string | null
+          factura_estado?: string | null
+          factura_folio?: string | null
+          factura_notas?: string | null
+          factura_realizada_at?: string | null
           fecha_checkin?: string
           fecha_checkout?: string
           habitacion_id?: string | null
@@ -2071,6 +2320,7 @@ export type Database = {
           personas_extra?: number
           reabierta_at?: string | null
           reabierta_por?: string | null
+          requiere_factura?: boolean
           reserva_anterior_id?: string | null
           revisada_at?: string | null
           revisada_por?: string | null
@@ -2091,6 +2341,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_descuento_id_fkey"
+            columns: ["descuento_id"]
+            isOneToOne: false
+            referencedRelation: "descuentos"
             referencedColumns: ["id"]
           },
           {
@@ -2431,6 +2688,7 @@ export type Database = {
           fotos: string[]
           hotel_id: string
           id: string
+          impuestos_default: Json | null
           nombre: string
           precio_base: number | null
           precio_persona_extra: number | null
@@ -2447,6 +2705,7 @@ export type Database = {
           fotos?: string[]
           hotel_id: string
           id?: string
+          impuestos_default?: Json | null
           nombre: string
           precio_base?: number | null
           precio_persona_extra?: number | null
@@ -2463,6 +2722,7 @@ export type Database = {
           fotos?: string[]
           hotel_id?: string
           id?: string
+          impuestos_default?: Json | null
           nombre?: string
           precio_base?: number | null
           precio_persona_extra?: number | null
@@ -3353,6 +3613,7 @@ export type Database = {
           ciudad: string | null
           descripcion_publica: string | null
           direccion: string | null
+          email: string | null
           estado: string | null
           estrellas: number | null
           hora_checkin: string | null
@@ -3368,6 +3629,7 @@ export type Database = {
           porcentaje_anticipo: number | null
           requiere_anticipo: boolean | null
           slug: string | null
+          telefono: string | null
           timezone: string | null
         }
         Insert: {
@@ -3375,6 +3637,7 @@ export type Database = {
           ciudad?: string | null
           descripcion_publica?: string | null
           direccion?: string | null
+          email?: string | null
           estado?: string | null
           estrellas?: number | null
           hora_checkin?: string | null
@@ -3390,6 +3653,7 @@ export type Database = {
           porcentaje_anticipo?: number | null
           requiere_anticipo?: boolean | null
           slug?: string | null
+          telefono?: string | null
           timezone?: string | null
         }
         Update: {
@@ -3397,6 +3661,7 @@ export type Database = {
           ciudad?: string | null
           descripcion_publica?: string | null
           direccion?: string | null
+          email?: string | null
           estado?: string | null
           estrellas?: number | null
           hora_checkin?: string | null
@@ -3412,6 +3677,7 @@ export type Database = {
           porcentaje_anticipo?: number | null
           requiere_anticipo?: boolean | null
           slug?: string | null
+          telefono?: string | null
           timezone?: string | null
         }
         Relationships: []
@@ -3454,6 +3720,10 @@ export type Database = {
           total_usuarios: number
           vencidas: number
         }[]
+      }
+      get_public_booking_policies: {
+        Args: { p_hotel_id: string }
+        Returns: Json
       }
       has_role: {
         Args: {
@@ -3512,6 +3782,15 @@ export type Database = {
       }
       vulo_build_shift_report: { Args: { p_turno_id: string }; Returns: Json }
       vulo_can_close_day: { Args: never; Returns: boolean }
+      vulo_change_payment_amount: {
+        Args: {
+          p_amount: number
+          p_payment_id: string
+          p_reason: string
+          p_reserva_id: string
+        }
+        Returns: Json
+      }
       vulo_close_shift: {
         Args: {
           p_checklist: Json
@@ -3527,6 +3806,11 @@ export type Database = {
       vulo_current_hotel_id: { Args: never; Returns: string }
       vulo_current_role: { Args: never; Returns: string }
       vulo_delete_purchase: { Args: { p_compra_id: string }; Returns: Json }
+      vulo_editar_datos_reserva: {
+        Args: { p_datos: Json; p_motivo?: string; p_reserva_id: string }
+        Returns: Json
+      }
+      vulo_hotel_publico: { Args: { p_hotel_id: string }; Returns: boolean }
       vulo_hotel_today: { Args: { p_hotel_id: string }; Returns: string }
       vulo_inventory_move: {
         Args: {
@@ -3557,7 +3841,17 @@ export type Database = {
         Args: { p_operacion: string }
         Returns: boolean
       }
+      vulo_permitido: { Args: { p_modulo: string }; Returns: boolean }
+      vulo_permitido_alguno: { Args: { p_modulos: string[] }; Returns: boolean }
       vulo_platform_owner: { Args: never; Returns: boolean }
+      vulo_reactivar_reserva: {
+        Args: {
+          p_habitacion_id: string
+          p_motivo: string
+          p_reserva_id: string
+        }
+        Returns: Json
+      }
       vulo_receive_purchase: { Args: { p_compra_id: string }; Returns: Json }
       vulo_register_sale: {
         Args: {
@@ -3609,6 +3903,15 @@ export type Database = {
       }
       vulo_user_name: { Args: { p_user_id: string }; Returns: string }
       vulo_user_requires_shift: { Args: never; Returns: boolean }
+      vulo_validar_politicas_reserva: {
+        Args: {
+          p_canal?: string
+          p_checkin: string
+          p_checkout: string
+          p_hotel_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role:
