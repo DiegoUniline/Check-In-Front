@@ -176,8 +176,10 @@ export default function Catalogos() {
 
   const [habsTipo, setHabsTipo] = useState<any[]>([]);
   const [preciosPiso, setPreciosPiso] = useState<Record<string, string>>({});
+  const [pisosHotel, setPisosHotel] = useState<string[]>([]);
   const pisosTipo = useMemo(() => {
     const m = new Map<string, any[]>();
+    pisosHotel.forEach((k) => m.set(k, []));
     habsTipo.forEach((h) => { const k = h.piso == null ? 'sin' : String(h.piso); m.set(k, [...(m.get(k) || []), h]); });
     return Array.from(m.entries()).sort((a, b) => Number(a[0]) - Number(b[0]));
   }, [habsTipo]);
@@ -187,6 +189,8 @@ export default function Catalogos() {
     const { data } = await (supabase as any).from('habitaciones').select('id, numero, piso, precio_noche').eq('tipo_habitacion_id', tipoId).order('numero');
     const rows = data || [];
     setHabsTipo(rows);
+    const { data: todas } = await (supabase as any).from('habitaciones').select('piso');
+    setPisosHotel(Array.from(new Set((todas || []).map((h: any) => h.piso == null ? 'sin' : String(h.piso)))) as string[]);
     const pp: Record<string, string> = {};
     rows.forEach((h: any) => {
       const k = h.piso == null ? 'sin' : String(h.piso);
@@ -250,7 +254,7 @@ export default function Catalogos() {
         await api.updateTipoHabitacion(editingTipo.id, data);
         setTipoDefault(editingTipo.id, usarImpuestosHotel ? null : formTipoImpuestos);
         for (const [k, grupo] of pisosTipo) {
-          if (!(k in preciosPiso)) continue;
+          if (!(k in preciosPiso) || grupo.length === 0) continue;
           const v = parseFloat(preciosPiso[k]);
           const precio = v > 0 && v !== data.precio_base ? v : null;
           const ids = grupo.map((h: any) => h.id);
@@ -1006,7 +1010,7 @@ export default function Catalogos() {
 
       {/* Modal Tipo Habitación */}
       <Dialog open={modalTipoOpen} onOpenChange={setModalTipoOpen}>
-        <DialogContent className="w-[96vw] max-w-[96vw] max-h-[92vh] overflow-y-auto">
+        <DialogContent className="w-[94vw] max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTipo ? 'Editar Tipo de Habitación' : 'Nuevo Tipo de Habitación'}</DialogTitle>
           </DialogHeader>
@@ -1096,7 +1100,7 @@ export default function Catalogos() {
               <div className="rounded-md border p-3 space-y-3">
                 <div>
                   <Label className="font-semibold">Precio por piso</Label>
-                  <p className="text-xs text-muted-foreground">Las habitaciones de esta categoría en cada piso cobran este precio. Vacío = precio base.</p>
+                  <p className="text-xs text-muted-foreground">Pisos capturados en Habitaciones. Las habitaciones de este tipo en cada piso cobran ese precio. Vacío = precio base.</p>
                 </div>
                 {pisosTipo.length === 0 ? (
                   <p className="text-xs text-muted-foreground">No hay habitaciones asignadas a esta categoría.</p>
@@ -1104,8 +1108,8 @@ export default function Catalogos() {
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {pisosTipo.map(([k, grupo]) => (
                       <div key={k} className="grid gap-1.5">
-                        <Label className="text-xs">{k === 'sin' ? 'Sin piso' : `Piso ${k}`} · {grupo.length} hab. ({grupo.map((h: any) => h.numero).join(', ')})</Label>
-                        <Input type="number" min="0" step="0.01" placeholder={formTipo.precio_base || 'Precio base'}
+                        <Label className="text-xs">{k === 'sin' ? 'Sin piso' : k === '0' ? 'Planta baja' : `Piso ${k}`} · {grupo.length ? `${grupo.length} hab.` : 'sin habitaciones de este tipo'}</Label>
+                        <Input disabled={grupo.length === 0} title={grupo.map((h: any) => h.numero).join(', ')} type="number" min="0" step="0.01" placeholder={formTipo.precio_base || 'Precio base'}
                           value={preciosPiso[k] ?? ''}
                           onChange={(e) => setPreciosPiso({ ...preciosPiso, [k]: e.target.value })} />
                       </div>
