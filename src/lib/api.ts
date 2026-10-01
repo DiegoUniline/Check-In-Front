@@ -2481,7 +2481,16 @@ class ApiClient {
     return result;
   };
   updateUsuario = async (id: string, data: any): Promise<any> => {
-    const { data: result, error } = await supabase.functions.invoke('update-user', { body: { id, ...data } });
+    let { data: sess } = await supabase.auth.getSession();
+    if (!sess.session || (sess.session.expires_at ?? 0) * 1000 < Date.now() + 60_000) {
+      const r = await supabase.auth.refreshSession();
+      sess = { session: r.data.session } as any;
+    }
+    if (!sess.session) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+    const { data: result, error } = await supabase.functions.invoke('update-user', {
+      body: { id, ...data },
+      headers: { Authorization: `Bearer ${sess.session.access_token}` },
+    });
     if (error) {
       let msg = error.message || 'No se pudo actualizar el usuario';
       try {
