@@ -503,6 +503,17 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
             : selected.id === 'add_guest' ? 'Huésped adicional registrado'
               : 'Cuenta dividida desde la estancia',
       );
+      if (selected.id === 'extend_stay' && payload.keep_price !== false) {
+        const scaled = scaledFixedDiscount(reserva, dateOnly(reserva.fecha_checkin), dateOnly(payload.new_checkout));
+        if (scaled && Math.abs(scaled.value - scaled.current) > 0.009) {
+          try {
+            await api.applyStayOperation(reserva.id, 'discount_change', { discount_type: 'Monto', discount_value: String(scaled.value) },
+              `Se mantiene el precio pactado de ${formatCurrency(scaled.agreedNightly)} por noche al extender`);
+          } catch (error: any) {
+            toast({ title: 'Estancia extendida, pero sin precio pactado', description: `Las noches nuevas se cobraron a tarifa normal. ${error.message || ''}`, variant: 'destructive' });
+          }
+        }
+      }
       const cancelledReservation = selected.id === 'cancel_reservation';
       toast({
         title: cancelledReservation ? 'Reserva cancelada' : 'Operación completada',
@@ -685,6 +696,17 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
             ? `Puedes extender como máximo hasta el ${formatDate(limit)}; ese día llega la siguiente reservación.`
             : 'No hay otra reservación futura que limite esta habitación.'}</p>
         </div>
+        {(() => {
+          const scaled = scaledFixedDiscount(reserva, dateOnly(reserva.fecha_checkin), dateOnly(reserva.fecha_checkout));
+          const rate = Number(reserva.tarifa_noche || 0);
+          if (!scaled) return <p className="rounded-[8px] border border-border bg-muted/40 p-3 text-xs text-muted-foreground">Las noches nuevas se cobran al mismo precio de esta reserva: <b className="text-foreground">{formatCurrency(rate)}</b> por noche.</p>;
+          const keep = payload.keep_price !== false;
+          return <div className="space-y-2 rounded-[8px] border border-border p-3">
+            <p className="text-sm font-semibold text-foreground">¿Mantener el precio pactado?</p>
+            <label className="flex cursor-pointer items-start gap-2 text-sm"><input type="radio" className="mt-1" checked={keep} onChange={() => set('keep_price', true)} /><span>Sí, cobrar <b>{formatCurrency(scaled.agreedNightly)}</b> por noche (precio con descuento)</span></label>
+            <label className="flex cursor-pointer items-start gap-2 text-sm"><input type="radio" className="mt-1" checked={!keep} onChange={() => set('keep_price', false)} /><span>No, cobrar las noches nuevas a <b>{formatCurrency(rate)}</b> (tarifa sin descuento)</span></label>
+          </div>;
+        })()}
         {availabilityNotice()}
         {financialImpactNotice()}
       </div>
