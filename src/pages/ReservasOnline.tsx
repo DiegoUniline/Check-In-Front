@@ -93,35 +93,35 @@ export default function ReservasOnline() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      <th className="px-4 py-2.5 font-medium">Reserva</th>
-                      <th className="px-4 py-2.5 font-medium">Contacto</th>
-                      <th className="px-4 py-2.5 font-medium whitespace-nowrap">Fechas</th>
-                      <th className="px-4 py-2.5 font-medium">Huéspedes</th>
-                      <th className="px-4 py-2.5 font-medium">Habitación</th>
-                      <th className="px-4 py-2.5 font-medium text-right">Total</th>
-                      <th className="px-4 py-2.5 font-medium text-right">Acciones</th>
+                      <th className="px-3 py-2.5 font-medium">Reserva</th>
+                      <th className="px-3 py-2.5 font-medium">Contacto</th>
+                      <th className="px-3 py-2.5 font-medium whitespace-nowrap">Fechas</th>
+                      <th className="px-3 py-2.5 font-medium">Huéspedes</th>
+                      <th className="px-3 py-2.5 font-medium">Habitación</th>
+                      <th className="px-3 py-2.5 font-medium text-right">Total</th>
+                      <th className="px-3 py-2.5 font-medium text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reservas.map((r: any) => (
                       <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3">
                           <div className="font-semibold">{r.cliente_nombre || 'Sin nombre'}</div>
                           <div className="text-xs text-muted-foreground">{r.numero_reserva}</div>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {r.cliente_email && <div className="truncate max-w-[180px]">{r.cliente_email}</div>}
+                        <td className="px-3 py-3 text-muted-foreground">
+                          {r.cliente_email && <div className="truncate max-w-[150px]">{r.cliente_email}</div>}
                           {r.cliente_telefono && <div className="text-xs">{r.cliente_telefono}</div>}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-3 py-3 whitespace-nowrap">
                           {formatDate(r.fecha_checkin)} → {formatDate(r.fecha_checkout)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-3 py-3 whitespace-nowrap">
                           {r.adultos}A{r.ninos > 0 ? ` ${r.ninos}N` : ''}
                         </td>
-                        <td className="px-4 py-3">{r.tipo_nombre || '—'}</td>
-                        <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(Number(r.total || 0))}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3">{r.tipo_nombre || '—'}</td>
+                        <td className="px-3 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(Number(r.total || 0))}</td>
+                        <td className="px-3 py-3">
                           <div className="flex justify-end gap-2">
                             <Button
                               size="sm"
