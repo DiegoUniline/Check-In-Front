@@ -6,6 +6,7 @@ import { withOfflineCache } from '@/lib/offlineCache';
 import { assertShiftWriteAllowed } from '@/lib/shiftAccess';
 import { occupancyEnd, occupiesNight } from '@/lib/stayOccupancy';
 import { formatDate as formatDateOnly } from '@/lib/dateFormat';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const operationalDb = supabase as any;
@@ -942,23 +943,25 @@ class ApiClient {
   };
   getHabitacionesDisponibles = async (checkin: string, checkout: string, tipoId?: string, excludeReservaId?: string): Promise<any> => {
     const effectiveCheckout = checkout <= checkin ? addCalendarDays(checkin, 1) : checkout;
-    let q = supabase
-      .from('habitaciones')
-      .select('*, tipos_habitacion(*)')
-      .eq('hotel_id', this.hid())
-      .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio,Bloqueada)');
-    if (tipoId) q = q.eq('tipo_habitacion_id', tipoId);
-    const { data: habs, error: habError } = await q;
-    if (habError) throw habError;
-    let conflictsQuery = supabase
-      .from('reservas')
-      .select('habitacion_id, fecha_checkin, fecha_checkout, estado, checkin_realizado, checkout_realizado')
-      .eq('hotel_id', this.hid())
-      .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
-      .lt('fecha_checkin', effectiveCheckout);
-    if (excludeReservaId) conflictsQuery = conflictsQuery.neq('id', excludeReservaId);
-    const { data: ocupadas, error: reservationError } = await conflictsQuery;
-    if (reservationError) throw reservationError;
+    const habs = await fetchAllRows<any>((from, to) => {
+      let q = supabase
+        .from('habitaciones')
+        .select('*, tipos_habitacion(*)')
+        .eq('hotel_id', this.hid())
+        .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio,Bloqueada)');
+      if (tipoId) q = q.eq('tipo_habitacion_id', tipoId);
+      return q.order('id').range(from, to);
+    });
+    const ocupadas = await fetchAllRows<any>((from, to) => {
+      let conflictsQuery = supabase
+        .from('reservas')
+        .select('habitacion_id, fecha_checkin, fecha_checkout, estado, checkin_realizado, checkout_realizado')
+        .eq('hotel_id', this.hid())
+        .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
+        .lt('fecha_checkin', effectiveCheckout);
+      if (excludeReservaId) conflictsQuery = conflictsQuery.neq('id', excludeReservaId);
+      return conflictsQuery.order('id').range(from, to);
+    });
     const ocupadasIds = new Set((ocupadas || [])
       .filter((reservation: any) => {
         const reservationCheckin = String(reservation.fecha_checkin || '').slice(0, 10);
@@ -1413,10 +1416,9 @@ class ApiClient {
     return data;
   };
   getStayMovements = async (reservaId: string): Promise<any[]> => {
-    const { data, error } = await operationalDb.from('estancia_movimientos').select('*')
-      .eq('reserva_id', reservaId).order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
+    return fetchAllRows<any>((from, to) => operationalDb.from('estancia_movimientos').select('*')
+      .eq('hotel_id', this.hid()).eq('reserva_id', reservaId)
+      .order('created_at', { ascending: false }).order('id').range(from, to));
   };
   getStayGuests = async (reservaId: string): Promise<any[]> => {
     const { data, error } = await operationalDb.from('reserva_huespedes').select('*')

@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/currency';
 import { calculateReservationFinancialSnapshot, type ReservationFinancialSnapshot } from '@/lib/reservationFinancials';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { checkoutAfterArrivalChange } from '@/lib/reservationDates';
+import { ReservationDateChanges } from '@/components/reservas/ReservationDateChanges';
 import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
 import { StayConsumptionPicker, type StayConsumptionItem } from '@/components/reservas/StayConsumptionPicker';
 import { Badge } from '@/components/ui/badge';
@@ -116,6 +118,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
   const [historyOpen, setHistoryOpen] = useState(false);
   const [payload, setPayload] = useState<Record<string, any>>({});
   const [reason, setReason] = useState('');
+  const [adjustedCheckout, setAdjustedCheckout] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
@@ -368,6 +371,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
 
   const openOperation = (op: Operation) => {
     setMoreOpen(false);
+    setAdjustedCheckout(false);
     setSelected(op); setReason('');
     setPayload({
       new_checkin: dateOnly(reserva.fecha_checkin), new_checkout: dateOnly(reserva.fecha_checkout),
@@ -417,6 +421,11 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
   }, [initialCheckout, initialOperationId, initialRoomId, reserva.id, user?.rol]);
 
   const set = (key: string, value: any) => setPayload((current) => ({ ...current, [key]: value }));
+  const changeArrival = (value: string) => {
+    const checkout = checkoutAfterArrivalChange(payload.new_checkin, payload.new_checkout, value);
+    setAdjustedCheckout(checkout !== payload.new_checkout);
+    setPayload((current) => ({ ...current, new_checkin: value, new_checkout: checkout }));
+  };
 
   const submit = async () => {
     if (!selected) return;
@@ -709,7 +718,16 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       case 'early_departure':
         return <div className="space-y-3"><Field label="Nueva fecha de salida"><Input type="date" min={isActiveStay ? todayLocal() : shiftDate(reserva.fecha_checkin, 1)} max={shiftDate(reserva.fecha_checkout, -1)} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field>{availabilityNotice()}{financialImpactNotice()}</div>;
       case 'modify_dates':
-        return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Nueva entrada"><Input type="date" max={payload.new_checkout || undefined} value={payload.new_checkin || ''} onChange={(e) => set('new_checkin', e.target.value)} /></Field><Field label="Nueva salida"><Input type="date" min={payload.new_checkin || undefined} value={payload.new_checkout || ''} onChange={(e) => set('new_checkout', e.target.value)} /></Field></div>{availabilityNotice()}{financialImpactNotice()}</div>;
+        return <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Nueva entrada"><Input aria-label="Nueva entrada" type="date" value={payload.new_checkin || ''} disabled={isActiveStay && !['SuperAdmin', 'Admin', 'Gerente'].includes(String(user?.rol))} onChange={(e) => changeArrival(e.target.value)} /></Field>
+            <Field label="Nueva salida"><Input aria-label="Nueva salida" type="date" min={payload.new_checkin || undefined} value={payload.new_checkout || ''} onChange={(e) => { set('new_checkout', e.target.value); setAdjustedCheckout(false); }} /></Field>
+          </div>
+          <p className="text-xs text-muted-foreground">Puedes corregir fechas de días anteriores. Después del check-in, sólo gerencia puede corregir la entrada.</p>
+          {adjustedCheckout && <p role="status" className="text-xs text-amber-700">La salida se ajustó al {formatDate(payload.new_checkout)} para conservar la duración. Revísala antes de aplicar.</p>}
+          <ReservationDateChanges before={reserva} after={{ fecha_checkin: payload.new_checkin, fecha_checkout: payload.new_checkout }} />
+          {availabilityNotice()}{financialImpactNotice()}
+        </div>;
       case 'room_change': return roomSelect();
       case 'category_change': return <div className="space-y-3">{roomSelect('Nueva habitación / categoría')}<div className="grid gap-3 sm:grid-cols-2"><Field label="Tipo de cambio"><Select value={payload.change_type || 'Upgrade'} onValueChange={(v) => { setPayload((current) => { const room = availableRooms.find((item) => item.id === current.new_room_id); return { ...current, change_type: v, new_rate: v === 'Cortesia' ? '0' : String(money(room?.precio_base ?? room?.tipos_habitacion?.precio_base ?? reserva.tarifa_noche)) }; }); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Upgrade">Upgrade</SelectItem><SelectItem value="Downgrade">Downgrade</SelectItem><SelectItem value="Cortesia">Cortesía</SelectItem><SelectItem value="CambioConCosto">Cambio con costo</SelectItem></SelectContent></Select></Field><Field label="Tarifa resultante por noche"><MoneyInput value={payload.new_rate || ''} onChange={(value) => set('new_rate', value)} /><p className="mt-1 text-xs text-muted-foreground">Se propone automáticamente la tarifa base de la categoría. Sólo gerencia puede modificarla.</p></Field></div>{financialImpactNotice()}</div>;
       case 'late_checkout': return <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><Field label="Salida autorizada"><Input type="datetime-local" value={payload.late_until || ''} onChange={(e) => set('late_until', e.target.value)} /></Field><Field label="Cargo adicional"><MoneyInput value={payload.charge_amount || ''} onChange={(value) => set('charge_amount', value)} /></Field></div>{financialImpactNotice()}</div>;
@@ -876,11 +894,11 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
 
     <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
       <DialogContent className="max-h-[88dvh] overflow-y-auto rounded-[8px] shadow-lg sm:max-w-3xl [&_button]:rounded-[6px] [&_input]:rounded-[6px] [&_textarea]:rounded-[6px] [&_[role=combobox]]:rounded-[6px]">
-        <DialogHeader><DialogTitle>Historial de operaciones</DialogTitle><DialogDescription>Movimientos auditados de esta estancia.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Historial de operaciones</DialogTitle><DialogDescription>Quién hizo cada cambio, cuándo y por qué. Las horas se muestran en la zona de tu computadora o celular: {Intl.DateTimeFormat().resolvedOptions().timeZone}.</DialogDescription></DialogHeader>
         <div className="divide-y rounded-[6px] border">
           {movements.length === 0 ? <p className="p-5 text-center text-sm text-muted-foreground">Sin movimientos todavía.</p> : movements.map((move, index) => <div key={move.id} className="p-3">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><p className="text-sm font-medium capitalize">{String(move.operacion).replace(/_/g,' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p>{move.motivo && <p className="mt-1 text-xs">{move.motivo}</p>}</div>
+              <div className="min-w-0 flex-1"><p className="text-sm font-medium">{['modify_dates', 'reservation_correction'].includes(move.operacion) ? 'Fechas / habitación de reserva modificadas' : String(move.operacion).replace(/_/g,' ')}</p><p className="text-xs text-muted-foreground">{move.usuario_nombre || move.usuario_email || 'Usuario'} · {formatDateTime(move.created_at)}</p>{move.usuario_nombre && move.usuario_email && <p className="break-all text-xs text-muted-foreground">{move.usuario_email}</p>}{move.motivo && <p className="mt-1 break-words text-xs">Motivo: {move.motivo}</p>}<ReservationDateChanges before={move.datos_antes} after={move.datos_despues} /></div>
               {move.revertido ? <Badge variant="secondary">Revertida</Badge> : move.reversible && index === 0 ? <Button size="toolbar" variant="outline" className="h-8" onClick={() => { setHistoryOpen(false); setReverseMovement(move); }}>Revertir</Button> : null}
             </div>
           </div>)}

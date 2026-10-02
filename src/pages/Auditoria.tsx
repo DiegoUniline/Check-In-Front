@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ScrollText, Search, RefreshCw, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateTime } from '@/lib/dateFormat';
+import { ReservationDateChanges } from '@/components/reservas/ReservationDateChanges';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -84,6 +86,8 @@ export default function Auditoria() {
             <SelectItem value="eliminar">Eliminar</SelectItem>
             <SelectItem value="login">Login</SelectItem>
             <SelectItem value="custom">Custom</SelectItem>
+            <SelectItem value="ESTANCIA_RESERVATION_CORRECTION">Corrección de reserva</SelectItem>
+            <SelectItem value="ESTANCIA_MODIFY_DATES">Cambio de fechas</SelectItem>
           </SelectContent>
         </Select>
         <Select value={entidad} onValueChange={setEntidad}>
@@ -126,7 +130,7 @@ export default function Auditoria() {
               ) : filtrados.map((r: any) => (
                 <TableRow key={r.id}>
                   <TableCell className="text-sm font-mono text-muted-foreground">
-                    {new Date(r.created_at).toLocaleString()}
+                    {formatDateTime(r.created_at)}
                   </TableCell>
                   <TableCell>
                     <Badge className={accionColor[r.accion] || accionColor.custom}>
@@ -141,7 +145,7 @@ export default function Auditoria() {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm">{r.descripcion || '—'}</TableCell>
+                  <TableCell className="text-sm">{r.descripcion || '—'}{r.entidad === 'reserva' && <ReservationDateChanges before={r.datos_antes} after={r.datos_despues} />}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{r.user_email || '—'}</TableCell>
                 </TableRow>
               ))}
@@ -151,6 +155,7 @@ export default function Auditoria() {
       </Card>
 
       <p className="text-xs text-muted-foreground mt-3">
+        Hora local de tu dispositivo ({Intl.DateTimeFormat().resolvedOptions().timeZone}).{' '}
         Mostrando {filtrados.length} de {registros.length} registros (máximo 500 más recientes).
       </p>
     </MainLayout>

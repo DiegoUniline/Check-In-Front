@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
+import { checkoutAfterArrivalChange } from '@/lib/reservationDates';
 import { calculateReservationFinancialSnapshot } from '@/lib/reservationFinancials';
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,8 @@ export function EditarReservaDialog({ open, onOpenChange, reserva, onSaved }: Pr
   const [habitacionId, setHabitacionId] = useState('');
   const [habitaciones, setHabitaciones] = useState<any[]>([]);
   const [cargandoHab, setCargandoHab] = useState(false);
+  const [errorHabitaciones, setErrorHabitaciones] = useState('');
+  const [salidaAjustada, setSalidaAjustada] = useState(false);
   const [adultos, setAdultos] = useState(1);
   const [ninos, setNinos] = useState(0);
   const [horaLlegada, setHoraLlegada] = useState('');
@@ -85,6 +88,8 @@ export function EditarReservaDialog({ open, onOpenChange, reserva, onSaved }: Pr
     setTab(cerrada ? 'notas' : 'huesped');
     setPaso('editar');
     setMotivo('');
+    setSalidaAjustada(false);
+    setErrorHabitaciones('');
     setCliente(reserva.cliente || (reserva.cliente_id ? { id: reserva.cliente_id, nombre: reserva.cliente_nombre } : null));
     setBusqueda(''); setResultados([]);
     setCheckin(d(reserva.fecha_checkin));
@@ -120,15 +125,24 @@ export function EditarReservaDialog({ open, onOpenChange, reserva, onSaved }: Pr
     if (!open || !puedeFechas || !checkin || !checkout || checkout < checkin) { setHabitaciones([]); return; }
     let cancel = false;
     setCargandoHab(true);
+    setErrorHabitaciones('');
+    setHabitaciones([]);
     api.getHabitacionesDisponibles(checkin, checkout, undefined, reserva.id)
       .then((lista: any[]) => { if (!cancel) setHabitaciones(lista || []); })
-      .catch(() => { if (!cancel) setHabitaciones([]); })
+      .catch((error: Error) => { if (!cancel) { setHabitaciones([]); setErrorHabitaciones(error.message || 'No se pudo comprobar la disponibilidad.'); } })
       .finally(() => { if (!cancel) setCargandoHab(false); });
     return () => { cancel = true; };
   }, [open, checkin, checkout, reserva?.id, puedeFechas]);
 
   const habitacionLibre = habitaciones.some((h) => h.id === habitacionId);
   const habitacionActual = habitaciones.find((h) => h.id === habitacionId);
+
+  const cambiarEntrada = (value: string) => {
+    const nuevaSalida = checkoutAfterArrivalChange(checkin, checkout, value);
+    setSalidaAjustada(nuevaSalida !== checkout);
+    setCheckin(value);
+    setCheckout(nuevaSalida);
+  };
 
   const descNormal = useMemo(() => descTipo === 'Cortesia'
     ? { tipo: 'Porcentaje', valor: 100 }
@@ -174,6 +188,7 @@ export function EditarReservaDialog({ open, onOpenChange, reserva, onSaved }: Pr
     if (hay('fechas')) {
       if (!checkin || !checkout || checkout < checkin) return 'La salida no puede ser anterior a la entrada.';
       if (cargandoHab) return 'Espera a que termine la búsqueda de habitaciones.';
+      if (errorHabitaciones) return errorHabitaciones;
       if (!habitacionLibre) return 'La habitación no está libre en esas fechas; elige otra en la pestaña Estancia.';
     }
     if (hay('tarifa') && (!Number.isFinite(n(tarifa)) || n(tarifa) < 0)) return 'Escribe una tarifa válida.';
@@ -190,6 +205,12 @@ export function EditarReservaDialog({ open, onOpenChange, reserva, onSaved }: Pr
   };
 
   const guardar = async () => {
+    if (guardando) return;
+    const errorValidacion = validar();
+    if (errorValidacion) {
+      toast({ title: 'Revisa los datos', description: errorValidacion, variant: 'destructive' });
+      return;
+    }
     if (requiereMotivo && motivo.trim().length < 3) {
       toast({ title: 'Escribe el motivo', description: 'Los cambios de fechas, habitación o precio quedan en el historial con su motivo.', variant: 'destructive' });
       return;
@@ -320,15 +341,17 @@ export function EditarReservaDialog({ open, onOpenChange, reserva, onSaved }: Pr
                 {!puedeFechas ? <p className="text-sm text-muted-foreground">Tu rol no puede cambiar fechas ni habitación.</p> : <>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label>Entrada</Label>
-                      <Input type="date" value={checkin} max={checkout || undefined} disabled={activa && !esGerencia} onChange={(e) => setCheckin(e.target.value)} />
+                      <Label htmlFor="editar-reserva-entrada">Entrada</Label>
+                      <Input id="editar-reserva-entrada" type="date" value={checkin} disabled={activa && !esGerencia} onChange={(e) => cambiarEntrada(e.target.value)} />
                       {activa && !esGerencia && <p className="text-[11px] text-muted-foreground">Sólo gerencia corrige la entrada después del check-in.</p>}
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Salida</Label>
-                      <Input type="date" value={checkout} min={checkin || undefined} onChange={(e) => setCheckout(e.target.value)} />
+                      <Label htmlFor="editar-reserva-salida">Salida</Label>
+                      <Input id="editar-reserva-salida" type="date" value={checkout} min={checkin || undefined} onChange={(e) => { setCheckout(e.target.value); setSalidaAjustada(false); }} />
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">Puedes corregir una reserva de días anteriores. Revisa entrada y salida antes de guardar; el cambio quedará registrado con tu usuario, fecha, hora y motivo.</p>
+                  {salidaAjustada && <p role="status" className="text-xs text-amber-700">La salida se ajustó al {formatDate(checkout)} para conservar la duración, porque quedaba antes de la nueva entrada. Puedes modificarla.</p>}
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5"><BedDouble className="h-3.5 w-3.5" />Habitación</Label>
                     {cargandoHab ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Buscando habitaciones libres…</p> : (
@@ -343,7 +366,7 @@ export function EditarReservaDialog({ open, onOpenChange, reserva, onSaved }: Pr
                         </SelectContent>
                       </Select>
                     )}
-                    {!cargandoHab && !habitacionLibre && <p className="flex items-center gap-1.5 text-xs text-red-600"><AlertTriangle className="h-3.5 w-3.5" />La habitación actual no está libre en esas fechas; elige otra.</p>}
+                    {!cargandoHab && !habitacionLibre && <p role="alert" className="flex items-center gap-1.5 text-xs text-red-600"><AlertTriangle className="h-3.5 w-3.5" />{errorHabitaciones || 'La habitación actual no está libre en esas fechas; elige otra.'}</p>}
                   </div>
                   {preview && hay('fechas') && <p className="text-xs text-muted-foreground">Noches: {preview.actual.nights} → <strong>{preview.nuevo.nights}</strong></p>}
                 </>}
