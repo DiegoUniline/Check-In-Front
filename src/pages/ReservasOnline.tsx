@@ -110,7 +110,7 @@ export default function ReservasOnline() {
                           <div className="text-xs text-muted-foreground">{r.numero_reserva}</div>
                         </td>
                         <td className="px-2 py-3 text-muted-foreground">
-                          {r.cliente_email && <div className="truncate max-w-[130px]">{r.cliente_email}</div>}
+                          {r.cliente_email && <div className="truncate max-w-[110px]">{r.cliente_email}</div>}
                           {r.cliente_telefono && <div className="text-xs">{r.cliente_telefono}</div>}
                         </td>
                         <td className="px-2 py-3 whitespace-nowrap">
