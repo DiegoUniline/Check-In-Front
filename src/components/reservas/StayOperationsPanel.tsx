@@ -11,7 +11,19 @@ import { canAccess } from '@/lib/permissions';
 import { useAuth } from '@/contexts/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/currency';
-import { calculateReservationFinancialSnapshot, type ReservationFinancialSnapshot } from '@/lib/reservationFinancials';
+import { calculateReservationFinancialSnapshot, reservationNightsBetween, type ReservationFinancialSnapshot } from '@/lib/reservationFinancials';
+
+/** Descuento fijo (p. ej. "precio final") escalado a las noches nuevas para conservar el precio pactado por noche. */
+const scaledFixedDiscount = (reserva: any, checkin: string, checkout: string) => {
+  const discount = Number(reserva?.descuento || 0);
+  const type = String(reserva?.descuento_tipo || '').toLowerCase();
+  if (discount <= 0 || type.startsWith('porc')) return null;
+  const oldNights = reservationNightsBetween(reserva.fecha_checkin, reserva.fecha_checkout);
+  const newNights = reservationNightsBetween(checkin, checkout);
+  const perNight = discount / oldNights;
+  const agreedNightly = Math.max(0, Number(reserva.tarifa_noche || 0) - perNight);
+  return { value: Math.round(perNight * newNights * 100) / 100, agreedNightly, current: discount };
+};
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { checkoutAfterArrivalChange } from '@/lib/reservationDates';
 import { ReservationDateChanges } from '@/components/reservas/ReservationDateChanges';
@@ -207,6 +219,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     if (DATE_OPERATIONS.includes(selected.id) || selected.id === 'reopen_checkout') {
       options.checkin = dateOnly(payload.new_checkin || reserva.fecha_checkin);
       options.checkout = dateOnly(payload.new_checkout || reserva.fecha_checkout);
+      const scaled = selected.id === 'extend_stay' && payload.keep_price !== false
+        ? scaledFixedDiscount(reserva, options.checkin, options.checkout) : null;
+      if (scaled) { options.discountType = 'Monto'; options.discountValue = scaled.value; }
       visible = true;
     } else if (['rate_change', 'category_change'].includes(selected.id)) {
       options.nightlyRate = money(payload.new_rate);
