@@ -88,78 +88,76 @@ export default function ReservasOnline() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {reservas.map((r: any) => (
-              <Card key={r.id} className="border-l-4 border-l-yellow-400">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-bold text-base">{r.cliente_nombre || 'Sin nombre'}</div>
-                      <div className="text-xs text-muted-foreground">{r.numero_reserva}</div>
-                    </div>
-                    <Badge variant="outline" className="bg-yellow-50 border-yellow-300 text-yellow-700">
-                      Pendiente
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {r.cliente_email && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Mail className="h-3 w-3" /> {r.cliente_email}
-                      </div>
-                    )}
-                    {r.cliente_telefono && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Phone className="h-3 w-3" /> {r.cliente_telefono}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1">
-                      <CalendarDays className="h-3 w-3" />
-                      {formatDate(r.fecha_checkin)} →{' '}
-                      {formatDate(r.fecha_checkout)}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3 w-3" /> {r.adultos}A {r.ninos > 0 ? `${r.ninos}N` : ''}
-                    </div>
-                    {r.tipo_nombre && (
-                      <div className="flex items-center gap-1 col-span-2">
-                        <BedDouble className="h-3 w-3" /> {r.tipo_nombre}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <div className="font-bold text-primary">{formatCurrency(Number(r.total || 0))}</div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={procesando === r.id}
-                        onClick={() => {
-                          const respuesta = prompt('Motivo del rechazo (opcional):');
-                          if (respuesta === null) return; // Canceló: no se rechaza.
-                          setProcesando(r.id);
-                          rechazar.mutate({ id: r.id, motivo: respuesta.trim() });
-                        }}
-                      >
-                        <X className="h-4 w-4 mr-1" /> Rechazar
-                      </Button>
-                      <Button
-                        size="sm"
-                        disabled={procesando === r.id}
-                        onClick={() => {
-                          setProcesando(r.id);
-                          confirmar.mutate(r.id);
-                        }}
-                      >
-                        <Check className="h-4 w-4 mr-1" /> Confirmar
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card className="py-0">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <th className="px-4 py-2.5 font-medium">Reserva</th>
+                      <th className="px-4 py-2.5 font-medium">Contacto</th>
+                      <th className="px-4 py-2.5 font-medium whitespace-nowrap">Fechas</th>
+                      <th className="px-4 py-2.5 font-medium">Huéspedes</th>
+                      <th className="px-4 py-2.5 font-medium">Habitación</th>
+                      <th className="px-4 py-2.5 font-medium text-right">Total</th>
+                      <th className="px-4 py-2.5 font-medium text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reservas.map((r: any) => (
+                      <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="font-semibold">{r.cliente_nombre || 'Sin nombre'}</div>
+                          <div className="text-xs text-muted-foreground">{r.numero_reserva}</div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {r.cliente_email && <div className="truncate max-w-[180px]">{r.cliente_email}</div>}
+                          {r.cliente_telefono && <div className="text-xs">{r.cliente_telefono}</div>}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {formatDate(r.fecha_checkin)} → {formatDate(r.fecha_checkout)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {r.adultos}A{r.ninos > 0 ? ` ${r.ninos}N` : ''}
+                        </td>
+                        <td className="px-4 py-3">{r.tipo_nombre || '—'}</td>
+                        <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(Number(r.total || 0))}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8"
+                              disabled={procesando === r.id}
+                              onClick={() => {
+                                const respuesta = prompt('Motivo del rechazo (opcional):');
+                                if (respuesta === null) return; // Canceló: no se rechaza.
+                                setProcesando(r.id);
+                                rechazar.mutate({ id: r.id, motivo: respuesta.trim() });
+                              }}
+                            >
+                              <X className="h-4 w-4 mr-1" /> Rechazar
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-8"
+                              disabled={procesando === r.id}
+                              onClick={() => {
+                                setProcesando(r.id);
+                                confirmar.mutate(r.id);
+                              }}
+                            >
+                              <Check className="h-4 w-4 mr-1" /> Confirmar
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
         </TabsContent>
