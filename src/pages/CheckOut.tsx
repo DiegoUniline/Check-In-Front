@@ -14,7 +14,9 @@ import {
   ClipboardCheck,
   CircleDollarSign,
   CheckCircle2,
+  Pencil,
 } from 'lucide-react';
+import { z } from 'zod';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -22,6 +24,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -35,8 +47,13 @@ import api from '@/lib/api';
 import { PagosMultiplesGrid, type PagoItem } from '@/components/PagosMultiplesGrid';
 import { StayDeliverables } from '@/components/reservas/StayDeliverables';
 import { formatCurrency } from '@/lib/currency';
-import { formatDate } from '@/lib/dateFormat';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/utils';
+
+const paymentCorrectionSchema = z.object({
+  amount: z.coerce.number().finite().positive('El importe debe ser mayor a cero').max(99999999, 'El importe es demasiado alto'),
+  reason: z.string().trim().min(3, 'Escribe un motivo de al menos 3 caracteres').max(300, 'El motivo no puede superar 300 caracteres'),
+});
 
 export default function CheckOut() {
   const { id } = useParams();
@@ -48,6 +65,10 @@ export default function CheckOut() {
   const [efectivoRecibido, setEfectivoRecibido] = useState(0);
   const [mostrarEntregables, setMostrarEntregables] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pagoEditar, setPagoEditar] = useState<any>(null);
+  const [importeEditado, setImporteEditado] = useState('');
+  const [motivoEdicion, setMotivoEdicion] = useState('');
+  const [guardandoPago, setGuardandoPago] = useState(false);
 
   const [reserva, setReserva] = useState<any>(null);
   const [cargosExtra, setCargosExtra] = useState<any[]>([]);
@@ -68,8 +89,8 @@ export default function CheckOut() {
         api.getEntregablesReserva(id).catch(() => []),
       ]);
       setReserva(reservaData);
-      // Los pagos y cargos cancelados se conservan en el historial pero no cuentan.
-      setPagos((Array.isArray(pagosData) ? pagosData : []).filter((p: any) => p.estado !== 'Cancelado'));
+      // Los pagos cancelados se muestran como historial, pero no cuentan en el saldo.
+      setPagos(Array.isArray(pagosData) ? pagosData : []);
       setCargosExtra(((reservaData as any)?.cargos_extra || (reservaData as any)?.cargos || [])
         .filter((c: any) => c.estado !== 'Cancelado'));
       const pendientes = (Array.isArray(entregablesData) ? entregablesData : [])
@@ -131,7 +152,8 @@ export default function CheckOut() {
   const total = reserva.total || reserva.monto_total || 0;
   const impuestos = Number(reserva.impuestos ?? reserva.total_impuestos ?? 0) || 0;
   const subtotal = Number(reserva.subtotal ?? reserva.subtotal_hospedaje ?? total - impuestos) || 0;
-  const totalPagado = pagos.reduce((sum, p) => sum + (Number(p.monto) || 0), 0);
+  const pagosActivos = pagos.filter((p) => p.estado !== 'Cancelado');
+  const totalPagado = pagosActivos.reduce((sum, p) => sum + (Number(p.monto) || 0), 0);
   const totalCargosExtra = cargosExtra.reduce(
     (sum, c) => sum + Number(c.total ?? c.subtotal ?? (Number(c.precio_unitario ?? c.precio) * (c.cantidad || 1))),
     0,
@@ -153,6 +175,36 @@ export default function CheckOut() {
     cliente.apellido_paterno || ''
   }`.trim();
   const habitacion = reserva.habitacion?.numero || reserva.habitacion_numero || 'N/A';
+
+  const abrirCorreccionPago = (pago: any) => {
+    setPagoEditar(pago);
+    setImporteEditado(Number(pago.monto || 0).toFixed(2));
+    setMotivoEdicion('');
+  };
+
+  const guardarCorreccionPago = async () => {
+    if (!id || !pagoEditar) return;
+    const parsed = paymentCorrectionSchema.safeParse({ amount: importeEditado, reason: motivoEdicion });
+    if (!parsed.success) {
+      toast({
+        title: 'Revisa la corrección',
+        description: parsed.error.issues[0]?.message || 'Captura un importe y motivo válidos.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setGuardandoPago(true);
+    try {
+      await api.cambiarImportePago(id, pagoEditar.id, parsed.data.amount, parsed.data.reason);
+      await cargarDatos();
+      setPagoEditar(null);
+      toast({ title: 'Pago corregido', description: 'El importe, el total pagado y el saldo ya se actualizaron.' });
+    } catch (error: any) {
+      toast({ title: 'No se pudo modificar el pago', description: error.message, variant: 'destructive' });
+    } finally {
+      setGuardandoPago(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!estanciaActiva) {
@@ -342,6 +394,53 @@ export default function CheckOut() {
                     <span className="font-medium">{formatDate(reserva.fecha_checkout)}</span>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    Pagos realizados
+                  </CardTitle>
+                  <Badge variant="outline">{pagos.length} {pagos.length === 1 ? 'pago' : 'pagos'}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {pagos.length === 0 ? (
+                  <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">No hay pagos registrados en esta estancia.</p>
+                ) : (
+                  <div className="divide-y overflow-hidden rounded-lg border">
+                    {pagos.map((pago) => {
+                      const cancelado = pago.estado === 'Cancelado';
+                      return (
+                        <div key={pago.id} className={cn('flex flex-col gap-3 p-3 sm:flex-row sm:items-center', cancelado && 'bg-muted/40 opacity-70')}>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className={cn('text-sm font-semibold', cancelado && 'line-through')}>{pago.metodo_pago || 'Forma de pago no indicada'}</p>
+                              {cancelado && <Badge variant="secondary" className="h-5 text-[10px]">Cancelado</Badge>}
+                            </div>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {formatDateTime(pago.fecha || pago.created_at)}
+                              {pago.concepto ? ` · ${pago.concepto}` : ''}
+                            </p>
+                            {pago.referencia && <p className="mt-0.5 truncate text-xs text-muted-foreground">Referencia: {pago.referencia}</p>}
+                          </div>
+                          <div className="flex items-center justify-between gap-3 sm:justify-end">
+                            <span className={cn('text-sm font-semibold tabular-nums', cancelado && 'line-through')}>{formatCurrency(Number(pago.monto) || 0)}</span>
+                            {!cancelado && (
+                              <Button variant="outline" size="sm" className="h-8" onClick={() => abrirCorreccionPago(pago)}>
+                                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                                Modificar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -568,6 +667,60 @@ export default function CheckOut() {
             </Card>
           </div>
         </div>
+
+        <Dialog open={Boolean(pagoEditar)} onOpenChange={(open) => { if (!open && !guardandoPago) setPagoEditar(null); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Modificar importe del pago</DialogTitle>
+              <DialogDescription>
+                Corrige únicamente un pago capturado por error. El cambio quedará registrado en el historial.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Forma de pago</span>
+                  <span className="font-medium">{pagoEditar?.metodo_pago || 'No indicada'}</span>
+                </div>
+                <div className="mt-1 flex justify-between gap-3">
+                  <span className="text-muted-foreground">Importe anterior</span>
+                  <span className="font-medium">{formatCurrency(Number(pagoEditar?.monto) || 0)}</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="importe-pago">Importe correcto</Label>
+                <Input
+                  id="importe-pago"
+                  type="number"
+                  inputMode="decimal"
+                  min="0.01"
+                  max="99999999"
+                  step="0.01"
+                  value={importeEditado}
+                  onChange={(event) => setImporteEditado(event.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="motivo-pago">Motivo de la corrección</Label>
+                <Textarea
+                  id="motivo-pago"
+                  maxLength={300}
+                  rows={3}
+                  placeholder="Ej. Se capturó dos veces el importe"
+                  value={motivoEdicion}
+                  onChange={(event) => setMotivoEdicion(event.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPagoEditar(null)} disabled={guardandoPago}>Cancelar</Button>
+              <Button onClick={guardarCorreccionPago} disabled={guardandoPago}>
+                {guardandoPago && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Guardar corrección
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <div
           className="fixed inset-x-0 z-40 border-t border-brand-navy/15 bg-background/96 px-3 py-2 shadow-[0_-8px_28px_rgba(16,35,63,0.12)] backdrop-blur lg:hidden"
