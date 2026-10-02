@@ -281,6 +281,9 @@ export function TimelineGrid({
   const handleRowMouseDown = (habitacionId: string, event: React.MouseEvent<HTMLElement>) => {
     if (!canCreate || event.button !== 0) return;
     if (roomBlocked(habitaciones.find((h) => h.id === habitacionId))) return;
+    // Los menús flotantes viven fuera de la fila (portal) pero React propaga sus
+    // clics hasta aquí: un clic en "Ver expediente" no debe iniciar una reserva nueva.
+    if (!event.currentTarget.contains(event.target as Node)) return;
     if ((event.target as HTMLElement).closest('[data-reservation-id]')) return;
     const dayIndex = dayIndexFromPointer(event);
     if (getReservationForCell(habitacionId, dayIndex)) return;
