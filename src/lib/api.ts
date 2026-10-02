@@ -1576,6 +1576,10 @@ class ApiClient {
     return data || [];
   };
   getPagosReserva = async (reservaId: string): Promise<any> => { const { data } = await supabase.from('pagos').select('*').eq('reserva_id', reservaId).order('fecha', { ascending: false }); return data || []; };
+  recalculateReservationFinancials = async (reservaId: string): Promise<void> => {
+    const { error } = await (supabase as any).rpc('recalculate_reservation_financials', { p_reserva_id: reservaId });
+    if (error) throw error;
+  };
   createPago = async (data: any): Promise<any> => {
     const { data: r, error } = await supabase.from('pagos').insert({ ...data, hotel_id: this.hid() }).select().single();
     if (error) throw error;

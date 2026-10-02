@@ -61,6 +61,7 @@ export default function CheckOut() {
   const cargarDatos = async () => {
     if (!id) return;
     try {
+      await api.recalculateReservationFinancials(id).catch(() => undefined);
       const [reservaData, pagosData, entregablesData] = await Promise.all([
         api.getReserva(id),
         api.getPagosReserva(id),
@@ -208,6 +209,32 @@ export default function CheckOut() {
 
     setIsSubmitting(true);
     try {
+      await api.recalculateReservationFinancials(id!);
+      const [reservaActual, pagosActuales] = await Promise.all([
+        api.getReserva(id!),
+        api.getPagosReserva(id!),
+      ]);
+      const pagosActivosActuales = (Array.isArray(pagosActuales) ? pagosActuales : [])
+        .filter((pago: any) => pago.estado !== 'Cancelado');
+      const pagadoActual = pagosActivosActuales.reduce((sum: number, pago: any) => sum + (Number(pago.monto) || 0), 0);
+      const saldoActual = reservaActual.saldo_pendiente == null
+        ? Math.max(0, Number(reservaActual.total || 0) - pagadoActual)
+        : Math.max(0, Number(reservaActual.saldo_pendiente) || 0);
+
+      if (Math.abs(saldoActual - saldoPendiente) > 0.009) {
+        setReserva(reservaActual);
+        setPagos(pagosActivosActuales);
+        setPagosLiquidacion([]);
+        setEfectivoRecibido(0);
+        toast({
+          title: 'Saldo actualizado',
+          description: saldoActual > 0
+            ? `El saldo vigente es ${formatCurrency(saldoActual)}. Captura nuevamente la forma de pago.`
+            : 'La cuenta ya está liquidada. Puedes completar el check-out.',
+        });
+        return;
+      }
+
       if (saldoPendiente > 0) {
         for (const pago of pagosLiquidacion) {
           await api.createPago({
