@@ -33,10 +33,12 @@ import { useToast } from '@/hooks/use-toast';
 import api, { todayLocal } from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid, type TimelineReservationAction, type TimelineRoomGrouping } from '@/components/reservas/TimelineGrid';
+import { AdjacentReservationDialog, type AdjacentSelection } from '@/components/reservas/AdjacentReservationDialog';
 import { useRealtimeSync, type RealtimeSyncEvent } from '@/hooks/useRealtimeSync';
 import type { ReservationPreload } from '@/components/reservas/NuevaReservaModal';
 import { RecepcionGrid } from '@/components/reservas/RecepcionGrid';
-import { departsTodayOrOverdue, occupiesNight } from '@/lib/stayOccupancy';
+import { adjacentReservationsForSelection, departsTodayOrOverdue, occupiesNight } from '@/lib/stayOccupancy';
+import { canAccess } from '@/lib/permissions';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
@@ -178,6 +180,7 @@ export default function Reservas() {
   const [cancelTarget, setCancelTarget] = useState<any | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState('');
   const [cancelSaving, setCancelSaving] = useState(false);
+  const [adjacentSelection, setAdjacentSelection] = useState<AdjacentSelection | null>(null);
 
   // Relacionado con `check-in-back/src/routes/reservas.js` (GET `/reservas/checkouts-hoy`):
   // Este arreglo contiene las "salidas de hoy" ya filtradas por backend (fecha + estado).
@@ -448,6 +451,11 @@ export default function Reservas() {
   };
 
   const handleCreateReservation = (habitacion: any, fechaCheckin: Date, fechaCheckout: Date) => {
+    const adjacent = adjacentReservationsForSelection(reservas, habitacion.id, format(fechaCheckin, 'yyyy-MM-dd'), todayLocal());
+    if (!viewOnlyMode && adjacent.length) {
+      setAdjacentSelection({ habitacion, fechaCheckin, fechaCheckout, reservas: adjacent });
+      return;
+    }
     openNewReservation({ habitacion, fechaCheckin, fechaCheckout });
   };
 
@@ -1535,6 +1543,23 @@ export default function Reservas() {
       />
 
       {/* Modal: Llegadas de hoy */}
+      <AdjacentReservationDialog
+        selection={adjacentSelection}
+        onClose={() => setAdjacentSelection(null)}
+        canExtend={!viewOnlyMode && canAccess('reservas.operacion.extend_stay', user?.rol)}
+        canCancel={!viewOnlyMode && canAccess('reservas.operacion.cancel_reservation', user?.rol)}
+        onCreate={() => {
+          if (!adjacentSelection) return;
+          const { habitacion, fechaCheckin, fechaCheckout } = adjacentSelection;
+          setAdjacentSelection(null);
+          openNewReservation({ habitacion, fechaCheckin, fechaCheckout });
+        }}
+        onAction={(reservation, action) => {
+          const checkout = adjacentSelection?.fechaCheckout;
+          setAdjacentSelection(null);
+          handleTimelineAction(reservation, action, checkout ? { checkout: format(checkout, 'yyyy-MM-dd') } : {});
+        }}
+      />
       {/* Cancelación rápida: motivo obligatorio; el servidor guarda quién y cuándo. */}
       <Dialog open={Boolean(cancelTarget)} onOpenChange={(open) => { if (!open && !cancelSaving) setCancelTarget(null); }}>
         <DialogContent className="max-w-md">

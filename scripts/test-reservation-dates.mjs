@@ -62,6 +62,18 @@ test('availability retains overdue in-house stays and same-day occupancy', () =>
   assert.equal(occupancy.occupiesNight({ ...stay, estado: 'CheckOut', checkout_realizado: true }, '2026-10-02', '2026-10-02'), false);
   assert.equal(occupancy.occupiesNight({ fecha_checkin: '2026-10-02', fecha_checkout: '2026-10-02', estado: 'Confirmada' }, '2026-10-02', '2026-10-02'), true);
 });
+test('adjacent calendar choices only include active reservations directly before the selection in the same room', () => {
+  const stay = { id: 'r1', habitacion_id: '248', fecha_checkin: '2026-10-04', fecha_checkout: '2026-10-05', estado: 'Confirmada' };
+  const rows = [stay, { ...stay, id: 'cancelled', estado: 'Cancelada' }, { ...stay, id: 'departed', checkout_realizado: true }, { ...stay, id: 'other-room', habitacion_id: '249' }, { ...stay, id: 'gap', fecha_checkin: '2026-10-03', fecha_checkout: '2026-10-04' }];
+  assert.deepEqual(occupancy.adjacentReservationsForSelection(rows, '248', '2026-10-05', '2026-10-02'), [stay]);
+  assert.deepEqual(occupancy.adjacentReservationsForSelection(rows, '248', '2026-10-08', '2026-10-02'), []);
+});
+test('adjacency follows the actual occupied end for same-day and overdue in-house stays', () => {
+  const stay = { id: 'r1', habitacion_id: '248', fecha_checkin: '2026-10-02', fecha_checkout: '2026-10-02', estado: 'Confirmada' };
+  assert.deepEqual(occupancy.adjacentReservationsForSelection([stay], '248', '2026-10-03', '2026-10-02'), [stay]);
+  const overdue = { ...stay, fecha_checkin: '2026-09-30', fecha_checkout: '2026-10-01', estado: 'CheckIn', checkin_realizado: true };
+  assert.deepEqual(occupancy.adjacentReservationsForSelection([overdue], '248', '2026-10-03', '2026-10-02'), [overdue]);
+});
 test('loads all availability/history rows past the 1,000-row API cap', async () => {
   const rows = Array.from({ length: 2001 }, (_, id) => ({ id }));
   const requests = [];

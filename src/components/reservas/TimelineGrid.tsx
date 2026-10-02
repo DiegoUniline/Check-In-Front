@@ -632,6 +632,21 @@ export function TimelineGrid({
                                 <PopoverTrigger asChild>
                                   <div
                                     data-reservation-id={reserva.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onMouseDown={(event) => event.stopPropagation()}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      dispatchAction(reserva, 'view');
+                                    }}
+                                    onKeyDown={(event) => {
+                                      if (event.target !== event.currentTarget) return;
+                                      if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        dispatchAction(reserva, 'view');
+                                      }
+                                    }}
                                     draggable={canCreate}
                                     onDragStart={(event) => {
                                       if (!canCreate) return;
@@ -707,7 +722,15 @@ export function TimelineGrid({
                                   </div>
                                 </PopoverTrigger>
                               </TooltipTrigger>
-                              <TooltipContent side="top" className="w-72 p-3">
+                              <TooltipContent
+                                side="top"
+                                data-reservation-id={reserva.id}
+                                onPointerDown={(event) => event.stopPropagation()}
+                                onMouseDown={(event) => event.stopPropagation()}
+                                onMouseUp={(event) => event.stopPropagation()}
+                                onClick={(event) => { event.stopPropagation(); dispatchAction(reserva, 'view'); }}
+                                className="w-72 p-3"
+                              >
                                 <div className="space-y-2">
                                   <div className="flex items-start justify-between gap-2">
                                     <div><p className="font-semibold">{guestFullName}</p><p className="text-xs text-muted-foreground">Hab. {reserva.habitacion_numero || hab.numero} · {reserva.numero_reserva || 'Sin folio'}</p></div>
@@ -721,7 +744,17 @@ export function TimelineGrid({
                             </Tooltip>
                           </TooltipProvider>
 
-                          <PopoverContent align="start" className="z-[90] w-[min(22rem,calc(100vw-2rem))] p-0">
+                          <PopoverContent
+                            align="start"
+                            data-reservation-id={reserva.id}
+                            // React portal events still bubble through the room row. Do not
+                            // let an action start the empty-cell mouse selection underneath.
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onMouseDown={(event) => event.stopPropagation()}
+                            onMouseUp={(event) => event.stopPropagation()}
+                            onClick={(event) => event.stopPropagation()}
+                            className="z-[90] w-[min(22rem,calc(100vw-2rem))] p-0"
+                          >
                             <div className="border-b p-4">
                               <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-bold text-[#10233F]">{guestFullName}</p><p className="mt-0.5 text-xs text-muted-foreground">Hab. {reserva.habitacion_numero || hab.numero} · {formatDate(reserva.fecha_checkin)} → {formatDate(reserva.fecha_checkout)}</p></div><Badge variant="outline" className={estadoCfg.badge}>{estadoCfg.label}</Badge></div>
                               <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#10233F]/[0.04] p-2.5 text-xs"><div><p className="text-muted-foreground">Total</p><p className="font-bold">{formatCurrency(total)}</p></div><div><p className="text-muted-foreground">Pagado</p><p className="font-bold text-emerald-700">{formatCurrency(paid)}</p></div><div><p className="text-muted-foreground">Saldo</p><p className={cn('font-bold', balance > 0 && 'text-red-600')}>{formatCurrency(balance)}</p></div></div>

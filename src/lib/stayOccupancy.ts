@@ -40,3 +40,10 @@ export const occupiesNight = (reserva: any, day: string, todayKey: string) => {
 /** ¿La salida de esta reserva está pendiente hoy (incluye salidas vencidas)? */
 export const departsTodayOrOverdue = (reserva: any, todayKey: string) =>
   isInHouseStay(reserva) && String(reserva?.fecha_checkout || '').slice(0, 10) <= todayKey;
+
+/** Existing stays immediately before an empty calendar selection; never guess a guest. */
+export const adjacentReservationsForSelection = (reservas: any[], roomId: string, arrival: string, todayKey: string) =>
+  reservas.filter((reserva) => reserva.habitacion_id === roomId
+    && ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'].includes(String(reserva.estado || ''))
+    && occupiesRoom(reserva)
+    && occupancyEnd(reserva, todayKey) === arrival);

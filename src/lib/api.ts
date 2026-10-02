@@ -7,6 +7,7 @@ import { assertShiftWriteAllowed } from '@/lib/shiftAccess';
 import { occupancyEnd, occupiesNight } from '@/lib/stayOccupancy';
 import { formatDate as formatDateOnly } from '@/lib/dateFormat';
 import { fetchAllRows } from '@/lib/fetchAllRows';
+import { onlineReservationDateError, onlineReservationSnapshot } from '@/lib/onlineReservations';
 
 const DEMO_HOTEL_ID = 'a0000000-0000-0000-0000-000000000001';
 const operationalDb = supabase as any;
@@ -2329,23 +2330,26 @@ class ApiClient {
   getMiSuscripcion = async (_params?: any): Promise<any> => ({ activa: true, plan: 'Demo', vence: '2099-12-31' });
 
   // ------- Reservas Online (web pública) -------
-  getReservasOnlinePendientes = async (): Promise<any[]> => {
-    const { data, error } = await supabase
-      .from('reservas')
-      .select('*, cliente:clientes(nombre, apellido_paterno, email, telefono), tipo:tipos_habitacion(nombre)')
-      .eq('hotel_id', this.hid())
-      .eq('origen', 'Web')
-      .eq('estado', 'Pendiente')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
+  getReservasOnline = async (estado?: string): Promise<any[]> => {
+    const data = await fetchAllRows<any>((from, to) => {
+      let query = supabase
+        .from('reservas')
+        .select('*, cliente:clientes(nombre, apellido_paterno, email, telefono), tipo:tipos_habitacion(nombre), habitacion:habitaciones(numero)')
+        .eq('hotel_id', this.hid())
+        .eq('origen', 'Web');
+      if (estado) query = query.eq('estado', estado);
+      return query.order('created_at', { ascending: false }).order('id').range(from, to);
+    });
     return (data || []).map((r: any) => ({
       ...r,
       cliente_nombre: [r.cliente?.nombre, r.cliente?.apellido_paterno].filter(Boolean).join(' '),
       cliente_email: r.cliente?.email,
       cliente_telefono: r.cliente?.telefono,
       tipo_nombre: r.tipo?.nombre,
+      habitacion_numero: r.habitacion?.numero,
     }));
   };
+  getReservasOnlinePendientes = () => this.getReservasOnline('Pendiente');
   contarReservasOnlinePendientes = async (): Promise<number> => {
     const { count } = await supabase
       .from('reservas')
@@ -2355,24 +2359,58 @@ class ApiClient {
       .eq('estado', 'Pendiente');
     return count || 0;
   };
-  confirmarReservaOnline = async (id: string): Promise<any> => {
-    const { error } = await supabase
-      .from('reservas')
-      .update({ estado: 'Confirmada', revisada_at: new Date().toISOString() } as any)
-      .eq('id', id)
-      .eq('estado', 'Pendiente');
+  getDisponibilidadReservaOnline = async (id: string): Promise<{ reserva: any; habitaciones: any[] }> => {
+    const { data: reserva, error } = await supabase.from('reservas')
+      .select('*, cliente:clientes(nombre, apellido_paterno), tipo:tipos_habitacion(nombre)')
+      .eq('id', id).eq('hotel_id', this.hid()).eq('origen', 'Web').single();
     if (error) throw error;
-    return {};
+    if (reserva.estado !== 'Pendiente' || reserva.checkin_realizado || reserva.checkout_realizado) {
+      throw new Error('Esta reserva ya fue procesada. Actualiza la tabla para consultar su estado.');
+    }
+    const dateError = onlineReservationDateError(reserva, todayLocal());
+    if (dateError) throw new Error(dateError);
+    if (!reserva.tipo_habitacion_id) throw new Error('Asigna un tipo de habitación antes de aceptar esta reserva.');
+    const habitaciones = await this.getHabitacionesDisponibles(
+      reserva.fecha_checkin, reserva.fecha_checkout, reserva.tipo_habitacion_id, id,
+    );
+    return { reserva: {
+      ...reserva,
+      cliente_nombre: [reserva.cliente?.nombre, reserva.cliente?.apellido_paterno].filter(Boolean).join(' '),
+      tipo_nombre: reserva.tipo?.nombre,
+    }, habitaciones };
+  };
+  confirmarReservaOnline = async (id: string, habitacionId: string, expectedSnapshot: string): Promise<any> => {
+    // Always re-read immediately before saving; never trust a cached availability badge.
+    const { reserva, habitaciones } = await this.getDisponibilidadReservaOnline(id);
+    if (onlineReservationSnapshot(reserva) !== expectedSnapshot) {
+      throw new Error('La reserva cambió mientras la revisabas. Vuelve a comprobar disponibilidad antes de aceptar.');
+    }
+    if (!habitacionId || !habitaciones.some((room) => room.id === habitacionId)) {
+      throw new Error('La habitación seleccionada ya no está libre para todo el periodo. Comprueba disponibilidad y elige otra.');
+    }
+    // The existing database overlap trigger is the final guard at UPDATE time.
+    let query = supabase
+      .from('reservas')
+      .update({ estado: 'Confirmada', habitacion_id: habitacionId, revisada_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any)
+      .eq('id', id).eq('hotel_id', this.hid()).eq('origen', 'Web').eq('estado', 'Pendiente')
+      .eq('fecha_checkin', reserva.fecha_checkin).eq('fecha_checkout', reserva.fecha_checkout)
+      .eq('tipo_habitacion_id', reserva.tipo_habitacion_id);
+    if (reserva.updated_at) query = query.eq('updated_at', reserva.updated_at);
+    const { data, error } = await query.select('*').maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error('La reserva cambió o ya fue procesada. Actualiza la tabla y vuelve a revisarla.');
+    return data;
   };
   rechazarReservaOnline = async (id: string, motivo?: string): Promise<any> => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('reservas')
       // El motivo va a su propio campo; no se borran las notas internas.
       .update({ estado: 'Cancelada', revisada_at: new Date().toISOString(), motivo_cancelacion: motivo || 'Rechazada por el hotel' } as any)
-      .eq('id', id)
-      .eq('estado', 'Pendiente');
+      .eq('id', id).eq('hotel_id', this.hid()).eq('origen', 'Web')
+      .eq('estado', 'Pendiente').select('id').maybeSingle();
     if (error) throw error;
-    return {};
+    if (!data) throw new Error('La reserva ya fue procesada o no está disponible. Actualiza la tabla.');
+    return data;
   };
 
   // ------- Métricas plataforma (SuperAdmin) -------
