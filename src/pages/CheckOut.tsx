@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { MetodoPagoSelect } from '@/components/MetodoPagoSelect';
+import { PagosMultiplesGrid, type PagoItem } from '@/components/PagosMultiplesGrid';
 import { StayDeliverables } from '@/components/reservas/StayDeliverables';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/dateFormat';
@@ -44,7 +44,8 @@ export default function CheckOut() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmarRevision, setConfirmarRevision] = useState(false);
-  const [metodoPago, setMetodoPago] = useState('');
+  const [pagosLiquidacion, setPagosLiquidacion] = useState<PagoItem[]>([]);
+  const [efectivoRecibido, setEfectivoRecibido] = useState(0);
   const [mostrarEntregables, setMostrarEntregables] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -139,6 +140,11 @@ export default function CheckOut() {
   const saldoServidor = reserva.saldo_pendiente == null ? total - totalPagado : Number(reserva.saldo_pendiente) || 0;
   const saldoPendiente = Math.max(0, Math.round(saldoServidor * 100) / 100);
   const saldoAFavor = saldoServidor < -0.009 ? Math.abs(saldoServidor) : 0;
+  const totalLiquidacion = pagosLiquidacion.reduce((sum, pago) => sum + (Number(pago.monto) || 0), 0);
+  const diferenciaLiquidacion = Math.round((saldoPendiente - totalLiquidacion) * 100) / 100;
+  const pagoEfectivo = pagosLiquidacion
+    .filter((pago) => pago.metodo.toLowerCase().includes('efectivo'))
+    .reduce((sum, pago) => sum + (Number(pago.monto) || 0), 0);
   const estanciaActiva = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || ''))
     && Boolean(reserva.checkin_realizado) && !reserva.checkout_realizado;
   const cliente = reserva.cliente || reserva.clientes || {};
@@ -173,8 +179,22 @@ export default function CheckOut() {
       const ok = window.confirm(`El huésped tiene un saldo a favor de ${formatCurrency(saldoAFavor)}. ¿Ya se le devolvió o se aplicará? Pulsa Aceptar para continuar con la salida.`);
       if (!ok) return;
     }
-    if (saldoPendiente > 0 && !metodoPago) {
-      toast({ variant: 'destructive', title: 'Elige el método de pago', description: `Falta liquidar ${formatCurrency(saldoPendiente)}.` });
+    if (saldoPendiente > 0 && totalLiquidacion <= 0) {
+      toast({ variant: 'destructive', title: 'Captura el pago', description: `Distribuye ${formatCurrency(saldoPendiente)} entre uno o varios métodos.` });
+      return;
+    }
+    if (saldoPendiente > 0 && Math.abs(diferenciaLiquidacion) > 0.009) {
+      toast({
+        variant: 'destructive',
+        title: diferenciaLiquidacion > 0 ? 'Aún falta por liquidar' : 'Los pagos superan el saldo',
+        description: diferenciaLiquidacion > 0
+          ? `Falta asignar ${formatCurrency(diferenciaLiquidacion)}.`
+          : `Reduce los pagos en ${formatCurrency(Math.abs(diferenciaLiquidacion))}.`,
+      });
+      return;
+    }
+    if (pagoEfectivo > 0 && efectivoRecibido > 0 && efectivoRecibido + 0.009 < pagoEfectivo) {
+      toast({ variant: 'destructive', title: 'Efectivo insuficiente', description: 'El efectivo recibido es menor que el importe asignado a efectivo.' });
       return;
     }
     if (!confirmarRevision) {
@@ -188,14 +208,18 @@ export default function CheckOut() {
 
     setIsSubmitting(true);
     try {
-      await api.completeCheckout(
-        id!,
-        saldoPendiente > 0 ? {
-          monto: saldoPendiente,
-          metodo_pago: metodoPago,
-          concepto: 'Pago en Check-out',
-        } : undefined,
-      );
+      if (saldoPendiente > 0) {
+        for (const pago of pagosLiquidacion) {
+          await api.createPago({
+            reserva_id: id!,
+            monto: Number(pago.monto),
+            metodo_pago: pago.metodo,
+            referencia: pago.referencia || null,
+            concepto: 'Pago en Check-out',
+          });
+        }
+      }
+      await api.completeCheckout(id!);
 
       toast({
         title: 'Check-out completado',
@@ -213,7 +237,7 @@ export default function CheckOut() {
   const steps = [
     { label: 'Estancia', icon: User, done: true },
     { label: 'Revisión', icon: ClipboardCheck, done: confirmarRevision },
-    { label: 'Liquidación', icon: CircleDollarSign, done: saldoPendiente <= 0 || Boolean(metodoPago) },
+    { label: 'Liquidación', icon: CircleDollarSign, done: saldoPendiente <= 0 || Math.abs(diferenciaLiquidacion) <= 0.009 },
     { label: 'Salida', icon: CheckCircle2, done: false },
   ];
 
@@ -464,8 +488,18 @@ export default function CheckOut() {
                   <>
                     <Separator />
                     <div className="space-y-2">
-                      <Label>Método para liquidar</Label>
-                      <MetodoPagoSelect value={metodoPago} onChange={setMetodoPago} />
+                      <div>
+                        <Label>Formas de pago</Label>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Puedes dividir el saldo entre varios métodos.</p>
+                      </div>
+                      <PagosMultiplesGrid
+                        total={saldoPendiente}
+                        pagos={pagosLiquidacion}
+                        onChange={setPagosLiquidacion}
+                        permitirCambioEfectivo
+                        efectivoRecibido={efectivoRecibido}
+                        onEfectivoRecibidoChange={setEfectivoRecibido}
+                      />
                     </div>
                   </>
                 ) : (

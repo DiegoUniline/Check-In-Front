@@ -18,6 +18,9 @@ interface Props {
   total: number;
   pagos: PagoItem[];
   onChange: (pagos: PagoItem[]) => void;
+  permitirCambioEfectivo?: boolean;
+  efectivoRecibido?: number;
+  onEfectivoRecibidoChange?: (monto: number) => void;
 }
 
 function iconoMetodo(nombre: string) {
@@ -30,7 +33,14 @@ function iconoMetodo(nombre: string) {
   return CreditCard;
 }
 
-export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
+export function PagosMultiplesGrid({
+  total,
+  pagos,
+  onChange,
+  permitirCambioEfectivo = false,
+  efectivoRecibido = 0,
+  onEfectivoRecibidoChange,
+}: Props) {
   const [metodos, setMetodos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,6 +62,11 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
   const totalPagado = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
   const saldo = Math.max(0, total - totalPagado);
   const excedente = Math.max(0, totalPagado - total);
+  const pagoEfectivo = pagos
+    .filter((p) => p.metodo.toLowerCase().includes('efectivo'))
+    .reduce((s, p) => s + (Number(p.monto) || 0), 0);
+  const cambio = pagoEfectivo > 0 ? Math.max(0, efectivoRecibido - pagoEfectivo) : 0;
+  const faltaEfectivo = pagoEfectivo > 0 && efectivoRecibido > 0 && efectivoRecibido + 0.009 < pagoEfectivo;
 
   const setMontoMetodo = (nombre: string, valor: string) => {
     const monto = parseFloat(valor) || 0;
@@ -118,6 +133,35 @@ export function PagosMultiplesGrid({ total, pagos, onChange }: Props) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {permitirCambioEfectivo && pagoEfectivo > 0 && (
+        <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-muted/30 p-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Efectivo recibido</label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={efectivoRecibido || ''}
+              placeholder={pagoEfectivo.toFixed(2)}
+              onChange={(event) => onEfectivoRecibidoChange?.(Number(event.target.value) || 0)}
+              className="h-9 text-right font-semibold tabular-nums"
+            />
+          </div>
+          <div className="flex flex-col justify-end rounded-md bg-background px-3 py-2 text-right">
+            <span className="text-xs text-muted-foreground">Cambio a entregar</span>
+            <span className={cn('font-semibold tabular-nums', faltaEfectivo ? 'text-destructive' : 'text-foreground')}>
+              {formatCurrency(cambio)}
+            </span>
+          </div>
+          {faltaEfectivo && (
+            <p className="col-span-2 text-xs font-medium text-destructive">
+              El efectivo recibido es menor que el importe asignado a efectivo.
+            </p>
+          )}
         </div>
       )}
 
