@@ -58,7 +58,7 @@ export default function ReservasOnline() {
   return (
     <MainLayout title="Reservas Online" subtitle="Bandeja de reservas pendientes desde la web pública">
       <Tabs defaultValue="pendientes" className="space-y-3">
-        <TabsList className="h-8">
+        <TabsList className="h-8 px-2 text-xs">
           <TabsTrigger value="pendientes" className="h-7 text-xs">Pendientes{reservas.length ? ` (${reservas.length})` : ''}</TabsTrigger>
           {verPoliticas && <TabsTrigger value="politicas" className="h-7 text-xs">Políticas de reserva</TabsTrigger>}
         </TabsList>
@@ -126,7 +126,7 @@ export default function ReservasOnline() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-8"
+                              className="h-8 px-2 text-xs"
                               disabled={procesando === r.id}
                               onClick={() => {
                                 const respuesta = prompt('Motivo del rechazo (opcional):');
@@ -135,18 +135,18 @@ export default function ReservasOnline() {
                                 rechazar.mutate({ id: r.id, motivo: respuesta.trim() });
                               }}
                             >
-                              <X className="h-4 w-4 mr-1" /> Rechazar
+                              <X className="h-4 w-4" /><span className="hidden xl:inline ml-1">Rechazar</span>
                             </Button>
                             <Button
                               size="sm"
-                              className="h-8"
+                              className="h-8 px-2 text-xs"
                               disabled={procesando === r.id}
                               onClick={() => {
                                 setProcesando(r.id);
                                 confirmar.mutate(r.id);
                               }}
                             >
-                              <Check className="h-4 w-4 mr-1" /> Confirmar
+                              <Check className="h-4 w-4" /><span className="hidden xl:inline ml-1">Confirmar</span>
                             </Button>
                           </div>
                         </td>
