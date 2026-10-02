@@ -1170,14 +1170,31 @@ class ApiClient {
       : 'all';
     const key = `reservas:${this.hid()}:${paramsKey}`;
     return withOfflineCache(key, async () => {
-      let q = supabase.from('reservas').select('*, clientes(*), habitaciones(numero, tipos_habitacion(nombre)), tipos_habitacion(nombre)').eq('hotel_id', this.hid()).order('fecha_checkin', { ascending: false });
-      if (params?.estado) q = q.eq('estado', params.estado);
-      // Excluir reservas online aún pendientes de aprobación, salvo en el
-      // calendario, donde sí bloquean la habitación.
-      if (params?.incluir_pendientes_web !== 'true') q = q.or('origen.neq.Web,estado.neq.Pendiente');
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data || []).map((r: any) => ({
+      const pageSize = 1000;
+      const rows: any[] = [];
+
+      // PostgREST limita cada respuesta a 1,000 filas. El calendario y los
+      // filtros operativos necesitan el conjunto completo del hotel activo.
+      for (let from = 0; ; from += pageSize) {
+        let q = supabase
+          .from('reservas')
+          .select('*, clientes(*), habitaciones(numero, tipos_habitacion(nombre)), tipos_habitacion(nombre)')
+          .eq('hotel_id', this.hid())
+          .order('fecha_checkin', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (params?.estado) q = q.eq('estado', params.estado);
+        // Excluir reservas online aún pendientes de aprobación, salvo en el
+        // calendario, donde sí bloquean la habitación.
+        if (params?.incluir_pendientes_web !== 'true') q = q.or('origen.neq.Web,estado.neq.Pendiente');
+        const { data, error } = await q;
+        if (error) throw error;
+        const page = data || [];
+        rows.push(...page);
+        if (page.length < pageSize) break;
+      }
+
+      return rows.map((r: any) => ({
         ...r,
         cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
         cliente_email: r.clientes?.email || '',
