@@ -66,6 +66,12 @@ export const setHotelTimezone = (tz?: string | null) => {
   if (tz && typeof tz === 'string') HOTEL_TZ = tz;
 };
 export const getHotelTimezone = () => HOTEL_TZ;
+// Hora local en que inicia el día operativo (p. ej. 7 → de 0:00 a 6:59 sigue siendo el día anterior).
+let HOTEL_DAY_START = 0;
+export const setHotelDayStart = (h?: unknown) => {
+  const n = Number(h);
+  HOTEL_DAY_START = Number.isFinite(n) && n >= 0 && n <= 12 ? Math.floor(n) : 0;
+};
 
 const parseCalendarParts = (ymd: string) => {
   const [year, month, day] = ymd.split('-').map(Number);
@@ -116,7 +122,7 @@ export const todayLocal = (): string => {
       timeZone: HOTEL_TZ,
       year: 'numeric', month: '2-digit', day: '2-digit',
     });
-    return fmt.format(new Date()); // en-CA -> YYYY-MM-DD
+    return fmt.format(new Date(Date.now() - HOTEL_DAY_START * 3600000)); // en-CA -> YYYY-MM-DD
   } catch {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -2233,6 +2239,7 @@ class ApiClient {
   getHotel = async (): Promise<any> => {
     const { data } = await supabase.from('hotels').select('*').eq('id', this.hid()).maybeSingle();
     if ((data as any)?.timezone) setHotelTimezone((data as any).timezone);
+    if (data) setHotelDayStart((data as any).hora_inicio_dia);
     if (data) setHotelCurrency({
       codigo: (data as any).moneda_codigo,
       simbolo: (data as any).moneda_simbolo,
@@ -2244,6 +2251,7 @@ class ApiClient {
     const { data: r, error } = await supabase.from('hotels').update(data).eq('id', this.hid()).select().single();
     if (error) throw error;
     if ((r as any)?.timezone) setHotelTimezone((r as any).timezone);
+    if (r) setHotelDayStart((r as any).hora_inicio_dia);
     if (r) setHotelCurrency({
       codigo: (r as any).moneda_codigo,
       simbolo: (r as any).moneda_simbolo,
