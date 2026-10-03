@@ -83,6 +83,7 @@ export default function Configuracion() {
       horaCheckin: h.hora_checkin ?? hotelData.horaCheckin,
       horaCheckout: h.hora_checkout ?? hotelData.horaCheckout,
       timezone: h.timezone ?? hotelData.timezone ?? 'America/Mexico_City',
+      horaInicioDia: h.hora_inicio_dia ?? hotelData.horaInicioDia,
       estrellas: Number(h.estrellas ?? hotelData.estrellas ?? 3),
       slug: h.slug ?? hotelData.slug ?? '',
       descripcionPublica: h.descripcion_publica ?? hotelData.descripcionPublica ?? '',
@@ -123,6 +124,7 @@ export default function Configuracion() {
       hora_checkin: ui.horaCheckin,
       hora_checkout: ui.horaCheckout,
       timezone: ui.timezone || 'America/Mexico_City',
+      ...(ui.horaInicioDia !== undefined ? { hora_inicio_dia: Number(ui.horaInicioDia) || 0 } : {}),
       estrellas: Number(ui.estrellas) || 3,
       slug,
       descripcion_publica: ui.descripcionPublica || null,
@@ -394,6 +396,21 @@ export default function Configuracion() {
                     />
                   </div>
                 </div>
+                {hotelData.horaInicioDia !== undefined && (
+                  <div className="space-y-2">
+                    <Label>Inicio del día operativo</Label>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={String(hotelData.horaInicioDia ?? 0)}
+                      onChange={(e) => setHotelData({ ...hotelData, horaInicioDia: Number(e.target.value) })}
+                    >
+                      {Array.from({ length: 13 }, (_, h) => (
+                        <option key={h} value={h}>{h === 0 ? '00:00 (medianoche)' : `${String(h).padStart(2, '0')}:00`}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground">Antes de esta hora, el sistema sigue usando la fecha del día anterior (turno de noche).</p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Zona horaria</Label>
                   <select
