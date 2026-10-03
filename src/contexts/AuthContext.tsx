@@ -42,7 +42,7 @@ const clearLocalSessionData = () => {
 async function hydrateFromSession(session: Session): Promise<User> {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('*, hotels!profiles_hotel_id_fkey(nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale)')
+    .select('*, hotels!profiles_hotel_id_fkey(*)')
     .eq('id', session.user.id)
     .maybeSingle();
   if (profileError) throw profileError;
@@ -53,12 +53,13 @@ async function hydrateFromSession(session: Session): Promise<User> {
   if (activeHotelId && activeHotelId !== profile?.hotel_id) {
     const { data: hActivo } = await supabase
       .from('hotels')
-      .select('nombre, timezone, moneda_codigo, moneda_simbolo, moneda_locale')
+      .select('*')
       .eq('id', activeHotelId)
       .maybeSingle();
     if (hActivo) hotel = hActivo;
   }
   if (hotel?.timezone) (await import('@/lib/api')).setHotelTimezone(hotel.timezone);
+  (await import('@/lib/api')).setHotelDayStart(hotel?.hora_inicio_dia);
   if (hotel) {
     const { setHotelCurrency } = await import('@/lib/currency');
     setHotelCurrency({ codigo: hotel.moneda_codigo, simbolo: hotel.moneda_simbolo, locale: hotel.moneda_locale });
