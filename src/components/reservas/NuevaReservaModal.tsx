@@ -170,8 +170,8 @@ const roomIsDirty = (room: any) => !['limpia', 'lista', 'inspeccionada']
 
 const createInitialFormData = (preload?: ReservationPreload): FormData => {
   const today = hotelToday();
-  // Una entrada con fecha pasada se registra hoy.
-  const checkin = preload?.fechaCheckin && preload.fechaCheckin > today ? preload.fechaCheckin : today;
+  // Se respeta la fecha elegida, aunque sea pasada.
+  const checkin = preload?.fechaCheckin ?? today;
   const checkoutPreload = preload?.fechaCheckout;
   return {
     fechaCheckin: checkin,
@@ -521,9 +521,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
     }
     if (nuevoOrigen === 'Recepcion') {
       const hoy = hotelToday();
-      const checkoutActual = formData.fechaCheckout;
-      const nuevoCheckout = checkoutActual <= hoy ? addDays(hoy, 1) : checkoutActual;
-      setFormData({ ...formData, fechaCheckin: hoy, fechaCheckout: nuevoCheckout });
+      if (formData.fechaCheckin > hoy) {
+        const checkoutActual = formData.fechaCheckout;
+        const nuevoCheckout = checkoutActual <= hoy ? addDays(hoy, 1) : checkoutActual;
+        setFormData({ ...formData, fechaCheckin: hoy, fechaCheckout: nuevoCheckout });
+      }
     }
   };
 
@@ -877,13 +879,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               <Field label="Check-in">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button data-reservation-focus="checkin" variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal" disabled={origen === 'Recepcion'}>
+                    <Button data-reservation-focus="checkin" variant="outline" className="h-9 w-full justify-start px-2.5 text-xs font-normal">
                       <CalendarDays className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                       {formatDate(formData.fechaCheckin)}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d > formData.fechaCheckout ? d : formData.fechaCheckout })} disabled={(d) => d <= hotelToday()} />
+                    <Calendar mode="single" locale={es} selected={formData.fechaCheckin} onSelect={(d) => d && setFormData({ ...formData, fechaCheckin: d, fechaCheckout: d > formData.fechaCheckout ? d : formData.fechaCheckout })} />
                   </PopoverContent>
                 </Popover>
               </Field>
