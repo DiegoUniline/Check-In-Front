@@ -60,7 +60,7 @@ import { useAuth } from '@/contexts/useAuth';
 
 const RESERVAS_VIEW_KEY = 'vulo:reservas:view-state';
 const readReservasViewState = (): Record<string, any> => {
-  try { return JSON.parse(sessionStorage.getItem(RESERVAS_VIEW_KEY) || '{}'); }
+  try { return JSON.parse(localStorage.getItem(RESERVAS_VIEW_KEY) || sessionStorage.getItem(RESERVAS_VIEW_KEY) || '{}'); }
   catch { return {}; }
 };
 
@@ -253,7 +253,7 @@ export default function Reservas() {
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem(RESERVAS_VIEW_KEY, JSON.stringify({
+    localStorage.setItem(RESERVAS_VIEW_KEY, JSON.stringify({
       startDate: format(startDate, 'yyyy-MM-dd'), viewMode, filtroTipo, filtroPiso,
       busqueda, reservasSubView, filtros, operationalFilter, roomGrouping,
     }));
