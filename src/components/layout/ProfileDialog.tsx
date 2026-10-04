@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/useAuth';
 import { toast } from 'sonner';
@@ -41,13 +42,14 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           <p className="text-sm font-medium">Cambiar contraseña</p>
           <div className="space-y-1.5">
             <Label htmlFor="np">Nueva contraseña</Label>
-            <Input id="np" type="password" value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="new-password" />
+            <PasswordInput id="np" value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="new-password" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cp">Confirmar contraseña</Label>
-            <Input id="cp" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+            <PasswordInput id="cp" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
           </div>
-          <Button className="w-full" onClick={guardar} disabled={saving}>
+          {confirm && pass !== confirm && <p className="text-xs text-destructive">Las contraseñas no coinciden</p>}
+          <Button className="w-full" onClick={guardar} disabled={saving || !pass || pass !== confirm}>
             {saving ? 'Guardando...' : 'Guardar contraseña'}
           </Button>
         </div>
