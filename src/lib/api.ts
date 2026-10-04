@@ -674,12 +674,12 @@ class ApiClient {
     });
     (gastosR.data || []).forEach((g: any) => {
       const amount = Number(g.monto || 0);
-      if (String(g.metodo_pago || '').toLowerCase().includes('efectivo')) summary.egresosEfectivo += amount;
+      if (claseMetodo(g.metodo_pago) === 'efectivo') summary.egresosEfectivo += amount;
       summary.movimientos.push({ id: g.id, tipo: 'Egreso', concepto: g.descripcion || g.categoria || 'Gasto', metodo: g.metodo_pago || 'Otro', monto: amount, fecha: g.created_at || g.fecha });
     });
     (comprasR.data || []).forEach((payment: any) => {
       const amount = Number(payment.monto || 0);
-      if (String(payment.metodo_pago || '').toLowerCase().includes('efectivo')) summary.egresosEfectivo += amount;
+      if (claseMetodo(payment.metodo_pago) === 'efectivo') summary.egresosEfectivo += amount;
       summary.movimientos.push({ id: payment.id, tipo: 'Egreso', concepto: 'Pago a proveedor', metodo: payment.metodo_pago || 'Otro', monto: amount, fecha: payment.created_at || payment.fecha });
     });
     summary.movimientos.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
