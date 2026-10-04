@@ -1,3 +1,4 @@
+import { PagosMultiplesGrid } from '@/components/PagosMultiplesGrid';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeftRight, BadgeDollarSign, BedDouble, CalendarClock, CalendarDays,
@@ -499,6 +500,19 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         await load();
         return;
       }
+      if (selected.id === 'partial_payment') {
+        const pagos = (payload.pagos || []).filter((p: any) => Number(p.monto) > 0);
+        for (const p of pagos) {
+          await api.applyStayOperation(reserva.id, 'partial_payment',
+            { ...normalizedPayload, pagos: undefined, amount: String(p.monto), payment_method: p.metodo },
+            `Abono registrado con ${p.metodo}`);
+        }
+        toast({ title: 'Pago registrado', description: `${pagos.length > 1 ? `${pagos.length} pagos` : 'Abono'} por ${formatCurrency(money(payload.amount))}. Puedes seguir registrando.` });
+        setPayload((c) => ({ ...c, pagos: [], amount: '', payment_method: '', reference: '' }));
+        await onUpdate?.();
+        await load();
+        return;
+      }
       await api.applyStayOperation(
         reserva.id,
         selected.id,
@@ -784,7 +798,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
       case 'cancel_charge': return chargeSelect();
       case 'restore_charge': return chargeSelect(cancelledCharges);
       case 'transfer_charge': return <div className="space-y-3">{chargeSelect()}{reservationSelect('target_reservation_id','Folio destino')}</div>;
-      case 'partial_payment': return <div className="space-y-4">{financialImpactNotice('payment')}<div className="grid gap-3 sm:grid-cols-2"><Field label="Importe del abono"><MoneyInput value={payload.amount || ''} onChange={(value) => set('amount', value)} autoFocus /></Field><PaymentMethod payload={payload} set={set} /><Field label="Referencia"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field>{accountSelect()}</div><div className="flex flex-wrap items-center gap-2 rounded-[8px] border border-dashed border-border p-3 text-sm"><span className="text-muted-foreground">¿Quieres hacer un descuento antes de cobrar?</span>{(['Monto','Porcentaje','PrecioFinal'] as const).map((t) => <Button key={t} type="button" size="sm" variant="outline" onClick={() => openOperationById('discount_change', { discount_type: t, discount_value: t === 'PrecioFinal' ? String(grossTotal(reserva)) : '' })}>{t === 'Monto' ? 'En dinero' : t === 'Porcentaje' ? 'En porcentaje' : 'Total a pagar'}</Button>)}</div></div>;
+      case 'partial_payment': return <div className="space-y-4">{financialImpactNotice('payment')}<div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><p className="mb-2 text-sm font-medium">Importe por forma de pago</p><PagosMultiplesGrid total={Math.max(0, calculateReservationFinancialSnapshot(reserva).balance)} pagos={payload.pagos || []} onChange={(pagos) => setPayload((c) => ({ ...c, pagos, amount: String(pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0)), payment_method: pagos[0]?.metodo || '' }))} /></div><Field label="Referencia"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field>{accountSelect()}</div><div className="flex flex-wrap items-center gap-2 rounded-[8px] border border-dashed border-border p-3 text-sm"><span className="text-muted-foreground">¿Quieres hacer un descuento antes de cobrar?</span>{(['Monto','Porcentaje','PrecioFinal'] as const).map((t) => <Button key={t} type="button" size="sm" variant="outline" onClick={() => openOperationById('discount_change', { discount_type: t, discount_value: t === 'PrecioFinal' ? String(grossTotal(reserva)) : '' })}>{t === 'Monto' ? 'En dinero' : t === 'Porcentaje' ? 'En porcentaje' : 'Total a pagar'}</Button>)}</div></div>;
       case 'payment_method_change': return <div className="space-y-3">{paymentSelect()}<PaymentMethod payload={payload} set={set} /><Field label="Nueva referencia (opcional)"><Input value={payload.reference || ''} onChange={(e) => set('reference', e.target.value)} /></Field></div>;
       case 'payment_amount_change': {
         const actual = activePayments.find((p: any) => p.id === payload.payment_id);
