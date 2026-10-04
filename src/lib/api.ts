@@ -632,12 +632,33 @@ class ApiClient {
       ] as any);
     }
     const summary = { efectivo: 0, tarjeta: 0, transferencia: 0, otros: 0, egresosEfectivo: 0, movimientos: [] as any[], linkedToShift };
+    // Clasifica por el TIPO configurado en Catálogos (metodos_pago.tipo);
+    // si el método no existe en catálogo, cae al respaldo por nombre.
+    const metodosR = await supabase.from('metodos_pago').select('nombre, tipo').eq('hotel_id', hotelId);
+    const clasePorNombre = new Map<string, string>();
+    (metodosR.data || []).forEach((m: any) => {
+      const tipo = String(m.tipo || '').toLowerCase();
+      const clase = tipo.includes('efectivo') ? 'efectivo'
+        : tipo.includes('tarjeta') ? 'tarjeta'
+        : tipo.includes('transfer') || tipo.includes('deposito') || tipo.includes('depósito') ? 'transferencia'
+        : 'otro';
+      clasePorNombre.set(String(m.nombre || '').toLowerCase().trim(), clase);
+    });
+    const claseMetodo = (methodValue: any): string => {
+      const method = String(methodValue || '').toLowerCase().trim();
+      const configurada = clasePorNombre.get(method);
+      if (configurada) return configurada;
+      if (method.includes('tarjeta')) return 'tarjeta';
+      if (method.includes('transfer') || method.includes('deposito') || method.includes('depósito')) return 'transferencia';
+      if (method.includes('efectivo')) return 'efectivo';
+      return 'otro';
+    };
     const addIncome = (methodValue: any, amountValue: any) => {
-      const method = String(methodValue || '').toLowerCase();
       const amount = Number(amountValue || 0);
-      if (method.includes('efectivo')) summary.efectivo += amount;
-      else if (method.includes('tarjeta')) summary.tarjeta += amount;
-      else if (method.includes('transfer')) summary.transferencia += amount;
+      const clase = claseMetodo(methodValue);
+      if (clase === 'efectivo') summary.efectivo += amount;
+      else if (clase === 'tarjeta') summary.tarjeta += amount;
+      else if (clase === 'transferencia') summary.transferencia += amount;
       else summary.otros += amount;
     };
     (pagosR.data || []).filter((p: any) => p.estado !== 'Cancelado').forEach((p: any) => {
