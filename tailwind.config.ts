@@ -33,6 +33,11 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        tint: {
+          navy: { bg: "hsl(var(--tint-navy-bg))", border: "hsl(var(--tint-navy-border))", fg: "hsl(var(--tint-navy-fg))" },
+          green: { bg: "hsl(var(--tint-green-bg))", border: "hsl(var(--tint-green-border))", fg: "hsl(var(--tint-green-fg))" },
+          amber: { bg: "hsl(var(--tint-amber-bg))", border: "hsl(var(--tint-amber-border))", fg: "hsl(var(--tint-amber-fg))" },
+        },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",

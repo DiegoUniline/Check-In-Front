@@ -126,6 +126,17 @@
     --border: 216 28% 28%;
     --input: 216 28% 26%;
     --ring: 24 95% 55%;
+
+    /* Botones tintados sutiles (oscuro) */
+    --tint-navy-bg: 216 35% 17%;
+    --tint-navy-border: 216 28% 30%;
+    --tint-navy-fg: 210 45% 90%;
+    --tint-green-bg: 160 35% 14%;
+    --tint-green-border: 160 28% 28%;
+    --tint-green-fg: 152 55% 74%;
+    --tint-amber-bg: 30 55% 15%;
+    --tint-amber-border: 30 45% 30%;
+    --tint-amber-fg: 38 90% 74%;
     
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
