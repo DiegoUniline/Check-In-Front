@@ -1187,7 +1187,7 @@ export function exportarCorteCaja(opts: CommonCtx & {
       },
       {
         title: 'Detalle de movimientos',
-        head: ['Fecha/hora', 'Tipo', 'Ref.', 'Concepto', 'Método', 'Monto'],
+        head: ['Fecha/hora', 'Tipo', 'Ref.', 'Concepto', 'Reserva', 'Hab.', 'Método', 'Registró', 'Monto'],
         rows: detalleRows,
       },
     ],
