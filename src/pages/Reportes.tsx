@@ -408,8 +408,76 @@ export default function Reportes() {
     toast({ title: 'PDF de ingresos generado' });
   };
   const exportarCorte = () => {
-    exportarCorteCaja({ desde: rango.desde, hasta: rango.hasta, pagos: pagosFiltrados, gastos });
+    exportarCorteCaja({ desde: rango.desde, hasta: rango.hasta, pagos: pagosDetallados, gastos });
     toast({ title: 'Corte de caja generado' });
+  };
+
+  const exportarCorteExcel = () => {
+    const ingPorMetodo: Record<string, number> = {};
+    pagosDetallados.forEach((p: any) => {
+      const m = p.metodo_pago || 'Sin especificar';
+      ingPorMetodo[m] = (ingPorMetodo[m] || 0) + Number(p.monto || 0);
+    });
+    const egrPorMetodo: Record<string, number> = {};
+    gastos.forEach((g: any) => {
+      const m = g.metodo_pago || 'Sin especificar';
+      egrPorMetodo[m] = (egrPorMetodo[m] || 0) + Number(g.monto || 0);
+    });
+
+    const detalle = [
+      ...pagosDetallados.map((p: any) => ({
+        fecha: p.fecha,
+        tipo: 'Ingreso',
+        ref: p.numero_pago || p.referencia || '',
+        concepto: p.concepto || '',
+        reserva: p.reserva,
+        habitacion: p.habitacion,
+        metodo: p.metodo_pago || '',
+        registro: p.registrado_por,
+        monto: Number(p.monto || 0),
+      })),
+      ...gastos.map((g: any) => ({
+        fecha: g.fecha || g.created_at,
+        tipo: 'Egreso',
+        ref: '',
+        concepto: g.concepto || g.descripcion || '',
+        reserva: '',
+        habitacion: '',
+        metodo: g.metodo_pago || '',
+        registro: g.created_by_nombre || '',
+        monto: -Number(g.monto || 0),
+      })),
+    ].sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')));
+
+    exportSheetsToExcel([
+      {
+        name: 'Resumen',
+        rows: [
+          { Concepto: 'Periodo', Valor: `${format(rango.desde, 'dd/MM/yyyy')} – ${format(rango.hasta, 'dd/MM/yyyy')}` },
+          { Concepto: 'Ingresos', Valor: totalIngresos },
+          { Concepto: 'Egresos', Valor: totalGastos },
+          { Concepto: 'Neto', Valor: utilidad },
+          ...Object.entries(ingPorMetodo).map(([k, v]) => ({ Concepto: `Ingreso · ${k}`, Valor: v })),
+          ...Object.entries(egrPorMetodo).map(([k, v]) => ({ Concepto: `Egreso · ${k}`, Valor: v })),
+        ],
+      },
+      {
+        name: 'Detalle de movimientos',
+        rows: detalle,
+        columns: [
+          { key: 'fecha', label: 'Fecha/hora', format: (v: any) => (v ? formatDateTime(v) : '') },
+          { key: 'tipo', label: 'Tipo' },
+          { key: 'ref', label: 'Ref.' },
+          { key: 'concepto', label: 'Concepto' },
+          { key: 'reserva', label: 'Reserva' },
+          { key: 'habitacion', label: 'Habitación' },
+          { key: 'metodo', label: 'Método' },
+          { key: 'registro', label: 'Registró' },
+          { key: 'monto', label: 'Monto' },
+        ],
+      },
+    ], 'corte_caja_vulo');
+    toast({ title: 'Excel del corte generado' });
   };
 
   const filtrosActivos = filtros.habitacionIds.length + filtros.tipoIds.length + filtros.usuarioIds.length + filtros.origenes.length;
