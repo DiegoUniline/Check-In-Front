@@ -847,17 +847,21 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     <section id="reservation-operations" className="scroll-mt-24 rounded-[8px] border border-slate-200/90 bg-white px-2.5 py-1.5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Operaciones</span>
-        {quickOperations.map((operation) => {
+         {quickOperations.map((operation) => {
           const Icon = operation.icon;
           const allowed = canAccess(`reservas.operacion.${operation.id}`, user?.rol);
           const applies = operationApplies(operation.id);
+          const softVariant = operation.id === 'partial_payment'
+            ? 'soft-green'
+            : operation.id === 'add_charge'
+              ? 'soft-amber'
+              : 'soft-navy';
           return <Button
             key={operation.id}
             size="toolbar"
-            variant="outline"
+            variant={softVariant}
             onClick={() => openOperation(operation)}
             disabled={loading || !allowed || !applies}
-            className="gap-1.5 border-slate-300 px-2.5 text-[#10233F] hover:border-[#10233F]/35 hover:bg-slate-50"
             title={!allowed ? 'Tu rol no tiene permiso para esta acción' : !applies ? 'Esta acción no aplica al estado actual' : operation.detail}
           >
             <Icon className="h-3.5 w-3.5" />
