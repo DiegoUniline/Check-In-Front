@@ -74,6 +74,17 @@
     --status-cleaning: 217 91% 60%;
     --status-maintenance: 0 84% 60%;
     --status-reserved: 271 81% 56%;
+
+    /* Botones tintados sutiles (claro) */
+    --tint-navy-bg: 216 55% 96%;
+    --tint-navy-border: 216 35% 85%;
+    --tint-navy-fg: 216 60% 20%;
+    --tint-green-bg: 152 55% 95%;
+    --tint-green-border: 152 40% 82%;
+    --tint-green-fg: 160 75% 24%;
+    --tint-amber-bg: 38 95% 95%;
+    --tint-amber-border: 38 75% 84%;
+    --tint-amber-fg: 28 80% 32%;
   }
 
   .dark {
