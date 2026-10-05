@@ -532,6 +532,10 @@ export default function Reportes() {
                   <DropdownMenuItem onClick={exportarOcupacion}><Percent className="mr-2 h-4 w-4" />Ocupación</DropdownMenuItem>
                   <DropdownMenuItem onClick={exportarIngresos}><DollarSign className="mr-2 h-4 w-4" />Ingresos</DropdownMenuItem>
                   <DropdownMenuItem onClick={exportarCorte}><TrendingUp className="mr-2 h-4 w-4" />Corte de caja</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Excel</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={exportarCorteExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Corte de caja</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
