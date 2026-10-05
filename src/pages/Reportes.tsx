@@ -16,6 +16,7 @@ import {
   CalendarIcon,
   DollarSign,
   Download,
+  FileSpreadsheet,
   FilterX,
   Moon,
   Percent,
@@ -66,6 +67,8 @@ import {
   exportarReporteOcupacion,
   exportarReportePDF,
 } from '@/lib/pdfExport';
+import { exportSheetsToExcel } from '@/lib/exportExcel';
+import { formatDateTime } from '@/lib/dateFormat';
 import { currencySymbol, formatCurrency } from '@/lib/currency';
 
 const COLORS = [
