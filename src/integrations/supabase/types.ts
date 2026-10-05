@@ -3827,6 +3827,10 @@ export type Database = {
         Returns: Json
       }
       vulo_is_superadmin: { Args: never; Returns: boolean }
+      vulo_metodo_clase: {
+        Args: { p_hotel_id: string; p_metodo: string }
+        Returns: string
+      }
       vulo_movement_hotel_date: {
         Args: { p_hotel_id: string; p_row: Json }
         Returns: string
