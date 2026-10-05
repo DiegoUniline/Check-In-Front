@@ -1088,6 +1088,10 @@ export function exportarCorteCaja(opts: CommonCtx & {
     metodo_pago?: string;
     concepto?: string;
     numero_pago?: string;
+    referencia?: string;
+    reserva?: string;
+    habitacion?: string;
+    registrado_por?: string;
   }>;
   gastos: Array<{
     fecha?: string;
@@ -1095,6 +1099,7 @@ export function exportarCorteCaja(opts: CommonCtx & {
     concepto?: string;
     descripcion?: string;
     metodo_pago?: string;
+    registrado_por?: string;
   }>;
 }) {
   const { desde, hasta, pagos, gastos, turno, currency = defaultCurrency() } = opts;
@@ -1126,9 +1131,12 @@ export function exportarCorteCaja(opts: CommonCtx & {
     ...pagos.map((p) => ({
       fecha: p.fecha,
       tipo: 'Ingreso',
-      ref: p.numero_pago || '—',
+      ref: p.numero_pago || p.referencia || '—',
       concepto: p.concepto || '—',
+      reserva: p.reserva || '—',
+      habitacion: p.habitacion || '—',
       metodo: p.metodo_pago || '—',
+      registro: p.registrado_por || '—',
       monto: Number(p.monto || 0),
     })),
     ...gastos.map((g) => ({
@@ -1136,7 +1144,10 @@ export function exportarCorteCaja(opts: CommonCtx & {
       tipo: 'Egreso',
       ref: '—',
       concepto: g.concepto || g.descripcion || '—',
+      reserva: '—',
+      habitacion: '—',
       metodo: g.metodo_pago || '—',
+      registro: g.registrado_por || '—',
       monto: -Number(g.monto || 0),
     })),
   ]
@@ -1146,7 +1157,10 @@ export function exportarCorteCaja(opts: CommonCtx & {
       m.tipo,
       m.ref,
       m.concepto,
+      m.reserva,
+      m.habitacion,
       m.metodo,
+      m.registro,
       fmtMoney(m.monto, currency),
     ]);
 
