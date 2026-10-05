@@ -177,7 +177,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   'reservas.operacion.remove_guest': ['Admin', 'Gerente', 'Recepcion'],
   'reservas.operacion.room_out_of_service': ['Admin', 'Gerente'],
   'reservas.operacion.rate_change': ['Admin', 'Gerente'],
-  'reservas.operacion.discount_change': ['Admin', 'Gerente', 'Recepcion', 'Housekeeping', 'Mantenimiento', 'SuperAdmin'],
+  'reservas.operacion.discount_change': ['Admin', 'Gerente', 'Recepcion', 'Housekeeping', 'Mantenimiento'],
   'reservas.operacion.add_charge': ['Admin', 'Gerente', 'Recepcion'],
   'reservas.operacion.update_charge': ['Admin', 'Gerente'],
   'reservas.operacion.cancel_charge': ['Admin', 'Gerente'],
