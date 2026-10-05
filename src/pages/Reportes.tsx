@@ -231,6 +231,26 @@ export default function Reportes() {
     return pagos.filter((p: any) => p.reserva_id && reservaIdsFiltradas.has(p.reserva_id));
   }, [pagos, reservaIdsFiltradas, hayFiltrosDimension]);
 
+  // Reserva y habitación a la que pertenece cada pago (para el corte de caja).
+  const reservaInfo = useMemo(() => {
+    const map: Record<string, { numero: string; habitacion: string }> = {};
+    reservas.forEach((r: any) => {
+      const h = habitaciones.find((x) => x.id === r.habitacion_id);
+      map[r.id] = {
+        numero: r.numero_reserva || r.folio || '',
+        habitacion: h?.numero || r.habitacion_numero || '',
+      };
+    });
+    return map;
+  }, [reservas, habitaciones]);
+
+  const pagosDetallados = useMemo(() => pagosFiltrados.map((p: any) => ({
+    ...p,
+    reserva: p.reserva_id ? reservaInfo[p.reserva_id]?.numero || '—' : '—',
+    habitacion: p.reserva_id ? reservaInfo[p.reserva_id]?.habitacion || '—' : '—',
+    registrado_por: p.created_by_nombre || '',
+  })), [pagosFiltrados, reservaInfo]);
+
   const totalIngresos = useMemo(() => pagosFiltrados.reduce((s, p) => s + (Number(p.monto) || 0), 0), [pagosFiltrados]);
   const totalGastos = useMemo(() => gastos.reduce((s, g) => s + (Number(g.monto) || 0), 0), [gastos]);
   const totalIngresosPrev = useMemo(() => pagosPrev.reduce((s, p) => s + (Number(p.monto) || 0), 0), [pagosPrev]);
