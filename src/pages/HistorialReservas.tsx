@@ -84,8 +84,9 @@ export default function HistorialReservas() {
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
   const [origenFiltro, setOrigenFiltro] = useState('todos');
   const [habitacionFiltro, setHabitacionFiltro] = useState('todos');
-  const [fechaDesde, setFechaDesde] = useState<Date | undefined>();
-  const [fechaHasta, setFechaHasta] = useState<Date | undefined>();
+  // Siempre con rango: sin él se descargaba todo el histórico del hotel.
+  const [fechaDesde, setFechaDesde] = useState<Date | undefined>(() => startOfDay(subDays(new Date(), 29)));
+  const [fechaHasta, setFechaHasta] = useState<Date | undefined>(() => endOfDay(new Date()));
   const [rangoBorrador, setRangoBorrador] = useState<{ from?: Date; to?: Date }>({});
   const [rangoPopoverOpen, setRangoPopoverOpen] = useState(false);
   
@@ -103,7 +104,7 @@ export default function HistorialReservas() {
 
   useEffect(() => {
     cargarReservas();
-  }, [pagina, estadoFiltro, origenFiltro, fechaDesde, fechaHasta]);
+  }, [estadoFiltro, origenFiltro, fechaDesde, fechaHasta]);
 
   const cargarReservas = async () => {
     setLoading(true);
@@ -131,8 +132,8 @@ export default function HistorialReservas() {
     setEstadoFiltro('todos');
     setOrigenFiltro('todos');
     setHabitacionFiltro('todos');
-    setFechaDesde(undefined);
-    setFechaHasta(undefined);
+    setFechaDesde(startOfDay(subDays(new Date(), 29)));
+    setFechaHasta(endOfDay(new Date()));
     setRangoBorrador({});
     setPagina(1);
   };
@@ -284,16 +285,21 @@ export default function HistorialReservas() {
   ];
 
   const aplicarRango = () => {
+    if (!rangoBorrador.from) {
+      toast({ title: 'Elige al menos la fecha inicial' });
+      return;
+    }
     setFechaDesde(rangoBorrador.from);
-    setFechaHasta(rangoBorrador.to);
+    setFechaHasta(rangoBorrador.to || rangoBorrador.from);
     setRangoPopoverOpen(false);
     setPagina(1);
   };
 
   const limpiarRango = () => {
     setRangoBorrador({});
-    setFechaDesde(undefined);
-    setFechaHasta(undefined);
+    setFechaDesde(startOfDay(subDays(new Date(), 29)));
+    setFechaHasta(endOfDay(new Date()));
+    setPagina(1);
   };
 
   const etiquetaRango = fechaDesde && fechaHasta

@@ -1218,6 +1218,11 @@ class ApiClient {
           .order('id', { ascending: true })
           .range(from, from + pageSize - 1);
         if (params?.estado) q = q.eq('estado', params.estado);
+        if (params?.origen === 'Web') q = q.eq('origen', 'Web');
+        else if (params?.origen) q = q.or('origen.is.null,origen.neq.Web');
+        // Rango por fecha de entrada (inclusivo).
+        if (params?.fecha_desde) q = q.gte('fecha_checkin', params.fecha_desde);
+        if (params?.fecha_hasta) q = q.lte('fecha_checkin', params.fecha_hasta);
         // Excluir reservas online aún pendientes de aprobación, salvo en el
         // calendario, donde sí bloquean la habitación.
         if (params?.incluir_pendientes_web !== 'true') q = q.or('origen.neq.Web,estado.neq.Pendiente');
