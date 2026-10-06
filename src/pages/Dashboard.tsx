@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useCheckoutAction } from '@/hooks/useCheckoutAction';
 import {
   AlertTriangle,
   ArrowRight,
@@ -102,6 +103,7 @@ const shiftDuration = (startedAt?: string | null, now = Date.now()) => {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { iniciarCheckout, procesandoId } = useCheckoutAction(() => load(true));
   const { openShift, shiftRequired, viewOnlyMode } = useShift();
   useCurrency();
 
@@ -359,8 +361,8 @@ export default function Dashboard() {
                   </p>
                 </button>
                 {!readOnly && (
-                  <Button size="sm" className={cn('h-7 shrink-0 px-2.5 text-xs', kind === 'in' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-[#10233F] hover:bg-[#10233F]/90')} onClick={() => navigate(kind === 'in' ? `/checkin/${r.id}` : `/checkout/${r.id}`)}>
-                    {kind === 'in' ? 'Check-in' : 'Check-out'}
+                  <Button size="sm" className={cn('h-7 shrink-0 px-2.5 text-xs', kind === 'in' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-[#10233F] hover:bg-[#10233F]/90')} disabled={procesandoId === r.id} onClick={() => kind === 'in' ? navigate(`/checkin/${r.id}`) : void iniciarCheckout(r.id)}>
+                    {kind === 'in' ? 'Check-in' : procesandoId === r.id ? 'Liberando…' : 'Check-out'}
                   </Button>
                 )}
               </div>

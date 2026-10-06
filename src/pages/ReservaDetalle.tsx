@@ -23,6 +23,7 @@ import {
 } from '@/lib/reservationFinancials';
 import { canAccess } from '@/lib/permissions';
 import { useAuth } from '@/contexts/useAuth';
+import { useCheckoutAction } from '@/hooks/useCheckoutAction';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -114,6 +115,7 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
   };
 
   useEffect(() => { void load(); }, [id]);
+  const { iniciarCheckout, procesandoId } = useCheckoutAction(() => load(true));
   useRealtimeSync('reservas', () => void load(true), { enabled: Boolean(id) });
   useRealtimeSync('cargos', () => void load(true), { enabled: Boolean(id) });
   useRealtimeSync('pagos', () => void load(true), { enabled: Boolean(id) });
@@ -248,7 +250,7 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
             {canCheckin && <Button size="toolbar" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>
               <DoorOpen className="mr-1.5 h-4 w-4" />Check-in
             </Button>}
-            {activeStay && <Button size="toolbar" className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>
+            {activeStay && <Button size="toolbar" className="bg-[#10233F] hover:bg-[#10233F]/90" disabled={procesandoId === reserva.id} onClick={() => void iniciarCheckout(reserva.id)}>
               <LogOut className="mr-1.5 h-4 w-4" />Check-out
             </Button>}
           </div>
@@ -370,7 +372,7 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
           {canCheckin
             ? <Button size="toolbar" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>Check-in</Button>
             : activeStay
-              ? <Button size="toolbar" className="w-full bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => navigate(`/checkout/${reserva.id}`)}>Check-out</Button>
+              ? <Button size="toolbar" className="w-full bg-[#10233F] hover:bg-[#10233F]/90" disabled={procesandoId === reserva.id} onClick={() => void iniciarCheckout(reserva.id)}>Check-out</Button>
               : <Button size="toolbar" className="w-full" onClick={() => operationsRef.current?.openOperation('partial_payment')} disabled={!canRegisterPayment}>Registrar pago</Button>}
         </div>
       </div>

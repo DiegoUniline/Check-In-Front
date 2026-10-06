@@ -1558,6 +1558,31 @@ class ApiClient {
   checkout = async (id: string): Promise<any> => {
     return this.completeCheckout(id);
   };
+  private checkoutConfigCache: { at: number; hotelId: string | null; value: { modo: 'completo' | 'rapido'; limpia: boolean } } | null = null;
+  getCheckoutConfig = async (): Promise<{ modo: 'completo' | 'rapido'; limpia: boolean }> => {
+    const hotelId = this.getHotelId();
+    const cached = this.checkoutConfigCache;
+    if (cached && cached.hotelId === hotelId && Date.now() - cached.at < 60_000) return cached.value;
+    const { data } = await supabase.from('hotels').select('*').eq('id', this.hid()).maybeSingle();
+    const value = {
+      modo: (data as any)?.modo_checkout === 'rapido' ? 'rapido' as const : 'completo' as const,
+      limpia: Boolean((data as any)?.checkout_rapido_limpia),
+    };
+    this.checkoutConfigCache = { at: Date.now(), hotelId, value };
+    return value;
+  };
+  /** Check-out de un clic: el servidor valida saldo y entregables. */
+  checkoutRapido = async (id: string): Promise<any> => {
+    const { data, error } = await (supabase as any).rpc('vulo_checkout_rapido', { p_reserva_id: id });
+    if (error) {
+      if (error.code === 'PGRST202' || /vulo_checkout_rapido|schema cache/i.test(error.message || '')) {
+        throw new Error('Falta correr el SQL SQL_2026-10-06_checkout_rapido.sql en Supabase.');
+      }
+      throw error;
+    }
+    window.dispatchEvent(new CustomEvent('data:changed'));
+    return data;
+  };
   cancelarReserva = async (id: string, motivo?: string): Promise<any> => {
     // El motivo va a su propio campo; el servidor registra quién y cuándo canceló.
     const { data: r, error } = await supabase.from('reservas').update({ estado: 'Cancelada', motivo_cancelacion: motivo || null } as any).eq('id', id).select().single();
@@ -2372,6 +2397,7 @@ class ApiClient {
     return data;
   };
   updateHotel = async (data: any): Promise<any> => {
+    this.checkoutConfigCache = null;
     const { data: r, error } = await supabase.from('hotels').update(data).eq('id', this.hid()).select().single();
     if (error) throw error;
     if ((r as any)?.timezone) setHotelTimezone((r as any).timezone);
