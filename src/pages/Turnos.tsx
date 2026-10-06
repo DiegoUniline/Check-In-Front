@@ -47,6 +47,7 @@ import { formatCurrency, useCurrency } from '@/lib/currency';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/utils';
 import { imprimirTicketTurno, ticketTurnoHtml } from '@/lib/ticketTurno';
+import { imprimirCorteTermica } from '@/lib/impresion';
 
 type ShiftSummary = {
   efectivo: number;
@@ -130,6 +131,16 @@ export default function Turnos() {
   const { user } = useAuth();
   const { refreshShift, continueWithoutShift } = useShift();
   const { toast } = useToast();
+  const [agentesImpresion, setAgentesImpresion] = useState<any[]>([]);
+  useEffect(() => { api.getAgentesImpresion().then(setAgentesImpresion).catch(() => {}); }, []);
+  const enviarATermica = async (report: any, shift: any, automatico = false) => {
+    try {
+      await imprimirCorteTermica({ report, turno: shift || {}, hotelNombre });
+      toast({ title: automatico ? 'Corte enviado a la impresora' : 'Enviado a la impresora de tickets' });
+    } catch (error: any) {
+      toast({ title: 'No se pudo imprimir en la térmica', description: error?.message, variant: 'destructive' });
+    }
+  };
   const location = useLocation();
   const navigate = useNavigate();
   const currency = useCurrency();
@@ -306,7 +317,7 @@ export default function Turnos() {
           efectivo_contado: contado, diferencia,
         } } : null;
       setSelectedReport(finalReport);
-      setSelectedShift({
+      const shiftCerrado = {
         ...turno,
         ...(closedShift || {}),
         estado: 'Cerrado',
@@ -317,8 +328,14 @@ export default function Turnos() {
         entrega_a: deliveryUser ? `${deliveryUser.nombre || ''} ${deliveryUser.apellido_paterno || ''}`.trim() : closedShift?.entrega_a || null,
         pendientes_entrega: pendientesEntrega.trim() || closedShift?.pendientes_entrega || null,
         motivo_diferencia: motivoDiferencia.trim() || closedShift?.motivo_diferencia || null,
-      });
+      };
+      setSelectedShift(shiftCerrado);
       setReportDialog(Boolean(finalReport));
+      if (finalReport && agentesImpresion.length) {
+        api.getConfigHotel<{ auto_corte?: boolean }>('impresion')
+          .then((cfg) => { if (cfg?.auto_corte) void enviarATermica(finalReport, shiftCerrado, true); })
+          .catch(() => {});
+      }
       setFondoContado('');
       setEntregaA('');
       setPendientesEntrega('');
@@ -349,6 +366,7 @@ export default function Turnos() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="w-fit border-emerald-200 bg-emerald-50 text-emerald-800"><ShieldCheck className="mr-1.5 h-3.5 w-3.5" />Turno cerrado y auditado</Badge>
               <Button size="sm" className="bg-[#10233F] hover:bg-[#10233F]/90" onClick={() => imprimirTicketTurno({ report: selectedReport, turno: selectedShift || {}, hotelNombre })}><Printer className="mr-1.5 h-3.5 w-3.5" />Imprimir ticket</Button>
+              {agentesImpresion.length > 0 && <Button size="sm" variant="outline" onClick={() => void enviarATermica(selectedReport, selectedShift)}><Printer className="mr-1.5 h-3.5 w-3.5" />Imprimir en térmica</Button>}
             </div>
           </div>
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">

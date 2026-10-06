@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VULO Impresión</title>
+<style>
+  :root { --azul: #10233F; --borde: #e2e8f0; --gris: #64748b; --ok: #059669; --mal: #dc2626; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: #f5f7fa; color: #0f172a; }
+  header { background: var(--azul); color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 18px; }
+  header small { opacity: .7; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+  .card { background: #fff; border: 1px solid var(--borde); border-radius: 10px; padding: 16px; }
+  .card h2 { margin: 0 0 10px; font-size: 15px; }
+  label { display: block; font-size: 12px; color: var(--gris); margin: 10px 0 4px; }
+  input, select { width: 100%; height: 40px; border: 1px solid var(--borde); border-radius: 8px; padding: 0 10px; font-size: 15px; background: #fff; }
+  input.codigo { text-transform: uppercase; letter-spacing: 4px; font-size: 22px; text-align: center; font-weight: 700; }
+  button { height: 40px; border: 0; border-radius: 8px; padding: 0 16px; font-size: 14px; font-weight: 600; cursor: pointer; background: var(--azul); color: #fff; }
+  button.sec { background: #fff; color: var(--azul); border: 1px solid var(--borde); }
+  button.peligro { background: #fff; color: var(--mal); border: 1px solid #fecaca; }
+  button:disabled { opacity: .5; cursor: default; }
+  .fila { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .estado { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .punto { width: 10px; height: 10px; border-radius: 50%; background: var(--mal); }
+  .punto.ok { background: var(--ok); }
+  .muted { color: var(--gris); font-size: 12px; }
+  .msg { margin-top: 10px; padding: 8px 10px; border-radius: 8px; font-size: 13px; display: none; }
+  .msg.ok { display: block; background: #ecfdf5; color: #065f46; }
+  .msg.mal { display: block; background: #fef2f2; color: #991b1b; }
+  ul { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; font-size: 12px; }
+  li { padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
+  li.e { color: var(--mal); }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .switch input { width: 20px; height: 20px; }
+  .oculto { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>VULO Impresión</h1><small id="sub">Agente de impresión de tickets</small></div>
+  <small id="ver"></small>
+</header>
+<main>
+  <section class="card oculto" id="vincular">
+    <h2>Vincular esta computadora</h2>
+    <p class="muted">En el sistema entra a <b>Configuración › Impresión</b>, pulsa <b>Vincular computadora</b> y escribe aquí el código.</p>
+    <input class="codigo" id="codigo" maxlength="9" placeholder="ABCD2345" autocomplete="off" />
+    <div class="fila"><button id="btnVincular">Vincular</button></div>
+    <div class="msg" id="msgVincular"></div>
+  </section>
+
+  <section class="card oculto" id="panel">
+    <div class="estado"><span class="punto" id="punto"></span><span id="estadoTxt">Conectando…</span></div>
+    <p class="muted" id="detalle"></p>
+
+    <label for="impresora">Impresora de tickets</label>
+    <select id="impresora"></select>
+    <label for="ancho">Ancho del papel</label>
+    <select id="ancho">
+      <option value="48">80 mm (48 caracteres)</option>
+      <option value="42">80 mm compacta (42 caracteres)</option>
+      <option value="32">58 mm (32 caracteres)</option>
+    </select>
+    <div class="fila">
+      <button id="btnGuardar">Guardar</button>
+      <button class="sec" id="btnPrueba">Imprimir prueba</button>
+    </div>
+    <div class="msg" id="msgPanel"></div>
+  </section>
+
+  <section class="card oculto" id="opciones">
+    <div class="switch">
+      <div><b>Iniciar con Windows</b><div class="muted">Recomendado: así siempre está listo para imprimir.</div></div>
+      <input type="checkbox" id="auto" />
+    </div>
+    <div class="fila">
+      <button class="sec" id="btnDesvincular">Desvincular</button>
+      <button class="peligro" id="btnDesinstalar">Desinstalar</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Actividad</h2>
+    <ul id="eventos"><li class="muted">Sin actividad</li></ul>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let editando = false;
+  async function api(ruta, datos) {
+    const r = await fetch(ruta, datos === undefined ? {} : {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Vulo': '1' }, body: JSON.stringify(datos),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Error');
+    return j;
+  }
+  function msg(el, texto, ok) { el.textContent = texto; el.className = 'msg ' + (ok ? 'ok' : 'mal'); }
+  async function refrescar() {
+    let e;
+    try { e = await api('/api/estado'); } catch { return; }
+    $('ver').textContent = 'v' + e.version;
+    $('vincular').classList.toggle('oculto', e.vinculado);
+    $('panel').classList.toggle('oculto', !e.vinculado);
+    $('opciones').classList.toggle('oculto', !e.vinculado);
+    $('sub').textContent = e.vinculado ? `${e.hotel} · ${e.nombre}` : 'Agente de impresión de tickets';
+    $('punto').classList.toggle('ok', e.conectado && !!e.impresora);
+    $('estadoTxt').textContent = !e.impresora ? 'Elige una impresora' : e.conectado ? 'Listo para imprimir' : 'Sin conexión con el sistema';
+    $('detalle').textContent = e.error ? e.error : e.conectado ? `Última revisión ${e.ultimo} · ${e.impresos} impreso(s) desde que inició` : '';
+    if (!editando) {
+      const sel = $('impresora');
+      const lista = e.impresoras || [];
+      sel.innerHTML = '<option value="">— Selecciona —</option>' + lista.map((p) => `<option>${p.replace(/</g, '&lt;')}</option>`).join('');
+      if (e.impresora && !lista.includes(e.impresora)) sel.insertAdjacentHTML('beforeend', `<option>${e.impresora}</option>`);
+      sel.value = e.impresora || '';
+      $('ancho').value = String(e.ancho || 48);
+      $('auto').checked = !!e.autoinicio;
+    }
+    const ev = e.eventos || [];
+    $('eventos').innerHTML = ev.length ? ev.map((x) => `<li class="${x.error ? 'e' : ''}">${x.hora} · ${x.texto.replace(/</g, '&lt;')}</li>`).join('') : '<li class="muted">Sin actividad</li>';
+  }
+  ['impresora', 'ancho'].forEach((id) => {
+    $(id).addEventListener('focus', () => { editando = true; });
+    $(id).addEventListener('change', () => { editando = true; });
+  });
+  $('btnVincular').onclick = async () => {
+    $('btnVincular').disabled = true;
+    try { await api('/api/vincular', { codigo: $('codigo').value }); msg($('msgVincular'), 'Vinculada', true); $('codigo').value = ''; }
+    catch (err) { msg($('msgVincular'), err.message, false); }
+    $('btnVincular').disabled = false;
+    refrescar();
+  };
+  $('codigo').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnVincular').click(); });
+  $('btnGuardar').onclick = async () => {
+    try { await api('/api/config', { impresora: $('impresora').value, ancho: Number($('ancho').value) }); msg($('msgPanel'), 'Guardado', true); }
+    catch (err) { msg($('msgPanel'), err.message, false); }
+    editando = false; refrescar();
+  };
+  $('btnPrueba').onclick = async () => {
+    $('btnPrueba').disabled = true;
+    try {
+      await api('/api/config', { impresora: $('impresora').value, ancho: Number($('ancho').value) });
+      await api('/api/prueba', {}); msg($('msgPanel'), 'Prueba enviada a la impresora', true);
+    } catch (err) { msg($('msgPanel'), err.message, false); }
+    $('btnPrueba').disabled = false; editando = false; refrescar();
+  };
+  $('auto').onchange = async () => { try { await api('/api/autoinicio', { on: $('auto').checked }); } catch (err) { alert(err.message); } refrescar(); };
+  $('btnDesvincular').onclick = async () => {
+    if (!confirm('¿Desvincular esta computadora? Dejará de imprimir hasta que la vuelvas a vincular.')) return;
+    await api('/api/desvincular', {}); refrescar();
+  };
+  $('btnDesinstalar').onclick = async () => {
+    if (!confirm('¿Desinstalar el agente de impresión de esta computadora?')) return;
+    await api('/api/desinstalar', {});
+    document.body.innerHTML = '<main><section class="card"><h2>Agente desinstalado</h2><p class="muted">Ya puedes cerrar esta ventana.</p></section></main>';
+  };
+  refrescar();
+  setInterval(refrescar, 3000);
+</script>
+</body>
+</html>

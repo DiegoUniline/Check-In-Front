@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Settings, Hotel, Users, CreditCard, Bell, 
-  Palette, Shield, Save, Building2, ExternalLink, ListChecks, Globe, Copy, MessageCircle
+  Palette, Shield, Save, Building2, ExternalLink, ListChecks, Globe, Copy, MessageCircle, Printer
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/lib/api';
 import { CURRENCY_PRESETS } from '@/lib/currency';
 import { ChecklistConfig } from '@/components/configuracion/ChecklistConfig';
+import { ImpresionConfig } from '@/components/configuracion/ImpresionConfig';
 import { WhatsAppConfig } from '@/components/configuracion/WhatsAppConfig';
 import { EvolutionConfig } from '@/components/configuracion/EvolutionConfig';
 import { WhatsAppAgentConfig } from '@/components/configuracion/WhatsAppAgentConfig';
@@ -196,7 +197,7 @@ export default function Configuracion() {
       subtitle="Ajustes del sistema y preferencias"
     >
       <Tabs defaultValue={new URLSearchParams(window.location.search).get('tab') ?? 'hotel'} className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-8 w-full max-w-5xl">
+        <TabsList className="grid grid-cols-2 md:grid-cols-9 w-full max-w-6xl">
           <TabsTrigger value="hotel">
             <Hotel className="mr-2 h-4 w-4" /> Hotel
           </TabsTrigger>
@@ -211,6 +212,9 @@ export default function Configuracion() {
           </TabsTrigger>
           <TabsTrigger value="checklists">
             <ListChecks className="mr-2 h-4 w-4" /> Checklists
+          </TabsTrigger>
+          <TabsTrigger value="impresion">
+            <Printer className="mr-2 h-4 w-4" /> Impresión
           </TabsTrigger>
           <TabsTrigger value="pagos">
             <CreditCard className="mr-2 h-4 w-4" /> Pagos
@@ -613,6 +617,10 @@ export default function Configuracion() {
         {/* Checklists */}
         <TabsContent value="checklists">
           <ChecklistConfig />
+        </TabsContent>
+
+        <TabsContent value="impresion">
+          <ImpresionConfig />
         </TabsContent>
 
         {/* Payments */}

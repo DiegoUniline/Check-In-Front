@@ -2065,6 +2065,40 @@ class ApiClient {
     this.rpcBloqueo('vulo_editar_bloqueo', { p_bloqueo_id: id, p_desde: p.desde, p_hasta: p.hasta, p_tipo: p.tipo, p_motivo: p.motivo });
   terminarBloqueo = (id: string, motivo?: string): Promise<any> =>
     this.rpcBloqueo('vulo_cancelar_bloqueo', { p_bloqueo_id: id, p_motivo: motivo || null });
+  // ------- Agente de impresión -------
+  private rpcImpresion = async (fn: string, args: Record<string, any>): Promise<any> => {
+    const { data, error } = await (operationalDb as any).rpc(fn, args);
+    if (error) {
+      if (error.code === 'PGRST202' || new RegExp(`${fn}|schema cache`, 'i').test(error.message || '')) {
+        throw new Error('Falta correr el SQL SQL_2026-10-06_agente_impresion.sql en Supabase.');
+      }
+      throw error;
+    }
+    return data;
+  };
+  getAgentesImpresion = async (): Promise<any[]> => {
+    const { data, error } = await (operationalDb as any).from('print_agentes')
+      .select('id, nombre, impresora, impresoras, ancho, version, ultimo_contacto, activo, created_at')
+      .eq('hotel_id', this.hid()).order('created_at');
+    if (error) {
+      if (error.code === '42P01' || /print_agentes/i.test(error.message || '')) return [];
+      throw error;
+    }
+    return data || [];
+  };
+  getTrabajosImpresion = async (limite = 15): Promise<any[]> => {
+    const { data, error } = await (operationalDb as any).from('print_trabajos')
+      .select('id, agente_id, tipo, titulo, estado, error, created_at, created_by_nombre, impreso_at')
+      .eq('hotel_id', this.hid()).order('created_at', { ascending: false }).limit(limite);
+    if (error) return [];
+    return data || [];
+  };
+  crearCodigoImpresion = (nombre: string): Promise<{ codigo: string; expira_at: string }> =>
+    this.rpcImpresion('vulo_print_crear_codigo', { p_nombre: nombre });
+  eliminarAgenteImpresion = (id: string): Promise<void> =>
+    this.rpcImpresion('vulo_print_eliminar_agente', { p_agente_id: id });
+  imprimir = (tipo: string, titulo: string, contenido: any[], agenteId?: string | null, copias = 1): Promise<string> =>
+    this.rpcImpresion('vulo_imprimir', { p_tipo: tipo, p_titulo: titulo, p_contenido: contenido, p_agente_id: agenteId || null, p_copias: copias });
   contarReportesAbiertos = async (habId: string): Promise<number> => {
     const { count } = await supabase.from('tareas_mantenimiento').select('id', { count: 'exact', head: true })
       .eq('hotel_id', this.hid()).eq('habitacion_id', habId)
