@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, BedDouble, CalendarDays, Clock3, DoorOpen, Ellipsis, FileText, History,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { EditarReservaDialog } from '@/components/reservas/EditarReservaDialog';
 import { ReactivarReservaDialog } from '@/components/reservas/ReactivarReservaDialog';
+import { EditarPagoAdminDialog } from '@/components/reservas/EditarPagoAdminDialog';
 import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { imprimirComprobanteReserva, imprimirRegistroRecepcion } from '@/lib/pdfExport';
@@ -50,13 +51,24 @@ const statusStyles: Record<string, string> = {
 const guestCount = (reserva: any) =>
   reservationMoney(reserva?.adultos) + reservationMoney(reserva?.ninos);
 
-export default function ReservaDetalle() {
-  const { id } = useParams<{ id: string }>();
+function Shell({ embedded, children }: { embedded: boolean; children: ReactNode }) {
+  if (embedded) return <div className="h-[86dvh] min-h-0 overflow-hidden">{children}</div>;
+  return <MainLayout fitViewport fullWidth>{children}</MainLayout>;
+}
+
+export default function ReservaDetalle({ reservaId, embedded = false, onClose }: {
+  reservaId?: string;
+  embedded?: boolean;
+  onClose?: () => void;
+} = {}) {
+  const params = useParams<{ id: string }>();
+  const id = reservaId || params.id;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [editOpen, setEditOpen] = useState(searchParams.get('editar') === '1');
+  const [editOpen, setEditOpen] = useState(!embedded && searchParams.get('editar') === '1');
   const [reactivarOpen, setReactivarOpen] = useState(false);
-  const [recienCreada, setRecienCreada] = useState(searchParams.get('nueva') === '1');
+  const [pagoAdmin, setPagoAdmin] = useState<any>(null);
+  const [recienCreada, setRecienCreada] = useState(!embedded && searchParams.get('nueva') === '1');
   const [enviandoWa, setEnviandoWa] = useState(false);
   const quitarParam = (key: string) => {
     const next = new URLSearchParams(searchParams);
@@ -112,23 +124,23 @@ export default function ReservaDetalle() {
   const account = useMemo(() => reserva ? getReservationAccountSummary(reserva) : null, [reserva]);
 
   if (loading) {
-    return <MainLayout fitViewport fullWidth>
+    return <Shell embedded={embedded}>
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
           <RefreshCw className="mx-auto h-7 w-7 animate-spin text-[#10233F]" />
           <p className="mt-3 text-sm text-muted-foreground">Abriendo expediente…</p>
         </div>
       </div>
-    </MainLayout>;
+    </Shell>;
   }
 
   if (!reserva || !account) {
-    return <MainLayout fitViewport fullWidth>
+    return <Shell embedded={embedded}>
       <div className="mx-auto max-w-xl py-20 text-center">
         <h1 className="text-xl font-semibold">Reservación no encontrada</h1>
-        <Button className="mt-4" onClick={() => navigate('/reservas')}>Volver a reservaciones</Button>
+        <Button className="mt-4" onClick={() => embedded ? onClose?.() : navigate('/reservas')}>Volver</Button>
       </div>
-    </MainLayout>;
+    </Shell>;
   }
 
   const activeStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && Boolean(reserva.checkin_realizado) && !reserva.checkout_realizado;
@@ -184,12 +196,12 @@ export default function ReservaDetalle() {
     .reduce((sum: number, item: any) => sum + reservationMoney(item.total ?? item.subtotal), 0);
   const otherAccountTotal = account.total - account.lodging - consumptionTotal;
 
-  return <MainLayout fitViewport fullWidth>
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F5F7FA] pb-16 sm:pb-0">
+  return <Shell embedded={embedded}>
+    <div className={cn('flex h-full min-h-0 flex-col overflow-hidden bg-[#F5F7FA]', !embedded && 'pb-16 sm:pb-0')}>
       <header className="z-30 shrink-0 border-b border-slate-200 bg-white">
-        <div className="flex min-h-[58px] items-center justify-between gap-4 px-4 py-2 lg:px-6">
+        <div className={cn('flex min-h-[58px] items-center justify-between gap-4 px-4 py-2 lg:px-6', embedded && 'pr-12 lg:pr-12')}>
           <div className="flex min-w-0 items-center gap-2.5">
-            <Button variant="ghost" size="toolbar" className="w-9 shrink-0 px-0" onClick={() => navigate(-1)} aria-label="Volver">
+            <Button variant="ghost" size="toolbar" className="w-9 shrink-0 px-0" onClick={() => embedded ? onClose?.() : navigate(-1)} aria-label="Volver">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
@@ -277,10 +289,10 @@ export default function ReservaDetalle() {
           reserva={reserva}
           habitaciones={rooms}
           onUpdate={refreshAll}
-          onReservationCancelled={() => navigate('/reservas/timeline', { replace: true })}
-          initialOperationId={searchParams.get('operation')}
-          initialCheckout={searchParams.get('checkout')}
-          initialRoomId={searchParams.get('roomId')}
+          onReservationCancelled={() => embedded ? void refreshAll() : navigate('/reservas/timeline', { replace: true })}
+          initialOperationId={embedded ? null : searchParams.get('operation')}
+          initialCheckout={embedded ? null : searchParams.get('checkout')}
+          initialRoomId={embedded ? null : searchParams.get('roomId')}
         >
           <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_350px]">
             <section className="min-w-0 overflow-hidden rounded-[8px] border border-slate-200 bg-white">
@@ -312,7 +324,9 @@ export default function ReservaDetalle() {
                 rows={ledger}
                 canUse={(op) => canAccess(`reservas.operacion.${op}`, user?.rol)}
                 onAction={(op, movementId) => {
-                  if (op.includes('charge')) {
+                  if (op === 'admin_payment_edit') {
+                    setPagoAdmin((reserva.pagos || []).find((item: any) => item.id === movementId) || null);
+                  } else if (op.includes('charge')) {
                     const charge = (reserva.cargos || []).find((item: any) => item.id === movementId);
                     operationsRef.current?.openOperation(op, {
                       charge_id: movementId,
@@ -346,7 +360,7 @@ export default function ReservaDetalle() {
         </StayOperationsPanel>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-white p-2 pb-[max(.5rem,env(safe-area-inset-bottom))] sm:hidden">
+      <div className={cn('border-t bg-white p-2 sm:hidden', embedded ? 'shrink-0' : 'fixed inset-x-0 bottom-0 z-30 pb-[max(.5rem,env(safe-area-inset-bottom))]')}>
         <div className="grid grid-cols-2 gap-2">
           {canEditReservation && <Button variant="outline" size="toolbar" className="w-full" onClick={() => setEditOpen(true)}><Pencil className="mr-1.5 h-3.5 w-3.5" />Editar</Button>}
           {canCancelReservation && <Button variant="outline" size="toolbar" className="w-full border-red-200 text-red-700" onClick={() => operationsRef.current?.openOperation('cancel_reservation')}><XCircle className="mr-1.5 h-3.5 w-3.5" />Cancelar</Button>}
@@ -367,8 +381,9 @@ export default function ReservaDetalle() {
         onSaved={refreshAll}
       />
       <ReactivarReservaDialog open={reactivarOpen} onOpenChange={setReactivarOpen} reserva={reserva} onDone={refreshAll} />
+      <EditarPagoAdminDialog open={Boolean(pagoAdmin)} onOpenChange={(v) => { if (!v) setPagoAdmin(null); }} pago={pagoAdmin} onSaved={refreshAll} />
     </div>
-  </MainLayout>;
+  </Shell>;
 }
 
 function ReservationQuickSummary({
@@ -469,8 +484,8 @@ function DataPoint({ label, value }: { label: string; value: string }) {
 
 const MOVEMENT_ACTIONS: Record<'payment' | 'charge', { active: [string, string][]; cancelled: [string, string][] }> = {
   payment: {
-    active: [['payment_amount_change', 'Corregir importe'], ['payment_method_change', 'Corregir forma de pago'], ['cancel_payment', 'Cancelar pago']],
-    cancelled: [['restore_payment', 'Reactivar pago']],
+    active: [['payment_amount_change', 'Corregir importe'], ['payment_method_change', 'Corregir forma de pago'], ['admin_payment_edit', 'Editar pago (admin)'], ['cancel_payment', 'Cancelar pago']],
+    cancelled: [['restore_payment', 'Reactivar pago'], ['admin_payment_edit', 'Editar pago (admin)']],
   },
   charge: {
     active: [['update_charge', 'Corregir cargo'], ['transfer_charge', 'Trasladar a otro folio'], ['cancel_charge', 'Cancelar cargo']],

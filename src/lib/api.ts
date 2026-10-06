@@ -1371,6 +1371,48 @@ class ApiClient {
     window.dispatchEvent(new CustomEvent('data:changed'));
     return data;
   };
+  adminEditarPago = async (p: {
+    paymentId: string; monto: number; metodo: string; referencia?: string; fecha: string;
+    usuarioId?: string | null; turnoId?: string | null; quitarTurno?: boolean;
+    estado: 'Activo' | 'Cancelado'; motivo: string; recalcularTurno: boolean;
+  }): Promise<any> => {
+    const { data, error } = await (operationalDb as any).rpc('vulo_admin_editar_pago', {
+      p_payment_id: p.paymentId, p_monto: p.monto, p_metodo: p.metodo, p_referencia: p.referencia || null,
+      p_fecha: p.fecha, p_usuario_id: p.usuarioId || null, p_turno_id: p.turnoId || null,
+      p_quitar_turno: Boolean(p.quitarTurno), p_estado: p.estado, p_motivo: p.motivo,
+      p_recalcular_turno: p.recalcularTurno,
+    });
+    if (error) {
+      if (error.code === 'PGRST202' || /vulo_admin_editar_pago|schema cache/i.test(error.message || '')) {
+        throw new Error('Falta correr el SQL SQL_2026-10-06_editar_pago_admin.sql en Supabase.');
+      }
+      throw error;
+    }
+    window.dispatchEvent(new CustomEvent('data:changed'));
+    return data;
+  };
+  recalcularTurno = async (turnoId: string): Promise<any> => {
+    const { data, error } = await (operationalDb as any).rpc('vulo_recalcular_turno', { p_turno_id: turnoId });
+    if (error) throw error;
+    window.dispatchEvent(new CustomEvent('data:changed'));
+    return data;
+  };
+  getTurnosAlrededor = async (fechaIso: string, dias = 3): Promise<any[]> => {
+    const base = new Date(fechaIso);
+    const desde = new Date(base.getTime() - dias * 86400000).toISOString();
+    const hasta = new Date(base.getTime() + dias * 86400000).toISOString();
+    const { data, error } = await (operationalDb as any).from('turnos_operativos')
+      .select('id, usuario_id, usuario_nombre, estado, abierto_at, cerrado_at')
+      .eq('hotel_id', this.hid()).gte('abierto_at', desde).lte('abierto_at', hasta)
+      .order('abierto_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  };
+  getTurno = async (id: string): Promise<any | null> => {
+    const { data } = await (operationalDb as any).from('turnos_operativos')
+      .select('id, usuario_id, usuario_nombre, estado, abierto_at, cerrado_at').eq('id', id).maybeSingle();
+    return data || null;
+  };
   private rpcReserva = async (fn: string, args: Record<string, any>): Promise<any> => {
     const { data, error } = await (operationalDb as any).rpc(fn, args);
     if (error) {
