@@ -44,6 +44,9 @@ export default function Limpieza() {
   const [asignarModal, setAsignarModal] = useState<{ open: boolean; tarea: any | null }>({ open: false, tarea: null });
   const [selectedEmpleado, setSelectedEmpleado] = useState('');
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
+  const [modoLimpieza, setModoLimpieza] = useState<'completo' | 'rapido'>('completo');
+  const rapido = modoLimpieza === 'rapido';
+  useEffect(() => { api.getLimpiezaModo().then(setModoLimpieza).catch(() => {}); }, []);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -167,8 +170,8 @@ export default function Limpieza() {
     try {
       await api.updateEstadoLimpieza(tarea.id, nuevoEstado);
       toast({
-        title: 'Estado actualizado',
-        description: `Habitación ${getHabitacionNumero(tarea)} · ${nuevoEstado}`,
+        title: rapido && nuevoEstado === 'Verificada' ? `Habitación ${getHabitacionNumero(tarea)} limpia` : 'Estado actualizado',
+        description: rapido && nuevoEstado === 'Verificada' ? 'Lista para rentar.' : `Habitación ${getHabitacionNumero(tarea)} · ${nuevoEstado}`,
       });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -294,11 +297,15 @@ export default function Limpieza() {
         deleting={eliminandoBulk}
         entityName="tareas"
         extraActions={
+          rapido ? (
+            <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Verificada')}><Check className="mr-1 h-3.5 w-3.5" /> Marcar limpias</Button>
+          ) : (
           <>
             <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('EnProceso')}>Iniciar</Button>
             <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Completada')}>Completar</Button>
             <Button variant="outline" size="sm" onClick={() => cambiarEstadoBulk('Verificada')}>Verificar</Button>
           </>
+          )
         }
       />
 
@@ -362,17 +369,22 @@ export default function Limpieza() {
                   )}
 
                   <div className="mt-3 flex items-center gap-2 border-t pt-3">
-                    {tarea.estado === 'Pendiente' && (
+                    {rapido && tarea.estado !== 'Verificada' && (
+                      <Button size="sm" className="h-8 flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={() => handleCambiarEstado(tarea, 'Verificada')}>
+                        <Check className="mr-1 h-3.5 w-3.5" /> Marcar limpia
+                      </Button>
+                    )}
+                    {!rapido && tarea.estado === 'Pendiente' && (
                       <Button size="sm" className="h-8 flex-1" onClick={() => handleCambiarEstado(tarea, 'EnProceso')}>
                         <Play className="mr-1 h-3.5 w-3.5" /> Iniciar
                       </Button>
                     )}
-                    {(tarea.estado === 'EnProceso' || tarea.estado === 'En Proceso') && (
+                    {!rapido && (tarea.estado === 'EnProceso' || tarea.estado === 'En Proceso') && (
                       <Button size="sm" className="h-8 flex-1" onClick={() => handleCambiarEstado(tarea, 'Completada')}>
                         <Check className="mr-1 h-3.5 w-3.5" /> Marcar lista
                       </Button>
                     )}
-                    {tarea.estado === 'Completada' && (
+                    {!rapido && tarea.estado === 'Completada' && (
                       <Button size="sm" variant="outline" className="h-8 flex-1" onClick={() => handleCambiarEstado(tarea, 'Verificada')}>
                         <Eye className="mr-1 h-3.5 w-3.5" /> Verificar habitación
                       </Button>

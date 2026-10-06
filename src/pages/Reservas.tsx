@@ -30,7 +30,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useCheckoutAction } from '@/hooks/useCheckoutAction';
 import api, { todayLocal } from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TimelineGrid, type TimelineReservationAction, type TimelineRoomGrouping } from '@/components/reservas/TimelineGrid';
@@ -189,7 +188,6 @@ export default function Reservas() {
   const [salidasHoyData, setSalidasHoyData] = useState<any[]>([]);
   const [modalSalidas, setModalSalidas] = useState(false);
   const { toast } = useToast();
-  const { iniciarCheckout } = useCheckoutAction(() => cargarDatos(true));
 
   const handleCardKeyDown = (
     e: React.KeyboardEvent,
@@ -488,7 +486,7 @@ export default function Reservas() {
       setCancelTarget(reserva);
       return;
     }
-    if (action === 'checkout') return void iniciarCheckout(reserva.id);
+    if (action === 'checkout') return navigate(`/checkout/${reserva.id}`);
     if (viewOnlyMode) {
       toast({ title: 'Modo sólo consulta', description: 'Abre un turno para realizar esta operación.' });
       return;
@@ -822,7 +820,7 @@ export default function Reservas() {
               hasta={hastaCheckout}
               onDesdeChange={setDesdeCheckout}
               onHastaChange={setHastaCheckout}
-              onAction={(id) => void iniciarCheckout(id)}
+              onAction={(id) => navigate(`/checkout/${id}`)}
               onRefresh={cargarDatos}
             />
           </TabsContent>
@@ -1682,9 +1680,9 @@ export default function Reservas() {
                     variant="outline"
                     // Relacionado con `Check-In-Front/src/pages/CheckOut.tsx`:
                     // Navega al flujo de check-out de la reserva seleccionada.
-                    onClick={() => { setModalSalidas(false); void iniciarCheckout(r.id); }}
+                    onClick={() => navigate(`/checkout/${r.id}`)}
                   >
-                    Check-out
+                    Ir a Check-out
                   </Button>
                 </div>
               ))}

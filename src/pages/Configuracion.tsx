@@ -84,8 +84,7 @@ export default function Configuracion() {
       horaCheckout: h.hora_checkout ?? hotelData.horaCheckout,
       timezone: h.timezone ?? hotelData.timezone ?? 'America/Mexico_City',
       horaInicioDia: h.hora_inicio_dia ?? hotelData.horaInicioDia,
-      modoCheckout: h.modo_checkout ?? hotelData.modoCheckout,
-      checkoutRapidoLimpia: h.checkout_rapido_limpia ?? hotelData.checkoutRapidoLimpia,
+      modoLimpieza: h.modo_limpieza ?? hotelData.modoLimpieza,
       estrellas: Number(h.estrellas ?? hotelData.estrellas ?? 3),
       slug: h.slug ?? hotelData.slug ?? '',
       descripcionPublica: h.descripcion_publica ?? hotelData.descripcionPublica ?? '',
@@ -127,10 +126,7 @@ export default function Configuracion() {
       hora_checkout: ui.horaCheckout,
       timezone: ui.timezone || 'America/Mexico_City',
       ...(ui.horaInicioDia !== undefined ? { hora_inicio_dia: Number(ui.horaInicioDia) || 0 } : {}),
-      ...(ui.modoCheckout !== undefined ? {
-        modo_checkout: ui.modoCheckout === 'rapido' ? 'rapido' : 'completo',
-        checkout_rapido_limpia: !!ui.checkoutRapidoLimpia,
-      } : {}),
+      ...(ui.modoLimpieza !== undefined ? { modo_limpieza: ui.modoLimpieza === 'rapido' ? 'rapido' : 'completo' } : {}),
       estrellas: Number(ui.estrellas) || 3,
       slug,
       descripcion_publica: ui.descripcionPublica || null,
@@ -417,27 +413,17 @@ export default function Configuracion() {
                     <p className="text-xs text-muted-foreground">Antes de esta hora, el sistema sigue usando la fecha del día anterior (turno de noche).</p>
                   </div>
                 )}
-                {hotelData.modoCheckout !== undefined && (
+                {hotelData.modoLimpieza !== undefined && (
                   <div className="space-y-2 rounded-md border p-3">
-                    <Label>Proceso de check-out</Label>
+                    <Label>Proceso de limpieza</Label>
                     <select
                       className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={hotelData.modoCheckout === 'rapido' ? 'rapido' : 'completo'}
-                      onChange={(e) => setHotelData({ ...hotelData, modoCheckout: e.target.value })}
+                      value={hotelData.modoLimpieza === 'rapido' ? 'rapido' : 'completo'}
+                      onChange={(e) => setHotelData({ ...hotelData, modoLimpieza: e.target.value })}
                     >
-                      <option value="completo">Completo: revisión de habitación y liquidación</option>
-                      <option value="rapido">Rápido: un clic y se libera la habitación</option>
+                      <option value="completo">Completo: iniciar, marcar lista y verificar</option>
+                      <option value="rapido">Rápido: un clic y queda limpia y disponible</option>
                     </select>
-                    <p className="text-xs text-muted-foreground">En modo rápido, si hay saldo pendiente o entregables sin devolver se abre el check-out completo.</p>
-                    {hotelData.modoCheckout === 'rapido' && (
-                      <div className="flex items-center justify-between gap-3 pt-1">
-                        <div>
-                          <p className="text-sm font-medium">Dejar la habitación lista para rentar</p>
-                          <p className="text-xs text-muted-foreground">Si está apagado, se libera y pasa a limpieza.</p>
-                        </div>
-                        <Switch checked={!!hotelData.checkoutRapidoLimpia} onCheckedChange={(v) => setHotelData({ ...hotelData, checkoutRapidoLimpia: v })} />
-                      </div>
-                    )}
                   </div>
                 )}
                 <div className="space-y-2">
