@@ -1,5 +1,6 @@
 import api, { todayLocal } from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
+import { legacyRoomBlocked, roomBlockedForStay, type RoomBlock } from '@/lib/roomBlocks';
 
 const PATCH_KEY = '__hospedapp_reservation_integrity_patch_v1__';
 const root = globalThis as any;
@@ -26,8 +27,7 @@ if (!root[PATCH_KEY]) {
     let habitacionesQuery = db
       .from('habitaciones')
       .select('*, tipos_habitacion(*)')
-      .eq('hotel_id', hotelId)
-      .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio,Bloqueada)');
+      .eq('hotel_id', hotelId);
     if (tipoId) habitacionesQuery = habitacionesQuery.eq('tipo_habitacion_id', tipoId);
 
     let reservasQuery = db.from('reservas')
@@ -37,9 +37,10 @@ if (!root[PATCH_KEY]) {
       .lt('fecha_checkin', effectiveCheckout);
     if (excludeReservaId) reservasQuery = reservasQuery.neq('id', excludeReservaId);
 
-    const [{ data: habitaciones, error: habError }, { data: conflictos, error: reservasError }] = await Promise.all([
+    const [{ data: habitaciones, error: habError }, { data: conflictos, error: reservasError }, bloqueos] = await Promise.all([
       habitacionesQuery,
       reservasQuery,
+      client.getBloqueos({ desde: checkin, hasta: effectiveCheckout }) as Promise<RoomBlock[]>,
     ]);
     if (habError) throw habError;
     if (reservasError) throw reservasError;
@@ -57,7 +58,10 @@ if (!root[PATCH_KEY]) {
       })
       .map((reservation: any) => reservation.habitacion_id)
       .filter(Boolean));
-    return (habitaciones || []).filter((h: any) => !ocupadas.has(h.id));
+    // Banderas antiguas sin fecha bloquean siempre; los bloqueos con fecha sólo su rango.
+    return (habitaciones || []).filter((h: any) => !ocupadas.has(h.id)
+      && !legacyRoomBlocked(h)
+      && !roomBlockedForStay(bloqueos, h.id, checkin, effectiveCheckout));
   };
 
   // El servidor valida habitación, fechas y estancias activas en una sola

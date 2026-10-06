@@ -68,6 +68,7 @@ import { MultiImageUpload } from '@/components/ui/multi-image-upload';
 import api from '@/lib/api';
 import { runAll } from '@/lib/bulk';
 import { ReportarFallaDialog } from '@/components/mantenimiento/ReportarFallaDialog';
+import { BloqueoHabitacionDialog } from '@/components/mantenimiento/BloqueoHabitacionDialog';
 import { ComboboxCreatable } from '@/components/ui/combobox-creatable';
 
 const esLimpia = (h: any) => ['limpia', 'lista'].some((v) => String(h?.estado_limpieza || 'Limpia').toLowerCase().includes(v));
@@ -107,6 +108,7 @@ export default function Habitaciones() {
   const [usarImpuestosTipo, setUsarImpuestosTipo] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [fallaHab, setFallaHab] = useState<any | null>(null);
+  const [bloqueoHabs, setBloqueoHabs] = useState<any[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [eliminandoBulk, setEliminandoBulk] = useState(false);
 
@@ -217,6 +219,9 @@ export default function Habitaciones() {
         for (const h of bloqueadas) await api.liberarHabitacion(h.id, true);
         const resto = ids.filter((id) => !bloqueadas.some((h) => h.id === id));
         await Promise.all(resto.map(id => api.updateHabitacion(id, { estado_habitacion: nuevo })));
+      } else if (nuevo === 'Bloqueada') {
+        setBloqueoHabs(habitaciones.filter((h) => ids.includes(h.id)));
+        return;
       } else {
         await runAll(ids, id => api.updateHabitacion(id, { estado_habitacion: nuevo }));
       }
@@ -295,6 +300,10 @@ export default function Habitaciones() {
   const handleChangeStatus = async (hab: any, newStatus: string) => {
     if (newStatus === 'Mantenimiento') {
       setFallaHab(hab);
+      return;
+    }
+    if (newStatus === 'Bloqueada') {
+      setBloqueoHabs([hab]);
       return;
     }
     try {
@@ -560,7 +569,7 @@ export default function Habitaciones() {
                         <DropdownMenuItem onClick={() => openEditModal(hab)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Disponible')}><DoorOpen className="mr-2 h-4 w-4" /> Disponible</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Bloqueada')}><DoorClosed className="mr-2 h-4 w-4" /> Bloquear</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Bloqueada')}><DoorClosed className="mr-2 h-4 w-4" /> Bloquear por fechas</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Limpieza')}><Sparkles className="mr-2 h-4 w-4" /> Enviar a limpieza</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Mantenimiento')}><Wrench className="mr-2 h-4 w-4" /> Reportar falla</DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -600,6 +609,7 @@ export default function Habitaciones() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Limpieza')}><Sparkles className="mr-2 h-4 w-4" /> Enviar a limpieza</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Mantenimiento')}><Wrench className="mr-2 h-4 w-4" /> Reportar falla</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleChangeStatus(hab, 'Bloqueada')}><DoorClosed className="mr-2 h-4 w-4" /> Bloquear por fechas</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => confirmDelete(hab)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -714,6 +724,7 @@ export default function Habitaciones() {
         </AlertDialogContent>
       </AlertDialog>
       <ReportarFallaDialog habitacion={fallaHab} onOpenChange={(v) => { if (!v) setFallaHab(null); }} onSaved={() => void cargarDatos()} />
+      <BloqueoHabitacionDialog habitaciones={bloqueoHabs} onOpenChange={(v) => { if (!v) setBloqueoHabs([]); }} onSaved={() => void cargarDatos()} />
     </MainLayout>
   );
 }

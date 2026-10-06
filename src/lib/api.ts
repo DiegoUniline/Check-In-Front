@@ -6,6 +6,7 @@ import { withOfflineCache } from '@/lib/offlineCache';
 import { assertShiftWriteAllowed } from '@/lib/shiftAccess';
 import { occupancyEnd, occupiesNight } from '@/lib/stayOccupancy';
 import { formatDate as formatDateOnly } from '@/lib/dateFormat';
+import { legacyRoomBlocked, roomBlockedForStay, type RoomBlock } from '@/lib/roomBlocks';
 import { fetchAllRows } from '@/lib/fetchAllRows';
 import { onlineReservationDateError, onlineReservationSnapshot } from '@/lib/onlineReservations';
 
@@ -950,6 +951,7 @@ class ApiClient {
   getHabitaciones = async (params?: Record<string, string>): Promise<any> => {
     const key = `habitaciones:${this.hid()}:${params?.estado_habitacion || 'all'}`;
     return withOfflineCache(key, async () => {
+      await this.syncBloqueos();
       let q = supabase.from('habitaciones').select('*, tipos_habitacion(*)').eq('hotel_id', this.hid()).order('numero');
       if (params?.estado_habitacion) q = q.eq('estado_habitacion', params.estado_habitacion);
       const { data, error } = await q;
@@ -975,11 +977,11 @@ class ApiClient {
       let q = supabase
         .from('habitaciones')
         .select('*, tipos_habitacion(*)')
-        .eq('hotel_id', this.hid())
-        .not('estado_habitacion', 'in', '(Mantenimiento,FueraDeServicio,Bloqueada)');
+        .eq('hotel_id', this.hid());
       if (tipoId) q = q.eq('tipo_habitacion_id', tipoId);
       return q.order('id').range(from, to);
     });
+    const bloqueos = await this.getBloqueos({ desde: checkin, hasta: effectiveCheckout });
     const ocupadas = await fetchAllRows<any>((from, to) => {
       let conflictsQuery = supabase
         .from('reservas')
@@ -999,7 +1001,8 @@ class ApiClient {
       })
       .map((reservation: any) => reservation.habitacion_id));
     return (habs || []).filter((h: any) => !ocupadasIds.has(h.id)
-      && String(h.estado_mantenimiento || 'OK').toLowerCase() === 'ok')
+      && !legacyRoomBlocked(h)
+      && !roomBlockedForStay(bloqueos, h.id, checkin, effectiveCheckout))
       .map((h: any) => (Number(h.precio_noche) > 0 ? { ...h, precio_base: Number(h.precio_noche) } : h));
   };
   createHabitacion = async (data: any): Promise<any> => {
@@ -1569,17 +1572,21 @@ class ApiClient {
   explicarHabitacionNoDisponible = async (habitacionId: string, checkin: string, checkout: string): Promise<string> => {
     const hotelId = this.hid();
     const end = checkout <= checkin ? addCalendarDays(checkin, 1) : checkout;
-    const [{ data: hab }, { data: reservas }] = await Promise.all([
-      supabase.from('habitaciones').select('numero, estado_habitacion, estado_mantenimiento').eq('id', habitacionId).eq('hotel_id', hotelId).maybeSingle(),
+    const [{ data: hab }, { data: reservas }, bloqueos] = await Promise.all([
+      supabase.from('habitaciones').select('*').eq('id', habitacionId).eq('hotel_id', hotelId).maybeSingle(),
       (supabase as any).from('reservas')
         .select('numero_reserva, fecha_checkin, fecha_checkout, estado, origen, checkin_realizado, checkout_realizado, clientes(nombre, apellido_paterno)')
         .eq('hotel_id', hotelId).eq('habitacion_id', habitacionId)
         .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
         .lt('fecha_checkin', end),
+      this.getBloqueos({ habitacionId, desde: checkin, hasta: end }),
     ]);
-    if (hab && (['Mantenimiento', 'FueraDeServicio', 'Bloqueada'].includes(String((hab as any).estado_habitacion))
-      || String((hab as any).estado_mantenimiento || 'OK').toLowerCase() !== 'ok')) {
-      return `Está en mantenimiento o bloqueada (${(hab as any).estado_habitacion}).`;
+    if (hab && legacyRoomBlocked(hab)) {
+      return `Está en mantenimiento o bloqueada sin fecha de fin (${(hab as any).estado_habitacion}). Libérala o define sus fechas en Habitaciones.`;
+    }
+    const bloqueo = roomBlockedForStay(bloqueos, habitacionId, checkin, end);
+    if (bloqueo) {
+      return `Está bloqueada del ${formatDateOnly(bloqueo.fecha_desde)} al ${formatDateOnly(bloqueo.fecha_hasta)} (${bloqueo.motivo || bloqueo.tipo}).`;
     }
     const today = todayLocal();
     const conflicto = (reservas || []).find((r: any) => {
@@ -1946,7 +1953,14 @@ class ApiClient {
     return (data || []).map((t: any) => ({ ...t, habitacion_numero: t.habitaciones?.numero }));
   };
   /** Reporta una falla: crea el ticket y, si se pide, deja la habitación fuera de venta. */
-  reportarFallaHabitacion = async (hab: { id: string; estado_habitacion?: string }, data: { titulo: string; descripcion: string; categoria?: string; prioridad?: string; bloquear: boolean }): Promise<any> => {
+  reportarFallaHabitacion = async (hab: { id: string; estado_habitacion?: string }, data: { titulo: string; descripcion: string; categoria?: string; prioridad?: string; bloquear: boolean; desde?: string; hasta?: string; tipo?: string }): Promise<any> => {
+    if (data.bloquear && data.desde && data.hasta) {
+      return this.crearBloqueo({
+        habitacionId: hab.id, desde: data.desde, hasta: data.hasta, tipo: data.tipo || 'Mantenimiento',
+        motivo: data.titulo, crearTicket: true,
+        ticket: { titulo: data.titulo, descripcion: data.descripcion, categoria: data.categoria || 'General', prioridad: data.prioridad || 'Normal' },
+      });
+    }
     const ticket = await this.createTareaMantenimiento({
       habitacion_id: hab.id,
       titulo: data.titulo,
@@ -1968,6 +1982,9 @@ class ApiClient {
   /** Cierra los reportes abiertos de la habitación y la deja disponible. */
   liberarHabitacion = async (habId: string, cerrarReportes: boolean): Promise<{ cerrados: number }> => {
     let cerrados = 0;
+    // Termina el bloqueo por fechas que cubre hoy (los futuros se conservan).
+    const { error: blockError } = await (operationalDb as any).rpc('vulo_liberar_bloqueo_hoy', { p_habitacion_id: habId });
+    if (blockError && blockError.code !== 'PGRST202') throw blockError;
     if (cerrarReportes) {
       const { data: abiertos, error } = await supabase.from('tareas_mantenimiento').select('id')
         .eq('hotel_id', this.hid()).eq('habitacion_id', habId)
@@ -1987,6 +2004,50 @@ class ApiClient {
     if (error) throw error;
     return { cerrados };
   };
+  private lastBlockSync = 0;
+  /** Aplica/libera el estado de hoy según los bloqueos por fecha (máx. cada 5 min). */
+  syncBloqueos = async (force = false): Promise<void> => {
+    if (!force && Date.now() - this.lastBlockSync < 5 * 60 * 1000) return;
+    this.lastBlockSync = Date.now();
+    try {
+      await (operationalDb as any).rpc('vulo_sync_bloqueos', { p_hotel_id: this.getHotelId() });
+    } catch {
+      // Sin el SQL de bloqueos la app sigue con las banderas antiguas.
+    }
+  };
+  getBloqueos = async (params: { desde?: string; hasta?: string; habitacionId?: string; incluirInactivos?: boolean } = {}): Promise<RoomBlock[]> => {
+    let q = (operationalDb as any).from('habitacion_bloqueos').select('*').eq('hotel_id', this.hid());
+    if (!params.incluirInactivos) q = q.eq('estado', 'Activo');
+    if (params.habitacionId) q = q.eq('habitacion_id', params.habitacionId);
+    if (params.desde) q = q.gte('fecha_hasta', params.desde.slice(0, 10));
+    if (params.hasta) q = q.lte('fecha_desde', params.hasta.slice(0, 10));
+    const { data, error } = await q.order('fecha_desde');
+    if (error) {
+      if (error.code === '42P01' || /habitacion_bloqueos/i.test(error.message || '')) return [];
+      throw error;
+    }
+    return data || [];
+  };
+  private rpcBloqueo = async (fn: string, args: Record<string, any>): Promise<any> => {
+    const { data, error } = await (operationalDb as any).rpc(fn, args);
+    if (error) {
+      if (error.code === 'PGRST202' || new RegExp(`${fn}|schema cache`, 'i').test(error.message || '')) {
+        throw new Error('Falta correr el SQL SQL_2026-10-06_bloqueos_por_fecha.sql en Supabase.');
+      }
+      throw error;
+    }
+    window.dispatchEvent(new CustomEvent('data:changed'));
+    return data;
+  };
+  crearBloqueo = (p: { habitacionId: string; desde: string; hasta: string; tipo: string; motivo: string; crearTicket?: boolean; ticket?: Record<string, any> }): Promise<any> =>
+    this.rpcBloqueo('vulo_crear_bloqueo', {
+      p_habitacion_id: p.habitacionId, p_desde: p.desde, p_hasta: p.hasta, p_tipo: p.tipo, p_motivo: p.motivo,
+      p_crear_ticket: Boolean(p.crearTicket), p_ticket: p.ticket || {},
+    });
+  editarBloqueo = (id: string, p: { desde: string; hasta: string; tipo: string; motivo: string }): Promise<any> =>
+    this.rpcBloqueo('vulo_editar_bloqueo', { p_bloqueo_id: id, p_desde: p.desde, p_hasta: p.hasta, p_tipo: p.tipo, p_motivo: p.motivo });
+  terminarBloqueo = (id: string, motivo?: string): Promise<any> =>
+    this.rpcBloqueo('vulo_cancelar_bloqueo', { p_bloqueo_id: id, p_motivo: motivo || null });
   contarReportesAbiertos = async (habId: string): Promise<number> => {
     const { count } = await supabase.from('tareas_mantenimiento').select('id', { count: 'exact', head: true })
       .eq('hotel_id', this.hid()).eq('habitacion_id', habId)

@@ -167,7 +167,16 @@ export default function PublicHotel() {
         .in('estado', ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'])
         // Hospedados con salida vencida siguen ocupando la habitación.
         .or(`fecha_checkout.gt.${localDateForZone(hotel.timezone)},estado.in.(CheckIn,Hospedado)`);
-      setReservas(data || []);
+      const { data: blocks } = await (supabase as any).rpc('get_public_room_blocks', { p_hotel_id: hotel.id });
+      // Un bloqueo se trata como estancia: noches fecha_desde..fecha_hasta.
+      const blockStays = (Array.isArray(blocks) ? blocks : []).map((b: any) => ({
+        id: `bloqueo-${b.habitacion_id}-${b.fecha_desde}`,
+        habitacion_id: b.habitacion_id,
+        fecha_checkin: b.fecha_desde,
+        fecha_checkout: format(addDays(parseISO(String(b.fecha_hasta).slice(0, 10)), 1), 'yyyy-MM-dd'),
+        estado: 'Confirmada',
+      }));
+      setReservas([...(data || []), ...blockStays]);
     };
     load();
     const ch = supabase.channel(`pub-hotel-${hotel.id}`)

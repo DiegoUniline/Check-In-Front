@@ -13,7 +13,9 @@ import { getEstadoConfig } from './estadoConfig';
 import { formatDate } from '@/lib/dateFormat';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { todayLocal } from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
+import { blockCoversNight, blockOverlapsStay, blockTipoLabel, legacyRoomBlocked, type RoomBlock } from '@/lib/roomBlocks';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { occupiesNight } from '@/lib/stayOccupancy';
 
 export type TimelineReservationAction =
@@ -173,6 +175,24 @@ export function TimelineGrid({
   const days = useMemo(() => {
     return Array.from({ length: daysToShow }, (_, i) => addDays(startOfDay(startDate), i));
   }, [startDate, daysToShow]);
+  const rangeStartKey = format(days[0], 'yyyy-MM-dd');
+  const rangeEndKey = format(days[days.length - 1] || days[0], 'yyyy-MM-dd');
+  const [bloqueos, setBloqueos] = useState<RoomBlock[]>([]);
+  const [blocksTick, setBlocksTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    api.getBloqueos({ desde: rangeStartKey, hasta: rangeEndKey })
+      .then((list) => { if (alive) setBloqueos(list); })
+      .catch(() => { if (alive) setBloqueos([]); });
+    return () => { alive = false; };
+  }, [rangeStartKey, rangeEndKey, blocksTick]);
+  useRealtimeSync('habitacion_bloqueos', () => setBlocksTick((n) => n + 1));
+  const blockForCell = (roomId: string, dayIndex: number) => {
+    const day = days[dayIndex];
+    if (!day) return undefined;
+    const key = format(day, 'yyyy-MM-dd');
+    return bloqueos.find((b) => b.habitacion_id === roomId && blockCoversNight(b, key));
+  };
   // "Hoy" en la zona horaria del hotel, no la del navegador.
   const todayKey = todayLocal();
   const today = parseISO(todayKey);
@@ -255,13 +275,13 @@ export function TimelineGrid({
     if (candidate >= start) {
       let end = candidate;
       for (let i = start; i < candidate; i++) {
-        if (getReservationForCell(roomId, i)) { end = i; break; }
+        if (getReservationForCell(roomId, i) || blockForCell(roomId, i)) { end = i; break; }
       }
       return Math.max(start, end);
     }
     let end = candidate;
     for (let i = start - 1; i >= candidate; i--) {
-      if (getReservationForCell(roomId, i)) { end = i + 1; break; }
+      if (getReservationForCell(roomId, i) || blockForCell(roomId, i)) { end = i + 1; break; }
     }
     return Math.min(start, end);
   };
@@ -272,11 +292,9 @@ export function TimelineGrid({
     return Math.max(0, Math.min(days.length - 1, index));
   };
 
-  const roomBlocked = (room: any) => {
-    const maintenance = String(room?.estado_mantenimiento || 'OK').toLowerCase();
-    const state = String(room?.estado_habitacion || '').toLowerCase();
-    return maintenance !== 'ok' || state.includes('mantenimiento') || state.includes('fuera') || state.includes('bloquead');
-  };
+  // Sólo las banderas antiguas sin fecha bloquean toda la fila; los bloqueos
+  // con fecha se pintan en sus noches.
+  const roomBlocked = (room: any) => legacyRoomBlocked(room);
 
   const handleRowMouseDown = (habitacionId: string, event: React.MouseEvent<HTMLElement>) => {
     if (!canCreate || event.button !== 0) return;
@@ -286,7 +304,7 @@ export function TimelineGrid({
     if (!event.currentTarget.contains(event.target as Node)) return;
     if ((event.target as HTMLElement).closest('[data-reservation-id]')) return;
     const dayIndex = dayIndexFromPointer(event);
-    if (getReservationForCell(habitacionId, dayIndex)) return;
+    if (getReservationForCell(habitacionId, dayIndex) || blockForCell(habitacionId, dayIndex)) return;
     event.preventDefault();
     setDragStart({ roomId: habitacionId, dayIndex });
     setDragEnd(dayIndex);
@@ -347,8 +365,7 @@ export function TimelineGrid({
   ].filter(Boolean).join(' ') || reserva.cliente_nombre || 'Sin nombre';
 
   const isRoomAvailableFor = (room: any, reserva: any, checkout = reserva.fecha_checkout) => {
-    const maintenance = String(room.estado_mantenimiento || 'OK').toLowerCase();
-    if (maintenance !== 'ok' || String(room.estado_habitacion || '').toLowerCase().includes('mantenimiento')) return false;
+    if (legacyRoomBlocked(room)) return false;
     const activeStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && !reserva.checkout_realizado;
     // Para un cambio de habitación la nueva debe estar lista; para ajustar la
     // salida en su propia habitación (ocupada por el mismo huésped) no aplica.
@@ -358,6 +375,7 @@ export function TimelineGrid({
     }
     const checkin = activeStay ? format(today, 'yyyy-MM-dd') : String(reserva.fecha_checkin || '').slice(0, 10);
     const nextCheckout = effectiveCheckoutDate(checkin, String(checkout || '').slice(0, 10));
+    if (bloqueos.some((b) => b.habitacion_id === room.id && blockOverlapsStay(b, checkin, nextCheckout))) return false;
     return !reservas.some((other) => {
       if (other.id === reserva.id || other.habitacion_id !== room.id) return false;
       if (['Cancelada', 'NoShow', 'CheckOut'].includes(String(other.estado || ''))) return false;
@@ -571,6 +589,27 @@ export function TimelineGrid({
                         style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(113,113,122,0.12) 0 6px, transparent 6px 12px)' }}
                       />
                     )}
+                    {bloqueos.filter((b) => b.habitacion_id === hab.id).map((b) => {
+                      const lo = Math.max(0, differenceInCalendarDays(parseISO(b.fecha_desde.slice(0, 10)), days[0]));
+                      const hi = Math.min(days.length - 1, differenceInCalendarDays(parseISO(b.fecha_hasta.slice(0, 10)), days[0]));
+                      if (hi < 0 || lo > days.length - 1 || hi < lo) return null;
+                      const label = `${blockTipoLabel(b.tipo)} · ${formatDate(b.fecha_desde)} → ${formatDate(b.fecha_hasta)}${b.motivo ? ` · ${b.motivo}` : ''}`;
+                      return <div
+                        key={b.id}
+                        title={label}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        className="absolute inset-y-0.5 z-[2] flex cursor-not-allowed items-center gap-1 overflow-hidden whitespace-nowrap rounded-md border border-dashed border-zinc-400 px-1.5 text-[10px] font-semibold text-zinc-700"
+                        style={{
+                          left: `${lo * cellWidthPx + 1}px`,
+                          width: `${(hi - lo + 1) * cellWidthPx - 2}px`,
+                          backgroundColor: 'rgba(244,244,245,0.95)',
+                          backgroundImage: 'repeating-linear-gradient(135deg, rgba(113,113,122,0.18) 0 6px, transparent 6px 12px)',
+                        }}
+                      >
+                        <Wrench className="h-3 w-3 shrink-0" />
+                        {!isCompact && <span className="truncate">{b.motivo || blockTipoLabel(b.tipo)}</span>}
+                      </div>;
+                    })}
                     {isDragging && dragStart?.roomId === hab.id && dragEnd !== null && (() => {
                       const lo = Math.min(dragStart.dayIndex, dragEnd);
                       const hi = Math.max(dragStart.dayIndex, dragEnd);

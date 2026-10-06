@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import api, { todayLocal } from '@/lib/api';
+import { formatDate } from '@/lib/dateFormat';
 
 type Props = {
   habitacion: any | null;
@@ -14,19 +15,23 @@ type Props = {
   onSaved?: () => void;
 };
 
-const vacio = { categoria: 'General', titulo: '', prioridad: 'Normal', descripcion: '', bloquear: true };
+const nuevo = () => ({ categoria: 'General', titulo: '', prioridad: 'Normal', descripcion: '', bloquear: true, desde: todayLocal(), hasta: todayLocal() });
 
 export function ReportarFallaDialog({ habitacion, onOpenChange, onSaved }: Props) {
   const { toast } = useToast();
-  const [form, setForm] = useState(vacio);
+  const [form, setForm] = useState(nuevo);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { if (habitacion) setForm(vacio); }, [habitacion?.id]);
+  useEffect(() => { if (habitacion) setForm(nuevo()); }, [habitacion?.id]);
 
   const guardar = async () => {
     if (!habitacion) return;
     if (!form.titulo.trim() || !form.descripcion.trim()) {
       toast({ title: 'Faltan datos', description: 'Escribe qué falla y una descripción.', variant: 'destructive' });
+      return;
+    }
+    if (form.bloquear && (!form.desde || !form.hasta || form.hasta < form.desde)) {
+      toast({ title: 'Revisa las fechas', description: 'La fecha fin no puede ser anterior a la de inicio.', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -37,8 +42,10 @@ export function ReportarFallaDialog({ habitacion, onOpenChange, onSaved }: Props
         categoria: form.categoria,
         prioridad: form.prioridad,
         bloquear: form.bloquear,
+        desde: form.desde,
+        hasta: form.hasta,
       });
-      toast({ title: 'Falla reportada', description: `Habitación ${habitacion.numero}${form.bloquear ? ' fuera de venta hasta resolverla' : ''}` });
+      toast({ title: 'Falla reportada', description: `Habitación ${habitacion.numero}${form.bloquear ? ` fuera de venta del ${formatDate(form.desde)} al ${formatDate(form.hasta)}` : ''}` });
       onOpenChange(false);
       onSaved?.();
     } catch (error: any) {
@@ -96,9 +103,19 @@ export function ReportarFallaDialog({ habitacion, onOpenChange, onSaved }: Props
             <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#10233F]" checked={form.bloquear} onChange={(e) => setForm({ ...form, bloquear: e.target.checked })} />
             <span>
               <span className="block font-medium">Sacar de venta</span>
-              <span className="block text-[11px] text-muted-foreground">No se podrá reservar hasta cerrar el reporte o marcarla como disponible.</span>
+              <span className="block text-[11px] text-muted-foreground">Sólo en las fechas elegidas. Si cierras el reporte antes, se libera ese día.</span>
             </span>
           </label>
+          {form.bloquear && <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Desde (primera noche)</Label>
+              <Input type="date" value={form.desde} min={todayLocal()} onChange={(e) => setForm({ ...form, desde: e.target.value, hasta: form.hasta < e.target.value ? e.target.value : form.hasta })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Hasta (última noche)</Label>
+              <Input type="date" value={form.hasta} min={form.desde} onChange={(e) => setForm({ ...form, hasta: e.target.value })} />
+            </div>
+          </div>}
         </div>
         <DialogFooter>
           <Button variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>Cancelar</Button>
