@@ -34,6 +34,9 @@ export function StayConsumptionPicker({ value, onChange }: Props) {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
+  const [customName, setCustomName] = useState('');
+  const [customPrice, setCustomPrice] = useState('');
+  const [customQty, setCustomQty] = useState('1');
 
   useEffect(() => {
     let alive = true;
