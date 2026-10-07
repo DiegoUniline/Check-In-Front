@@ -1239,8 +1239,82 @@ export type Database = {
           },
         ]
       }
+      habitacion_bloqueos: {
+        Row: {
+          actualizado_at: string | null
+          actualizado_por_nombre: string | null
+          created_at: string
+          created_by: string | null
+          created_by_nombre: string | null
+          estado: string
+          fecha_desde: string
+          fecha_hasta: string
+          habitacion_id: string
+          hotel_id: string
+          id: string
+          motivo: string
+          tarea_id: string | null
+          tipo: string
+        }
+        Insert: {
+          actualizado_at?: string | null
+          actualizado_por_nombre?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_nombre?: string | null
+          estado?: string
+          fecha_desde: string
+          fecha_hasta: string
+          habitacion_id: string
+          hotel_id: string
+          id?: string
+          motivo: string
+          tarea_id?: string | null
+          tipo?: string
+        }
+        Update: {
+          actualizado_at?: string | null
+          actualizado_por_nombre?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_nombre?: string | null
+          estado?: string
+          fecha_desde?: string
+          fecha_hasta?: string
+          habitacion_id?: string
+          hotel_id?: string
+          id?: string
+          motivo?: string
+          tarea_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habitacion_bloqueos_habitacion_id_fkey"
+            columns: ["habitacion_id"]
+            isOneToOne: false
+            referencedRelation: "habitaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habitacion_bloqueos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habitacion_bloqueos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       habitaciones: {
         Row: {
+          bloqueo_id: string | null
           created_at: string | null
           estado_habitacion: string | null
           estado_limpieza: string | null
@@ -1261,6 +1335,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bloqueo_id?: string | null
           created_at?: string | null
           estado_habitacion?: string | null
           estado_limpieza?: string | null
@@ -1281,6 +1356,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bloqueo_id?: string | null
           created_at?: string | null
           estado_habitacion?: string | null
           estado_limpieza?: string | null
@@ -1339,6 +1415,7 @@ export type Database = {
           id: string
           impuestos_default: Json | null
           logo_url: string | null
+          modo_limpieza: string
           moneda_codigo: string
           moneda_locale: string
           moneda_simbolo: string
@@ -1372,6 +1449,7 @@ export type Database = {
           id?: string
           impuestos_default?: Json | null
           logo_url?: string | null
+          modo_limpieza?: string
           moneda_codigo?: string
           moneda_locale?: string
           moneda_simbolo?: string
@@ -1405,6 +1483,7 @@ export type Database = {
           id?: string
           impuestos_default?: Json | null
           logo_url?: string | null
+          modo_limpieza?: string
           moneda_codigo?: string
           moneda_locale?: string
           moneda_simbolo?: string
@@ -1842,6 +1921,184 @@ export type Database = {
           },
           {
             foreignKeyName: "politicas_reserva_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_agentes: {
+        Row: {
+          activo: boolean
+          ancho: number
+          created_at: string
+          created_by: string | null
+          hotel_id: string
+          id: string
+          impresora: string | null
+          impresoras: Json
+          nombre: string
+          token_hash: string | null
+          ultimo_contacto: string | null
+          version: string | null
+        }
+        Insert: {
+          activo?: boolean
+          ancho?: number
+          created_at?: string
+          created_by?: string | null
+          hotel_id: string
+          id?: string
+          impresora?: string | null
+          impresoras?: Json
+          nombre: string
+          token_hash?: string | null
+          ultimo_contacto?: string | null
+          version?: string | null
+        }
+        Update: {
+          activo?: boolean
+          ancho?: number
+          created_at?: string
+          created_by?: string | null
+          hotel_id?: string
+          id?: string
+          impresora?: string | null
+          impresoras?: Json
+          nombre?: string
+          token_hash?: string | null
+          ultimo_contacto?: string | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_agentes_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_agentes_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_codigos: {
+        Row: {
+          codigo: string
+          created_by: string | null
+          expira_at: string
+          hotel_id: string
+          nombre: string
+          usado_at: string | null
+        }
+        Insert: {
+          codigo: string
+          created_by?: string | null
+          expira_at: string
+          hotel_id: string
+          nombre: string
+          usado_at?: string | null
+        }
+        Update: {
+          codigo?: string
+          created_by?: string | null
+          expira_at?: string
+          hotel_id?: string
+          nombre?: string
+          usado_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_codigos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_codigos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_trabajos: {
+        Row: {
+          agente_id: string | null
+          contenido: Json
+          copias: number
+          created_at: string
+          created_by: string | null
+          created_by_nombre: string | null
+          error: string | null
+          estado: string
+          hotel_id: string
+          id: string
+          impreso_at: string | null
+          intentos: number
+          tipo: string
+          titulo: string
+          tomado_at: string | null
+        }
+        Insert: {
+          agente_id?: string | null
+          contenido?: Json
+          copias?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_nombre?: string | null
+          error?: string | null
+          estado?: string
+          hotel_id: string
+          id?: string
+          impreso_at?: string | null
+          intentos?: number
+          tipo?: string
+          titulo?: string
+          tomado_at?: string | null
+        }
+        Update: {
+          agente_id?: string | null
+          contenido?: Json
+          copias?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_nombre?: string | null
+          error?: string | null
+          estado?: string
+          hotel_id?: string
+          id?: string
+          impreso_at?: string | null
+          intentos?: number
+          tipo?: string
+          titulo?: string
+          tomado_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_trabajos_agente_id_fkey"
+            columns: ["agente_id"]
+            isOneToOne: false
+            referencedRelation: "print_agentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_trabajos_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_trabajos_hotel_id_fkey"
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels_publicos"
@@ -3728,6 +3985,14 @@ export type Database = {
         Args: { p_hotel_id: string }
         Returns: Json
       }
+      get_public_room_blocks: {
+        Args: { p_hotel_id: string }
+        Returns: {
+          fecha_desde: string
+          fecha_hasta: string
+          habitacion_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3755,6 +4020,22 @@ export type Database = {
         }
         Returns: Json
       }
+      vulo_admin_editar_pago: {
+        Args: {
+          p_estado: string
+          p_fecha: string
+          p_metodo: string
+          p_monto: number
+          p_motivo: string
+          p_payment_id: string
+          p_quitar_turno: boolean
+          p_recalcular_turno?: boolean
+          p_referencia: string
+          p_turno_id: string
+          p_usuario_id: string
+        }
+        Returns: Json
+      }
       vulo_apply_stay_operation: {
         Args: {
           p_motivo?: string
@@ -3763,6 +4044,16 @@ export type Database = {
           p_reserva_id: string
         }
         Returns: Json
+      }
+      vulo_assert_block_range_free: {
+        Args: {
+          p_desde: string
+          p_excluir: string
+          p_habitacion_id: string
+          p_hasta: string
+          p_hotel_id: string
+        }
+        Returns: undefined
       }
       vulo_assert_open_shift: { Args: { p_hotel_id?: string }; Returns: string }
       vulo_assert_room_ready_for_checkin: {
@@ -3785,6 +4076,10 @@ export type Database = {
       }
       vulo_build_shift_report: { Args: { p_turno_id: string }; Returns: Json }
       vulo_can_close_day: { Args: never; Returns: boolean }
+      vulo_cancelar_bloqueo: {
+        Args: { p_bloqueo_id: string; p_motivo?: string }
+        Returns: Json
+      }
       vulo_change_payment_amount: {
         Args: {
           p_amount: number
@@ -3806,15 +4101,47 @@ export type Database = {
         }
         Returns: Json
       }
+      vulo_crear_bloqueo: {
+        Args: {
+          p_crear_ticket?: boolean
+          p_desde: string
+          p_habitacion_id: string
+          p_hasta: string
+          p_motivo: string
+          p_ticket?: Json
+          p_tipo: string
+        }
+        Returns: Json
+      }
       vulo_current_hotel_id: { Args: never; Returns: string }
       vulo_current_role: { Args: never; Returns: string }
       vulo_delete_purchase: { Args: { p_compra_id: string }; Returns: Json }
+      vulo_editar_bloqueo: {
+        Args: {
+          p_bloqueo_id: string
+          p_desde: string
+          p_hasta: string
+          p_motivo: string
+          p_tipo: string
+        }
+        Returns: Json
+      }
       vulo_editar_datos_reserva: {
         Args: { p_datos: Json; p_motivo?: string; p_reserva_id: string }
         Returns: Json
       }
       vulo_hotel_publico: { Args: { p_hotel_id: string }; Returns: boolean }
       vulo_hotel_today: { Args: { p_hotel_id: string }; Returns: string }
+      vulo_imprimir: {
+        Args: {
+          p_agente_id?: string
+          p_contenido: Json
+          p_copias?: number
+          p_tipo: string
+          p_titulo: string
+        }
+        Returns: string
+      }
       vulo_inventory_move: {
         Args: {
           p_absoluto?: boolean
@@ -3827,6 +4154,10 @@ export type Database = {
         Returns: Json
       }
       vulo_is_superadmin: { Args: never; Returns: boolean }
+      vulo_liberar_bloqueo_hoy: {
+        Args: { p_habitacion_id: string }
+        Returns: number
+      }
       vulo_metodo_clase: {
         Args: { p_hotel_id: string; p_metodo: string }
         Returns: string
@@ -3851,6 +4182,35 @@ export type Database = {
       vulo_permitido: { Args: { p_modulo: string }; Returns: boolean }
       vulo_permitido_alguno: { Args: { p_modulos: string[] }; Returns: boolean }
       vulo_platform_owner: { Args: never; Returns: boolean }
+      vulo_print_crear_codigo: { Args: { p_nombre: string }; Returns: Json }
+      vulo_print_eliminar_agente: {
+        Args: { p_agente_id: string }
+        Returns: undefined
+      }
+      vulo_print_hash: { Args: { p_token: string }; Returns: string }
+      vulo_print_reportar: {
+        Args: {
+          p_error?: string
+          p_ok: boolean
+          p_token: string
+          p_trabajo_id: string
+        }
+        Returns: undefined
+      }
+      vulo_print_tomar: {
+        Args: {
+          p_ancho?: number
+          p_impresora?: string
+          p_impresoras?: Json
+          p_token: string
+          p_version?: string
+        }
+        Returns: Json
+      }
+      vulo_print_vincular: {
+        Args: { p_codigo: string; p_version?: string }
+        Returns: Json
+      }
       vulo_reactivar_reserva: {
         Args: {
           p_habitacion_id: string
@@ -3859,6 +4219,7 @@ export type Database = {
         }
         Returns: Json
       }
+      vulo_recalcular_turno: { Args: { p_turno_id: string }; Returns: Json }
       vulo_receive_purchase: { Args: { p_compra_id: string }; Returns: Json }
       vulo_register_sale: {
         Args: {
@@ -3907,6 +4268,20 @@ export type Database = {
           p_reserva_id: string
         }
         Returns: boolean
+      }
+      vulo_room_blocked_in_range: {
+        Args: {
+          p_desde: string
+          p_excluir?: string
+          p_habitacion_id: string
+          p_hasta: string
+        }
+        Returns: string
+      }
+      vulo_sync_bloqueos: { Args: { p_hotel_id?: string }; Returns: number }
+      vulo_terminar_bloqueo_interno: {
+        Args: { p_bloqueo_id: string; p_motivo: string }
+        Returns: undefined
       }
       vulo_user_name: { Args: { p_user_id: string }; Returns: string }
       vulo_user_requires_shift: { Args: never; Returns: boolean }
