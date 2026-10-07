@@ -1152,8 +1152,11 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
               />
               <Input className="h-9 px-1.5 text-center text-xs" type="number" min={1} inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
               <Input className="h-9 px-1.5 text-right text-xs" type="number" inputMode="decimal" placeholder="$0" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
-              <Button type="button" className="h-9 w-9 px-0" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-4 w-4" /></Button>
+              <Button type="button" variant="soft-amber" className="h-9 px-2.5 text-xs font-semibold" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-3.5 w-3.5" />Agregar</Button>
             </div>
+            {conceptosCargo.length === 0 && (
+              <p className="text-[11px] text-muted-foreground">No hay servicios en el catálogo. Escríbelo y dale a «Crear», o dalos de alta en Catálogos › Servicios extras.</p>
+            )}
             {formData.cargos.length > 0 && (
               <div className="divide-y rounded-lg border">
                 {formData.cargos.map(c => (
