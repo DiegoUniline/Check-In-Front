@@ -97,7 +97,7 @@ export function PagosMultiplesGrid({
           Sin métodos activos. Crea uno en Catálogos.
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {metodos.map((m) => {
             const Icono = iconoMetodo(m.nombre);
             const monto = montoPorMetodo(m.nombre);
@@ -106,18 +106,18 @@ export function PagosMultiplesGrid({
               <div
                 key={m.id}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg border-2 bg-background px-3 py-2.5 transition-all',
+                  'rounded-lg border-2 bg-background p-2.5 transition-all',
                   activo
                     ? 'border-primary bg-primary/5'
                     : 'border-border hover:border-primary/40'
                 )}
               >
                 <div className={cn(
-                  'flex items-center gap-2 flex-1 min-w-0',
-                  activo ? 'text-primary' : 'text-foreground'
+                  'mb-1.5 flex items-center gap-1.5 min-w-0',
+                  activo ? 'text-primary' : 'text-muted-foreground'
                 )}>
-                  <Icono className="h-4 w-4 shrink-0" />
-                  <span className="text-sm font-medium truncate">{m.nombre}</span>
+                  <Icono className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate text-xs font-semibold">{m.nombre}</span>
                 </div>
                 <Input
                   type="number"
@@ -126,7 +126,7 @@ export function PagosMultiplesGrid({
                   value={monto || ''}
                   onChange={(e) => setMontoMetodo(m.nombre, e.target.value)}
                   className={cn(
-                    'h-9 w-32 text-right tabular-nums font-semibold',
+                    'h-9 w-full text-right tabular-nums font-semibold',
                     activo && 'border-primary'
                   )}
                 />
