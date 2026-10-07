@@ -1578,27 +1578,8 @@ class ApiClient {
   cancelarReserva = async (id: string, motivo?: string): Promise<any> => {
     const razon = String(motivo || '').trim();
     if (razon.length < 3) throw new Error('Escribe el motivo de la cancelación.');
-    // El motivo va a su propio campo; el servidor registra quién y cuándo canceló.
-    const { data: r, error } = await supabase.from('reservas').update({ estado: 'Cancelada', motivo_cancelacion: razon } as any).eq('id', id).select().single();
-    if (error) throw error;
-    // Anula los pagos activos de la reserva para que el corte de caja se actualice.
-    const { data: pagos } = await (supabase as any).from('pagos').select('id, turno_id, monto')
-      .eq('reserva_id', id).neq('estado', 'Cancelado');
-    if (pagos?.length) {
-      const { data: auth } = await supabase.auth.getUser();
-      await (supabase as any).from('pagos').update({
-        estado: 'Cancelado', cancelado_at: new Date().toISOString(), cancelado_por: auth.user?.id || null,
-        motivo_cambio: `Reserva cancelada: ${razon}`,
-      }).in('id', pagos.map((p: any) => p.id));
-      const turnos = [...new Set(pagos.map((p: any) => p.turno_id).filter(Boolean))] as string[];
-      await Promise.all(turnos.map(t => (operationalDb as any).rpc('vulo_recalcular_turno', { p_turno_id: t }).then(() => null, () => null)));
-    }
-    void registrarAuditoria({
-      accion: 'actualizar', entidad: 'reserva', entidad_id: id,
-      descripcion: `Reserva cancelada: ${razon}${pagos?.length ? ` · ${pagos.length} pago(s) anulados del corte` : ''}`,
-    });
-    window.dispatchEvent(new CustomEvent('data:changed'));
-    return r;
+    // Misma operación auditada que el expediente: libera fechas y anula pagos del corte abierto.
+    return this.applyStayOperation(id, 'cancel_reservation', {}, razon);
   };
   // Explica por qué una habitación no aparece libre en un rango de fechas.
   explicarHabitacionNoDisponible = async (habitacionId: string, checkin: string, checkout: string): Promise<string> => {

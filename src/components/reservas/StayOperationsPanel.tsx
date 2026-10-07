@@ -164,7 +164,8 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     if (id === 'restore_charge') return cancelledCharges.length > 0;
     if (id === 'restore_payment') return cancelledPayments.length > 0;
     if (id === 'move_to_account') return accounts.some((account) => account.estado === 'Abierta');
-    if (['no_show', 'cancel_reservation'].includes(id)) return ['Pendiente', 'Confirmada'].includes(state);
+    if (id === 'no_show') return ['Pendiente', 'Confirmada'].includes(state);
+    if (id === 'cancel_reservation') return ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'].includes(state) && !reserva.checkout_realizado;
     if (['add_charge', 'partial_payment', 'split_account'].includes(id)) return !['Cancelada', 'NoShow', 'CheckOut'].includes(state);
     if (['extend_stay', 'early_departure', 'modify_dates', 'room_change', 'category_change'].includes(id))
       return !['Cancelada', 'NoShow', 'CheckOut'].includes(state);
@@ -812,7 +813,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <p className="font-semibold">Esta reserva se marcará como cancelada.</p>
-            <p className="mt-1 text-xs text-red-700">Dejará de bloquear la habitación en el calendario y las fechas volverán a estar disponibles. La reserva y su historial no se eliminan; gerencia puede reactivarla si fue un error.</p>
+            <p className="mt-1 text-xs text-red-700">Se liberan las fechas y la habitación (si ya estaba hospedado, queda sucia). Los pagos de turnos abiertos se anulan y se descuentan del corte; si el pago es de un turno ya cerrado, la devolución se registra aparte. La reserva y su historial no se eliminan.</p>
           </div>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 rounded-[6px] bg-white/70 p-2 text-xs text-[#10233F]">
@@ -873,7 +874,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
           variant="soft-red"
           className="ml-auto gap-1.5 px-2.5"
           disabled={loading || !cancelAllowed || !cancelApplies}
-          title={!cancelAllowed ? 'Tu rol no tiene permiso para esta acción' : !cancelApplies ? 'Solo se puede cancelar reservas Pendientes o Confirmadas' : 'Cancela con motivo e historial'}
+          title={!cancelAllowed ? 'Tu rol no tiene permiso para esta acción' : !cancelApplies ? 'La reserva ya está cerrada' : 'Cancela con motivo e historial'}
           onClick={() => cancelReservationOperation && openOperation(cancelReservationOperation)}
         >
           <XCircle className="h-3.5 w-3.5" />
