@@ -1135,7 +1135,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </FormSection>
 
           <FormSection icon={Receipt} title="Cargos adicionales" hint="Consumos o servicios anticipados.">
-            <div className="grid grid-cols-[minmax(120px,1fr)_64px_100px_auto] gap-1.5">
+            <div className="space-y-1.5">
               <ComboboxCreatable
                 options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
                 value={cargoConcepto}
@@ -1148,11 +1148,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 placeholder="Concepto…"
                 searchPlaceholder="Buscar o crear concepto…"
                 createLabel="Crear"
-                className="h-9 justify-start px-2.5 text-left text-xs font-normal"
+                className="h-9 w-full justify-start px-2.5 text-left text-xs font-normal"
               />
-              <Input className="h-9 px-1.5 text-center text-xs" type="number" min={1} inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
-              <Input className="h-9 px-1.5 text-right text-xs" type="number" inputMode="decimal" placeholder="$0" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
-              <Button type="button" variant="soft-amber" className="h-9 px-2.5 text-xs font-semibold" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-3.5 w-3.5" />Agregar</Button>
+              <div className="grid grid-cols-[64px_1fr_auto] gap-1.5">
+                <Input className="h-9 px-1.5 text-center text-xs" type="number" min={1} inputMode="numeric" placeholder="Cant" value={cargoCantidad} onChange={(e) => setCargoCantidad(e.target.value)} />
+                <Input className="h-9 px-1.5 text-right text-xs" type="number" inputMode="decimal" placeholder="$0" value={cargoMonto} onChange={(e) => setCargoMonto(e.target.value)} />
+                <Button type="button" variant="soft-amber" className="h-9 px-2.5 text-xs font-semibold" onClick={handleAgregarCargo} disabled={!cargoConcepto} aria-label="Agregar cargo"><Plus className="h-3.5 w-3.5" />Agregar</Button>
+              </div>
             </div>
             {conceptosCargo.length === 0 && (
               <p className="text-[11px] text-muted-foreground">No hay servicios en el catálogo. Escríbelo y dale a «Crear», o dalos de alta en Catálogos › Servicios extras.</p>
