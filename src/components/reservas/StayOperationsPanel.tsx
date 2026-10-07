@@ -164,7 +164,8 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     if (id === 'restore_charge') return cancelledCharges.length > 0;
     if (id === 'restore_payment') return cancelledPayments.length > 0;
     if (id === 'move_to_account') return accounts.some((account) => account.estado === 'Abierta');
-    if (['no_show', 'cancel_reservation'].includes(id)) return ['Pendiente', 'Confirmada'].includes(state);
+    if (id === 'no_show') return ['Pendiente', 'Confirmada'].includes(state);
+    if (id === 'cancel_reservation') return ['Pendiente', 'Confirmada', 'CheckIn', 'Hospedado'].includes(state) && !reserva.checkout_realizado;
     if (['add_charge', 'partial_payment', 'split_account'].includes(id)) return !['Cancelada', 'NoShow', 'CheckOut'].includes(state);
     if (['extend_stay', 'early_departure', 'modify_dates', 'room_change', 'category_change'].includes(id))
       return !['Cancelada', 'NoShow', 'CheckOut'].includes(state);
