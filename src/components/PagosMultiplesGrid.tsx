@@ -116,11 +116,11 @@ export function PagosMultiplesGrid({
                 )}
               >
                 <div className={cn(
-                  'mb-1.5 flex items-center gap-1.5 min-w-0',
+                  'mb-1.5 flex min-h-[2.25rem] items-start gap-1.5',
                   activo ? 'text-primary' : 'text-muted-foreground'
                 )}>
-                  <Icono className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate text-xs font-semibold">{m.nombre}</span>
+                  <Icono className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="break-words text-xs font-semibold leading-snug" title={m.nombre}>{m.nombre}</span>
                 </div>
                 <Input
                   type="number"
