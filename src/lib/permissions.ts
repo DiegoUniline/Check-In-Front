@@ -195,7 +195,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   'reservas.operacion.split_account': ['Admin', 'Gerente', 'Recepcion'],
   'reservas.operacion.move_to_account': ['Admin', 'Gerente', 'Recepcion'],
   'reservas.operacion.no_show': ['Admin', 'Gerente', 'Recepcion'],
-  'reservas.operacion.cancel_reservation': ['Admin', 'Gerente'],
+  'reservas.operacion.cancel_reservation': ['Admin', 'Gerente', 'Recepcion', 'Housekeeping', 'Mantenimiento'],
   'reservas.operacion.reopen_checkout': ['Admin', 'Gerente'],
   'reservas.operacion.consecutive_reservation': ['Admin', 'Gerente', 'Recepcion'],
   'reservas.operacion.correction_note': ['Admin', 'Gerente', 'Recepcion'],
