@@ -2402,6 +2402,10 @@ export type Database = {
           creado_por: string | null
           creado_por_nombre: string | null
           created_at: string | null
+          credito_autorizado_por: string | null
+          credito_liquidado: boolean
+          credito_liquidado_at: string | null
+          credito_monto: number
           descuento: number | null
           descuento_id: string | null
           descuento_nombre: string | null
@@ -2441,6 +2445,7 @@ export type Database = {
           revisada_at: string | null
           revisada_por: string | null
           saldo_pendiente: number | null
+          salida_credito: boolean
           solicitudes_especiales: string | null
           subtotal_hospedaje: number | null
           tarifa_noche: number | null
@@ -2474,6 +2479,10 @@ export type Database = {
           creado_por?: string | null
           creado_por_nombre?: string | null
           created_at?: string | null
+          credito_autorizado_por?: string | null
+          credito_liquidado?: boolean
+          credito_liquidado_at?: string | null
+          credito_monto?: number
           descuento?: number | null
           descuento_id?: string | null
           descuento_nombre?: string | null
@@ -2513,6 +2522,7 @@ export type Database = {
           revisada_at?: string | null
           revisada_por?: string | null
           saldo_pendiente?: number | null
+          salida_credito?: boolean
           solicitudes_especiales?: string | null
           subtotal_hospedaje?: number | null
           tarifa_noche?: number | null
@@ -2546,6 +2556,10 @@ export type Database = {
           creado_por?: string | null
           creado_por_nombre?: string | null
           created_at?: string | null
+          credito_autorizado_por?: string | null
+          credito_liquidado?: boolean
+          credito_liquidado_at?: string | null
+          credito_monto?: number
           descuento?: number | null
           descuento_id?: string | null
           descuento_nombre?: string | null
@@ -2585,6 +2599,7 @@ export type Database = {
           revisada_at?: string | null
           revisada_por?: string | null
           saldo_pendiente?: number | null
+          salida_credito?: boolean
           solicitudes_especiales?: string | null
           subtotal_hospedaje?: number | null
           tarifa_noche?: number | null
@@ -3949,7 +3964,7 @@ export type Database = {
         Returns: Json
       }
       complete_reservation_checkout: {
-        Args: { p_pago?: Json; p_reserva_id: string }
+        Args: { p_credito?: boolean; p_pago?: Json; p_reserva_id: string }
         Returns: Json
       }
       create_public_reservation: {
