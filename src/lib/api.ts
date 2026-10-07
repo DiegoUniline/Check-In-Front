@@ -1707,6 +1707,8 @@ class ApiClient {
   // ------- Conceptos Cargo -------
   getConceptosCargo = async (): Promise<any> => { const { data } = await supabase.from('conceptos_cargo').select('*').eq('hotel_id', this.hid()).order('nombre'); return data || []; };
   createConceptoCargo = async (data: any): Promise<any> => { const { data: r, error } = await supabase.from('conceptos_cargo').insert({ ...data, hotel_id: this.hid() }).select().single(); if (error) throw error; return r; };
+  updateConceptoCargo = async (id: string, data: any): Promise<any> => { const { data: r, error } = await supabase.from('conceptos_cargo').update(data).eq('id', id).eq('hotel_id', this.hid()).select().single(); if (error) throw error; return r; };
+  deleteConceptoCargo = async (id: string): Promise<void> => { const { error } = await supabase.from('conceptos_cargo').delete().eq('id', id).eq('hotel_id', this.hid()); if (error) throw error; };
 
   // ------- Métodos de Pago -------
   getMetodosPago = async (params?: { soloActivos?: boolean }): Promise<any> => {

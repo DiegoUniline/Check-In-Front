@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Plus, Pencil, Trash2, BedDouble, Package, Tags, KeyRound, CreditCard, RotateCcw, Globe, GlobeLock, Percent } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { DescuentosCatalogo } from '@/components/catalogos/DescuentosCatalogo';
+import { ServiciosExtrasCatalogo } from '@/components/catalogos/ServiciosExtrasCatalogo';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -571,10 +572,18 @@ export default function Catalogos() {
             <Percent className="h-4 w-4 mr-2" />
             Descuentos
           </TabsTrigger>
+          <TabsTrigger value="servicios-extras">
+            <Tags className="h-4 w-4 mr-2" />
+            Servicios extras
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="descuentos">
           <DescuentosCatalogo />
+        </TabsContent>
+
+        <TabsContent value="servicios-extras">
+          <ServiciosExtrasCatalogo />
         </TabsContent>
 
         {/* TAB: Tipos de Habitación */}
