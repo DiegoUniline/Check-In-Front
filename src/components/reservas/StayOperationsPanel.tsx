@@ -868,17 +868,17 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         <Button size="toolbar" variant="ghost" className="px-2.5 text-[#10233F]" onClick={() => setMoreOpen(true)}>
           Más operaciones
         </Button>
-        {canCancelReservation && cancelReservationOperation && <Button
+        <Button
           size="toolbar"
           variant="soft-red"
           className="ml-auto gap-1.5 px-2.5"
-          disabled={loading || !cancelApplies}
-          title={!cancelApplies ? 'Solo se puede cancelar reservas Pendientes o Confirmadas' : 'Cancela con motivo e historial'}
-          onClick={() => openOperation(cancelReservationOperation)}
+          disabled={loading || !cancelAllowed || !cancelApplies}
+          title={!cancelAllowed ? 'Tu rol no tiene permiso para esta acción' : !cancelApplies ? 'Solo se puede cancelar reservas Pendientes o Confirmadas' : 'Cancela con motivo e historial'}
+          onClick={() => cancelReservationOperation && openOperation(cancelReservationOperation)}
         >
           <XCircle className="h-3.5 w-3.5" />
           Cancelar
-        </Button>}
+        </Button>
       </div>
     </section>
 
