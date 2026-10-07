@@ -808,7 +808,7 @@ export function TimelineGrid({
                                 <div className="grid grid-cols-2 gap-2">
                                   <QuickAction icon={CalendarPlus} label="Extender" onClick={() => dispatchAction(reserva, 'extend_stay')} />
                                   <QuickAction icon={ArrowLeftRight} label="Cambiar habitación" onClick={() => dispatchAction(reserva, 'room_change')} />
-                                  <QuickAction icon={Receipt} label="Consumo" onClick={() => dispatchAction(reserva, 'add_charge')} />
+                                  <QuickAction icon={Receipt} label="Registrar consumo" onClick={() => dispatchAction(reserva, 'add_charge')} />
                                   <QuickAction icon={CreditCard} label="Registrar pago" onClick={() => dispatchAction(reserva, 'partial_payment')} />
                                 </div>
                                 {canCheckin && <Button variant="outline" className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => { setMenuReservationId(null); dispatchAction(reserva, 'cancel'); }}><XCircle className="mr-2 h-4 w-4" />Cancelar reserva</Button>}

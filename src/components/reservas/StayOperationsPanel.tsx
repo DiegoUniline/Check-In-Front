@@ -78,7 +78,7 @@ const groups: { title: string; operations: Operation[] }[] = [
   { title: 'Tarifa, cuenta y correcciones', operations: [
     { id: 'rate_change', label: 'Modificar tarifa', detail: 'Recalcula noches, total y saldo.', icon: BadgeDollarSign, sensitive: true },
     { id: 'discount_change', label: 'Descuento o cortesía', detail: 'Monto, porcentaje o cortesía.', icon: BadgeDollarSign, sensitive: true },
-    { id: 'add_charge', label: 'Agregar consumo', detail: 'Minibar, restaurante, daños u otro.', icon: Plus },
+    { id: 'add_charge', label: 'Registrar consumo', detail: 'Minibar, restaurante, daños u otro.', icon: Plus },
     { id: 'update_charge', label: 'Corregir cargo', detail: 'Edita sin borrar el registro original.', icon: Receipt, sensitive: true },
     { id: 'cancel_charge', label: 'Cancelar cargo', detail: 'Lo anula conservando trazabilidad.', icon: Receipt, sensitive: true },
     { id: 'restore_charge', label: 'Restaurar cargo', detail: 'Reactiva de forma controlada un cargo cancelado.', icon: RefreshCcw, sensitive: true },
