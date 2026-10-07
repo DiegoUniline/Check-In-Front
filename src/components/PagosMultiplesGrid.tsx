@@ -97,7 +97,10 @@ export function PagosMultiplesGrid({
           Sin métodos activos. Crea uno en Catálogos.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}
+        >
           {metodos.map((m) => {
             const Icono = iconoMetodo(m.nombre);
             const monto = montoPorMetodo(m.nombre);
