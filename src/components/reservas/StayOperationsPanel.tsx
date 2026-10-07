@@ -970,8 +970,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className={cn(
       'h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none shadow-xl sm:h-auto sm:max-h-[92dvh] sm:rounded-[8px] [&_button]:rounded-[6px] [&_input]:rounded-[6px] [&_textarea]:rounded-[6px] [&_[role=combobox]]:rounded-[6px]',
       selected?.id === 'add_charge' ? 'sm:max-w-6xl'
-        : selected?.id === 'extend_stay' || selected?.id === 'modify_dates' ? 'sm:max-w-4xl'
-          : selected && ROOM_OPERATIONS.includes(selected.id) ? 'sm:max-w-5xl' : 'sm:max-w-3xl',
+        : selected?.id === 'partial_payment' ? 'sm:max-w-5xl'
+          : selected?.id === 'extend_stay' || selected?.id === 'modify_dates' ? 'sm:max-w-4xl'
+            : selected && ROOM_OPERATIONS.includes(selected.id) ? 'sm:max-w-5xl' : 'sm:max-w-3xl',
     )}><DialogHeader><DialogTitle>{selected?.label}</DialogTitle><DialogDescription>{selected?.id === 'add_charge'
       ? 'Selecciona productos o servicios y cárgalos directamente a la cuenta de la habitación.'
       : selected?.id === 'cancel_reservation'
