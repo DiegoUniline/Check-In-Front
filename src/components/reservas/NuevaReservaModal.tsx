@@ -1135,7 +1135,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
           </FormSection>
 
           <FormSection icon={Receipt} title="Cargos adicionales" hint="Consumos o servicios anticipados.">
-            <div className="grid grid-cols-[minmax(120px,1fr)_64px_100px_36px] gap-1.5">
+            <div className="grid grid-cols-[minmax(120px,1fr)_64px_100px_auto] gap-1.5">
               <ComboboxCreatable
                 options={conceptosCargo.map(c => ({ value: c.id, label: c.nombre }))}
                 value={cargoConcepto}
