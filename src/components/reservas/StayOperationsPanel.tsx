@@ -181,9 +181,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     .find((operation) => operation.id === 'cancel_reservation') as Operation | undefined;
   const canCancelReservation = Boolean(
     cancelReservationOperation
-    && operationApplies('cancel_reservation')
     && canAccess('reservas.operacion.cancel_reservation', user?.rol),
   );
+  const cancelApplies = operationApplies('cancel_reservation');
 
   const roomTypes = useMemo<{ id: string; name: string }[]>(() => {
     const types = new Map<string, string>();
@@ -873,12 +873,14 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         </Button>
         {canCancelReservation && cancelReservationOperation && <Button
           size="toolbar"
-          variant="outline"
-          className="ml-auto gap-1.5 border-red-200 px-2.5 text-red-700 hover:border-red-300 hover:bg-red-50 hover:text-red-800"
+          variant="soft-red"
+          className="ml-auto gap-1.5 px-2.5"
+          disabled={loading || !cancelApplies}
+          title={!cancelApplies ? 'Solo se puede cancelar reservas Pendientes o Confirmadas' : 'Cancela con motivo e historial'}
           onClick={() => openOperation(cancelReservationOperation)}
         >
           <XCircle className="h-3.5 w-3.5" />
-          Cancelar reserva
+          Cancelar
         </Button>}
       </div>
     </section>
