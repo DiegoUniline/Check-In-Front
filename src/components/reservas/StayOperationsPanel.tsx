@@ -181,9 +181,9 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
     .find((operation) => operation.id === 'cancel_reservation') as Operation | undefined;
   const canCancelReservation = Boolean(
     cancelReservationOperation
-    && operationApplies('cancel_reservation')
     && canAccess('reservas.operacion.cancel_reservation', user?.rol),
   );
+  const cancelApplies = operationApplies('cancel_reservation');
 
   const roomTypes = useMemo<{ id: string; name: string }[]>(() => {
     const types = new Map<string, string>();
