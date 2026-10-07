@@ -133,7 +133,7 @@ export function StayConsumptionPicker({ value, onChange }: Props) {
             const selected = value.some((current) => keyOf(current) === keyOf(item));
             const soldOut = item.source === 'product' && number(item.stock) <= 0;
             return <button key={keyOf(item)} type="button" disabled={soldOut} onClick={() => add(item)} className="flex min-h-20 items-center justify-between gap-3 rounded-xl border bg-white p-3 text-left transition hover:border-[#10233F]/45 disabled:cursor-not-allowed disabled:opacity-45">
-              <span className="min-w-0"><span className="block truncate text-sm font-semibold text-[#10233F]">{item.name}</span><span className="block truncate text-xs text-muted-foreground">{item.code ? `${item.code} · ` : ''}{item.category}</span><span className={`mt-1 block text-[11px] ${soldOut ? 'text-red-600' : 'text-emerald-700'}`}>{item.source === 'product' ? `Existencia ${item.stock}` : 'Servicio sin inventario'}</span></span>
+              <span className="min-w-0"><span className="block break-words text-sm font-semibold text-[#10233F]" title={item.name}>{item.name}</span><span className="block break-words text-xs text-muted-foreground">{item.code ? `${item.code} · ` : ''}{item.category}</span><span className={`mt-1 block text-[11px] ${soldOut ? 'text-red-600' : 'text-emerald-700'}`}>{item.source === 'product' ? `Existencia ${item.stock}` : 'Servicio sin inventario'}</span></span>
               <span className="shrink-0 text-right"><span className="block text-sm font-bold">{formatCurrency(item.unit_price)}</span>{selected ? <CheckCircle2 className="ml-auto mt-1 h-4 w-4 text-emerald-600" /> : <Plus className="ml-auto mt-1 h-4 w-4 text-[#10233F]" />}</span>
             </button>;
           })}
@@ -144,7 +144,7 @@ export function StayConsumptionPicker({ value, onChange }: Props) {
       <div className="flex items-center justify-between border-b bg-[#10233F] px-3 py-3 text-white"><h4 className="flex items-center gap-2 text-sm font-semibold"><ShoppingCart className="h-4 w-4" />Cargo a habitación</h4><Badge className="bg-white/15 text-white hover:bg-white/15">{value.reduce((sum, item) => sum + item.quantity, 0)} artículos</Badge></div>
       {value.length === 0 ? <div className="flex min-h-44 flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground"><ShoppingCart className="mb-2 h-7 w-7 text-[#10233F]/35" /><p>Aún no agregas artículos.</p><p className="mt-1 text-xs">Elige productos del catálogo de la izquierda.</p></div> : <div className="max-h-[44dvh] divide-y overflow-y-auto">
         {value.map((item) => <div key={keyOf(item)} className="flex items-center gap-2 p-3">
-          <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.name}</p>
+          <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium" title={item.name}>{item.name}</p>
             <div className="mt-1 flex items-center gap-1">
               <span className="text-xs text-muted-foreground">$</span>
               <Input
