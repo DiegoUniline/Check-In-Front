@@ -1552,10 +1552,11 @@ class ApiClient {
     if (!habitacionId) throw new Error('Selecciona una habitación antes de hacer check-in');
     return this.completeCheckin(id, habitacionId, []);
   };
-  completeCheckout = async (id: string, pago?: any): Promise<any> => {
+  completeCheckout = async (id: string, pago?: any, credito = false): Promise<any> => {
     const { data, error } = await (supabase as any).rpc('complete_reservation_checkout', {
       p_reserva_id: id,
       p_pago: pago || null,
+      p_credito: credito,
     });
     if (error) throw error;
     return data;

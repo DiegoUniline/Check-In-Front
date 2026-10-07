@@ -640,6 +640,22 @@ export default function CheckOut() {
                         efectivoRecibido={efectivoRecibido}
                         onEfectivoRecibidoChange={setEfectivoRecibido}
                       />
+                      <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50/60 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+                        <Checkbox
+                          id="salir-credito"
+                          checked={salirACredito}
+                          onCheckedChange={(checked) => setSalirACredito(checked as boolean)}
+                          className="mt-0.5"
+                        />
+                        <div>
+                          <Label htmlFor="salir-credito" className="cursor-pointer text-sm font-semibold">
+                            Salir a crédito
+                          </Label>
+                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                            El huésped se va sin liquidar. Lo que falte ({formatCurrency(Math.max(0, saldoPendiente - totalLiquidacion))}) queda como cuenta por cobrar.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </>
                 ) : (
