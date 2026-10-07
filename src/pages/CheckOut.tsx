@@ -63,6 +63,7 @@ export default function CheckOut() {
   const [confirmarRevision, setConfirmarRevision] = useState(false);
   const [pagosLiquidacion, setPagosLiquidacion] = useState<PagoItem[]>([]);
   const [efectivoRecibido, setEfectivoRecibido] = useState(0);
+  const [salirACredito, setSalirACredito] = useState(false);
   const [mostrarEntregables, setMostrarEntregables] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pagoEditar, setPagoEditar] = useState<any>(null);
@@ -232,19 +233,30 @@ export default function CheckOut() {
       const ok = window.confirm(`El huésped tiene un saldo a favor de ${formatCurrency(saldoAFavor)}. ¿Ya se le devolvió o se aplicará? Pulsa Aceptar para continuar con la salida.`);
       if (!ok) return;
     }
-    if (saldoPendiente > 0 && totalLiquidacion <= 0) {
-      toast({ variant: 'destructive', title: 'Captura el pago', description: `Distribuye ${formatCurrency(saldoPendiente)} entre uno o varios métodos.` });
+    if (saldoPendiente > 0 && totalLiquidacion <= 0 && !salirACredito) {
+      toast({ variant: 'destructive', title: 'Captura el pago', description: `Distribuye ${formatCurrency(saldoPendiente)} entre uno o varios métodos, o marca «Salir a crédito».` });
       return;
     }
-    if (saldoPendiente > 0 && Math.abs(diferenciaLiquidacion) > 0.009) {
+    // Con crédito, lo que no se capture queda como cuenta por cobrar; nunca se permite excedente.
+    if (saldoPendiente > 0 && diferenciaLiquidacion < -0.009) {
       toast({
         variant: 'destructive',
-        title: diferenciaLiquidacion > 0 ? 'Aún falta por liquidar' : 'Los pagos superan el saldo',
-        description: diferenciaLiquidacion > 0
-          ? `Falta asignar ${formatCurrency(diferenciaLiquidacion)}.`
-          : `Reduce los pagos en ${formatCurrency(Math.abs(diferenciaLiquidacion))}.`,
+        title: 'Los pagos superan el saldo',
+        description: `Reduce los pagos en ${formatCurrency(Math.abs(diferenciaLiquidacion))}.`,
       });
       return;
+    }
+    if (saldoPendiente > 0 && diferenciaLiquidacion > 0.009 && !salirACredito) {
+      toast({
+        variant: 'destructive',
+        title: 'Aún falta por liquidar',
+        description: `Falta asignar ${formatCurrency(diferenciaLiquidacion)} o marca «Salir a crédito».`,
+      });
+      return;
+    }
+    if (salirACredito && saldoPendiente > 0 && diferenciaLiquidacion > 0.009) {
+      const ok = window.confirm(`El huésped saldrá a crédito por ${formatCurrency(diferenciaLiquidacion)}. Quedará como cuenta por cobrar. ¿Continuar?`);
+      if (!ok) return;
     }
     if (pagoEfectivo > 0 && efectivoRecibido > 0 && efectivoRecibido + 0.009 < pagoEfectivo) {
       toast({ variant: 'destructive', title: 'Efectivo insuficiente', description: 'El efectivo recibido es menor que el importe asignado a efectivo.' });
@@ -278,6 +290,7 @@ export default function CheckOut() {
         setPagos(pagosActivosActuales);
         setPagosLiquidacion([]);
         setEfectivoRecibido(0);
+        setSalirACredito(false);
         toast({
           title: 'Saldo actualizado',
           description: saldoActual > 0
@@ -298,7 +311,8 @@ export default function CheckOut() {
           });
         }
       }
-      await api.completeCheckout(id!);
+      const montoCredito = salirACredito ? Math.max(0, saldoPendiente - totalLiquidacion) : 0;
+      await api.completeCheckout(id!, undefined, montoCredito > 0.009);
 
       toast({
         title: 'Check-out completado',
