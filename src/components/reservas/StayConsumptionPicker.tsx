@@ -141,7 +141,22 @@ export function StayConsumptionPicker({ value, onChange }: Props) {
       <div className="flex items-center justify-between border-b bg-[#10233F] px-3 py-3 text-white"><h4 className="flex items-center gap-2 text-sm font-semibold"><ShoppingCart className="h-4 w-4" />Cargo a habitación</h4><Badge className="bg-white/15 text-white hover:bg-white/15">{value.reduce((sum, item) => sum + item.quantity, 0)} artículos</Badge></div>
       {value.length === 0 ? <div className="flex min-h-44 flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground"><ShoppingCart className="mb-2 h-7 w-7 text-[#10233F]/35" /><p>Aún no agregas artículos.</p><p className="mt-1 text-xs">Elige productos del catálogo de la izquierda.</p></div> : <div className="max-h-[44dvh] divide-y overflow-y-auto">
         {value.map((item) => <div key={keyOf(item)} className="flex items-center gap-2 p-3">
-          <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{formatCurrency(item.unit_price)} c/u · precio del catálogo</p></div>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.name}</p>
+            <div className="mt-1 flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">$</span>
+              <Input
+                type="number" min={0} step="0.01" inputMode="decimal"
+                value={String(item.unit_price)}
+                onChange={(e) => {
+                  const price = Math.max(0, Number(e.target.value) || 0);
+                  onChange(value.map((current) => keyOf(current) === keyOf(item) ? { ...current, unit_price: price } : current));
+                }}
+                className="h-7 w-24 px-2 text-xs"
+                aria-label={`Precio de ${item.name}`}
+              />
+              <span className="text-xs text-muted-foreground">c/u · editable</span>
+            </div>
+          </div>
           <div className="flex shrink-0 items-center rounded-lg border"><Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => changeQuantity(item, -1)}><Minus className="h-3 w-3" /></Button><span className="w-7 text-center text-sm font-semibold">{item.quantity}</span><Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => changeQuantity(item, 1)} disabled={item.source === 'product' && item.quantity >= number(item.stock)}><Plus className="h-3 w-3" /></Button></div>
           <p className="w-20 shrink-0 text-right text-sm font-semibold">{formatCurrency(item.quantity * item.unit_price)}</p>
           <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600" onClick={() => onChange(value.filter((current) => keyOf(current) !== keyOf(item)))}><Trash2 className="h-3.5 w-3.5" /></Button>
