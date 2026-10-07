@@ -18,6 +18,7 @@ const buttonVariants = cva(
         "soft-navy": "border border-tint-navy-border bg-tint-navy-bg text-tint-navy-fg hover:border-tint-navy-border/80 hover:bg-tint-navy-bg/70",
         "soft-green": "border border-tint-green-border bg-tint-green-bg text-tint-green-fg hover:border-tint-green-border/80 hover:bg-tint-green-bg/70",
         "soft-amber": "border border-tint-amber-border bg-tint-amber-bg text-tint-amber-fg hover:border-tint-amber-border/80 hover:bg-tint-amber-bg/70",
+        "soft-red": "border border-tint-red-border bg-tint-red-bg text-tint-red-fg hover:border-tint-red-border/80 hover:bg-tint-red-bg/70",
       },
       size: {
         default: "h-10 px-4 py-2 sm:h-9 sm:px-3.5",
