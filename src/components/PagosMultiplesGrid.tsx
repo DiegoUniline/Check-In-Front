@@ -99,7 +99,7 @@ export function PagosMultiplesGrid({
       ) : (
         <div
           className="grid gap-2"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))' }}
         >
           {metodos.map((m) => {
             const Icono = iconoMetodo(m.nombre);
