@@ -11,6 +11,7 @@ export type StayConsumptionItem = {
   source: 'product' | 'service';
   product_id?: string;
   concept_id?: string;
+  custom_id?: string;
   name: string;
   code?: string;
   category: string;
@@ -25,7 +26,7 @@ type Props = {
 };
 
 const number = (value: unknown) => Number(value || 0);
-const keyOf = (item: StayConsumptionItem) => `${item.source}:${item.product_id || item.concept_id}`;
+const keyOf = (item: StayConsumptionItem) => `${item.source}:${item.product_id || item.concept_id || item.custom_id || item.name}`;
 
 export function StayConsumptionPicker({ value, onChange }: Props) {
   const [catalog, setCatalog] = useState<StayConsumptionItem[]>([]);
