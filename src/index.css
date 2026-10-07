@@ -85,6 +85,9 @@
     --tint-amber-bg: 38 95% 95%;
     --tint-amber-border: 38 75% 84%;
     --tint-amber-fg: 28 80% 32%;
+    --tint-red-bg: 0 85% 97%;
+    --tint-red-border: 0 70% 88%;
+    --tint-red-fg: 0 70% 35%;
   }
 
   .dark {
@@ -137,6 +140,9 @@
     --tint-amber-bg: 30 55% 15%;
     --tint-amber-border: 30 45% 30%;
     --tint-amber-fg: 38 90% 74%;
+    --tint-red-bg: 0 40% 16%;
+    --tint-red-border: 0 35% 32%;
+    --tint-red-fg: 0 85% 78%;
     
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
