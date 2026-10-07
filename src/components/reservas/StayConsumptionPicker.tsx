@@ -126,6 +126,33 @@ export function StayConsumptionPicker({ value, onChange }: Props) {
         </Select>
       </div>
 
+      <div className="mt-2 rounded-lg border border-dashed border-[#10233F]/20 bg-white p-2.5">
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Cargo libre (sin catálogo)</p>
+        <div className="grid grid-cols-[minmax(0,1fr)_56px_90px_auto] items-center gap-1.5">
+          <Input value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="Concepto… ej. Daño toalla" className="h-9 px-2.5 text-xs" />
+          <Input value={customQty} onChange={(e) => setCustomQty(e.target.value)} type="number" min={1} inputMode="numeric" placeholder="Cant" className="h-9 px-1.5 text-center text-xs" />
+          <Input value={customPrice} onChange={(e) => setCustomPrice(e.target.value)} type="number" min={0} step="0.01" inputMode="decimal" placeholder="$0" className="h-9 px-1.5 text-right text-xs" />
+          <Button
+            type="button" variant="soft-amber" className="h-9 px-2.5 text-xs font-semibold"
+            disabled={!customName.trim()}
+            onClick={() => {
+              const name = customName.trim();
+              if (!name) return;
+              const item: StayConsumptionItem = {
+                source: 'service',
+                custom_id: `libre-${Date.now()}`,
+                name,
+                category: 'Cargo libre',
+                quantity: Math.max(1, Number(customQty) || 1),
+                unit_price: Math.max(0, Number(customPrice) || 0),
+              };
+              onChange([...value, item]);
+              setCustomName(''); setCustomPrice(''); setCustomQty('1');
+            }}
+          ><Plus className="h-3.5 w-3.5" />Agregar</Button>
+        </div>
+      </div>
+
       {loading ? <div className="flex min-h-36 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Cargando productos y precios…</div>
         : error ? <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
         : filtered.length === 0 ? <div className="flex min-h-32 flex-col items-center justify-center text-center text-sm text-muted-foreground"><PackageOpen className="mb-2 h-6 w-6" />No hay coincidencias en el catálogo.</div>
