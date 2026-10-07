@@ -179,10 +179,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
   const cancelReservationOperation = groups
     .flatMap((group) => group.operations)
     .find((operation) => operation.id === 'cancel_reservation') as Operation | undefined;
-  const canCancelReservation = Boolean(
-    cancelReservationOperation
-    && canAccess('reservas.operacion.cancel_reservation', user?.rol),
-  );
+  const cancelAllowed = canAccess('reservas.operacion.cancel_reservation', user?.rol);
   const cancelApplies = operationApplies('cancel_reservation');
 
   const roomTypes = useMemo<{ id: string; name: string }[]>(() => {
