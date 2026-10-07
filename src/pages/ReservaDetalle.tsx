@@ -123,6 +123,15 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
   const ledger = useMemo(() => reserva ? buildReservationLedger(reserva) : [], [reserva]);
   const account = useMemo(() => reserva ? getReservationAccountSummary(reserva) : null, [reserva]);
 
+  // Cuando un crédito queda en ceros, se marca como liquidado automáticamente.
+  useEffect(() => {
+    if (!reserva?.salida_credito || reserva?.credito_liquidado || !account || account.balance > 0.01) return;
+    api.updateReserva(reserva.id, { credito_liquidado: true, credito_liquidado_at: new Date().toISOString() })
+      .then(() => load(true))
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reserva?.salida_credito, reserva?.credito_liquidado, account?.balance]);
+
   if (loading) {
     return <Shell embedded={embedded}>
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -145,8 +154,10 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
 
   const activeStay = ['CheckIn', 'Hospedado'].includes(String(reserva.estado || '')) && Boolean(reserva.checkin_realizado) && !reserva.checkout_realizado;
   const canCheckin = ['Pendiente', 'Confirmada'].includes(String(reserva.estado || '')) && !reserva.checkin_realizado;
+  // Una salida a crédito permite seguir registrando pagos aunque la estancia ya cerró.
+  const creditoPendiente = Boolean(reserva.salida_credito) && !reserva.credito_liquidado && account.balance > 0.01;
   const canRegisterPayment = canAccess('reservas.operacion.partial_payment', user?.rol)
-    && !['Cancelada', 'NoShow', 'CheckOut'].includes(String(reserva.estado || ''))
+    && (!['Cancelada', 'NoShow', 'CheckOut'].includes(String(reserva.estado || '')) || creditoPendiente)
     && account.balance > 0.01;
 
   const refreshAll = async () => { await load(true); };
@@ -213,6 +224,13 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
                 <Badge variant="outline" className={cn('h-5 border px-1.5 text-[10px]', statusStyles[reserva.estado])}>
                   {reserva.estado}
                 </Badge>
+                {reserva.salida_credito && (
+                  <Badge variant="outline" className={cn('h-5 border px-1.5 text-[10px]', reserva.credito_liquidado
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-amber-300 bg-amber-50 text-amber-800')}>
+                    {reserva.credito_liquidado ? 'Crédito liquidado' : `A crédito · ${formatCurrency(reservationMoney(reserva.credito_monto))}`}
+                  </Badge>
+                )}
               </div>
               <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-[13px]">
                 Hab. {reserva.habitacion_numero || 'sin asignar'} · {formatDate(reserva.fecha_checkin)} → {formatDate(reserva.fecha_checkout)} · {adults} adulto{adults === 1 ? '' : 's'}{children > 0 ? ` · ${children} menor${children === 1 ? '' : 'es'}` : ''}
