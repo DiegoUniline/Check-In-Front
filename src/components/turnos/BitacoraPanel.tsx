@@ -133,7 +133,7 @@ export function BitacoraPanel({ turnoId }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label>Prioridad</Label>
                     <Select value={form.prioridad} onValueChange={(v: typeof form.prioridad) => setForm({ ...form, prioridad: v })}>

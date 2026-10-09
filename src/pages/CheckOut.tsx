@@ -753,6 +753,7 @@ export default function CheckOut() {
         </Dialog>
 
         <div
+          data-mobile-action-bar
           className="fixed inset-x-0 z-40 border-t border-brand-navy/15 bg-background/96 px-3 py-2 shadow-[0_-8px_28px_rgba(16,35,63,0.12)] backdrop-blur lg:hidden"
           style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}
         >

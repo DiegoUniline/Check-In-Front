@@ -52,7 +52,7 @@ export function ServiciosExtrasCatalogo() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
+      <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>Servicios y cargos extras</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">Late check-out, mascota, estacionamiento, desayuno… Aparecen con su precio al crear una reserva.</p>

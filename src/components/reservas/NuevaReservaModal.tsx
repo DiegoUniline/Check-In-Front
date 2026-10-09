@@ -842,7 +842,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
         </div>
         <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted p-0.5">
           {([['Reserva', CalendarPlus], ['Recepcion', UserPlus]] as const).map(([value, Icon]) => (
-              <button
+              <button data-mobile-touch
                 key={value}
                 type="button"
                 aria-label={value === 'Reserva' ? 'Crear reserva futura' : 'Registrar entrada hoy'}
@@ -911,7 +911,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
             </div>
             <div className="flex flex-wrap gap-1.5">
               {[0, 1, 2, 3, 7].map((n) => (
-                <button
+                <button data-mobile-touch
                   key={n}
                   type="button"
                   onClick={() => setFormData({ ...formData, fechaCheckout: addDays(formData.fechaCheckin, n) })}
@@ -1199,7 +1199,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                         </span>
                         {activo && (
                           <span className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
-                            <button type="button" className="h-6 w-6 rounded border text-xs hover:bg-muted" onClick={() => setCantidadEntregable(ent.id, (formData.entregablesCantidad[ent.id] || 1) - 1)}>−</button>
+                            <button data-mobile-touch type="button" className="h-6 w-6 rounded border text-xs hover:bg-muted" onClick={() => setCantidadEntregable(ent.id, (formData.entregablesCantidad[ent.id] || 1) - 1)}>−</button>
                             <input
                               type="number"
                               min={1}
@@ -1209,7 +1209,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                               onFocus={(e) => e.currentTarget.select()}
                               onChange={(e) => setCantidadEntregable(ent.id, Number(e.target.value))}
                             />
-                            <button type="button" className="h-6 w-6 rounded border text-xs hover:bg-muted" onClick={() => setCantidadEntregable(ent.id, (formData.entregablesCantidad[ent.id] || 1) + 1)}>+</button>
+                            <button data-mobile-touch type="button" className="h-6 w-6 rounded border text-xs hover:bg-muted" onClick={() => setCantidadEntregable(ent.id, (formData.entregablesCantidad[ent.id] || 1) + 1)}>+</button>
                           </span>
                         )}
                       </label>
@@ -1349,9 +1349,9 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                 <div className="flex items-center justify-between gap-2">
                   <Label className="flex items-center gap-1.5 text-[11px] text-white/80"><CreditCard className="h-3 w-3" />Anticipo</Label>
                   <div className="flex items-center gap-1">
-                    <button type="button" className="rounded px-1.5 py-0.5 text-[10px] text-white/70 hover:bg-white/10 hover:text-white" onClick={clearAdvancePayment}>Sin anticipo</button>
-                    <button type="button" className="rounded px-1.5 py-0.5 text-[10px] text-white/70 hover:bg-white/10 hover:text-white" onClick={() => setPagoRapido('half')}>50%</button>
-                    <button type="button" className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white hover:bg-white/20" onClick={() => setPagoRapido('full')}>Liquidar</button>
+                    <button data-mobile-touch type="button" className="rounded px-1.5 py-0.5 text-[10px] text-white/70 hover:bg-white/10 hover:text-white" onClick={clearAdvancePayment}>Sin anticipo</button>
+                    <button data-mobile-touch type="button" className="rounded px-1.5 py-0.5 text-[10px] text-white/70 hover:bg-white/10 hover:text-white" onClick={() => setPagoRapido('half')}>50%</button>
+                    <button data-mobile-touch type="button" className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white hover:bg-white/20" onClick={() => setPagoRapido('full')}>Liquidar</button>
                   </div>
                 </div>
                 <div className="flex gap-1.5">
@@ -1407,7 +1407,7 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
                   <p className="mb-1.5 text-[10px] font-medium text-white/70">Falta para continuar</p>
                   <div className="flex flex-wrap gap-1">
                     {validationIssues.map((issue) => (
-                      <button key={`${issue.key}-${issue.label}`} type="button" onClick={() => focusReservationField(issue.key)} className="rounded-md bg-white/10 px-2 py-1 text-[10px] text-white transition-colors hover:bg-white/20">
+                      <button data-mobile-touch key={`${issue.key}-${issue.label}`} type="button" onClick={() => focusReservationField(issue.key)} className="rounded-md bg-white/10 px-2 py-1 text-[10px] text-white transition-colors hover:bg-white/20">
                         {issue.label}
                       </button>
                     ))}
@@ -1441,13 +1441,13 @@ export function NuevaReservaModal({ open, onOpenChange, preload, onSuccess, page
 function Stepper({ value, onChange, min = 0, max = 99 }: { value: number; onChange: (v: number) => void; min?: number; max?: number }) {
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
   return (
-    <div className="flex h-9 items-center overflow-hidden rounded-lg border border-input bg-background">
-      <button
+    <div className="flex h-11 lg:h-9 items-center overflow-hidden rounded-lg border border-input bg-background">
+      <button data-mobile-touch
         type="button"
         aria-label="Restar"
         onClick={() => onChange(clamp(value - 1))}
         disabled={value <= min}
-        className="grid h-full w-8 shrink-0 place-items-center text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+        className="grid h-full w-11 lg:w-8 shrink-0 place-items-center text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
       >
         <Minus className="h-3.5 w-3.5" />
       </button>
@@ -1464,12 +1464,12 @@ function Stepper({ value, onChange, min = 0, max = 99 }: { value: number; onChan
         }}
         className="h-full w-full min-w-0 border-0 bg-transparent text-center text-xs font-medium tabular-nums text-foreground outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
-      <button
+      <button data-mobile-touch
         type="button"
         aria-label="Sumar"
         onClick={() => onChange(clamp(value + 1))}
         disabled={value >= max}
-        className="grid h-full w-8 shrink-0 place-items-center text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+        className="grid h-full w-11 lg:w-8 shrink-0 place-items-center text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

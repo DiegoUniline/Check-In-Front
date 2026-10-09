@@ -70,10 +70,10 @@ export default function HistorialAjustes() {
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <CardTitle className="text-base flex items-center gap-2"><History className="h-4 w-4" />Movimientos</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-0 w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar producto, motivo, usuario..." className="pl-9 w-[280px]" value={search} onChange={e => setSearch(e.target.value)} />
+                <Input placeholder="Buscar producto, motivo, usuario..." className="pl-9 w-full sm:w-[280px]" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
               <Select value={tipo} onValueChange={setTipo}>
                 <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>

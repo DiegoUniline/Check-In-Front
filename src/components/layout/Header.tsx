@@ -68,9 +68,9 @@ export function Header({ title, subtitle }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b bg-card/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-card/85 lg:px-6">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <SidebarTrigger className="h-9 w-9 rounded-xl" />
-        <Logo size={34} className="lg:hidden" />
+      <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-3">
+        <SidebarTrigger className="h-9 w-9 shrink-0 rounded-xl" />
+        <Logo size={34} className="hidden sm:block lg:hidden" />
         {title ? (
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold tracking-tight text-foreground lg:text-lg">{title}</h1>
@@ -98,7 +98,7 @@ export function Header({ title, subtitle }: HeaderProps) {
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5 lg:gap-2">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5 lg:gap-2">
         {shiftRequired && <Button asChild variant="outline" size="sm" className={openShift
           ? 'h-9 border-emerald-200 bg-emerald-50 px-2 text-emerald-700 hover:bg-emerald-100 sm:px-3'
           : viewOnlyMode
@@ -136,7 +136,7 @@ export function Header({ title, subtitle }: HeaderProps) {
           variant="ghost"
           size="icon"
           onClick={toggleTheme}
-          className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
+          className="hidden h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground sm:inline-flex"
           aria-label="Cambiar tema"
         >
           {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
@@ -146,7 +146,7 @@ export function Header({ title, subtitle }: HeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0">
+            <Button variant="ghost" aria-label="Menú de usuario" className="relative h-10 w-10 rounded-xl p-0">
               <Avatar className="h-9 w-9">
                 <AvatarImage src={user?.fotoUrl} alt={user?.nombre} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
@@ -164,6 +164,16 @@ export function Header({ title, subtitle }: HeaderProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {isSuperAdmin && hoteles.length > 0 && <>
+              <DropdownMenuLabel className="xl:hidden">Cambiar hotel</DropdownMenuLabel>
+              {hoteles.map((hotel: any) => <DropdownMenuItem className="xl:hidden" key={hotel.id} onSelect={() => void handleHotelChange(hotel.id)}>
+                <Hotel className="mr-2 h-4 w-4 shrink-0" />{hotel.nombre}{hotel.id === hotelActivoId ? ' · Actual' : ''}
+              </DropdownMenuItem>)}
+            </>}
+            <DropdownMenuItem onSelect={toggleTheme} className="sm:hidden">
+              {theme === 'light' ? <Moon className="mr-2 h-4 w-4" /> : <Sun className="mr-2 h-4 w-4" />}
+              <span>Cambiar tema</span>
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
               <User className="mr-2 h-4 w-4" />
               <span>Mi perfil y contraseña</span>

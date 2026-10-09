@@ -10,10 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, Send, Bot, User as UserIcon, Check, CheckCheck,
-  MessageCircle, RefreshCw, Pause, Play, Hotel
+  MessageCircle, RefreshCw, Pause, Play, Hotel, ArrowLeft
 } from 'lucide-react';
 import { CrmPanel } from '@/components/whatsapp/CrmPanel';
 import { cn } from '@/lib/utils';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -95,6 +97,8 @@ export default function Chats() {
   const [cliente, setCliente] = useState<any>(null);
   const [clientesPorId, setClientesPorId] = useState<Record<string, ClienteResumen>>({});
   const [fichaAbierta, setFichaAbierta] = useState(false);
+  const [mobileContactOpen, setMobileContactOpen] = useState(false);
+  const isMobile = useIsMobile();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(
@@ -326,18 +330,34 @@ export default function Chats() {
     toast({ title: nuevo === 'bot' ? 'Bot reanudado' : 'Bot pausado en este chat' });
   };
 
+  const contactPanel = selected ? (
+            <CrmPanel
+              chat={selected}
+              cliente={cliente}
+              onClienteChange={() => {
+                if (selected?.cliente_id) {
+                  sb.from('clientes').select('*').eq('id', selected.cliente_id).single()
+                    .then(({ data }: any) => setCliente(data));
+                } else {
+                  cargarChats();
+                }
+              }}
+              onChatChange={cargarChats}
+            />
+  ) : null;
+
   return (
     <MainLayout title="WhatsApp / Chats" subtitle="Bandeja de conversaciones con IA">
       <div
         className={cn(
-          'grid grid-cols-1 gap-3 h-[calc(100vh-11rem)] transition-[grid-template-columns] duration-300',
+          'grid grid-cols-1 gap-3 h-[calc(var(--vulo-viewport-height,100dvh)-11rem)] min-h-0 transition-[grid-template-columns] duration-300',
           fichaAbierta
             ? 'lg:grid-cols-[320px_1fr_320px]'
             : 'lg:grid-cols-[320px_1fr_56px]'
         )}
       >
         {/* Panel izquierdo: lista */}
-        <div className="border rounded-lg bg-card overflow-hidden flex flex-col">
+        <div className={cn("min-h-0 min-w-0 border rounded-lg bg-card overflow-hidden flex-col", selected ? "hidden lg:flex" : "flex")}>
           <div className="p-3 border-b space-y-2">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -425,7 +445,7 @@ export default function Chats() {
         </div>
 
         {/* Panel central: hilo */}
-        <div className="border rounded-lg bg-card overflow-hidden flex flex-col">
+        <div className={cn("min-h-0 min-w-0 border rounded-lg bg-card overflow-hidden flex-col", selected ? "flex" : "hidden lg:flex")}>
           {!selected ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
@@ -435,14 +455,16 @@ export default function Chats() {
             </div>
           ) : (
             <>
-              <div className="p-3 border-b flex items-center justify-between">
-                <div>
+              <div className="p-3 border-b flex flex-wrap items-center gap-2 justify-between">
+                <Button type="button" size="icon" variant="ghost" className="lg:hidden" aria-label="Volver a conversaciones" onClick={() => setSelectedId(null)}><ArrowLeft className="h-4 w-4" /></Button>
+                <div className="min-w-0 flex-1 break-words">
                   <div className="font-semibold">
                     {nombreVisibleChat(selected, cliente || (selected.cliente_id ? clientesPorId[selected.cliente_id] : null))}
                   </div>
                   <div className="text-xs text-muted-foreground">{selected.phone}</div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button size="icon" variant="outline" className="lg:hidden" aria-label="Ver ficha del contacto" onClick={() => setMobileContactOpen(true)}><UserIcon className="h-4 w-4" /></Button>
                   <Button size="sm" variant="outline" onClick={toggleBot}>
                     {selected.estado_bot === 'bot' ? (
                       <><Pause className="h-3.5 w-3.5 mr-1.5" /> Pausar bot</>
@@ -550,27 +572,21 @@ export default function Chats() {
               <Hotel className="h-4 w-4" />
             </Button>
           </div>
-          {fichaAbierta && (!selected ? (
+          {!isMobile && fichaAbierta && (!selected ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               Selecciona una conversación
             </div>
           ) : (
-            <CrmPanel
-              chat={selected}
-              cliente={cliente}
-              onClienteChange={() => {
-                if (selected?.cliente_id) {
-                  sb.from('clientes').select('*').eq('id', selected.cliente_id).single()
-                    .then(({ data }: any) => setCliente(data));
-                } else {
-                  cargarChats();
-                }
-              }}
-              onChatChange={cargarChats}
-            />
+            contactPanel
           ))}
         </div>
       </div>
+      {isMobile && <Sheet open={mobileContactOpen} onOpenChange={setMobileContactOpen}>
+        <SheetContent className="w-full sm:max-w-md flex flex-col min-h-0">
+          <SheetHeader className="pr-10"><SheetTitle>Ficha del contacto</SheetTitle></SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto">{contactPanel}</div>
+        </SheetContent>
+      </Sheet>}
     </MainLayout>
   );
 }

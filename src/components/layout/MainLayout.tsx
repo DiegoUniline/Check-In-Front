@@ -164,7 +164,7 @@ export function MainLayout({ children, title, subtitle, fitViewport = false, ful
     <SidebarProvider>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <div
-        className="flex h-[100dvh] w-full overflow-hidden bg-muted/20"
+        className="vulo-app-shell flex h-[100dvh] w-full overflow-hidden bg-muted/20"
         style={{
           paddingTop: 'env(safe-area-inset-top)',
           paddingLeft: 'env(safe-area-inset-left)',
@@ -199,13 +199,13 @@ export function MainLayout({ children, title, subtitle, fitViewport = false, ful
             data-scroll-container
             data-shift-read-only={readOnlyActive ? 'true' : undefined}
             className={fitViewport
-              ? 'flex-1 min-h-0 min-w-0 overflow-hidden'
+              ? 'flex-1 min-h-0 min-w-0 overflow-hidden pb-[calc(env(safe-area-inset-bottom)+4.5rem)] lg:pb-0'
               : 'flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5 lg:px-7 lg:py-6 min-w-0 pb-[calc(env(safe-area-inset-bottom)+5rem)] lg:pb-7'}
-            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'auto', overscrollBehavior: 'contain' }}
           >
             <div className={fitViewport
-              ? `mx-auto flex h-full w-full flex-col overflow-hidden ${fullWidth ? 'max-w-none' : 'max-w-[1600px]'}`
-              : 'mx-auto w-full max-w-[1600px]'}>
+              ? `mx-auto flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden ${fullWidth ? 'max-w-none' : 'max-w-[1600px]'}`
+              : 'mx-auto min-w-0 w-full max-w-[1600px]'}>
               {children}
             </div>
           </main>

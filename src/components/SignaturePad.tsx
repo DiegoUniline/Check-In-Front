@@ -21,6 +21,7 @@ export function SignaturePad({ onChange, height = 160, className }: Props) {
   const drawing = useRef(false);
   const last = useRef<{ x: number; y: number } | null>(null);
   const [hasStrokes, setHasStrokes] = useState(false);
+  const strokesRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -28,8 +29,16 @@ export function SignaturePad({ onChange, height = 160, className }: Props) {
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
+      const width = Math.round(rect.width * dpr);
+      const pixelHeight = Math.round(rect.height * dpr);
+      if (!width || !pixelHeight || (canvas.width === width && canvas.height === pixelHeight)) return;
+      // Opening the mobile keyboard or rotating must not erase a captured signature.
+      const previous = document.createElement('canvas');
+      previous.width = canvas.width;
+      previous.height = canvas.height;
+      previous.getContext('2d')?.drawImage(canvas, 0, 0);
+      canvas.width = width;
+      canvas.height = pixelHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.scale(dpr, dpr);
@@ -37,11 +46,13 @@ export function SignaturePad({ onChange, height = 160, className }: Props) {
         ctx.lineJoin = 'round';
         ctx.strokeStyle = '#111';
         ctx.lineWidth = 2;
+        if (strokesRef.current) ctx.drawImage(previous, 0, 0, rect.width, rect.height);
       }
     };
     resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    return () => observer.disconnect();
   }, []);
 
   const pointFromEvent = (e: PointerEvent | React.PointerEvent): { x: number; y: number } => {
@@ -53,7 +64,7 @@ export function SignaturePad({ onChange, height = 160, className }: Props) {
   const emit = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    onChange(hasStrokes ? canvas.toDataURL('image/png') : null);
+    onChange(strokesRef.current ? canvas.toDataURL('image/png') : null);
   };
 
   const handleDown = (e: React.PointerEvent) => {
@@ -71,6 +82,7 @@ export function SignaturePad({ onChange, height = 160, className }: Props) {
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
     last.current = p;
+    strokesRef.current = true;
     if (!hasStrokes) setHasStrokes(true);
   };
   const handleUp = () => {
@@ -85,6 +97,7 @@ export function SignaturePad({ onChange, height = 160, className }: Props) {
     const ctx = canvas.getContext('2d');
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
     setHasStrokes(false);
+    strokesRef.current = false;
     onChange(null);
   };
 
@@ -97,7 +110,9 @@ export function SignaturePad({ onChange, height = 160, className }: Props) {
           onPointerDown={handleDown}
           onPointerMove={handleMove}
           onPointerUp={handleUp}
-          onPointerLeave={handleUp}
+          onPointerCancel={handleUp}
+          onLostPointerCapture={() => { if (drawing.current) handleUp(); }}
+          aria-label="Firma del huésped"
         />
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">

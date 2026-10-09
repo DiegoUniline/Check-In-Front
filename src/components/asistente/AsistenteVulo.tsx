@@ -29,6 +29,7 @@ export function AsistenteVulo() {
   const publicRoutes = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/funciones', '/precios', '/empresa', '/contacto', '/features', '/pricing', '/about', '/contact'];
   const isPublic = publicRoutes.some((r) => pathname === r) || pathname.startsWith('/h/');
   const guia = useMemo(() => guiaPorRuta(pathname), [pathname]);
+  const hasOperationBar = pathname.startsWith('/checkin/') || pathname.startsWith('/checkout/');
 
   if (isPublic) return null;
 
@@ -37,11 +38,13 @@ export function AsistenteVulo() {
   return (
     <>
       <button
+        data-mobile-action-bar
         aria-label="Abrir asistente VULO"
         onClick={() => setOpen(true)}
         className={cn(
-          'fixed z-50 group',
-          'right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:bottom-6',
+          'fixed z-40 group',
+          'right-4 lg:bottom-6',
+          hasOperationBar ? 'bottom-[calc(env(safe-area-inset-bottom)+10rem)]' : 'bottom-[calc(env(safe-area-inset-bottom)+5.5rem)]',
           'h-14 w-14 rounded-full bg-white border border-[#CBD5E1] shadow-[0_10px_40px_rgba(15,23,42,0.15)]',
           'flex items-center justify-center transition-all duration-250 hover:scale-105 hover:shadow-[0_14px_44px_rgba(249,115,22,0.28)]',
           'ring-2 ring-transparent hover:ring-[#F97316]/40',

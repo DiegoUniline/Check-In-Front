@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Upload, X, Loader2, Image as ImageIcon, GripVertical } from 'lucide-react';
+import { Upload, X, Loader2, Image as ImageIcon, GripVertical, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { uploadImage, deleteImage } from '@/lib/imageUpload';
@@ -103,21 +103,25 @@ export function MultiImageUpload({
                 if (dragIndex !== null) reorder(dragIndex, idx);
                 setDragIndex(null);
               }}
-              className="relative group rounded-lg overflow-hidden border bg-muted aspect-[4/3]"
+              className="relative group rounded-lg overflow-hidden border bg-muted"
             >
-              <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+              <img src={url} alt={`Foto ${idx + 1}`} className="w-full aspect-[4/3] object-cover" loading="lazy" />
               {idx === 0 && (
                 <span className="absolute top-1 left-1 text-[10px] uppercase tracking-wide bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
                   Portada
                 </span>
               )}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <div className="flex flex-wrap items-center justify-center gap-1 p-1 lg:absolute lg:inset-0 lg:bg-black/50 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity touch-reveal">
                 <span className="absolute top-1 right-1 text-white/80">
                   <GripVertical className="h-4 w-4" />
                 </span>
                 <Button type="button" variant="destructive" size="sm" onClick={() => handleRemove(idx)}>
                   <X className="h-3.5 w-3.5 mr-1" /> Quitar
                 </Button>
+                <div className="flex gap-1">
+                  <Button type="button" variant="secondary" size="icon" aria-label={`Mover foto ${idx + 1} antes`} disabled={idx === 0 || uploading} onClick={() => reorder(idx, idx - 1)}><ArrowLeft className="h-4 w-4" /></Button>
+                  <Button type="button" variant="secondary" size="icon" aria-label={`Mover foto ${idx + 1} después`} disabled={idx === value.length - 1 || uploading} onClick={() => reorder(idx, idx + 1)}><ArrowRight className="h-4 w-4" /></Button>
+                </div>
               </div>
             </div>
           ))}

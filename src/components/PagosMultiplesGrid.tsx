@@ -99,7 +99,7 @@ export function PagosMultiplesGrid({
       ) : (
         <div
           className="grid gap-2"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(185px, 100%), 1fr))' }}
         >
           {metodos.map((m) => {
             const Icono = iconoMetodo(m.nombre);
@@ -140,7 +140,7 @@ export function PagosMultiplesGrid({
       )}
 
       {permitirCambioEfectivo && pagoEfectivo > 0 && (
-        <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-muted/30 p-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg border border-border bg-muted/30 p-3">
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Efectivo recibido</label>
             <Input

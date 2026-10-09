@@ -352,7 +352,7 @@ export function CrmPanel({ chat, cliente, onClienteChange, onChatChange }: Props
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
                   </span>
                   <button
-                    className="opacity-0 group-hover:opacity-100 text-destructive"
+                    aria-label="Eliminar nota" className="touch-reveal mobile-touch opacity-0 group-hover:opacity-100 focus:opacity-100 text-destructive"
                     onClick={() => eliminarNota(n.id)}
                   >
                     <Trash2 className="h-3 w-3" />

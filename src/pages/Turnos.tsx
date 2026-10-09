@@ -503,7 +503,7 @@ export default function Turnos() {
                   <p className={cn('text-sm', turno ? 'text-white/60' : 'text-muted-foreground')}>{turno ? `Abierto ${formatDateTime(turno.abierto_at)} · Fondo ${formatCurrency(turno.fondo_inicial || 0)}` : 'Abre caja para iniciar el control de tu operación.'}</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" className={cn(turno && 'border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white')} onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Actualizar</Button>
                 {turno ? <Button className="bg-white text-[#10233F] hover:bg-slate-100" onClick={() => void abrirCierre()}><Calculator className="mr-2 h-4 w-4" />Revisar y cerrar turno</Button> : <Button onClick={() => setOpenDialog(true)}><Unlock className="mr-2 h-4 w-4" />Abrir turno</Button>}
               </div>

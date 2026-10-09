@@ -93,7 +93,7 @@ export function DescuentosCatalogo() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>Descuentos</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">Descuentos que puedes asignar a clientes y aplicar en reservaciones.</p>
@@ -142,7 +142,7 @@ export function DescuentosCatalogo() {
               <Label>Nombre *</Label>
               <Input autoFocus value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Corporativo, Convenio, Cliente frecuente…" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Tipo</Label>
                 <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as Tipo })}>

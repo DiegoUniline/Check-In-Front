@@ -1,0 +1,1118 @@
+{
+  "environment": "Isolated actual React App + production CSS; mocked auth/API, network blocked; Playwright Chromium 153 touch emulation. No live hotel writes or physical devices.",
+  "routeChecks": 522,
+  "routes": [
+    {
+      "route": "/login",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/signup",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/forgot-password",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/reset-password",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/funciones",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/precios",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/empresa",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/contacto",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/ayuda",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/features",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/pricing",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/about",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/contact",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/legal/privacidad",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/legal/terminos",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/legal/seguridad",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/h/demo",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/admin-plataforma",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/dashboard",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/reservas",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/reservas/nueva",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/reservas/detalle/r1",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/reservas/checkin",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/reservas/checkout",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/politicas-reserva",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/reservas-online",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/chats",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/whatsapp/agente",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/whatsapp/conexion",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/habitaciones",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/clientes",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/limpieza",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/mantenimiento",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/pos",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/inventario",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/productos",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/ajustes-stock",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/historial-ajustes",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/reportes",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/configuracion",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/catalogos",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/temporadas",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/soporte",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/checkin/r1",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/checkout/r2",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/turnos",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/cierre-dia",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/gastos",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/compras",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/proveedores",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/historial",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/facturacion",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/historial-reservas",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/usuarios",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/permisos",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/auditoria",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    },
+    {
+      "route": "/gerencia",
+      "widths": [
+        320,
+        360,
+        375,
+        390,
+        414,
+        430,
+        768,
+        1024,
+        1440
+      ],
+      "status": "passed"
+    }
+  ],
+  "interactions": [
+    {
+      "name": "/clientes: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/habitaciones: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/productos: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/usuarios: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/temporadas: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/proveedores: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/gastos: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/mantenimiento: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/inventario: abrir, recorrer campos y cerrar",
+      "status": "passed"
+    },
+    {
+      "name": "/catalogos: todas las pestañas",
+      "status": "passed"
+    },
+    {
+      "name": "/configuracion: todas las pestañas",
+      "status": "passed"
+    },
+    {
+      "name": "/reportes: todas las pestañas",
+      "status": "passed"
+    },
+    {
+      "name": "/inventario: todas las pestañas",
+      "status": "passed"
+    },
+    {
+      "name": "Proveedor: error conserva datos y permite guardar otra vez",
+      "status": "passed"
+    },
+    {
+      "name": "Reservación: calendario táctil, mes siguiente y selección de fecha",
+      "status": "passed"
+    },
+    {
+      "name": "Calendario: tocar reserva abre acciones y expediente",
+      "status": "passed"
+    },
+    {
+      "name": "Calendario: tocar habitación disponible prepara reservación",
+      "status": "passed"
+    },
+    {
+      "name": "Chats: conversación, ficha de contacto y regreso",
+      "status": "passed"
+    },
+    {
+      "name": "Compras: abrir captura y regresar",
+      "status": "passed"
+    },
+    {
+      "name": "Turnos: abrir cierre y recorrer formulario",
+      "status": "passed"
+    },
+    {
+      "name": "Check-in y check-out: campos y acciones accesibles",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Extender estancia, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Salida anticipada, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Modificar fechas, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Late check-out, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Early check-in, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Cambiar habitación, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Upgrade o downgrade, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Agregar huésped, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Fuera de servicio, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Reserva consecutiva, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Modificar tarifa, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Descuento o cortesía, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Registrar consumo, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Corregir cargo, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Cancelar cargo, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Restaurar cargo, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Trasladar cargo, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Pago parcial, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Corregir forma de pago, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Corregir importe de pago, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Cancelar pago, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Restaurar pago, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Dividir cuenta, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Mover entre subcuentas, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Marcar no-show, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Cancelar reserva, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Reabrir check-out, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Estancia: Corrección posterior, abrir y recorrer",
+      "status": "passed"
+    },
+    {
+      "name": "Navegación: menú lateral, usuario y asistente",
+      "status": "passed"
+    },
+    {
+      "name": "Tabla: desplazamiento horizontal táctil",
+      "status": "passed"
+    },
+    {
+      "name": "Firma: conservar trazo al cambiar ancho y borrar",
+      "status": "passed"
+    },
+    {
+      "name": "Fotos: reordenar con botones táctiles",
+      "status": "passed"
+    },
+    {
+      "name": "Formulario con viewport reducido conserva captura",
+      "status": "passed"
+    },
+    {
+      "name": "Calendario: desplazar fechas mediante gesto táctil",
+      "status": "passed"
+    },
+    {
+      "name": "Catálogos: formularios de las seis pestañas",
+      "status": "passed"
+    },
+    {
+      "name": "Administración: cliente y plan en ventanas desplazables",
+      "status": "passed"
+    }
+  ],
+  "existingTests": {
+    "passed": 22,
+    "failed": 0
+  },
+  "build": "passed",
+  "typecheck": "passed",
+  "limitations": [
+    "No physical Android/iPhone or Safari/WebKit run",
+    "No live backend persistence or integration verification",
+    "UI operation dialogs opened and traversed; business mutations not submitted",
+    "Viewport smoke checks cover initial fixture states; details in mobile-responsive-audit.md"
+  ]
+}

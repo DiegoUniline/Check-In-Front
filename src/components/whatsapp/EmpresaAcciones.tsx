@@ -260,14 +260,14 @@ export function EmpresaAcciones({ chat, hotelId }: Props) {
                     >
                       {r.titulo || r.texto.slice(0, 30)}
                     </button>
-                    <button className="opacity-60 hover:opacity-100" onClick={() => copiar(r.texto)}>
+                    <button aria-label="Copiar respuesta" className="mobile-touch opacity-60 hover:opacity-100" onClick={() => copiar(r.texto)}>
                       <Copy className="h-3 w-3" />
                     </button>
-                    <button className="opacity-60 hover:opacity-100"
+                    <button aria-label="Editar respuesta" className="mobile-touch opacity-60 hover:opacity-100"
                       onClick={() => { setRespDraft(r); setRespOpen(true); }}>
                       <Pencil className="h-3 w-3" />
                     </button>
-                    <button className="opacity-0 group-hover:opacity-100 text-destructive"
+                    <button aria-label="Eliminar respuesta" className="touch-reveal mobile-touch opacity-0 group-hover:opacity-100 focus:opacity-100 text-destructive"
                       onClick={() => guardarRespuestas(respuestas.filter((x) => x.id !== r.id))}>
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -285,7 +285,7 @@ export function EmpresaAcciones({ chat, hotelId }: Props) {
           <DialogHeader>
             <DialogTitle>Datos bancarios de la empresa</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <FieldInput label="Banco" value={bancoDraft.banco}
               onChange={(v) => setBancoDraft({ ...bancoDraft, banco: v })} />
             <FieldInput label="Titular" value={bancoDraft.titular}
@@ -298,7 +298,7 @@ export function EmpresaAcciones({ chat, hotelId }: Props) {
               onChange={(v) => setBancoDraft({ ...bancoDraft, swift: v })} />
             <FieldInput label="Método" value={bancoDraft.metodo}
               onChange={(v) => setBancoDraft({ ...bancoDraft, metodo: v })} />
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Label className="text-xs">Nota adicional</Label>
               <Textarea rows={2} value={bancoDraft.nota ?? ''}
                 onChange={(e) => setBancoDraft({ ...bancoDraft, nota: e.target.value })} />

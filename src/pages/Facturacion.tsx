@@ -112,9 +112,9 @@ export default function Facturacion() {
               </TabsList>
             </Tabs>
             <div className="flex items-center gap-2">
-              <div className="relative">
+              <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input className="h-9 w-64 pl-8 text-sm" placeholder="Reserva, huésped, RFC, folio…" value={query} onChange={(e) => setQuery(e.target.value)} />
+                <Input className="h-9 w-full sm:w-64 pl-8 text-sm" placeholder="Reserva, huésped, RFC, folio…" value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
               <Button variant="outline" size="icon" onClick={() => void load()} title="Actualizar">
                 <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
