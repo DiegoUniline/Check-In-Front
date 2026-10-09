@@ -152,7 +152,7 @@ export function WhatsAppAgentConfig() {
             <Switch checked={cfg.horario_24_7} onCheckedChange={(v) => setCfg({ ...cfg, horario_24_7: v })} />
           </div>
           {!cfg.horario_24_7 && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Hora inicio</Label>
                 <Input type="time" value={cfg.hora_inicio ?? ""} onChange={(e) => setCfg({ ...cfg, hora_inicio: e.target.value })} />
@@ -161,7 +161,7 @@ export function WhatsAppAgentConfig() {
                 <Label>Hora fin</Label>
                 <Input type="time" value={cfg.hora_fin ?? ""} onChange={(e) => setCfg({ ...cfg, hora_fin: e.target.value })} />
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <Label>Mensaje fuera de horario</Label>
                 <Textarea rows={2} value={cfg.mensaje_fuera_horario} onChange={(e) => setCfg({ ...cfg, mensaje_fuera_horario: e.target.value })} />
               </div>

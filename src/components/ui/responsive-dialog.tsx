@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 /**
  * ResponsiveDialog
@@ -40,7 +42,7 @@ export function ResponsiveDialog({
   onOpenChange,
   children,
   className,
-  mobileMaxHeight = "90vh",
+  mobileMaxHeight = "90dvh",
 }: ResponsiveDialogProps) {
   const isMobile = useIsMobile();
 
@@ -49,9 +51,12 @@ export function ResponsiveDialog({
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent
           className="flex flex-col"
-          style={{ maxHeight: mobileMaxHeight, paddingBottom: "env(safe-area-inset-bottom)" }}
+          style={{ maxHeight: `min(${mobileMaxHeight}, var(--vulo-viewport-height, 100dvh))`, paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <div className="flex-1 overflow-y-auto overscroll-contain">{children}</div>
+          <DrawerClose aria-label="Cerrar" className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-md bg-background text-muted-foreground">
+            <X className="h-4 w-4" />
+          </DrawerClose>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
         </DrawerContent>
       </Drawer>
     );
@@ -70,7 +75,7 @@ export function ResponsiveDialogHeader({
 }: React.HTMLAttributes<HTMLDivElement>) {
   const isMobile = useIsMobile();
   return isMobile ? (
-    <DrawerHeader className={cn("text-left", className)} {...props} />
+    <DrawerHeader className={cn("pr-14 text-left", className)} {...props} />
   ) : (
     <DialogHeader className={className} {...props} />
   );

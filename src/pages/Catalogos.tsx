@@ -607,9 +607,9 @@ export default function Catalogos() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between">
               <CardTitle>Tipos de Habitación</CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleResetTipos}>
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Restablecer
@@ -727,9 +727,9 @@ export default function Catalogos() {
         {/* TAB: Categorías Productos */}
         <TabsContent value="categorias-productos">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between">
               <CardTitle>Categorías de Productos</CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleResetCats}>
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Restablecer
@@ -803,14 +803,14 @@ export default function Catalogos() {
         {/* TAB: Entregables */}
         <TabsContent value="entregables">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle>Entregables</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   Items que se entregan al huésped durante su estancia (llaves, controles, toallas, etc.)
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleResetEnt}>
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Restablecer
@@ -916,14 +916,14 @@ export default function Catalogos() {
         {/* TAB: Métodos de Pago */}
         <TabsContent value="metodos-pago">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle>Métodos de Pago</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   Define los métodos de cobro que usa tu hotel. Aparecerán al registrar pagos en Check-in, Check-out, Reservas y POS.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleResetMet}>
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Restablecer
@@ -978,7 +978,7 @@ export default function Catalogos() {
                         </TableCell>
                         <TableCell className="text-muted-foreground">{m.orden ?? 0}</TableCell>
                         <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <CreditCard className="h-4 w-4 text-muted-foreground" />
                             {m.nombre}
                           </div>
@@ -1055,7 +1055,7 @@ export default function Catalogos() {
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="grid gap-2">
                 <Label>Capacidad Adultos</Label>
                 <Input
@@ -1084,7 +1084,7 @@ export default function Catalogos() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Precio Base por Noche *</Label>
                 <Input

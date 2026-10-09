@@ -303,7 +303,7 @@ export default function Features() {
             </div>
           </aside>
 
-          <div className="space-y-28 md:space-y-36">
+          <div className="min-w-0 space-y-28 md:space-y-36">
             {GRUPOS.map((g) => (
               <section key={g} id={`g-${g.toLowerCase()}`} className="space-y-24 md:space-y-28">
                 <Reveal>
@@ -316,7 +316,7 @@ export default function Features() {
                   <Reveal
                     key={b.id}
                     id={b.id}
-                    className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-14 ${
+                    className={`grid min-w-0 items-center gap-10 [&>*]:min-w-0 lg:grid-cols-2 lg:gap-14 ${
                       i % 2 ? "lg:[&>*:first-child]:order-2" : ""
                     }`}
                     as="section"

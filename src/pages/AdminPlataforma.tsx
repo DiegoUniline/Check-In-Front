@@ -514,7 +514,7 @@ export default function AdminPlataforma() {
           <h1 className="text-2xl font-black text-slate-900">SaaS Master Panel</h1>
           <p className="text-xs text-slate-400">Gestión de Clientes y Suscripciones</p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <Button variant="outline" asChild>
             <Link to="/dashboard"><ArrowLeft className="w-4 h-4 mr-2" /> Volver al Panel</Link>
           </Button>
@@ -566,8 +566,8 @@ export default function AdminPlataforma() {
         </TabsList>
 
         <TabsContent value="cuentas">
-          <div className="bg-white rounded-xl border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-xl border overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-slate-900 text-white text-xs">
                 <tr>
                   <th className="text-left p-4">Cliente / Administrador</th>
@@ -644,11 +644,11 @@ export default function AdminPlataforma() {
 
       {/* Modal Nuevo Cliente */}
       {modalCliente && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="vulo-modal-backdrop fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
               <h2 className="font-bold">Nuevo Cliente</h2>
-              <button onClick={() => setModalCliente(false)}><X size={20} /></button>
+              <button aria-label="Cerrar" className="mobile-touch inline-flex items-center justify-center" onClick={() => setModalCliente(false)}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               <div className="border-b pb-4">
@@ -666,7 +666,7 @@ export default function AdminPlataforma() {
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-500">Teléfono</label>
-                    <Input 
+                    <Input inputMode="tel"
                       value={formCliente.telefono} 
                       onChange={e => setFormCliente({...formCliente, telefono: e.target.value})} 
                       placeholder="Ej: 33 1234 5678"
@@ -724,11 +724,11 @@ export default function AdminPlataforma() {
 
       {/* Modal Crear Usuario para Cuenta Existente */}
       {modalCrearUsuario.open && modalCrearUsuario.cliente && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="vulo-modal-backdrop fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="font-bold">Crear Usuario Admin</h2>
-              <button onClick={() => setModalCrearUsuario({ open: false, cliente: null })}><X size={20} /></button>
+              <button aria-label="Cerrar" className="mobile-touch inline-flex items-center justify-center" onClick={() => setModalCrearUsuario({ open: false, cliente: null })}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               <div className="bg-blue-50 p-3 rounded-lg">
@@ -782,11 +782,11 @@ export default function AdminPlataforma() {
 
       {/* Modal Editar Cliente */}
       {modalEditarCliente.open && modalEditarCliente.cliente && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="vulo-modal-backdrop fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
               <h2 className="font-bold">Editar Cliente</h2>
-              <button onClick={() => setModalEditarCliente({ open: false, cliente: null })}><X size={20} /></button>
+              <button aria-label="Cerrar" className="mobile-touch inline-flex items-center justify-center" onClick={() => setModalEditarCliente({ open: false, cliente: null })}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               <div>
@@ -813,7 +813,7 @@ export default function AdminPlataforma() {
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-500">Teléfono</label>
-                <Input 
+                <Input inputMode="tel"
                   value={formEditarCliente.telefono} 
                   onChange={e => setFormEditarCliente({...formEditarCliente, telefono: e.target.value})} 
                 />
@@ -843,11 +843,11 @@ export default function AdminPlataforma() {
 
       {/* Modal Nuevo Hotel */}
       {modalHotel.open && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="vulo-modal-backdrop fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="font-bold">Nuevo Hotel</h2>
-              <button onClick={() => setModalHotel({ open: false, cuenta_id: null })}><X size={20} /></button>
+              <button aria-label="Cerrar" className="mobile-touch inline-flex items-center justify-center" onClick={() => setModalHotel({ open: false, cuenta_id: null })}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               <div>
@@ -868,7 +868,7 @@ export default function AdminPlataforma() {
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-500">Teléfono</label>
-                <Input 
+                <Input inputMode="tel"
                   value={formHotel.telefono} 
                   onChange={e => setFormHotel({...formHotel, telefono: e.target.value})} 
                   placeholder="Ej: 33 1234 5678"
@@ -888,11 +888,11 @@ export default function AdminPlataforma() {
 
       {/* Modal Asignar Suscripción */}
       {modalSuscripcion.open && modalSuscripcion.hotel && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="vulo-modal-backdrop fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="font-bold">Asignar Plan a {modalSuscripcion.hotel.nombre}</h2>
-              <button onClick={() => setModalSuscripcion({ open: false, hotel: null })}><X size={20} /></button>
+              <button aria-label="Cerrar" className="mobile-touch inline-flex items-center justify-center" onClick={() => setModalSuscripcion({ open: false, hotel: null })}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               <div>
@@ -931,11 +931,11 @@ export default function AdminPlataforma() {
 
       {/* Modal Plan */}
       {modalPlan.open && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="vulo-modal-backdrop fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
               <h2 className="font-bold">{modalPlan.plan ? 'Editar Plan' : 'Nuevo Plan'}</h2>
-              <button onClick={() => setModalPlan({ open: false, plan: null })}><X size={20} /></button>
+              <button aria-label="Cerrar" className="mobile-touch inline-flex items-center justify-center" onClick={() => setModalPlan({ open: false, plan: null })}><X size={20} /></button>
             </div>
             <div className="p-4 space-y-3">
               <div>
@@ -946,7 +946,7 @@ export default function AdminPlataforma() {
                 <label className="text-xs font-bold text-slate-500">Descripción</label>
                 <Input value={formPlan.descripcion} onChange={e => setFormPlan({...formPlan, descripcion: e.target.value})} placeholder="Para hoteles en crecimiento" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-500">Costo mensual (MXN)</label>
                   <Input type="number" value={formPlan.costo_mensual} onChange={e => setFormPlan({...formPlan, costo_mensual: Number(e.target.value)})} />
@@ -956,7 +956,7 @@ export default function AdminPlataforma() {
                   <Input type="number" value={formPlan.costo_anual} onChange={e => setFormPlan({...formPlan, costo_anual: Number(e.target.value)})} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-500">Hoteles</label>
                   <Input type="number" value={formPlan.limite_hoteles} onChange={e => setFormPlan({...formPlan, limite_hoteles: Number(e.target.value)})} />
@@ -980,7 +980,7 @@ export default function AdminPlataforma() {
                   placeholder={'Reservas ilimitadas\nWhatsApp integrado\nReportes avanzados'}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-500">Orden</label>
                   <Input type="number" value={formPlan.orden} onChange={e => setFormPlan({...formPlan, orden: Number(e.target.value)})} />

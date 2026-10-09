@@ -191,7 +191,7 @@ export const PhotoFrame = forwardRef<HTMLDivElement, PhotoFrameProps>(
           alt={alt}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
-          fetchPriority={priority ? "high" : "auto"}
+          {...{ fetchpriority: priority ? "high" : "auto" }}
           className="h-full w-full object-cover"
         />
       </div>

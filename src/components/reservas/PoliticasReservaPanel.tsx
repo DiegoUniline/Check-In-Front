@@ -218,7 +218,7 @@ export function PoliticasReservaPanel() {
               <Label>Nombre *</Label>
               <Input autoFocus value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Temporada enero, Fines de semana…" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label>Desde</Label><Input type="date" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Hasta</Label><Input type="date" value={form.fecha_fin} onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Mínimo de noches</Label><Input type="number" min={1} value={form.min_noches} onFocus={(e) => e.currentTarget.select()} onChange={(e) => setForm({ ...form, min_noches: e.target.value })} placeholder="Sin mínimo" /></div>

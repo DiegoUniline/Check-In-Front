@@ -52,7 +52,7 @@ const guestCount = (reserva: any) =>
   reservationMoney(reserva?.adultos) + reservationMoney(reserva?.ninos);
 
 function Shell({ embedded, children }: { embedded: boolean; children: ReactNode }) {
-  if (embedded) return <div className="h-[86dvh] min-h-0 overflow-hidden">{children}</div>;
+  if (embedded) return <div className="h-[min(86dvh,var(--vulo-viewport-height,86dvh))] min-h-0 overflow-hidden">{children}</div>;
   return <MainLayout fitViewport fullWidth>{children}</MainLayout>;
 }
 

@@ -100,7 +100,7 @@ export default function Temporadas() {
   return (
     <MainLayout title="Temporadas y tarifas" subtitle="Sube o baja los precios de habitación por rango de fechas">
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
           <p className="text-sm text-muted-foreground">
             Al crear una reserva se aplica automáticamente la temporada que coincida con la fecha de check-in.
           </p>
@@ -172,7 +172,7 @@ export default function Temporadas() {
               <Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej. Semana Santa 2026" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Desde</Label>
                 <Input type="date" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} />
@@ -183,7 +183,7 @@ export default function Temporadas() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Tipo de ajuste</Label>
                 <Select value={form.tipo_ajuste} onValueChange={(v) => setForm({ ...form, tipo_ajuste: v as TipoAjuste })}>
@@ -244,7 +244,7 @@ export default function Temporadas() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Prioridad</Label>
                 <Input type="number" value={form.prioridad} onChange={(e) => setForm({ ...form, prioridad: Number(e.target.value) })} />

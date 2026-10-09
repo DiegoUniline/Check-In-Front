@@ -80,7 +80,7 @@ export function ImageUpload({
       {value ? (
         <div className="relative group rounded-lg overflow-hidden border bg-muted">
           <img src={value} alt="Imagen subida" className="w-full h-48 object-cover" loading="lazy" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+          <div className="touch-reveal absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex flex-wrap items-center justify-center gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
               <Upload className="h-4 w-4 mr-1" /> Reemplazar
             </Button>

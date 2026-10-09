@@ -18,6 +18,8 @@ for (const name of ['window', 'document', 'navigator', 'HTMLElement', 'HTMLInput
 globalThis.requestAnimationFrame = dom.window.requestAnimationFrame.bind(dom.window);
 globalThis.cancelAnimationFrame = dom.window.cancelAnimationFrame.bind(dom.window);
 globalThis.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+// JSDOM does not implement matchMedia; these existing tests cover desktop behavior.
+dom.window.matchMedia = (media) => ({ media, matches: false, addEventListener() {}, removeEventListener() {} });
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { createRoot } = await import('react-dom/client');
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
@@ -47,7 +49,7 @@ const source = await readFile(join(repo, 'src/lib/onlineReservations.ts'), 'utf8
 const helpers = await import(`data:text/javascript;base64,${Buffer.from(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText).toString('base64')}`);
 const reservation = { id: 'r1', hotel_id: 'hotel1', origen: 'Web', estado: 'Pendiente', fecha_checkin: '2026-10-04', fecha_checkout: '2026-10-05', tipo_habitacion_id: 'type1', habitacion_id: 'room1', adultos: 2, ninos: 0, total: 849, total_pagado: 849, cliente_nombre: 'JOSÉ LUIS FLORES', numero_reserva: 'RES-2026-0021', tipo_nombre: 'King Size', habitacion_numero: '248', updated_at: '2026-10-02T14:00:00Z' };
 const room = { id: 'room1', numero: '248', tipo_habitacion_id: 'type1', tipo_nombre: 'King Size', estado_habitacion: 'Disponible', estado_mantenimiento: 'OK' };
-globalThis.__onlineApi = { getHotelId: () => 'hotel1', getReservasOnline: async () => [reservation], getDisponibilidadReservaOnline: async () => ({ reserva: reservation, habitaciones: [room] }), confirmarReservaOnline: async () => ({}) };
+globalThis.__onlineApi = { getHotelId: () => 'hotel1', getBloqueos: async () => [], getReservasOnline: async () => [reservation], getDisponibilidadReservaOnline: async () => ({ reserva: reservation, habitaciones: [room] }), confirmarReservaOnline: async () => ({}) };
 const { TimelineGrid } = await bundle('src/components/reservas/TimelineGrid.tsx', 'timeline.mjs', mocks);
 const { default: OnlinePage } = await bundle('src/pages/ReservasOnline.tsx', 'online.mjs', mocks);
 const { AdjacentReservationDialog } = await bundle('src/components/reservas/AdjacentReservationDialog.tsx', 'adjacent.mjs', mocks);

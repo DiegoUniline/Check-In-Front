@@ -17,6 +17,7 @@ import api, { todayLocal } from '@/lib/api';
 import { blockCoversNight, blockOverlapsStay, blockTipoLabel, legacyRoomBlocked, type RoomBlock } from '@/lib/roomBlocks';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { occupiesNight } from '@/lib/stayOccupancy';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export type TimelineReservationAction =
   | 'view'
@@ -148,6 +149,7 @@ export function TimelineGrid({
   canCreate = true,
   groupBy = 'none',
 }: TimelineGridProps) {
+  const isMobile = useIsMobile();
   const [dragStart, setDragStart] = useState<{ roomId: string; dayIndex: number } | null>(null);
   const [dragEnd, setDragEnd] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -353,10 +355,11 @@ export function TimelineGrid({
     return dayIndex >= start && dayIndex <= end;
   };
 
-  const isCompact = daysToShow > 14;
-  const cellWidth = isCompact ? 'w-10' : daysToShow > 7 ? 'w-16' : 'w-20';
-  const cellWidthPx = isCompact ? 40 : daysToShow > 7 ? 64 : 80;
-  const cellHeight = isCompact ? 'h-7' : 'h-9';
+  const isCompact = !isMobile && daysToShow > 14;
+  const cellWidth = isMobile ? 'w-20' : isCompact ? 'w-10' : daysToShow > 7 ? 'w-16' : 'w-20';
+  const cellWidthPx = isMobile ? 80 : isCompact ? 40 : daysToShow > 7 ? 64 : 80;
+  const cellHeight = isMobile ? 'h-12' : isCompact ? 'h-7' : 'h-9';
+  const roomColumnWidth = isMobile ? 'w-28' : isCompact ? 'w-44' : 'w-60';
 
   const fullName = (reserva: any) => [
     reserva.clientes?.nombre,
@@ -453,7 +456,9 @@ export function TimelineGrid({
     <div className="absolute inset-0 flex flex-col border rounded-lg bg-card overflow-hidden">
       {/* Scroller único: sincroniza cabecera de fechas + columna de habitaciones + celdas */}
       <div
-        className="flex-1 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border"
+        className="min-h-0 flex-1 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border"
+        data-timeline-scroll
+        style={{ touchAction: 'pan-x pan-y' }}
         ref={scrollRef}
       >
         <div className="min-w-max">
@@ -461,7 +466,7 @@ export function TimelineGrid({
           <div className="flex sticky top-0 z-20 bg-card border-b">
             <div className={cn(
               "flex-shrink-0 p-2 border-r bg-card flex items-center justify-center sticky left-0 z-30",
-              isCompact ? "w-44" : "w-60"
+              roomColumnWidth
             )}>
               <span className={cn("font-semibold", isCompact ? "text-[10px]" : "text-xs")}>
                 Habitación
@@ -492,13 +497,13 @@ export function TimelineGrid({
             return (
               <div key={group.key}>
                 {groupBy !== 'none' && (
-                  <div className="flex h-8 border-b border-[#10233F]/10 bg-[#10233F]/[0.045]">
+                  <div className={cn("flex border-b border-[#10233F]/10 bg-[#10233F]/[0.045]", isMobile ? 'h-11' : 'h-8')}>
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.key)}
                       className={cn(
                         'sticky left-0 z-[15] flex shrink-0 items-center gap-1.5 border-r border-[#10233F]/10 bg-[#F5F7FA] px-2 text-left text-[#10233F] transition-colors hover:bg-[#EAF0F7] dark:bg-card dark:text-foreground dark:hover:bg-muted',
-                        isCompact ? 'w-44' : 'w-60',
+                        roomColumnWidth,
                       )}
                       aria-expanded={!collapsed}
                       aria-label={`${collapsed ? 'Expandir' : 'Contraer'} ${group.label}`}
@@ -565,7 +570,7 @@ export function TimelineGrid({
               <div
                 className={cn(
                   "flex-shrink-0 border-r border-b bg-card px-2 py-1 flex items-center gap-1.5 sticky left-0 z-10 min-w-0",
-                  isCompact ? "w-44" : "w-60",
+                  roomColumnWidth,
                   cellHeight
                 )}
               >
@@ -579,8 +584,8 @@ export function TimelineGrid({
                     className={cn("relative flex flex-shrink-0", cellHeight, isDragging && dragStart?.roomId === hab.id && 'select-none', canCreate && roomBlocked(hab) && 'cursor-not-allowed')}
                     style={{ width: `${days.length * cellWidthPx}px` }}
                     title={roomBlocked(hab) ? 'En mantenimiento: no se puede reservar' : undefined}
-                    onMouseDown={canCreate ? (event) => handleRowMouseDown(hab.id, event) : undefined}
-                    onMouseMove={canCreate ? (event) => handleRowMouseMove(hab.id, event) : undefined}
+                    onMouseDown={canCreate && !isMobile ? (event) => handleRowMouseDown(hab.id, event) : undefined}
+                    onMouseMove={canCreate && !isMobile ? (event) => handleRowMouseMove(hab.id, event) : undefined}
                   >
                     {roomBlocked(hab) && (
                       <div
@@ -629,8 +634,14 @@ export function TimelineGrid({
                       const isSelecting = isCellInDragSelection(hab.id, dayIndex);
                       const isToday = isSameDay(day, today);
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={dayIndex}
+                          aria-label={`Reservar habitación ${hab.numero} el ${format(day, 'd MMM yyyy', { locale: es })}`}
+                          disabled={!canCreate || roomBlocked(hab) || Boolean(getReservationForCell(hab.id, dayIndex) || blockForCell(hab.id, dayIndex))}
+                          onClick={(event) => {
+                            if (isMobile || event.detail === 0) onCreateReservation(hab, day, addDays(day, 1));
+                          }}
                           className={cn(
                             "h-full border-r border-b transition-colors flex-shrink-0",
                             canCreate ? "cursor-crosshair hover:bg-accent/50" : "cursor-default bg-muted/10",
@@ -676,6 +687,11 @@ export function TimelineGrid({
                                     onMouseDown={(event) => event.stopPropagation()}
                                     onClick={(event) => {
                                       event.stopPropagation();
+                                      if (isMobile) {
+                                        event.preventDefault();
+                                        setMenuReservationId(reserva.id);
+                                        return;
+                                      }
                                       dispatchAction(reserva, 'view');
                                     }}
                                     onKeyDown={(event) => {
@@ -686,7 +702,7 @@ export function TimelineGrid({
                                         dispatchAction(reserva, 'view');
                                       }
                                     }}
-                                    draggable={canCreate}
+                                    draggable={canCreate && !isMobile}
                                     onDragStart={(event) => {
                                       if (!canCreate) return;
                                       event.dataTransfer.effectAllowed = 'move';
@@ -729,7 +745,7 @@ export function TimelineGrid({
                                       {tienesSaldo && !isCompact && <CircleDollarSign className="h-3 w-3 shrink-0" aria-label="Saldo pendiente" />}
                                     </div>
 
-                                    {canCreate && !geometry.clippedEnd && (
+                                    {canCreate && !isMobile && !geometry.clippedEnd && (
                                       <button
                                         type="button"
                                         className="absolute inset-y-1 right-0 z-20 w-2 cursor-ew-resize rounded-full bg-white/0 transition-colors hover:bg-white/50"
@@ -845,7 +861,7 @@ export function TimelineGrid({
           <span className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-amber-500"></div> Pendiente</span>
           <span className="flex items-center gap-1"><CircleDollarSign className="h-3 w-3" /> Saldo</span>
         </div>
-        <span className="hidden sm:inline">{canCreate ? 'Arrastra un espacio para reservar · mueve una barra para cambiar habitación · ajusta su extremo para cambiar la salida · clic derecho para acciones' : 'Modo sólo consulta'}</span>
+        <span>{canCreate ? (isMobile ? 'Toca un espacio para reservar o una reserva para ver sus acciones. Desliza para recorrer fechas.' : 'Arrastra un espacio para reservar · mueve una barra para cambiar habitación · ajusta su extremo para cambiar la salida · clic derecho para acciones') : 'Modo sólo consulta'}</span>
       </div>
     </div>
   );

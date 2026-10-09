@@ -580,7 +580,7 @@ export default function Reservas() {
         />
         {busqueda && <button type="button" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted" onMouseDown={(event) => event.preventDefault()} onClick={() => { setBusqueda(''); setFocusReservationId(null); }} aria-label="Limpiar búsqueda"><X className="h-3 w-3" /></button>}
         {searchOpen && matchingReservations.length > 0 && (
-          <div className="absolute left-0 top-full z-[70] mt-1 w-[300px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-xl">
+          <div className="absolute left-0 top-full z-[70] mt-1 w-full max-w-[300px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-xl">
             <p className="border-b px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Reservas encontradas</p>
             {matchingReservations.map((reservation) => {
               const name = reservation.cliente_nombre || [reservation.clientes?.nombre, reservation.clientes?.apellido_paterno, reservation.clientes?.apellido_materno].filter(Boolean).join(' ') || 'Sin nombre';
@@ -1003,7 +1003,7 @@ export default function Reservas() {
                         />
                         {busqueda && <button type="button" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted" onMouseDown={(event) => event.preventDefault()} onClick={() => { setBusqueda(''); setFocusReservationId(null); }} aria-label="Limpiar búsqueda"><X className="h-3.5 w-3.5" /></button>}
                         {searchOpen && matchingReservations.length > 0 && (
-                          <div className="absolute right-0 top-full z-[70] mt-1 w-full min-w-[320px] overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-xl">
+                          <div className="absolute right-0 top-full z-[70] mt-1 w-full min-w-0 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-xl">
                             <p className="border-b px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Reservas encontradas</p>
                             {matchingReservations.map((reservation) => {
                               const name = reservation.cliente_nombre || [reservation.clientes?.nombre, reservation.clientes?.apellido_paterno, reservation.clientes?.apellido_materno].filter(Boolean).join(' ') || 'Sin nombre';
@@ -1028,7 +1028,7 @@ export default function Reservas() {
                             <div><p className="text-sm font-semibold">Filtrar calendario</p><p className="text-[11px] text-muted-foreground">La selección se conserva al volver.</p></div>
                             {calendarFilterCount > 0 && <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={clearCalendarFilters}>Limpiar</Button>}
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div className="space-y-1">
                               <label className="text-[11px] font-medium text-muted-foreground">Categoría</label>
                               <Select value={filtroTipo} onValueChange={setFiltroTipo}>

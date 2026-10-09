@@ -589,7 +589,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <Select value={roomTypeFilter} onValueChange={setRoomTypeFilter}>
           <SelectTrigger><SelectValue placeholder="Todas las categorías" /></SelectTrigger>
           <SelectContent>

@@ -77,7 +77,7 @@ export default function Signup() {
               {errors.hotel_nombre && <p className="text-xs text-destructive">{errors.hotel_nombre.message}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Nombre</Label>
                 <Input placeholder="Juan" {...register('nombre')} />

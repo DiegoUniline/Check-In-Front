@@ -726,7 +726,7 @@ export default function PublicHotel() {
                       <span className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" />{adultos} adulto{adultos !== 1 ? 's' : ''}{ninos ? ` · ${ninos} niño${ninos !== 1 ? 's' : ''}` : ''}</span>
                       <span className="font-semibold">{nsBooking} {nsBooking === 1 ? 'noche' : 'noches'}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs font-semibold">Nombre *</Label>
                         <Input autoComplete="given-name" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="mt-1 h-11 rounded-xl border-stone-200" />

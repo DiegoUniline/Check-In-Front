@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { cn } from "@/lib/utils";
 import {
   BedDouble,
@@ -55,7 +56,7 @@ export function ShotReservasTimeline() {
           const start = idx % 5;
           const span = Math.min(r.nights, 7 - start);
           return (
-            <>
+            <Fragment key={r.id}>
               <div key={`${r.id}-l`} className="flex flex-col justify-center">
                 <div className="text-[11px] font-mono text-muted-foreground">{r.id}</div>
                 <div className="truncate text-[13px] font-medium text-foreground">{r.guest}</div>
@@ -79,7 +80,7 @@ export function ShotReservasTimeline() {
                   <span className="truncate">{r.status}</span>
                 </div>
               </div>
-            </>
+            </Fragment>
           );
         })}
       </div>

@@ -273,7 +273,7 @@ export default function Configuracion() {
                     onChange={(e) => setHotelData({...hotelData, razonSocial: e.target.value})}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>RFC</Label>
                     <Input 
@@ -343,7 +343,7 @@ export default function Configuracion() {
                     onChange={(e) => setHotelData({...hotelData, direccion: e.target.value})}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Ciudad</Label>
                     <Input 
@@ -359,10 +359,10 @@ export default function Configuracion() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Teléfono</Label>
-                    <Input 
+                    <Input inputMode="tel"
                       value={hotelData.telefono}
                       onChange={(e) => setHotelData({...hotelData, telefono: e.target.value})}
                     />
@@ -384,7 +384,7 @@ export default function Configuracion() {
                 <CardTitle>Horarios</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Hora Check-in</Label>
                     <Input 

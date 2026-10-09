@@ -31,6 +31,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
+      data-mobile-navigation
       className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-card/96 shadow-[0_-8px_30px_rgba(15,23,42,0.06)] backdrop-blur supports-[backdrop-filter]:bg-card/88"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       aria-label="Navegación principal"
