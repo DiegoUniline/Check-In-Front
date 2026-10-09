@@ -551,7 +551,10 @@ export default function Catalogos() {
   return (
     <MainLayout title="Catálogos" subtitle="Administración de catálogos del sistema">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
+        <TabsList
+          aria-label="Catálogos del sistema"
+          className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:basis-[calc(50%-0.125rem)] [&>button]:whitespace-normal [&>button]:px-2 [&>button]:py-2 [&>button]:text-left [&>button>svg]:shrink-0 sm:[&>button]:basis-auto sm:[&>button]:px-3"
+        >
           <TabsTrigger value="tipos-habitacion">
             <BedDouble className="h-4 w-4 mr-2" />
             Tipos de Habitación
