@@ -101,7 +101,8 @@ export default function HistorialReservas() {
   
   // Paginación
   const [pagina, setPagina] = useState(1);
-  const [porPagina] = useState(20);
+  // 0 = todas en una sola página.
+  const [porPaginaSel, setPorPaginaSel] = useState(50);
   
   // Modal detalle
   const [reservaDetalleId, setReservaDetalleId] = useState<string | null>(null);
@@ -226,6 +227,7 @@ export default function HistorialReservas() {
   });
 
   // Paginación logic
+  const porPagina = porPaginaSel || Math.max(1, reservasFiltradas.length);
   const totalPaginas = Math.ceil(reservasFiltradas.length / porPagina);
   const reservasPaginadas = reservasFiltradas.slice((pagina - 1) * porPagina, pagina * porPagina);
 
@@ -719,12 +721,22 @@ export default function HistorialReservas() {
               </div>
 
               {/* Paginación */}
-              {totalPaginas > 1 && (
+              {reservasFiltradas.length > 0 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
-                  <p className="text-sm text-muted-foreground order-2 sm:order-1">
-                    {((pagina - 1) * porPagina) + 1} - {Math.min(pagina * porPagina, reservasFiltradas.length)} de {reservasFiltradas.length}
-                  </p>
-                  <div className="flex gap-2 order-1 sm:order-2">
+                  <div className="flex items-center gap-3 order-2 sm:order-1">
+                    <p className="text-sm text-muted-foreground">
+                      {((pagina - 1) * porPagina) + 1} - {Math.min(pagina * porPagina, reservasFiltradas.length)} de {reservasFiltradas.length}
+                    </p>
+                    <Select value={String(porPaginaSel)} onValueChange={(v) => { setPorPaginaSel(Number(v)); setPagina(1); }}>
+                      <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="50">50 por página</SelectItem>
+                        <SelectItem value="100">100 por página</SelectItem>
+                        <SelectItem value="0">Todos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {totalPaginas > 1 && <div className="flex gap-2 order-1 sm:order-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -747,7 +759,7 @@ export default function HistorialReservas() {
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
-                  </div>
+                  </div>}
                 </div>
               )}
             </>
