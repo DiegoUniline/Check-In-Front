@@ -75,9 +75,13 @@ import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { exportarComprobanteReserva, exportarRegistroHuesped } from '@/lib/pdfExport';
 import ReservaDetalle from '@/pages/ReservaDetalle';
 
-// Saldo vivo; las canceladas y no-shows no se cobran.
-const saldoReserva = (r: any): number =>
-  ['Cancelada', 'NoShow'].includes(String(r?.estado || '')) ? 0 : Math.max(0, Number(r?.saldo_pendiente) || 0);
+// Saldo = total − pagos activos reales; las canceladas y no-shows no se cobran.
+const saldoReserva = (r: any): number => {
+  if (['Cancelada', 'NoShow'].includes(String(r?.estado || ''))) return 0;
+  const pagado = r?.pagado_real ?? r?.total_pagado;
+  const saldo = pagado == null ? Number(r?.saldo_pendiente) || 0 : (Number(r?.total) || 0) - Number(pagado);
+  return Math.max(0, Math.round(saldo * 100) / 100);
+};
 
 export default function HistorialReservas() {
   const { toast } = useToast();
@@ -122,7 +126,8 @@ export default function HistorialReservas() {
       if (fechaHasta) params.fecha_hasta = format(fechaHasta, 'yyyy-MM-dd');
       
       const data = await api.getReservas(params);
-      setReservas(data);
+      const pagado = await api.getPagadoPorReservas(data.map((r: any) => r.id)).catch(() => null);
+      setReservas(pagado ? data.map((r: any) => ({ ...r, pagado_real: pagado[r.id] || 0 })) : data);
     } catch (error) {
       toast({ title: 'Error', description: 'No se pudieron cargar las reservas', variant: 'destructive' });
     } finally {
@@ -575,7 +580,9 @@ export default function HistorialReservas() {
                             ? <span className={cn('font-semibold', reserva.salida_credito ? 'text-amber-700' : 'text-red-600')}>
                                 {formatCurrency(saldoReserva(reserva))}{reserva.salida_credito ? ' · crédito' : ''}
                               </span>
-                            : <span className="text-muted-foreground">—</span>}
+                            : reserva.salida_credito
+                              ? <span className="text-xs font-medium text-emerald-700">Crédito liquidado</span>
+                              : <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
                         <TableCell>{getOrigenBadge(reserva.origen)}</TableCell>

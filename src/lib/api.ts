@@ -1561,6 +1561,21 @@ class ApiClient {
     if (error) throw error;
     return data;
   };
+  /** Suma de pagos activos por reserva, leída de los movimientos reales. */
+  getPagadoPorReservas = async (ids: string[]): Promise<Record<string, number>> => {
+    const out: Record<string, number> = {};
+    for (let i = 0; i < ids.length; i += 200) {
+      const chunk = ids.slice(i, i + 200);
+      const rows = await fetchAllRows<any>((from, to) => (supabase as any).from('pagos')
+        .select('id, reserva_id, monto, estado').in('reserva_id', chunk)
+        .order('id', { ascending: true }).range(from, to));
+      for (const p of rows) {
+        if (String(p.estado || 'Activo') === 'Cancelado') continue;
+        out[p.reserva_id] = (out[p.reserva_id] || 0) + (Number(p.monto) || 0);
+      }
+    }
+    return out;
+  };
   // Cuentas por cobrar: estancias que salieron a crédito y siguen con saldo.
   getCuentasPorCobrar = async (incluirLiquidadas = false): Promise<any[]> => {
     const rows = await fetchAllRows<any>((from, to) => {
@@ -1572,8 +1587,11 @@ class ApiClient {
       if (!incluirLiquidadas) q = q.eq('credito_liquidado', false);
       return q;
     });
+    const pagado = await this.getPagadoPorReservas(rows.map((r: any) => r.id));
     return rows.map((r: any) => ({
       ...r,
+      total_pagado: pagado[r.id] || 0,
+      saldo_pendiente: Math.max(0, Math.round(((Number(r.total) || 0) - (pagado[r.id] || 0)) * 100) / 100),
       cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
       cliente_telefono: r.clientes?.telefono || '',
       habitacion_numero: r.habitaciones?.numero || '',
