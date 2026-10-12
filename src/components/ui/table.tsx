@@ -1,7 +1,17 @@
 import * as React from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Columns3 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { setHiddenColumns, useHiddenColumns } from "@/lib/columnPrefs";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /*
  * Orden por columna en todas las tablas: clic en el encabezado ordena A→Z,
@@ -56,10 +66,52 @@ const rowCells = (row: React.ReactElement): React.ReactElement[] => {
   return React.Children.toArray(target.props?.children).filter(React.isValidElement) as React.ReactElement[];
 };
 
+/** Clave estable por pantalla + encabezados; los ids de la URL no cuentan. */
+const tableKeyFor = (labels: string[], explicit?: string) => {
+  if (explicit) return explicit;
+  const path = window.location.pathname
+    .split("/")
+    .map((seg) => (/\d/.test(seg) && seg.length > 6 ? ":id" : seg))
+    .join("/");
+  return `${path}|${labels.filter(Boolean).join("·")}`;
+};
+
+/*
+ * Selector de columnas en todas las tablas: el usuario elige qué columnas ver
+ * y queda guardado en su perfil (ver lib/columnPrefs). <Table data-nocolumns> lo desactiva.
+ */
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => {
     const [sort, setSort] = React.useState<SortState>({ col: null, dir: "asc" });
     const enabled = !(props as any)["data-nosort"];
+    const columnsEnabled = !(props as any)["data-nocolumns"];
+    const explicitKey = (props as any)["data-table-id"] as string | undefined;
+    const tid = React.useId();
+    const tableRef = React.useRef<HTMLTableElement | null>(null);
+    const setRefs = (el: HTMLTableElement | null) => {
+      tableRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    };
+    const [labels, setLabels] = React.useState<string[]>([]);
+    React.useLayoutEffect(() => {
+      const row = tableRef.current?.tHead?.rows[0];
+      const next = row ? Array.from(row.cells).map((c) => (c.textContent || "").replace(/\s+/g, " ").trim()) : [];
+      setLabels((prev) => (prev.join("\u0000") === next.join("\u0000") ? prev : next));
+    });
+    const tableKey = columnsEnabled && labels.length ? tableKeyFor(labels, explicitKey) : null;
+    const hidden = useHiddenColumns(tableKey);
+    const choices = labels.filter(Boolean);
+    const showPicker = columnsEnabled && choices.length >= 4;
+    const hiddenIdx = labels.map((l, i) => (l && hidden.includes(l) ? i : -1)).filter((i) => i >= 0);
+    const selector = `[data-tid="${tid}"]`;
+    const css = hiddenIdx.map((i) => `${selector} tr > :nth-child(${i + 1}):not([colspan]){display:none}`).join("\n");
+    const toggleColumn = (label: string, visible: boolean) => {
+      if (!tableKey) return;
+      const next = visible ? hidden.filter((h) => h !== label) : [...hidden, label];
+      if (choices.every((c) => next.includes(c))) return; // siempre queda al menos una
+      setHiddenColumns(tableKey, next);
+    };
     const ctx = React.useMemo<SortCtx>(() => ({
       ...sort,
       enabled,
@@ -69,7 +121,47 @@ const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableE
     return (
       <TableSortContext.Provider value={ctx}>
         <div data-table-scroll className="relative min-w-0 w-full max-w-full overflow-auto rounded-lg overscroll-x-contain" tabIndex={0} role="region" aria-label="Tabla desplazable">
-          <table ref={ref} className={cn("w-full caption-bottom text-sm max-sm:w-max max-sm:min-w-full max-sm:whitespace-nowrap", className)} {...props} />
+          {showPicker && (
+            <div className="sticky left-0 z-[1] flex justify-end px-1 pb-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title="Elegir qué columnas ver"
+                    className={cn(
+                      "inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors hover:bg-muted",
+                      hiddenIdx.length ? "border-primary/40 bg-primary/5 text-primary" : "border-border text-muted-foreground",
+                    )}
+                  >
+                    <Columns3 className="h-3.5 w-3.5" />
+                    Columnas{hiddenIdx.length ? ` · ${hiddenIdx.length} oculta${hiddenIdx.length === 1 ? "" : "s"}` : ""}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-h-[60vh] w-56 overflow-y-auto">
+                  <DropdownMenuLabel className="text-xs">Columnas visibles</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {choices.map((label) => (
+                    <DropdownMenuCheckboxItem
+                      key={label}
+                      checked={!hidden.includes(label)}
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={(v) => toggleColumn(label, Boolean(v))}
+                    >
+                      {label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                  {hiddenIdx.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => tableKey && setHiddenColumns(tableKey, [])}>Mostrar todas</DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+          {css && <style>{css}</style>}
+          <table ref={setRefs} data-tid={tid} className={cn("w-full caption-bottom text-sm max-sm:w-max max-sm:min-w-full max-sm:whitespace-nowrap", className)} {...props} />
         </div>
       </TableSortContext.Provider>
     );
