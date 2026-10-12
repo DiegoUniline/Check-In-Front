@@ -1,13 +1,77 @@
 import * as React from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+/*
+ * Orden por columna en todas las tablas: clic en el encabezado ordena A→Z,
+ * otro clic Z→A y un tercero regresa al orden original. El tipo de valor
+ * (número, moneda, fecha o texto) se detecta del contenido de la celda.
+ * Para desactivarlo en una tabla: <Table data-nosort>; en una columna: <TableHead data-nosort>.
+ */
+type SortState = { col: number | null; dir: "asc" | "desc" };
+type SortCtx = SortState & { enabled: boolean; toggle: (col: number) => void };
+const TableSortContext = React.createContext<SortCtx | null>(null);
+
+const textOf = (node: React.ReactNode): string => {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).filter(Boolean).join(" ");
+  if (React.isValidElement(node)) return textOf((node.props as any)?.children);
+  return "";
+};
+
+const EMPTY = new Set(["", "-", "—", "–", "n/a", "sin asignar"]);
+const DATE_DMY = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/;
+const DATE_ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/;
+
+type SortKey = { kind: 0 | 1 | 2 | 3; num: number; str: string }; // 0 número/fecha, 1 texto, 3 vacío
+const sortKey = (raw: string): SortKey => {
+  const text = raw.replace(/\s+/g, " ").trim();
+  if (EMPTY.has(text.toLowerCase())) return { kind: 3, num: 0, str: "" };
+  let m = text.match(DATE_DMY);
+  if (m) return { kind: 0, num: new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)).getTime(), str: text };
+  m = text.match(DATE_ISO);
+  if (m) return { kind: 0, num: new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)).getTime(), str: text };
+  const plain = text.replace(/[$,%\s]|MXN|USD|EUR/gi, "");
+  if (/^-?\d+(\.\d+)?$/.test(plain)) return { kind: 0, num: Number(plain), str: text };
+  return { kind: 1, num: 0, str: text };
+};
+
+const collator = new Intl.Collator("es", { numeric: true, sensitivity: "base" });
+const compareKeys = (a: SortKey, b: SortKey): number => {
+  if (a.kind !== b.kind) return a.kind - b.kind;
+  if (a.kind === 0) return a.num - b.num;
+  return collator.compare(a.str, b.str);
+};
+
+const rowCells = (row: React.ReactElement): React.ReactElement[] => {
+  let target: any = row;
+  if (row.type === React.Fragment) {
+    target = React.Children.toArray((row.props as any).children).find(React.isValidElement);
+  }
+  if (!target) return [];
+  return React.Children.toArray(target.props?.children).filter(React.isValidElement) as React.ReactElement[];
+};
+
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div data-table-scroll className="relative min-w-0 w-full max-w-full overflow-auto rounded-lg overscroll-x-contain" tabIndex={0} role="region" aria-label="Tabla desplazable">
-      <table ref={ref} className={cn("w-full caption-bottom text-sm max-sm:w-max max-sm:min-w-full max-sm:whitespace-nowrap", className)} {...props} />
-    </div>
-  ),
+  ({ className, ...props }, ref) => {
+    const [sort, setSort] = React.useState<SortState>({ col: null, dir: "asc" });
+    const enabled = !(props as any)["data-nosort"];
+    const ctx = React.useMemo<SortCtx>(() => ({
+      ...sort,
+      enabled,
+      toggle: (col) => setSort((s) => s.col !== col ? { col, dir: "asc" }
+        : s.dir === "asc" ? { col, dir: "desc" } : { col: null, dir: "asc" }),
+    }), [sort, enabled]);
+    return (
+      <TableSortContext.Provider value={ctx}>
+        <div data-table-scroll className="relative min-w-0 w-full max-w-full overflow-auto rounded-lg overscroll-x-contain" tabIndex={0} role="region" aria-label="Tabla desplazable">
+          <table ref={ref} className={cn("w-full caption-bottom text-sm max-sm:w-max max-sm:min-w-full max-sm:whitespace-nowrap", className)} {...props} />
+        </div>
+      </TableSortContext.Provider>
+    );
+  },
 );
 Table.displayName = "Table";
 
@@ -19,9 +83,29 @@ const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttribut
 TableHeader.displayName = "TableHeader";
 
 const TableBody = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...props }, ref) => (
-    <tbody ref={ref} className={cn("[&_tr:last-child]:border-0", className)} {...props} />
-  ),
+  ({ className, children, ...props }, ref) => {
+    const sort = React.useContext(TableSortContext);
+    const col = sort?.enabled ? sort.col : null;
+    const dir = sort?.dir;
+    const rows = React.useMemo(() => {
+      if (col == null) return children;
+      const items = React.Children.toArray(children);
+      if (items.length < 2) return children;
+      const keyed = items.map((item, i) => ({
+        item,
+        i,
+        key: React.isValidElement(item) ? sortKey(textOf(rowCells(item)[col]?.props?.children)) : sortKey(""),
+      }));
+      keyed.sort((a, b) => {
+        // Los vacíos siempre al final, sin importar la dirección.
+        if (a.key.kind === 3 || b.key.kind === 3) return a.key.kind - b.key.kind || a.i - b.i;
+        const c = compareKeys(a.key, b.key);
+        return (dir === "desc" ? -c : c) || a.i - b.i;
+      });
+      return keyed.map((k) => k.item);
+    }, [children, col, dir]);
+    return <tbody ref={ref} className={cn("[&_tr:last-child]:border-0", className)} {...props}>{rows}</tbody>;
+  },
 );
 TableBody.displayName = "TableBody";
 
@@ -44,16 +128,41 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
 TableRow.displayName = "TableRow";
 
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...props }, ref) => (
-    <th
-      ref={ref}
-      className={cn(
-        "h-10 px-2 text-left align-middle text-xs font-semibold text-muted-foreground whitespace-nowrap sm:px-3 [&:has([role=checkbox])]:pr-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
+  ({ className, children, onClick, ...props }, ref) => {
+    const sort = React.useContext(TableSortContext);
+    const innerRef = React.useRef<HTMLTableCellElement | null>(null);
+    const setRefs = (el: HTMLTableCellElement | null) => {
+      innerRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    };
+    const inHeader = Boolean(innerRef.current?.closest("thead"));
+    const sortable = Boolean(sort?.enabled) && !(props as any)["data-nosort"] && textOf(children).trim() !== "";
+    const active = sortable && inHeader && sort?.col != null && innerRef.current?.cellIndex === sort.col;
+    const Icon = active ? (sort?.dir === "asc" ? ArrowUp : ArrowDown) : null;
+    return (
+      <th
+        ref={setRefs}
+        aria-sort={active ? (sort?.dir === "asc" ? "ascending" : "descending") : undefined}
+        className={cn(
+          "h-10 px-2 text-left align-middle text-xs font-semibold text-muted-foreground whitespace-nowrap sm:px-3 [&:has([role=checkbox])]:pr-0",
+          sortable && "cursor-pointer select-none hover:text-foreground",
+          active && "text-foreground",
+          className,
+        )}
+        onClick={(e) => {
+          onClick?.(e);
+          if (!sortable || e.defaultPrevented) return;
+          if ((e.target as HTMLElement).closest("button, input, a, [role=checkbox], [role=combobox]")) return;
+          if (!e.currentTarget.closest("thead")) return;
+          sort?.toggle(e.currentTarget.cellIndex);
+        }}
+        {...props}
+      >
+        {Icon ? <span className="inline-flex items-center gap-1">{children}<Icon className="h-3 w-3" /></span> : children}
+      </th>
+    );
+  },
 );
 TableHead.displayName = "TableHead";
 
