@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,6 +74,10 @@ import { formatDate as fmtDate } from '@/lib/dateFormat';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { exportarComprobanteReserva, exportarRegistroHuesped } from '@/lib/pdfExport';
 import ReservaDetalle from '@/pages/ReservaDetalle';
+
+// Saldo vivo; las canceladas y no-shows no se cobran.
+const saldoReserva = (r: any): number =>
+  ['Cancelada', 'NoShow'].includes(String(r?.estado || '')) ? 0 : Math.max(0, Number(r?.saldo_pendiente) || 0);
 
 export default function HistorialReservas() {
   const { toast } = useToast();
@@ -453,6 +458,7 @@ export default function HistorialReservas() {
                 'Check-out': r.fecha_checkout ? fmtDate(r.fecha_checkout) : '',
                 'Noches': r.noches ?? '',
                 'Total': r.total ?? r.monto_total ?? 0,
+                'Saldo': saldoReserva(r),
                 'Estado': r.estado ?? '',
                 'Origen': r.origen ?? '',
               }))}
@@ -513,6 +519,7 @@ export default function HistorialReservas() {
                       <TableHead className="whitespace-nowrap">Check-out</TableHead>
                       <TableHead>Noches</TableHead>
                       <TableHead>Total</TableHead>
+                      <TableHead>Saldo</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Origen</TableHead>
                       <TableHead className="whitespace-nowrap">Creada por</TableHead>
@@ -562,6 +569,13 @@ export default function HistorialReservas() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <span className="font-medium">{formatCurrency(safeNumber(reserva.total))}</span>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {saldoReserva(reserva) > 0.009
+                            ? <span className={cn('font-semibold', reserva.salida_credito ? 'text-amber-700' : 'text-red-600')}>
+                                {formatCurrency(saldoReserva(reserva))}{reserva.salida_credito ? ' · crédito' : ''}
+                              </span>
+                            : <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
                         <TableCell>{getOrigenBadge(reserva.origen)}</TableCell>
@@ -646,7 +660,7 @@ export default function HistorialReservas() {
                     ))}
                     {reservasPaginadas.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={13} className="text-center text-muted-foreground py-12">
+                        <TableCell colSpan={14} className="text-center text-muted-foreground py-12">
                           No se encontraron reservas
                         </TableCell>
                       </TableRow>
@@ -678,6 +692,9 @@ export default function HistorialReservas() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap font-semibold text-primary">
                           {formatCurrency(reservasFiltradas.reduce((s: number, r: any) => s + safeNumber(r.total), 0))}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap font-semibold text-amber-700">
+                          {formatCurrency(reservasFiltradas.reduce((s: number, r: any) => s + saldoReserva(r), 0))}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                           {stats.checkin}/{stats.checkout}/{stats.canceladas}

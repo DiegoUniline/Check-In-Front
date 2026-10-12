@@ -1561,6 +1561,41 @@ class ApiClient {
     if (error) throw error;
     return data;
   };
+  // Cuentas por cobrar: estancias que salieron a crédito y siguen con saldo.
+  getCuentasPorCobrar = async (incluirLiquidadas = false): Promise<any[]> => {
+    const rows = await fetchAllRows<any>((from, to) => {
+      let q = (supabase as any).from('reservas')
+        .select('id, numero_reserva, fecha_checkin, fecha_checkout, total, total_pagado, saldo_pendiente, credito_monto, credito_liquidado, credito_liquidado_at, updated_at, clientes(nombre, apellido_paterno, telefono, email), habitaciones(numero)')
+        .eq('hotel_id', this.hid()).eq('salida_credito', true)
+        .order('fecha_checkout', { ascending: false }).order('id', { ascending: true })
+        .range(from, to);
+      if (!incluirLiquidadas) q = q.eq('credito_liquidado', false);
+      return q;
+    });
+    return rows.map((r: any) => ({
+      ...r,
+      cliente_nombre: r.clientes ? `${r.clientes.nombre} ${r.clientes.apellido_paterno || ''}`.trim() : '',
+      cliente_telefono: r.clientes?.telefono || '',
+      habitacion_numero: r.habitaciones?.numero || '',
+    }));
+  };
+  /** Abona a una cuenta por cobrar; cada forma de pago entra al turno abierto. */
+  aplicarPagoCredito = async (reservaId: string, pagos: { metodo: string; monto: number }[], referencia = ''): Promise<{ saldo: number }> => {
+    for (const p of pagos.filter((x) => Number(x.monto) > 0)) {
+      await this.applyStayOperation(reservaId, 'partial_payment', {
+        amount: String(p.monto), payment_method: p.metodo, reference: referencia,
+        concept: 'Pago de cuenta por cobrar',
+      }, `Pago de crédito con ${p.metodo}`);
+    }
+    const { data, error } = await supabase.from('reservas').select('saldo_pendiente').eq('id', reservaId).maybeSingle();
+    if (error) throw error;
+    const saldo = Number((data as any)?.saldo_pendiente || 0);
+    if (saldo <= 0.009) {
+      await this.updateReserva(reservaId, { credito_liquidado: true, credito_liquidado_at: new Date().toISOString() });
+    }
+    window.dispatchEvent(new CustomEvent('data:changed'));
+    return { saldo };
+  };
   checkout = async (id: string): Promise<any> => {
     return this.completeCheckout(id);
   };

@@ -31,6 +31,7 @@ import {
   UserCog,
   FileText,
   Globe,
+  HandCoins,
 } from 'lucide-react';
 
 type ViewItem = {
@@ -63,6 +64,7 @@ const VIEWS: ViewItem[] = [
   { label: 'Proveedores', path: '/proveedores', icon: Truck },
   { label: 'Historial', path: '/historial', icon: History },
   { label: 'Histórico Entradas', path: '/historial-reservas', icon: History },
+  { label: 'Cuentas por cobrar', path: '/cuentas-por-cobrar', icon: HandCoins, keywords: 'credito cobranza saldo' },
   { label: 'Facturación', path: '/facturacion', icon: FileText },
   { label: 'Catálogos', path: '/catalogos', icon: FileText },
   { label: 'Usuarios', path: '/usuarios', icon: UserCog },

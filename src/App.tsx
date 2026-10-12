@@ -40,6 +40,7 @@ import Proveedores from "./pages/Proveedores";
 import Historial from "./pages/Historial";
 import HistorialReservas from "./pages/HistorialReservas";
 import Facturacion from "./pages/Facturacion";
+import CuentasPorCobrar from "./pages/CuentasPorCobrar";
 import NotFound from "./pages/NotFound";
 import Catalogos from "./pages/Catalogos";
 import Usuarios from "./pages/Usuarios";
@@ -329,6 +330,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute viewKey="checkout">
           <CheckOut />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/cuentas-por-cobrar"
+      element={
+        <ProtectedRoute viewKey="cuentas-cobrar">
+          <CuentasPorCobrar />
         </ProtectedRoute>
       }
     />

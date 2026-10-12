@@ -32,6 +32,7 @@ import {
   X,
   FileText,
   Search,
+  HandCoins,
 } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
@@ -82,6 +83,7 @@ const cajaNavItems = [
   { title: 'Turno y caja', url: '/turnos', icon: Clock, viewKey: 'turnos' },
   { title: 'Punto de venta', url: '/pos', icon: ShoppingCart, viewKey: 'pos' },
   { title: 'Historial de ventas', url: '/historial', icon: History, viewKey: 'historial' },
+  { title: 'Cuentas por cobrar', url: '/cuentas-por-cobrar', icon: HandCoins, viewKey: 'cuentas-cobrar' },
   { title: 'Facturación', url: '/facturacion', icon: FileText, viewKey: 'facturacion' },
   { title: 'Cierre del día', url: '/cierre-dia', icon: ClipboardCheck, viewKey: 'cierre-dia' },
 ];

@@ -48,6 +48,7 @@ export const VIEWS: ViewDef[] = [
   // Reservas
   { key: 'historial-reservas', label: 'Histórico Entradas', group: 'Principal', path: '/historial-reservas' },
   { key: 'facturacion', label: 'Facturación', group: 'Principal', path: '/facturacion' },
+  { key: 'cuentas-cobrar', label: 'Cuentas por cobrar', group: 'Principal', path: '/cuentas-por-cobrar' },
   { key: 'politicas_reserva', label: 'Políticas de reserva', group: 'Principal', path: '/politicas-reserva' },
 
   // Sistema
@@ -140,6 +141,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   historial: ['Admin', 'Gerente'],
   'historial-reservas': ['Admin', 'Gerente', 'Recepcion'],
   facturacion: ['Admin', 'Gerente', 'Recepcion'],
+  'cuentas-cobrar': ['Admin', 'Gerente', 'Recepcion'],
   politicas_reserva: ['Admin', 'Gerente'],
   reportes: ['Admin', 'Gerente'],
 
