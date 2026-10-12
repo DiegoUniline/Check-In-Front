@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,8 @@ const textOf = (node: React.ReactNode): string => {
   return "";
 };
 
+// Columnas de botones: no tienen valor que ordenar.
+const NO_SORT_LABELS = /^(acciones?|opciones|ver|editar)$/i;
 const EMPTY = new Set(["", "-", "—", "–", "n/a", "sin asignar"]);
 const DATE_DMY = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/;
 const DATE_ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/;
@@ -137,17 +139,22 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
       else if (ref) ref.current = el;
     };
     const inHeader = Boolean(innerRef.current?.closest("thead"));
-    const sortable = Boolean(sort?.enabled) && !(props as any)["data-nosort"] && textOf(children).trim() !== "";
+    const label = textOf(children).trim();
+    const sortable = Boolean(sort?.enabled) && !(props as any)["data-nosort"] && label !== "" && !NO_SORT_LABELS.test(label);
     const active = sortable && inHeader && sort?.col != null && innerRef.current?.cellIndex === sort.col;
-    const Icon = active ? (sort?.dir === "asc" ? ArrowUp : ArrowDown) : null;
+    const Icon = active ? (sort?.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+    const hint = !sortable ? undefined
+      : !active ? "Clic para ordenar de la A a la Z"
+        : sort?.dir === "asc" ? "Orden A→Z · clic para Z→A" : "Orden Z→A · clic para quitar el orden";
     return (
       <th
         ref={setRefs}
         aria-sort={active ? (sort?.dir === "asc" ? "ascending" : "descending") : undefined}
+        title={hint}
         className={cn(
           "h-10 px-2 text-left align-middle text-xs font-semibold text-muted-foreground whitespace-nowrap sm:px-3 [&:has([role=checkbox])]:pr-0",
-          sortable && "cursor-pointer select-none hover:text-foreground",
-          active && "text-foreground",
+          sortable && "group/sort cursor-pointer select-none transition-colors hover:bg-muted/60 hover:text-foreground",
+          active && "bg-primary/5 text-primary",
           className,
         )}
         onClick={(e) => {
@@ -159,7 +166,12 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
         }}
         {...props}
       >
-        {Icon ? <span className="inline-flex items-center gap-1">{children}<Icon className="h-3 w-3" /></span> : children}
+        {sortable ? (
+          <span className="inline-flex items-center gap-1">
+            {children}
+            <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground/50 group-hover/sort:text-foreground")} />
+          </span>
+        ) : children}
       </th>
     );
   },
