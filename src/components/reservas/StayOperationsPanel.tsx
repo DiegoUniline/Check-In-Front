@@ -10,6 +10,7 @@ import api, { hotelLocalToIso, todayLocal } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { canAccess } from '@/lib/permissions';
 import { useAuth } from '@/contexts/useAuth';
+import { useShift } from '@/contexts/useShift';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/currency';
 import { calculateReservationFinancialSnapshot, reservationNightsBetween, type ReservationFinancialSnapshot } from '@/lib/reservationFinancials';
@@ -128,6 +129,7 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
 }: Props, ref) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { openShift: openShiftForPayments } = useShift();
   const [selected, setSelected] = useState<Operation | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -152,9 +154,13 @@ export const StayOperationsPanel = forwardRef<StayOperationsPanelHandle, Props>(
   const openedInitialOperation = useRef('');
 
   const activeCharges = useMemo(() => (reserva.cargos || []).filter((c: any) => c.estado !== 'Cancelado'), [reserva.cargos]);
-  const activePayments = useMemo(() => (reserva.pagos || []).filter((p: any) => p.estado !== 'Cancelado'), [reserva.pagos]);
+  // Admin/Gerente corrigen cualquier pago; el resto sólo los de su turno abierto.
+  const isManagerRole = ['Admin', 'Gerente', 'SuperAdmin'].includes(String(user?.rol || ''));
+  const myShiftId = openShiftForPayments?.id || null;
+  const ownPayment = (p: any) => isManagerRole || (myShiftId && p.turno_id === myShiftId);
+  const activePayments = useMemo(() => (reserva.pagos || []).filter((p: any) => p.estado !== 'Cancelado' && ownPayment(p)), [reserva.pagos, isManagerRole, myShiftId]);
   const cancelledCharges = useMemo(() => (reserva.cargos || []).filter((c: any) => c.estado === 'Cancelado'), [reserva.cargos]);
-  const cancelledPayments = useMemo(() => (reserva.pagos || []).filter((p: any) => p.estado === 'Cancelado'), [reserva.pagos]);
+  const cancelledPayments = useMemo(() => (reserva.pagos || []).filter((p: any) => p.estado === 'Cancelado' && ownPayment(p)), [reserva.pagos, isManagerRole, myShiftId]);
   const operationApplies = (id: string) => {
     const state = String(reserva.estado || '');
     const active = ['CheckIn', 'Hospedado'].includes(state) && !reserva.checkout_realizado;
