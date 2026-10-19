@@ -527,7 +527,11 @@ export function TimelineGrid({
                 {!collapsed && group.rooms.map((hab) => {
             const status = roomStatus(hab);
             const dropActive = dropTarget?.roomId === hab.id;
-            const roomReservationBars = getReservasForRoom(hab.id)
+            // Historial visible: las estancias con salida también se dibujan
+            // (no ocupan la celda, solo se muestran como registro).
+            const roomReservationBars = reservas
+              .filter((r) => r.habitacion_id === hab.id && r.fecha_checkin && r.fecha_checkout
+                && !['Cancelada', 'NoShow'].includes(String(r.estado || '')))
               .map((reserva) => {
                 const occupancyCheckout = occupancyCheckoutDate(reserva, todayKey);
                 const checkoutPreview = resizePreview?.reservationId === reserva.id
