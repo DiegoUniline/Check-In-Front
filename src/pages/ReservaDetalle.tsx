@@ -3,14 +3,16 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, BedDouble, CalendarDays, Clock3, DoorOpen, Ellipsis, FileText, History,
   LogOut, Mail, Pencil, Phone, Printer, RefreshCw, Users, WalletCards,
-  CheckCircle2, CreditCard, MessageCircle, RotateCcw, X, XCircle,
+  CheckCircle2, CreditCard, MessageCircle, Receipt, RotateCcw, X, XCircle,
 } from 'lucide-react';
 import { EditarReservaDialog } from '@/components/reservas/EditarReservaDialog';
 import { ReactivarReservaDialog } from '@/components/reservas/ReactivarReservaDialog';
 import { EditarPagoAdminDialog } from '@/components/reservas/EditarPagoAdminDialog';
 import { enviarWhatsAppReserva, MENSAJES_DEFAULT } from '@/lib/whatsappSend';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { imprimirComprobanteReserva, imprimirRegistroRecepcion } from '@/lib/pdfExport';
+import { imprimirTicketReserva, ticketReservaHtml } from '@/lib/ticketReserva';
 import api, { todayLocal } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/currency';
@@ -68,6 +70,7 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
   const [editOpen, setEditOpen] = useState(!embedded && searchParams.get('editar') === '1');
   const [reactivarOpen, setReactivarOpen] = useState(false);
   const [pagoAdmin, setPagoAdmin] = useState<any>(null);
+  const [ticketOpen, setTicketOpen] = useState(false);
   const [recienCreada, setRecienCreada] = useState(!embedded && searchParams.get('nueva') === '1');
   const [enviandoWa, setEnviandoWa] = useState(false);
   const quitarParam = (key: string) => {
@@ -122,6 +125,12 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
 
   const ledger = useMemo(() => reserva ? buildReservationLedger(reserva) : [], [reserva]);
   const account = useMemo(() => reserva ? getReservationAccountSummary(reserva) : null, [reserva]);
+  const ticketHtml = useMemo(() => reserva ? ticketReservaHtml({
+    reserva,
+    hotel: reserva.hotel,
+    cliente: reserva.cliente || reserva.clientes,
+    currency: reserva.hotel?.moneda_codigo || reserva.hotel?.moneda,
+  }) : '', [reserva]);
 
   // Cuando un crédito queda en ceros, se marca como liquidado automáticamente.
   useEffect(() => {
@@ -253,9 +262,10 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
             </Button>}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="toolbar"><Printer className="mr-1.5 h-3.5 w-3.5" />PDF</Button>
+                <Button variant="outline" size="toolbar"><Printer className="mr-1.5 h-3.5 w-3.5" />Imprimir</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem aria-label="Imprimir ticket de reserva (80 mm)" onClick={() => setTicketOpen(true)}><Receipt className="mr-2 h-4 w-4" />Ticket de reserva (80 mm)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => void imprimir('registro')}>Tarjeta de registro (recepción)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => void imprimir('comprobante')}>Comprobante de reservación</DropdownMenuItem>
               </DropdownMenuContent>
@@ -384,6 +394,7 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
           {canCancelReservation && <Button variant="outline" size="toolbar" className="w-full border-red-200 text-red-700" onClick={() => operationsRef.current?.openOperation('cancel_reservation')}><XCircle className="mr-1.5 h-3.5 w-3.5" />Cancelar</Button>}
           {canReactivate && <Button size="toolbar" className="w-full bg-[#10233F]" onClick={() => setReactivarOpen(true)}><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reactivar</Button>}
           <Button variant="outline" size="toolbar" className="w-full" onClick={() => operationsRef.current?.openMoreOperations()}>Más operaciones</Button>
+          <Button variant="outline" size="toolbar" className="w-full" aria-label="Imprimir ticket de reserva" onClick={() => setTicketOpen(true)}><Receipt className="mr-1.5 h-3.5 w-3.5" />Ticket</Button>
           <Button variant="outline" size="toolbar" className="w-full" onClick={() => void imprimir('registro')}><Printer className="mr-1.5 h-3.5 w-3.5" />Registro PDF</Button>
           {canCheckin
             ? <Button size="toolbar" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate(`/checkin/${reserva.id}`)}>Check-in</Button>
@@ -400,6 +411,36 @@ export default function ReservaDetalle({ reservaId, embedded = false, onClose }:
       />
       <ReactivarReservaDialog open={reactivarOpen} onOpenChange={setReactivarOpen} reserva={reserva} onDone={refreshAll} />
       <EditarPagoAdminDialog open={Boolean(pagoAdmin)} onOpenChange={(v) => { if (!v) setPagoAdmin(null); }} pago={pagoAdmin} onSaved={refreshAll} />
+      <Dialog open={ticketOpen} onOpenChange={setTicketOpen}>
+        <DialogContent className="sm:max-w-[430px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Receipt className="h-5 w-5" />Ticket de reserva</DialogTitle>
+            <DialogDescription>Formato térmico de 80 mm. Revisa los cargos, pagos y el saldo antes de imprimir.</DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <iframe
+              title={`Ticket de ${reserva.numero_reserva || 'reserva'}`}
+              className="mx-auto h-[58dvh] min-h-[340px] w-full max-w-[340px] rounded-sm border bg-white"
+              srcDoc={ticketHtml}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTicketOpen(false)}>Cerrar</Button>
+            <Button onClick={() => {
+              try {
+                imprimirTicketReserva({
+                  reserva,
+                  hotel: reserva.hotel,
+                  cliente: reserva.cliente || reserva.clientes,
+                  currency: reserva.hotel?.moneda_codigo || reserva.hotel?.moneda,
+                });
+              } catch (error: any) {
+                toast({ title: 'No se pudo abrir la impresión', description: error?.message, variant: 'destructive' });
+              }
+            }}><Printer className="mr-1.5 h-4 w-4" />Imprimir ticket</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   </Shell>;
 }
